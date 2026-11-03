@@ -3,116 +3,67 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#080914">
-  <meta name="description" content="LIVEVERSE ARENA — شاشة تفاعلية احترافية لمسابقات البث المباشر">
-  <title>LIVEVERSE ARENA — شاشة المشاهدين</title>
+  <meta name="theme-color" content="#101635">
+  <meta name="description" content="LIVEVERSE — مسابقات وأسئلة تفاعلية لجمهور البث المباشر">
+  <title>LIVEVERSE — شاشة البث</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fonts/tajawal-arabic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/overlay.css">
   <link rel="stylesheet" href="/broadcast-theme.css">
 </head>
 <body>
   <main class="arena" id="arena" data-mode="quiz" data-phase="waiting">
-    <div class="arena-grid" aria-hidden="true"></div>
-    <div class="arena-flare flare-one" aria-hidden="true"></div>
-    <div class="arena-flare flare-two" aria-hidden="true"></div>
-    <div class="arena-lines" aria-hidden="true"></div>
     <header class="top-line">
-      <div class="brand-lockup" dir="ltr">
-        <div class="brand-symbol"><span>L</span><b>✦</b></div>
-        <div class="brand-words"><strong>LIVE<span>VERSE</span></strong><small>THE INTERACTIVE ARENA</small></div>
-      </div>
-      <div class="top-status">
-        <span class="round-pill" id="overlayRound">ROUND 01</span>
-        <span class="live-pill" id="overlayLive"><i></i><span id="overlayLiveText">STANDBY</span></span>
-      </div>
+      <div class="brand-lockup"><span class="brand-symbol" aria-hidden="true">L<span>•</span></span><strong dir="ltr">LIVEVERSE</strong></div>
+      <span class="live-pill" id="overlayLive"><i></i><span id="overlayLiveText">في انتظار البداية</span></span>
+      <span class="header-caption">مسابقات البث المباشر</span>
     </header>
-    <div class="top-rule"><div id="topProgress"></div></div>
-
     <div class="arena-body">
       <section class="competition-zone" aria-label="السؤال والخيارات">
         <div class="zone-intro">
-          <div class="section-tag"><span class="tag-mark">◆</span><span id="modeTag">LIVE QUIZ</span><span class="tag-separator"></span><span id="stageTag">استعد للتحدي</span></div>
-          <h1 id="overlayTitle">تحدي المعلومات</h1>
+          <span class="round-pill" id="overlayRound">السؤال <b>1</b></span>
           <div class="quiz-progress-dots" id="quizProgressDots" aria-label="تقدم المسابقة"></div>
+          <div class="clock-panel" id="overlayTimer">
+            <div class="clock-face" id="timerFace" role="timer" aria-label="الوقت المتبقي بالثواني"><strong id="overlaySeconds">30</strong></div>
+            <span class="sr-only" id="clockStatus">في انتظار البداية</span>
+          </div>
         </div>
-        <div class="question-card" id="questionCard">
-          <div class="question-topline"><span><i class="tiny-square"></i> <span id="questionLabel">السؤال الحالي</span></span><span class="question-side">LIVEVERSE / <b id="questionMode">QUIZ</b></span></div>
-          <div class="question-main" id="overlayPrompt">ما هي عاصمة المملكة العربية السعودية؟</div>
-          <div class="question-edge" aria-hidden="true"></div>
-        </div>
-        <div class="choices-grid" id="overlayOptions" aria-label="الخيارات">
-          <div class="choice"><span class="choice-index">A</span><span class="choice-label">الرياض</span><span class="choice-mark">↗</span></div>
-          <div class="choice"><span class="choice-index">B</span><span class="choice-label">جدة</span><span class="choice-mark">↗</span></div>
-          <div class="choice"><span class="choice-index">C</span><span class="choice-label">الدمام</span><span class="choice-mark">↗</span></div>
-          <div class="choice"><span class="choice-index">D</span><span class="choice-label">مكة</span><span class="choice-mark">↗</span></div>
-        </div>
+        <div class="question-card" id="questionCard"><h1 class="question-main" id="overlayPrompt">ما هي عاصمة المملكة العربية السعودية؟</h1></div>
+        <div class="choices-grid" id="overlayOptions" aria-label="الخيارات"></div>
         <div id="overlayRace" class="race-panel" hidden></div>
-        <div id="overlayWheel" class="wheel-panel" hidden>
-          <div class="wheel-orbit"><span class="wheel-orbit-inner">✳</span></div>
-          <div class="wheel-copy"><small>JOIN THE DRAW</small><strong id="overlayWheelCount">0 مشاركين</strong><span id="wheelEntriesPreview">اكتب !join للمشاركة</span></div>
-        </div>
-        <div class="answer-callout"><div class="callout-icon">↵</div><span id="overlayHint">اكتب رقم الإجابة في التعليقات • محاولة واحدة فقط</span><div class="callout-arrow" aria-hidden="true">✦</div></div>
+        <div id="overlayWheel" class="wheel-panel" hidden><div class="wheel-orbit" aria-hidden="true">✦</div><strong id="overlayWheelCount">0 مشاركين</strong><span id="wheelEntriesPreview">أسماء المسجلين في الفعالية</span></div>
+        <div class="answer-callout"><span id="overlayHint">اكتب رقم الإجابة 1 – 4 في الشات</span><span class="answer-total">جاوب <b id="overlaySubmissions">0</b></span></div>
       </section>
-      <aside class="arena-aside" aria-label="حالة الجولة والصدارة">
-        <div class="clock-panel" id="overlayTimer">
-          <div class="aside-heading"><span>COUNTDOWN</span><span class="aside-deco">◈</span></div>
-          <div class="clock-face" id="timerFace" role="timer" aria-live="off"><div class="clock-inner"><small>الوقت المتبقي</small><strong id="overlaySeconds">0:30</strong><span id="clockLabel">ثانية</span></div></div>
-          <div class="clock-footer"><span class="clock-led"></span><span id="clockStatus">في انتظار بداية الجولة</span></div>
-        </div>
-        <div class="quick-stats">
-          <div class="quick-stat"><span>المشاركون</span><strong id="overlayPlayers">0</strong><small>PLAYERS</small></div>
-          <div class="quick-stat"><span>الإجابات المسجلة</span><strong id="overlaySubmissions">0</strong><small>ENTRIES</small></div>
-        </div>
-        <div class="standings-panel">
-          <div class="aside-heading"><span>TOP PLAYERS</span><span class="standings-icon">↗</span></div>
-          <div class="standings-title">المتصدرون <span>الترتيب العام</span></div>
-          <div class="standings-list" id="overlayStandings"><div class="standings-empty">مكانك بين الأبطال يبدأ بإجابة واحدة.</div></div>
-        </div>
-      </aside>
     </div>
-    <footer class="arena-footer">
-      <div class="event-status"><span class="event-pulse"></span><div><strong id="overlayStatus">جاهز لبداية التحدي</strong><small id="footerDetail">انتظر انطلاق الجولة</small></div></div>
-      <div class="footer-center"><span>ONE ANSWER</span><span class="footer-diamond">✦</span><span>ONE CHANCE</span></div>
-      <div class="footer-serial" dir="ltr">LV / <span id="footerRound">001</span> <i></i> ARENA EDITION</div>
-    </footer>
-
-    <section class="signup-screen" id="registrationOverlay" hidden aria-label="شاشة التسجيل في مسابقة البث" aria-live="polite">
+    <section class="signup-screen" id="registrationOverlay" hidden aria-label="تسجيل المشاركين">
       <div class="signup-layout">
         <header class="signup-bar">
-          <div class="signup-logo" dir="ltr">LIVEVERSE<small>LIVE CHALLENGE / GAME SHOW</small></div>
-          <span class="signup-live-badge">● التسجيل مفتوح الآن</span>
+          <div class="signup-event"><small>اللعبة الجاية</small><h1 id="signupTitle">تحدي المعلومات</h1></div>
+          <div class="signup-command"><span>اكتب بالشات</span><strong id="signupKeyword">انضم</strong></div>
+          <span class="signup-live-badge"><i></i> <span id="signupStateLabel">التسجيل مفتوح</span></span>
         </header>
-        <div class="signup-command"><span class="signup-step">١</span><span>اكتب</span><strong id="signupKeyword">انضم</strong><span>بالشات</span></div>
         <div class="signup-board">
           <div class="signup-wall">
-            <div class="signup-wall-heading"><strong>المشاركون في الفعالية</strong><span>المسجلون: <b id="signupCount">0</b></span></div>
-            <div class="signup-member-grid" id="signupRecent" aria-label="أسماء المشاركين المسجلين"></div>
+            <div class="signup-wall-heading"><span>المشاركون</span><span><b id="signupCount">0</b> متسابق</span></div>
+            <div class="signup-member-grid" id="signupRecent" aria-label="المتسابقون المسجلون"></div>
+            <div class="signup-empty" id="signupEmpty"><span class="empty-chat" aria-hidden="true">＋</span><strong>مين أول متسابق؟</strong><p id="signupEmptyHint">اكتب كلمة الانضمام في شات البث<br>وبيظهر اسمك هنا مباشرة</p></div>
           </div>
-          <aside class="signup-spotlight" aria-label="آخر مشارك انضم">
-            <h3>دخل التحدي!</h3>
-            <span class="signup-latest-num" id="signupLatestNumber">#0</span>
-            <div class="signup-spotlight-avatar" id="signupLatestAvatar" aria-hidden="true">✦</div>
-            <strong id="signupLatestName">بانتظار أول متسابق</strong>
-            <p id="signupLatestDescription">اكتب كلمة الانضمام لتظهر هنا</p>
+          <aside class="signup-spotlight" aria-label="آخر مشارك انضم" aria-live="polite">
+            <div class="spotlight-inner"><h2>دخل الحين</h2><div class="spotlight-card"><span class="signup-latest-num" id="signupLatestNumber">#0</span><div class="spotlight-profile"><div class="signup-spotlight-avatar" id="signupLatestAvatar" aria-hidden="true">؟</div><strong id="signupLatestName" dir="auto">بانتظارك</strong></div></div><p id="signupLatestDescription">مكانك محجوز للتحدي</p></div>
           </aside>
         </div>
-        <footer class="signup-footer">
-          <span>حساب واحد = تسجيل واحد • التسجيل بكلمة في تعليقات البث</span>
-          <div class="signup-ready" id="signupReady">جاهزون للبدء (0)</div>
-        </footer>
+        <footer class="signup-footer"><span><i class="connection-dot"></i> الانضمام من تعليقات البث</span><span class="signup-ready" id="signupReady">بانتظار المشاركين</span></footer>
       </div>
     </section>
-    <section class="results-screen" id="roundResultsOverlay" hidden aria-label="لوحة نتائج الجولة" aria-live="polite">
-      <div class="results-noise" aria-hidden="true"></div><div class="results-beam" aria-hidden="true"></div>
-      <header class="results-head"><div class="results-brand" dir="ltr"><span class="results-brand-mark">✦</span> LIVEVERSE <b>ARENA</b></div><span class="results-round" id="resultsRoundLabel">ROUND 01 • FINISHED</span></header>
-      <div class="results-heading"><div class="results-eyebrow">✦ &nbsp; THE FASTEST RISE TO THE TOP &nbsp; ✦</div><h2>أبطال <span>الجولة</span></h2><p id="resultsSubtitle">كل ثانية تصنع الفارق</p></div>
-      <div class="results-container">
-        <div class="results-podium" id="resultsPodium"></div>
-        <div class="results-details"><div class="results-details-head"><strong>ترتيب بقية المتسابقين</strong><span>RANKING / TOP 10</span></div><div id="resultsOthers" class="results-others"></div></div>
-      </div>
-      <div class="results-bottom"><div class="results-metric"><span>الإجابة الصحيحة</span><strong id="resultsCorrect">—</strong></div><div class="results-metric"><span>إحصائيات الجولة</span><strong id="resultsAnswers">—</strong></div><div class="results-next">NEXT ROUND <span>◌</span></div></div>
+    <section class="results-screen" id="roundResultsOverlay" hidden aria-label="نتائج الجولة" aria-live="polite">
+      <header class="results-head"><span class="results-brand" dir="ltr">LIVEVERSE</span><span id="resultsRoundLabel">نتائج الجولة</span></header>
+      <div class="results-heading"><span class="results-eyebrow">السرعة تصنع الفارق</span><h2>أبطال <span>الجولة</span></h2><p id="resultsSubtitle">أسرع الإجابات الصحيحة</p></div>
+      <div class="results-container"><div class="results-podium" id="resultsPodium"></div><div class="results-details"><div class="results-details-head"><strong>ترتيب المتسابقين</strong><span>أسرع 10 إجابات</span></div><div id="resultsOthers" class="results-others"></div></div></div>
+      <div class="results-bottom"><div class="results-metric"><span>الإجابة الصحيحة</span><strong id="resultsCorrect">—</strong></div><div class="results-metric"><span>مشاركات الجولة</span><strong id="resultsAnswers">—</strong></div><span class="results-next">استعد للسؤال الجاي</span></div>
     </section>
-    <div class="winner-banner" id="winnerBanner" hidden role="status"><span class="winner-spark">✦</span><div><small>WINNER / الفائز</small><strong id="winnerName"></strong></div><span>+5 نقاط</span></div>
+    <div class="winner-banner" id="winnerBanner" hidden role="status"><span>★</span><div><small>الفائز</small><strong id="winnerName"></strong></div><b>+5 نقاط</b></div>
+    <div class="connection-notice" id="connectionNotice" hidden role="status">انقطع الاتصال، نحاول الرجوع للبث…</div>
+    <div hidden><span id="topProgress"></span><span id="modeTag"></span><span id="questionMode"></span><span id="questionLabel"></span><span id="stageTag"></span><span id="overlayTitle"></span><span id="overlayPlayers"></span><span id="overlayStatus"></span><span id="footerDetail"></span><span id="footerRound"></span><div id="overlayStandings"></div></div>
   </main>
   <script type="module" src="/overlay.js"></script>
 </body>

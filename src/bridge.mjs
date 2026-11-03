@@ -34,7 +34,7 @@ export class LiveBridge {
       const user = event.user || {};
       const stableId = user.id || user.userId || user.displayId || user.uniqueId || event.userId || event.uniqueId;
       if (!stableId) return;
-      this.engine.receiveChat({ id: String(stableId), username: user.nickname || user.displayId || user.uniqueId || event.nickname || 'مشاهد', text: event.content || event.comment || '' });
+      this.engine.receiveChat({ id: String(stableId), username: user.nickname || user.displayId || user.uniqueId || event.nickname || 'مشاهد', text: event.content || event.comment || '', avatar: user.avatarThumb?.urlList?.[0] || user.avatarMedium?.urlList?.[0] || user.avatarLarge?.urlList?.[0] || event.profilePictureUrl || '' });
     });
     connection.on(ControlEvent.DISCONNECTED, () => {
       if (generation !== this.generation) return;
@@ -71,3 +71,4 @@ export class LiveBridge {
     this.engine.setConnection('disconnected', '', 'تم الفصل');
   }
 }
+

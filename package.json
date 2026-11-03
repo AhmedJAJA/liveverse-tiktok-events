@@ -1,13 +1,15 @@
 {
   "name": "tiktok-live-events",
-  "version": "0.1.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "description": "Arabic interactive TikTok LIVE event studio with live chat, quiz, guessing, race, wheel and OBS overlay",
-  "engines": {"node": ">=20"},
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.mjs",
-    "dev": "node --watch server.mjs",
+    "dev": "node --env-file-if-exists=.env.local tools/dev.mjs",
     "test": "node --test tests/*.test.mjs",
     "check": "node --check server.mjs && node --check src/engine.mjs && node --check src/bridge.mjs && node --check public/app.js && node --check public/overlay.js && node --check src/question-bank.mjs"
   },

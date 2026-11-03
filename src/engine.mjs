@@ -8,6 +8,16 @@ const KEEP_CHAT = 35;
 const QUIZ_POINTS = [10, 7, 5, 3, 2, 1];
 const REGISTRATION_PREVIEW = 10;
 
+const AVATAR_HOSTS = ['tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokcdn-eu.com', 'tiktokcdn-in.com', 'byteoversea.com', 'ibytedtos.com', 'ibyteimg.com', 'muscdn.com'];
+export function safeAvatarUrl(raw) {
+  if (typeof raw !== 'string' || raw.length > 2048) return '';
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' && !url.username && !url.password && (!url.port || url.port === '443') &&
+      AVATAR_HOSTS.some(host => url.hostname === host || url.hostname.endsWith('.' + host)) ? url.href : '';
+  } catch { return ''; }
+}
+
 export function normalizeAnswer(raw) {
   return String(raw ?? '')
     .toLowerCase()
@@ -61,7 +71,7 @@ export class Engine {
     const race = [...this.raceProgress.entries()].map(([id, progress]) => ({ id, name: this.players.get(id)?.name || id, progress }))
       .sort((a,b) => b.progress - a.progress).slice(0, 15);
     return {
-      status: { ...this.status, answer: undefined, choiceCounts: [1, 2, 3, 4].map(n => [...this.firstAnswers.values()].filter(a => a.choice === String(n)).length) },
+      status: { ...this.status, answer: undefined, choiceCounts: [1, 2, 3, 4].map(n => [...this.firstAnswers.values()].filter(a => a.choice === String(n)).length), choiceVoters: [1, 2, 3, 4].map(n => [...this.firstAnswers.entries()].filter(([, a]) => a.choice === String(n)).slice(0, 3).map(([id]) => this.publicPlayer(this.players.get(id)))) },
       connection: this.connection,
       leaderboard: players,
       race,
@@ -70,18 +80,23 @@ export class Engine {
       recent: this.recent,
       round: this.round,
       playerCount: this.players.size,
-      registration: { ...this.registration, count: this.players.size, recent: [...this.registrationRecent], participants: [...this.players.values()].slice(-100).map((p, i, tail) => ({ name: p.name, number: this.players.size - tail.length + i + 1 })) },
+      registration: { ...this.registration, count: this.players.size, recent: [...this.registrationRecent], participants: [...this.players.values()].slice(-100).map((p, i, tail) => ({ name: p.name, number: this.players.size - tail.length + i + 1, ...(p.avatar ? { avatar: p.avatar } : {}) })) },
       serverTime: this.now()
     };
   }
-  player(userId, name) {
+  publicPlayer(player) {
+    return { name: player?.name || 'مشاهد', number: player?.number || 0, ...(player?.avatar ? { avatar: player.avatar } : {}) };
+  }
+  player(userId, name, avatar = '') {
     const id = safeLine(userId, 80) || safeUserName(name);
     if (!this.players.has(id)) {
       if (this.players.size >= MAX_PLAYERS) return null;
-      this.players.set(id, { id, name: safeUserName(name), score: 0, firstSeen: this.now(), correctRounds: 0, totalResponseMs: 0 });
+      this.players.set(id, { id, number: this.players.size + 1, name: safeUserName(name), score: 0, firstSeen: this.now(), correctRounds: 0, totalResponseMs: 0 });
     }
     const player = this.players.get(id);
     player.name = safeUserName(name);
+    const image = safeAvatarUrl(avatar);
+    if (image) player.avatar = image;
     return player;
   }
   openRegistration({ keyword = this.registration.keyword, reset = false } = {}) {
@@ -111,11 +126,11 @@ export class Engine {
     this.emit();
     return this.registration;
   }
-  register(id, name) {
+  register(id, name, avatar = '') {
     if (this.registration.phase !== 'open' || !id || this.players.has(id)) return false;
-    const player = this.player(id, name);
+    const player = this.player(id, name, avatar);
     if (!player) return false;
-    this.registrationRecent.unshift({ name: player.name, joinedAt: this.now() });
+    this.registrationRecent.unshift({ name: player.name, joinedAt: this.now(), ...(player.avatar ? { avatar: player.avatar } : {}) });
     this.registrationRecent.length = Math.min(this.registrationRecent.length, REGISTRATION_PREVIEW);
     this.emit();
     return true;
@@ -251,9 +266,9 @@ export class Engine {
     if (this.recent.length > KEEP_CHAT) this.recent.length = KEEP_CHAT;
     // Joining the TikTok room does NOT enroll the viewer. Only the chosen chat word does.
     if (this.registration.phase === 'open') {
-      if (this.hasValidJoinWord(message)) this.register(identity, name);
+      if (this.hasValidJoinWord(message)) this.register(identity, name, avatar);
     } else if (this.registration.phase === 'closed' && this.status.active && this.players.has(identity)) {
-      const player = this.player(identity, name);
+      const player = this.player(identity, name, avatar);
       if (player) this.applyMessage(player, message, currentTime);
     }
     this.emit();
@@ -304,3 +319,4 @@ export class Engine {
     return { name: winner.name };
   }
 }
+

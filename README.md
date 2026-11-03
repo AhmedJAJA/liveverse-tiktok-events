@@ -12,6 +12,17 @@ A standalone Arabic interactive livestream events dashboard. Built with Node.js 
 - Automatic WebSocket updates, reconnect attempts and basic tests.
 - RTL / mobile-friendly dashboard with English technical labels.
 
+## v0.6 — Arabic broadcast redesign
+
+- The home page opens directly to the broadcast stage. The top toolbar opens/closes registration, starts the next question, ends a round, opens settings, and toggles fullscreen.
+- **الإعدادات** contains the existing connection, question library, game setup, demo comments and leaderboard. The public `/overlay` remains read-only and contains no administrative controls or credentials.
+- Registration uses a dense participant wall and a highlighted latest entrant. Desktop displays up to 77 recent registrations; smaller landscape views show 60 and portrait views show 30. Counts always include everyone registered. Empty slots never create fake contestants.
+- Questions use a large white panel, four colored numbered shapes, live answer counts and small profile-photo stacks. Profile photos are accepted only from supported HTTPS TikTok CDNs, with initials if unavailable. Only the first valid answer counts; the correct answer stays private until results.
+- Self-hosted Tajawal fonts, responsive 16:9 and 9:16 layouts, text fitting for long Arabic questions, and reduced-motion support. Font licensing is included under `public/fonts/OFL.txt`.
+- Registration and results use simulated events in automated tests. A real TikTok LIVE session is still needed to validate the external chat connection.
+
+For local development use `npm run dev -- --port 3000`. An optional, ignored `.env.local` can set `ADMIN_TOKEN` for development; production continues to use the hosting environment.
+
 ## Quick start
 
 Node.js 20+ is required.
@@ -121,3 +132,4 @@ Open Trivia DB was researched as an optional future provider, but its API questi
 - Speed awards cumulative points: 1st **10**, 2nd **7**, 3rd **5**, 4th **3**, 5th **2**, all subsequent correct responses **1** point. Cumulative tie-breaks use average response time.
 - The answer key is never included in public state before the results screen. Times reflect **server arrival**, not precise time the viewer pressed Send, because TikTok may buffer/delay comments.
 - Race and wheel modes keep their existing rules; the single-answer rule applies only to quiz and guessing rounds.
+

@@ -13,7 +13,7 @@ const modeLabels = { quiz: 'الأسئلة', guess: 'التخمين', race: 'ا�
 function toast(message, error=false) { const box=el('toast'); box.textContent=message; box.classList.toggle('error', error); box.classList.add('show'); clearTimeout(toastTimeout); toastTimeout=setTimeout(()=>box.classList.remove('show'),4500); }
 function safeText(v) { return String(v ?? ''); }
 async function api(action, data={}) {
-  if (!authToken) { toast('أدخل رمز الإدارة وفعّله أولًا', true); throw new Error('Authentication required'); }
+  if (!authToken) { openSettings('adminToken'); toast('أدخل رمز الإدارة وفعّله أولًا', true); throw new Error('Authentication required'); }
   const res=await fetch('/api/admin/'+action,{ method:'POST', headers:{ 'Content-Type':'application/json',Authorization:'Bearer '+authToken },body:JSON.stringify(data)});
   const result=await res.json();
   if (!res.ok) { toast(result.error || 'تعذر تنفيذ الطلب', true); throw new Error(result.error || 'Request failed'); }
@@ -46,6 +46,7 @@ function populate(snapshot) {
   el('totalPlayers').textContent=state.playerCount.toLocaleString('ar-SA');
   paintRoundStatus(state);
   paintRegistration(state.registration);
+  paintPresenter(state);
   el('roundNumber').textContent=String(state.round).padStart(2,'0');
   el('statusText').textContent=state.registration?.phase==='open'?'التسجيل مفتوح':state.status.active?'جولة جارية':'في الانتظار';
   const live=state.connection.state;
@@ -57,7 +58,7 @@ function populate(snapshot) {
   el('connectionDetail').textContent=state.connection.detail||'لا يوجد اتصال حاليًا';
   const top=el('leaderboard');top.replaceChildren();
   if (!state.leaderboard.length) { top.append(empty('لم يحصل أحد على نقاط بعد.')); }
-  else state.leaderboard.slice(0,10).forEach((p,i)=>{const row=document.createElement('div');row.className='leader-row';const rank=document.createElement('span');rank.className='rank '+(i<3?'top-'+i:'');rank.textContent=String(i+1).padStart(2,'0');const name=document.createElement('strong');name.textContent=p.name;const score=document.createElement('span');score.className='score';score.textContent=p.score+' PTS';row.append(rank,name,score);top.append(row);});
+  else state.leaderboard.slice(0,10).forEach((p,i)=>{const row=document.createElement('div');row.className='leader-row';const rank=document.createElement('span');rank.className='rank '+(i<3?'top-'+i:'');rank.textContent=String(i+1).padStart(2,'0');const name=document.createElement('strong');name.textContent=p.name;const score=document.createElement('span');score.className='score';score.textContent=p.score+' نقطة';row.append(rank,name,score);top.append(row);});
   const feed=el('chatFeed');feed.replaceChildren();
   if (!state.recent.length) feed.append(empty('التعليقات ستظهر هنا عند الاتصال أو المحاكاة.'));
   else state.recent.slice(0,12).forEach(c=>{const row=document.createElement('div');row.className='feed-row';const icon=document.createElement('span');icon.className='chat-icon';icon.textContent='✦';const user=document.createElement('strong');user.textContent=c.name;const text=document.createElement('span');text.textContent=c.message;const time=document.createElement('small');time.textContent=new Date(c.at).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});row.append(icon,user,text,time);feed.append(row);});
@@ -116,7 +117,7 @@ function paintRoundStatus(data) {
     const rank = document.createElement('span'); rank.className='round-rank-number'; rank.textContent = ['🥇','🥈','🥉'][person.rank - 1] || '#' + person.rank;
     const username = document.createElement('strong'); username.textContent = person.name;
     const time = document.createElement('span'); time.textContent = formatSeconds(person.elapsedMs);
-    const pts = document.createElement('b'); pts.textContent = '+' + person.points + ' PTS';
+    const pts = document.createElement('b'); pts.textContent = '+' + person.points + ' نقاط';
     item.append(rank, username, time, pts); list.append(item);
   }
   el('roundResultsAnswer').textContent = 'الإجابة الصحيحة: ' + results.correctAnswer;
@@ -165,10 +166,58 @@ async function drawBankQuestion(start = false) {
     loadBankIntoForm(result.question);
     paintBank(result.bank);
     toast(start ? 'بدأ السؤال الجديد! اكتبوا الإجابة في التعليقات' : 'تم تحميل السؤال وحفظه. اضغط بدء الجولة لعرضه.');
-    if (start) el('studio').scrollIntoView({behavior:'smooth',block:'start'});
+    if (start) el('settingsDialog').close();
   } catch {}
 }
 function configureData() {return {mode:currentMode,title:el('gameTitle').value,prompt:el('gamePrompt').value,options:[1,2,3,4].map(i=>el('opt'+i).value),answer:el('gameAnswer').value,target:Number(el('gameTarget').value),duration:Number(el('gameDuration').value)};}
+let presenterBusy = false;
+function openSettings(focusId) {
+  const dialog=el('settingsDialog');
+  if(!dialog.open) dialog.showModal();
+  if(focusId){const input=el(focusId);input?.focus();input?.scrollIntoView({block:'center'});}
+}
+function paintPresenter(data) {
+  const active=!!data.status.active, open=data.registration?.phase==='open';
+  const count=data.registration?.count||0;
+  document.body.dataset.phase=open?'registration':active?'active':data.status.results?'results':'waiting';
+  el('presenterKeyword').textContent=data.registration?.keyword||'انضم';
+  el('presenterRegistrationLabel').textContent=open?'إغلاق التسجيل':'فتح التسجيل';
+  el('presenterRegistration').disabled=active||presenterBusy;
+  el('presenterStop').disabled=!active||presenterBusy;
+  el('presenterNext').disabled=active||!count||open||data.status.mode!=='quiz'||presenterBusy;
+  el('presenterStart').disabled=active||!count||presenterBusy;
+  el('presenterStartLabel').textContent=(data.status.results?'بدء الجولة التالية':'بدء اللعبة')+' ('+count+')';
+  el('presenterStatus').textContent=open?'التسجيل مفتوح • انضم من تعليقات البث':active?'تُعتمد أول إجابة لكل متسابق':data.status.results?'انتهت الجولة • النتائج على الشاشة':count?'المشاركون جاهزون • ابدأ الجولة':'افتح التسجيل لاستقبال المشاركين';
+}
+async function presenterAction(button, action) {
+  if(presenterBusy)return;
+  presenterBusy=true;if(state)paintPresenter(state);
+  try{await action();}catch{}finally{presenterBusy=false;if(state)paintPresenter(state);}
+}
+async function startPresentedRound() {
+  if(state?.status.results&&state.status.mode==='quiz'){await drawBankQuestion(true);return;}
+  await api('start');el('settingsDialog').close();
+}
+function wirePresenter() {
+  el('presenterSettings').addEventListener('click',()=>openSettings());
+  el('closeSettings').addEventListener('click',()=>el('settingsDialog').close());
+  el('settingsDialog').addEventListener('click',event=>{
+    if(event.target!==el('settingsDialog'))return;
+    const r=event.target.getBoundingClientRect();
+    if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)event.target.close();
+  });
+  el('presenterRegistration').addEventListener('click',event=>presenterAction(event.currentTarget,async()=>{
+    const open=state?.registration?.phase==='open';
+    await api(open?'registration-close':'registration-open',{keyword:el('registrationKeyword').value});
+  }));
+  el('presenterStart').addEventListener('click',event=>presenterAction(event.currentTarget,startPresentedRound));
+  el('presenterNext').addEventListener('click',event=>presenterAction(event.currentTarget,()=>drawBankQuestion(true)));
+  el('presenterStop').addEventListener('click',event=>presenterAction(event.currentTarget,()=>api('stop')));
+  el('presenterFullscreen').addEventListener('click',async()=>{
+    try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{toast('استخدم زر ملء الشاشة في متصفحك');}
+  });
+  document.addEventListener('fullscreenchange',()=>el('presenterFullscreen').setAttribute('aria-label',document.fullscreenElement?'الخروج من ملء الشاشة':'ملء الشاشة'));
+}
 function wire() {
   el('adminToken').value=authToken;
   if(authToken) el('authLabel').textContent='رمز سابق محفوظ مؤقتًا لهذه الجلسة؛ يمكنك التحقق مجددًا.';
@@ -201,4 +250,5 @@ function wire() {
   el('demoMessage').addEventListener('keydown',e=>{if(e.key==='Enter')el('simulateButton').click();});
   el('resetScoresButton').addEventListener('click',async()=>{if(!confirm('هل تريد مسح المتسابقين ونقاطهم؟ ستحتاج إلى فتح التسجيل من جديد.'))return;try{await api('reset');toast('تم تصفير النقاط');}catch{}});
 }
-wire();if (authToken) refreshBank().catch(() => {});fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
+wire();wirePresenter();if (authToken) refreshBank().catch(() => {});fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
+

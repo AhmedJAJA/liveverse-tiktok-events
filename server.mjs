@@ -13,7 +13,7 @@ const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
 if (!process.env.ADMIN_TOKEN) console.log('\n[LOCAL ADMIN TOKEN] ' + authToken + '\nSet ADMIN_TOKEN in hosting environment before publishing.');
 const safeToken = Buffer.from(authToken, 'utf8');
 const matchesToken = (raw) => { const incoming = Buffer.from(String(raw||''), 'utf8'); return incoming.length === safeToken.length && timingSafeEqual(incoming, safeToken); };
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 const clients = new Set();
 function send(ws, value) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(value)); }
 const engine = new Engine({ notify(state) { const packet = { type: 'state', data: state }; for (const ws of clients) send(ws, packet); } });
@@ -31,7 +31,7 @@ function secureHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data: https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
 }
 function isAuthorized(req) { return matchesToken((req.headers.authorization || '').replace(/^Bearer\s+/i, '')); }
 async function handleAction(action, body) {
@@ -79,7 +79,7 @@ const server = http.createServer(async (req, res) => {
   const fileMap = { '/': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'favicon.svg' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
-  if (!['index.html','overlay.html','app.js','overlay.js','styles.css','overlay.css','broadcast-theme.css','favicon.svg'].includes(relative)) return json(res, 404, { error: 'Not found' });
+  if (!['index.html','overlay.html','app.js','overlay.js','styles.css','overlay.css','broadcast-theme.css','presenter.css','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
   const filename = path.join(root, relative);
   try { const content = await fs.promises.readFile(filename); res.writeHead(200, { 'Content-Type': mime[path.extname(filename)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(req.method === 'HEAD' ? undefined : content); }
   catch { json(res, 404, { error: 'Not found' }); }
@@ -107,3 +107,4 @@ heartbeat.unref?.();
 server.listen(PORT, '0.0.0.0', () => console.log(`TikTok LIVE Events ready on http://localhost:${PORT}`));
 const shutdown = async () => { clearInterval(roundClock); clearInterval(heartbeat); await bridge.disconnect(); wss.close(); server.close(); };
 process.on('SIGTERM', shutdown); process.on('SIGINT', shutdown);
+
