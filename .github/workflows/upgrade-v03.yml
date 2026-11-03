@@ -17,18 +17,49 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
-      - name: Verify and apply source upgrade
+      - name: Verify source, apply compatible patch, test and commit
         shell: bash
         run: |
           set -euo pipefail
           if [ ! -f release/v03/part1.txt ]; then
-            echo "v0.3 upgrade has already been applied"
+            echo "v0.3 upgrade already applied"
             exit 0
           fi
           cat release/v03/part{1,2,3,4,5}.txt | base64 -d > /tmp/liveverse-v03.patch.xz
           echo 'b00ef165d5c12ea9ddcef6eba8e2ec209398cd1a14a5af93de8e8c6e627c9704  /tmp/liveverse-v03.patch.xz' | sha256sum --check
           xz -dc /tmp/liveverse-v03.patch.xz > /tmp/liveverse-v03.patch
-          patch --batch --forward -p1 < /tmp/liveverse-v03.patch
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          original=Path('/tmp/liveverse-v03.patch').read_text()
+          blocks=re.split(r'(?=^--- a/)',original,flags=re.M)
+          selected=[p for p in blocks if not p.startswith(('--- a/README.md','--- a/tests/question-bank.test.mjs'))]
+          Path('/tmp/liveverse-v03-compatible.patch').write_text(''.join(selected))
+          PY
+          patch --batch --forward -p1 < /tmp/liveverse-v03-compatible.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/question-bank.test.mjs')
+          s=p.read_text()
+          old="assert.equal(e.status.winner.name,'A')"
+          if old not in s: raise SystemExit('Bank test version changed; refusing automatic patch')
+          p.write_text(s.replace(old,"e.stop();assert.equal(e.status.results.rankings[0].name,'A')"))
+          p=Path('README.md');readme=p.read_text()
+          readme=readme.replace('The first viewer to send the correct option number (1–4) or matching answer earns 5 points.',
+            'The first valid answer per viewer is locked for the round. After the timer, correct entries are ranked by server arrival time (10, 7, 5, 3, 2, then 1 point).')
+          readme += """
+          \n## LIVEVERSE v0.3: One locked answer and speed podium
+          
+          - Quiz and guessing: one first valid answer per viewer per round, even if incorrect. Repeated attempts never change it.
+          - Timed 10–180-second rounds; default 30 seconds. A host can manually stop the question and publish results early.
+          - OBS shows up to ten quickest correct answers, their times, and a podium; the host dashboard shows up to twenty.
+          - Scoring by place: 10, 7, 5, 3, 2 then 1 point per correct player. Cumulative leaderboard ties use average answer speed.
+          - Ranking uses server receipt time. TikTok delivery delay may affect perceived relative speed.
+          - Secret answers stay hidden from public game state until the results are displayed.
+          - Race and wheel are unchanged; only quiz and guessing use locked attempts.
+          """
+          p.write_text(readme)
+          PY
           node --version
           npm run check
           npm test
