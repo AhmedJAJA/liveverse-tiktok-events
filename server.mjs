@@ -57,7 +57,7 @@ async function handleAction(action, body) {
     case 'simulate': {
       const name = String(body.username ?? '').trim().slice(0,32);
       if (!name || !body.text) throw new Error('أدخل اسم المشاهد والتعليق');
-      engine.receiveChat({ id: 'demo:' + name.toLowerCase(), username: name, text: body.text, avatar: typeof body.avatar === 'string' ? body.avatar : '' });
+      engine.receiveChat({ id: 'demo:' + name.toLowerCase(), username: name, text: body.text, avatar: typeof body.avatar === 'string' ? body.avatar : '', isFollower: body.isFollower === true, isSubscriber: body.isSubscriber === true });
       return { ok: true };
     }
     default: throw new Error('الإجراء غير معروف');
@@ -82,10 +82,10 @@ const server = http.createServer(async (req, res) => {
     return json(res, 404, { error: 'Not found' });
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
-  const fileMap = { '/': 'landing.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
+  const fileMap = { '/': 'landing.html', '/event': 'event.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
-  if (!['index.html','landing.html','landing.js','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','overlay.html','app.js','overlay.js','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
+  if (!['index.html','landing.html','landing.js','event.html','event.js','event.css','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','overlay.html','app.js','overlay.js','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
   const filename = path.join(root, relative);
   try { const content = await fs.promises.readFile(filename); res.writeHead(200, { 'Content-Type': mime[path.extname(filename)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(req.method === 'HEAD' ? undefined : content); }
   catch { json(res, 404, { error: 'Not found' }); }

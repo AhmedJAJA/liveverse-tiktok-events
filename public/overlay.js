@@ -5,7 +5,8 @@ const modeInfo = {
   quiz: { en:'LIVE QUIZ', short:'QUIZ', ar:'السؤال الحالي', instruction:'اكتب رقم الإجابة 1 – 4 في الشات • محاولة واحدة فقط' },
   guess: { en:'GUESS IT', short:'GUESS', ar:'خمن الإجابة', instruction:'اكتب تخمينك في التعليقات • محاولة واحدة فقط' },
   race: { en:'CHAT RACE', short:'RACE', ar:'السباق المباشر', instruction:'المسجلون يتقدمون بكتابة !go أو انطلق' },
-  wheel: { en:'LUCKY DRAW', short:'WHEEL', ar:'عجلة المشاركين', instruction:'كل المسجلين في الفعالية داخل السحب تلقائيًا' }
+  wheel: { en:'LUCKY DRAW', short:'WHEEL', ar:'عجلة المشاركين', instruction:'كل المسجلين في الفعالية داخل السحب تلقائيًا' },
+  glass: { en:'GLASS BRIDGE', short:'GLASS', ar:'الجسر الزجاجي', instruction:'اكتب 1 أو 2 لاختيار اللوح الآمن — محاولة واحدة لكل خطوة' }
 };
 const stateCache = { questionKey:null, leaderboardKey:null, raceKey:null, resultsKey:null, lastWinnerAt:null, lastSubmissionCount:0 };
 let clock = { endsAt: null, duration:30, offset:0, active:false };
@@ -218,7 +219,7 @@ function podiumCard(p, rank) {
 }
 function renderResults(status, round) {
   const results=status.results;
-  const show=!!results && ['quiz','guess'].includes(status.mode);
+  const show=!!results && ['quiz','guess','glass'].includes(status.mode);
   const screen=$('roundResultsOverlay');
   screen.hidden=!show;
   if (!show) {stateCache.resultsKey=null;return;}
@@ -343,19 +344,20 @@ function update(data) {
   $('questionLabel').textContent=mode.ar;
   $('stageTag').textContent=phase==='active'?'التحدي بدأ':phase==='results'?'اكتملت الجولة':'استعد للتحدي';
   $('overlayTitle').textContent=s.title||'تحدي الجمهور';
-  $('overlayPrompt').textContent=s.mode==='race'?'سجّل دخولك وابدأ السباق نحو المركز الأول':s.mode==='wheel'?'كل المسجلين داخل السحب — من سيكون الفائز؟':s.prompt||'استعد للسؤال التالي';
+  $('overlayPrompt').textContent=s.mode==='race'?'سجّل دخولك وابدأ السباق نحو المركز الأول':s.mode==='wheel'?'كل المسجلين داخل السحب — من سيكون الفائز؟':s.mode==='glass'?'الجسر الزجاجي • الخطوة '+(s.glassStep||1)+' من '+(s.glassSteps||10)+' — أي لوح آمن؟':s.prompt||'استعد للسؤال التالي';
   $('overlayHint').textContent=s.mode==='quiz'?'اكتب رقم الإجابة 1 – 4 في الشات':mode.instruction;
-  $('overlayOptions').hidden=s.mode!=='quiz';
+  $('overlayOptions').hidden=s.mode!=='quiz'&&s.mode!=='glass';
   $('overlayRace').hidden=s.mode!=='race';
   $('overlayWheel').hidden=s.mode!=='wheel';
   $('overlayWheel').classList.toggle('is-spinning',s.mode==='wheel'&&!!s.active);
-  const questionKey=JSON.stringify([s.mode,s.options,s.prompt,data.round]);
-  if(s.mode==='quiz' && questionKey!==stateCache.questionKey) {
-    renderOptions(s.options||[]);
+  const questionKey=JSON.stringify([s.mode,s.options,s.prompt,data.round,s.glassStep]);
+  if((s.mode==='quiz'||s.mode==='glass') && questionKey!==stateCache.questionKey) {
+    renderOptions(s.mode==='glass'?['اللوح الأول','اللوح الثاني']:(s.options||[]));
     restartAnimation($('questionCard'),'question-enter');
     restartAnimation($('overlayOptions'),'choices-enter');
   }
   if(s.mode==='quiz') updateVoteCounts(s.choiceCounts||[],s.choiceVoters||[]);
+   if(s.mode==='glass') updateVoteCounts(data.glass?.choiceCounts||[0,0],[[],[]]);
   $('overlayPrompt').classList.toggle('is-long',(s.prompt||'').length>70);
   $('overlayPrompt').classList.toggle('is-very-long',(s.prompt||'').length>125);
   if(questionKey!==stateCache.questionKey)requestAnimationFrame(fitBroadcastText);
@@ -370,7 +372,7 @@ function update(data) {
   stateCache.lastSubmissionCount = subCount;
   $('overlayStatus').textContent=s.active?'الجولة جارية • أرسل إجابتك الآن':s.results?'اكتملت الجولة • النتائج ظهرت':s.notice||'جاهز لبدء الجولة';
   $('footerDetail').textContent=phase==='active'?'إجابتك الأولى فقط هي المعتمدة':phase==='results'?'الصدارة للأسرع في الإجابة الصحيحة':'انتظر انطلاق المنافسة';
-  clock={endsAt:s.endsAt??null,duration:Number(s.duration)||30,offset:(Number(data.serverTime)||Date.now())-Date.now(),active:!!s.active&&['quiz','guess'].includes(s.mode)};
+  clock={endsAt:s.endsAt??null,duration:s.mode==='glass'?(Number(data.glass?.duration)||10):(Number(s.duration)||30),offset:(Number(data.serverTime)||Date.now())-Date.now(),active:!!s.active&&['quiz','guess','glass'].includes(s.mode)};
   renderClock();
   $('overlayTimer').hidden=['race','wheel'].includes(s.mode);
   updateStandings(data.leaderboard||[]);

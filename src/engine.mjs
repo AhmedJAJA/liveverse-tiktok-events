@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto';
 
-export const MODES = ['quiz', 'guess', 'race', 'wheel'];
+export const MODES = ['quiz', 'guess', 'race', 'wheel', 'glass'];
 const MAX_MESSAGE = 160;
 const MAX_PLAYERS = 1500;
 const MAX_ENTRIES = 500;
@@ -47,12 +47,13 @@ export class Engine {
     this.wheelEntries = new Map();
     this.lastChatAt = new Map();
     this.round = 0;
-    this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0 };
+    this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0, maxPlayers: MAX_PLAYERS, audience: 'all' };
+    this.glass = { steps: 10, stepDuration: 10, step: 0, safeSide: 0, survivors: new Set(), choices: new Map(), choiceTimes: new Map() };
     this.registrationRecent = [];
     this.firstAnswers = new Map();
     this.correctAnswers = [];
     this.answerSequence = 0;
-    this.status = { mode: 'quiz', active: false, title: 'تحدي المعلومات', prompt: 'ما هي عاصمة المملكة العربية السعودية؟', options: ['الرياض', 'جدة', 'الدمام', 'مكة'], answer: '1', winner: null, notice: 'جاهز للفعالية!', target: 12, duration: 30, startedAt: null, endsAt: null, submissionCount: 0, results: null, lastEvent: null };
+    this.status = { mode: 'quiz', active: false, title: 'تحدي المعلومات', prompt: 'ما هي عاصمة المملكة العربية السعودية؟', options: ['الرياض', 'جدة', 'الدمام', 'مكة'], answer: '1', winner: null, notice: 'جاهز للفعالية!', target: 12, duration: 30, startedAt: null, endsAt: null, submissionCount: 0, results: null, lastEvent: null, glassStep: 0, glassSteps: 10, glassRemaining: 0 };
     this.connection = { state: 'disconnected', username: '', detail: 'لم يتم الربط' };
   }
   setConnection(state, username = '', detail = '') {
@@ -77,6 +78,7 @@ export class Engine {
       race,
       entries: [...this.wheelEntries.values()].map(({ name }) => name).slice(0, 60),
       entriesCount: this.wheelEntries.size,
+      glass: { step: this.glass.step, steps: this.glass.steps, remaining: this.glass.survivors.size, duration: this.glass.stepDuration, voted: this.glass.choices.size, choiceCounts: [1, 2].map(n => [...this.glass.choices.values()].filter(x => x === n).length) },
       recent: this.recent,
       round: this.round,
       playerCount: this.players.size,
@@ -99,11 +101,14 @@ export class Engine {
     if (image) player.avatar = image;
     return player;
   }
-  openRegistration({ keyword = this.registration.keyword, reset = false } = {}) {
+  openRegistration({ keyword = this.registration.keyword, reset = false, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience } = {}) {
     if (this.status.active) throw new Error('أنهِ الجولة قبل فتح التسجيل');
     const rawKeyword = String(keyword ?? '').trim();
     const clean = safeLine(rawKeyword, 32).trim();
     if (!clean || !normalizeAnswer(clean) || rawKeyword.length > 32 || /[\r\n]/.test(rawKeyword)) throw new Error('اكتب كلمة تسجيل صالحة من 1 إلى 32 حرفًا');
+    if (!Number.isInteger(maxPlayers) || maxPlayers < 1 || maxPlayers > MAX_PLAYERS) throw new Error('عدد اللاعبين يجب أن يكون بين 1 و1500');
+    if (!['all','followers','subscribers'].includes(audience)) throw new Error('نوع الجمهور غير صالح');
+    if (!reset && maxPlayers < this.players.size) throw new Error('حد اللاعبين أقل من عدد المسجلين حاليًا');
     if (reset) {
       this.players.clear(); this.recent = []; this.round = 0;
       this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear();
@@ -111,7 +116,7 @@ export class Engine {
       this.status.results = null; this.status.winner = null; this.status.submissionCount = 0;
       this.registrationRecent = [];
     }
-    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1 };
+    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience };
     this.status.results = null; this.status.winner = null; this.status.endsAt = null;
     this.status.notice = `التسجيل مفتوح! اكتب ${clean} في شات البث`;
     this.status.lastEvent = null;
@@ -126,8 +131,11 @@ export class Engine {
     this.emit();
     return this.registration;
   }
-  register(id, name, avatar = '') {
+  register(id, name, avatar = '', { isFollower = false, isSubscriber = false } = {}) {
     if (this.registration.phase !== 'open' || !id || this.players.has(id)) return false;
+    if (this.players.size >= this.registration.maxPlayers) return false;
+    if (this.registration.audience === 'followers' && !isFollower) return false;
+    if (this.registration.audience === 'subscribers' && !isSubscriber) return false;
     const player = this.player(id, name, avatar);
     if (!player) return false;
     this.registrationRecent.unshift({ name: player.name, joinedAt: this.now(), ...(player.avatar ? { avatar: player.avatar } : {}) });
@@ -143,7 +151,7 @@ export class Engine {
     this.status.winner = winner;
     this.status.lastEvent = { text: this.status.notice, at: this.now(), winner };
   }
-  configure({ mode, title, prompt, options, answer, target, duration } = {}) {
+  configure({ mode, title, prompt, options, answer, target, duration, glassSteps, glassStepDuration } = {}) {
     if (this.status.active) throw new Error('أنه الجولة الحالية قبل تغيير إعداداتها');
     if (mode !== undefined && !MODES.includes(mode)) throw new Error('نمط غير معروف');
     if (title !== undefined) this.status.title = safeLine(title, 80);
@@ -164,6 +172,15 @@ export class Engine {
       if (!Number.isInteger(seconds) || seconds < 10 || seconds > 180) throw new Error('مدة الجولة يجب أن تكون من 10 إلى 180 ثانية');
       this.status.duration = seconds;
     }
+    if (glassSteps !== undefined) {
+      if (![5, 10, 15].includes(glassSteps)) throw new Error('طول الجسر يجب أن يكون 5 أو 10 أو 15 خطوة');
+      this.glass.steps = glassSteps;
+      this.status.glassSteps = glassSteps;
+    }
+    if (glassStepDuration !== undefined) {
+      if (!Number.isInteger(glassStepDuration) || glassStepDuration < 5 || glassStepDuration > 60) throw new Error('وقت قفزة الجسر يجب أن يكون بين 5 و60 ثانية');
+      this.glass.stepDuration = glassStepDuration;
+    }
     this.status.active = false;
     this.status.winner = null;
     this.status.results = null;
@@ -174,6 +191,8 @@ export class Engine {
     this.status.lastEvent = null;
     this.status.notice = 'الإعدادات محفوظة، ابدأ الجولة';
     this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear();
+    this.glass.choices.clear(); this.glass.choiceTimes.clear(); this.glass.survivors.clear(); this.glass.step = 0;
+    this.status.glassStep = 0; this.status.glassRemaining = 0;
     this.emit();
   }
   start() {
@@ -190,6 +209,16 @@ export class Engine {
     this.status.results = null;
     this.status.startedAt = this.now();
     this.status.endsAt = ['quiz','guess'].includes(this.status.mode) ? this.status.startedAt + this.status.duration * 1000 : null;
+    if (this.status.mode === 'glass') {
+      this.glass.step = 1;
+      this.glass.survivors = new Set([...this.players.keys()].slice(0, this.registration.maxPlayers));
+      this.glass.choices.clear(); this.glass.choiceTimes.clear();
+      this.glass.safeSide = this.random(2) + 1;
+      this.status.glassStep = 1;
+      this.status.glassRemaining = this.glass.survivors.size;
+      this.status.glassSteps = this.glass.steps;
+      this.status.endsAt = this.status.startedAt + this.glass.stepDuration * 1000;
+    }
     this.status.winner = null;
     this.status.lastEvent = null;
     this.status.notice = 'بدأت الجولة! شارك الآن';
@@ -203,14 +232,58 @@ export class Engine {
     this.emit();
   }
   stop() {
+    if (this.status.active && this.status.mode === 'glass') { this.endGlassGame('manual'); return; }
     if (this.status.active && ['quiz', 'guess'].includes(this.status.mode)) return this.finishTimedRound('manual');
     this.status.active = false; this.status.notice = 'الجولة متوقفة'; this.emit();
   }
   tick() {
     if (this.status.active && this.status.endsAt !== null && this.now() >= this.status.endsAt) {
-      this.finishTimedRound('timer'); return true;
+      if (this.status.mode === 'glass') this.finishGlassStep(); else this.finishTimedRound('timer'); return true;
     }
     return false;
+  }
+  finishGlassStep() {
+    if (!this.status.active || this.status.mode !== 'glass') return false;
+    const surviving = [...this.glass.survivors].filter(id => this.glass.choices.get(id) === this.glass.safeSide);
+    this.glass.survivors = new Set(surviving);
+    this.status.glassRemaining = surviving.length;
+    this.status.submissionCount = this.glass.choices.size;
+    if (!surviving.length || this.glass.step >= this.glass.steps) {
+      this.endGlassGame('timer');
+      return true;
+    }
+    this.glass.step++;
+    this.status.glassStep = this.glass.step;
+    this.glass.choices.clear(); this.glass.choiceTimes.clear();
+    this.glass.safeSide = this.random(2) + 1;
+    this.status.endsAt = this.now() + this.glass.stepDuration * 1000;
+    this.status.notice = 'الجسر الزجاجي — الخطوة ' + this.glass.step + ' من ' + this.glass.steps;
+    this.emit();
+    return true;
+  }
+  endGlassGame(reason = 'timer') {
+    if (!this.status.active || this.status.mode !== 'glass') return false;
+    const completed = this.glass.step >= this.glass.steps && this.glass.survivors.size > 0;
+    const results = completed
+      ? [...this.glass.survivors].sort((a,b) => (this.glass.choiceTimes.get(a)||Infinity) - (this.glass.choiceTimes.get(b)||Infinity))
+      : [];
+    const rankings = results.map((id,i) => {
+      const player = this.players.get(id);
+      const points = QUIZ_POINTS[Math.min(i, QUIZ_POINTS.length-1)];
+      if (player) this.addScore(player,points);
+      return { rank:i+1, name:player?.name||'متسابق', ...(player?.avatar?{avatar:player.avatar}:{}), points, totalScore:player?.score||points };
+    });
+    const winner=rankings[0];
+    this.status.active=false;
+    this.status.endsAt=null;
+    this.status.winner=winner?{ name:winner.name, score:winner.points, ...(winner.avatar?{avatar:winner.avatar}:{}) }:null;
+    this.status.results={ round:this.round, completedAt:this.now(), reason,
+      totalAnswers:this.glass.choices.size, correctCount:rankings.length,
+      correctAnswer:completed?'اكتمل عبور الجسر':'لم ينجُ أحد من الجسر', rankings:rankings.slice(0,20) };
+    this.status.notice=winner?'🏆 بطل الجسر الزجاجي: '+winner.name : reason==='manual'?'تم إيقاف الجسر الزجاجي':'انتهت الجولة، لم يعبر أي متسابق';
+    this.status.lastEvent={ text:this.status.notice, at:this.now(), winner:this.status.winner };
+    this.emit();
+    return true;
   }
   finishTimedRound(reason = 'timer') {
     if (!this.status.active || !['quiz','guess'].includes(this.status.mode)) return false;
@@ -244,6 +317,7 @@ export class Engine {
   resetScores() {
     if (this.status.active) throw new Error('أنه الجولة قبل تصفير النقاط');
     this.players.clear(); this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear(); this.recent = [];
+    this.glass.survivors.clear(); this.glass.choices.clear(); this.glass.choiceTimes.clear(); this.glass.step=0;
     this.registrationRecent = [];
     this.registration.phase = 'idle'; this.registration.openedAt = null; this.registration.closedAt = null;
     this.status.results = null; this.status.winner = null;
@@ -251,12 +325,12 @@ export class Engine {
     this.emit();
   }
   addScore(player, points) { player.score += points; }
-  receiveChat({ id, username, text, avatar = '' }) {
+  receiveChat({ id, username, text, avatar = '', isFollower = false, isSubscriber = false }) {
     const message = safeLine(text);
     const identity = safeLine(id, 80);
     if (!message || !identity) return;
     const currentTime = this.now();
-    if (this.status.active && this.status.endsAt !== null && currentTime >= this.status.endsAt) this.finishTimedRound('timer');
+    if (this.status.active && this.status.endsAt !== null && currentTime >= this.status.endsAt) { if (this.status.mode === 'glass') this.finishGlassStep(); else this.finishTimedRound('timer'); }
     const dedupKey = `${identity}\u0000${message}`;
     if (currentTime - (this.lastChatAt.get(dedupKey) ?? -Infinity) < 300) return;
     this.lastChatAt.set(dedupKey, currentTime);
@@ -266,7 +340,7 @@ export class Engine {
     if (this.recent.length > KEEP_CHAT) this.recent.length = KEEP_CHAT;
     // Joining the TikTok room does NOT enroll the viewer. Only the chosen chat word does.
     if (this.registration.phase === 'open') {
-      if (this.hasValidJoinWord(message)) this.register(identity, name, avatar);
+      if (this.hasValidJoinWord(message)) this.register(identity, name, avatar, {isFollower,isSubscriber});
     } else if (this.registration.phase === 'closed' && this.status.active && this.players.has(identity)) {
       const player = this.player(identity, name, avatar);
       if (player) this.applyMessage(player, message, currentTime);
@@ -290,6 +364,15 @@ export class Engine {
     } else if (this.status.mode === 'guess') {
       if (!input || message.trim().startsWith('!')) return;
       this.recordAnswer(player, input === normalizeAnswer(this.status.answer), timestamp);
+    } else if (this.status.mode === 'glass') {
+      if (!this.glass.survivors.has(player.id) || this.glass.choices.has(player.id)) return;
+      const choice = message.trim().normalize('NFKC')
+        .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x660))
+        .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x6f0));
+      if (!['1','2'].includes(choice)) return;
+      this.glass.choices.set(player.id, Number(choice));
+      this.glass.choiceTimes.set(player.id, timestamp);
+      this.status.submissionCount = this.glass.choices.size;
     } else if (this.status.mode === 'wheel') {
       // Already enrolled at event registration; no second !join required.
     } else if (this.status.mode === 'race') {

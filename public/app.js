@@ -33,9 +33,10 @@ const instructions = {
   quiz: ['إجابة واحدة لكل مشاهد • ترتيب الأسرع بعد انتهاء الوقت', 'أول اختيار صحيح أو خاطئ يُعتمد ولا يمكن تغييره. ترتيب الفائزين حسب سرعة الإجابة الصحيحة.'],
   guess: ['محاولة واحدة • ترتيب الإجابات الصحيحة حسب السرعة', 'أول تخمين فقط لكل مشاهد؛ لا يمكن تعديله حتى لو كان خاطئًا.'],
   race: ['المسجلون يتقدمون بكتابة !go', 'سجل اسمك أولًا في شاشة التسجيل، ثم اكتب !go للتقدم. مهلة 1.2 ثانية لكل حركة.'],
-  wheel: ['سحب عشوائي بين المسجلين', 'الأسماء المسجلة في الفعالية تدخل السحب تلقائيًا، ثم يختار المضيف الفائز.']
+  wheel: ['سحب عشوائي بين المسجلين', 'الأسماء المسجلة في الفعالية تدخل السحب تلقائيًا، ثم يختار المضيف الفائز.'],
+  glass: ['جسر زجاجي من خطوات متتالية: اختر اللوح الآمن', 'اكتب 1 أو 2 في الشات لكل خطوة؛ الخطأ وعدم الإجابة يقصيان المشارك. غيّر عدد الخطوات من صفحة الفعالية.']
 };
-const modeLabels = { quiz: 'الأسئلة', guess: 'التخمين', race: 'السباق', wheel: 'العجلة' };
+const modeLabels = { quiz: 'الأسئلة', guess: 'التخمين', race: 'السباق', wheel: 'العجلة', glass: 'الجسر الزجاجي' };
 function toast(message, error=false) { const box=el('toast'); const dialog=el('settingsDialog'); (dialog?.open?dialog:document.body).append(box); box.textContent=message; box.classList.toggle('error', error); box.classList.add('show'); clearTimeout(toastTimeout); toastTimeout=setTimeout(()=>box.classList.remove('show'),4500); }
 function safeText(v) { return String(v ?? ''); }
 async function api(action, data={}) {
@@ -66,9 +67,9 @@ function setMode(mode) {
     if (cta) cta.textContent = selected ? 'الفعالية المحددة' : 'العب الآن ←';
   });
   el('modeHint').textContent=instructions[mode][0]; el('instruction').textContent=instructions[mode][1];
-  el('questionWrap').hidden=mode==='race'||mode==='wheel';
+  el('questionWrap').hidden=mode==='race'||mode==='wheel'||mode==='glass';
   el('optionsWrap').hidden=mode!=='quiz';
-  el('answerWrap').hidden=mode==='race'||mode==='wheel';
+  el('answerWrap').hidden=mode==='race'||mode==='wheel'||mode==='glass';
   el('targetWrap').hidden=mode!=='race';
   el('durationWrap').hidden=mode!=='quiz'&&mode!=='guess';
   el('drawButton').hidden=mode!=='wheel';
@@ -81,7 +82,7 @@ function setMode(mode) {
     ['الأول','الثاني','الثالث','الرابع'].forEach((x,i)=>{const opt=document.createElement('option');opt.value=String(i+1);opt.textContent=String.fromCharCode(65+i)+' — الخيار '+x;select.append(opt);});
     answer.replaceWith(select);
   }
-  const placeholder={quiz:'تحدي المعلومات',guess:'خمن الكلمة',race:'سباق الجمهور',wheel:'عجلة المشاركين'};
+  const placeholder={quiz:'تحدي المعلومات',guess:'خمن الكلمة',race:'سباق الجمهور',wheel:'عجلة المشاركين',glass:'الجسر الزجاجي'};
   el('gameTitle').value=placeholder[mode];
 }
 function createAvatarFallbackSvg(initial = '') {
@@ -295,7 +296,7 @@ function updateRoundClock() {
 }
 function paintRoundStatus(data) {
   const { status } = data;
-  const timedMode = status.mode === 'quiz' || status.mode === 'guess';
+  const timedMode = status.mode === 'quiz' || status.mode === 'guess' || status.mode === 'glass';
   const liveTimed = timedMode && status.active && status.endsAt;
   el('roundTimeCard').hidden = !liveTimed;
   liveClock = { endsAt: liveTimed ? status.endsAt : null, serverOffset: data.serverTime - Date.now() };
@@ -310,7 +311,7 @@ function paintRoundStatus(data) {
   const results = timedMode ? status.results : null;
   const section = el('roundResults'); section.hidden = !results;
   if (!results) return;
-  el('roundResultsSummary').textContent = `${results.correctCount} إجابة صحيحة من ${results.totalAnswers} مشاركة • ترتيب حسب سرعة وصول الإجابة`;
+  el('roundResultsSummary').textContent = status.mode==='glass' ? (results.correctCount+' متسابقين عبروا الجسر بنجاح') : `${results.correctCount} إجابة صحيحة من ${results.totalAnswers} مشاركة • ترتيب حسب سرعة وصول الإجابة`;
   const mark = el('roundWinnerMark');
   mark.textContent = results.correctCount ? 'تم الحسم' : 'بدون فائز';
   mark.className = results.correctCount ? 'anim-check' : 'anim-cross';
@@ -323,7 +324,7 @@ function paintRoundStatus(data) {
     const av = document.createElement('span'); av.className = 'round-rank-avatar'; paintMiniAvatar(av, person);
     const username = document.createElement('strong'); username.textContent = person.name;
     userCell.append(av, username);
-    const time = document.createElement('span'); time.textContent = formatSeconds(person.elapsedMs);
+    const time = document.createElement('span'); time.textContent = status.mode==='glass' ? 'عبر الجسر' : formatSeconds(person.elapsedMs);
     const pts = document.createElement('b'); pts.textContent = '+' + person.points + ' نقاط';
     item.append(rank, userCell, time, pts); list.append(item);
   }
@@ -533,7 +534,7 @@ guardStudioImages();
 // Game cards on the homepage deep-link to the actual mode in the working studio.
 const urlOptions = new URLSearchParams(location.search);
 const requestedMode = urlOptions.get('mode');
-const selectedMode = ['quiz','guess','race','wheel'].includes(requestedMode) ? requestedMode : 'quiz';
+const selectedMode = ['quiz','guess','race','wheel','glass'].includes(requestedMode) ? requestedMode : 'quiz';
 wire();wirePresenter();setMode(selectedMode);
 if (urlOptions.get('panel') === 'games') openSettings();
 if (authToken) refreshBank().catch(() => {});else autoDevAuth();fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();

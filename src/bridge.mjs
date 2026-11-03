@@ -34,7 +34,10 @@ export class LiveBridge {
       const user = event.user || {};
       const stableId = user.id || user.userId || user.displayId || user.uniqueId || event.userId || event.uniqueId;
       if (!stableId) return;
-      this.engine.receiveChat({ id: String(stableId), username: user.nickname || user.displayId || user.uniqueId || event.nickname || 'مشاهد', text: event.content || event.comment || '', avatar: user.avatarThumb?.urlList?.[0] || user.avatarMedium?.urlList?.[0] || user.avatarLarge?.urlList?.[0] || event.profilePictureUrl || '' });
+      this.engine.receiveChat({ id: String(stableId), username: user.nickname || user.displayId || user.uniqueId || event.nickname || 'مشاهد', text: event.content || event.comment || '', avatar: user.avatarThumb?.urlList?.[0] || user.avatarMedium?.urlList?.[0] || user.avatarLarge?.urlList?.[0] || event.profilePictureUrl || '',
+        // TikTok supplies follower/subscriber flags inconsistently; unverified users are not considered eligible for restricted events.
+        isFollower: user.followStatus === 1 || user.followStatus === 2 || user.followRole === 1 || user.followRole === 2 || user.followInfo?.followStatus === 1 || user.followInfo?.followStatus === 2 || event.followRole === 1 || event.followRole === 2,
+        isSubscriber: user.isSubscriber === true || event.isSubscriber === true });
     });
     connection.on(ControlEvent.DISCONNECTED, () => {
       if (generation !== this.generation) return;

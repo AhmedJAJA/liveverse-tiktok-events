@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08090B">
+<meta name="description" content="إعداد فعالية تفاعلية لجمهور SKY LIVE — انضمام من تعليقات البث وإعدادات اللعب">
+<title>إعداد الفعالية | SKY LIVE</title>
+<link rel="icon" href="/sky-live-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/royal-core.css">
+<link rel="stylesheet" href="/event.css">
+<script defer src="/event.js"></script>
+</head>
+<body class="event-page" data-game="glass">
+<main class="event-wrap" id="eventMain">
+  <section class="event-hero" aria-labelledby="eventName">
+    <div class="event-visual">
+      <div class="event-glow"></div>
+      <svg class="glass-bridge-art" id="glassBridgeArt" viewBox="0 0 640 490" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+       <defs>
+         <linearGradient id="skyMist" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#123d4c"/><stop offset=".28" stop-color="#1d7d89"/><stop offset=".7" stop-color="#174b58"/><stop offset="1" stop-color="#020a15"/></linearGradient>
+         <radialGradient id="lightBurst"><stop stop-color="#53d5e0" stop-opacity=".53"/><stop offset=".65" stop-color="#2ea1ae" stop-opacity=".1"/><stop offset="1" stop-color="#39ced0" stop-opacity="0"/></radialGradient>
+         <linearGradient id="glassPanel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#6ab6be" stop-opacity=".8"/><stop offset=".5" stop-color="#2a7a85" stop-opacity=".45"/><stop offset="1" stop-color="#8ae0e6" stop-opacity=".7"/></linearGradient>
+         <linearGradient id="glassEdge" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#7cd5df"/><stop offset="1" stop-color="#12303c"/></linearGradient>
+         <linearGradient id="bridgeVoid" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#132d3c"/><stop offset="1" stop-color="#01050f"/></linearGradient>
+       </defs>
+       <rect width="640" height="490" fill="url(#skyMist)"/>
+       <rect width="640" height="490" fill="url(#lightBurst)"/>
+       <path d="M0 490L276 98H355L640 490Z" fill="url(#bridgeVoid)" opacity=".78"/>
+       <path d="M0 490 L276 98 M640 490 L355 98" stroke="#3e9bab" stroke-width="8" opacity=".23"/>
+       <path d="M0 490 L276 98 M640 490 L355 98" stroke="#5f9eac" stroke-width="2" opacity=".55"/>
+       <g id="bridgePanels"></g>
+       <g id="bridgeSparks"></g>
+       <path d="M95 490L276 98M552 490L355 98" fill="none" stroke="#8dcdd8" stroke-opacity=".55" stroke-width="6"/>
+       <path d="M100 490L279 102M548 490L352 102" fill="none" stroke="#d2f4f6" stroke-opacity=".2" stroke-width="2"/>
+       <path d="M0 468L100 470 276 100 0 218Z" fill="#010711" opacity=".34"/>
+       <path d="M640 468L549 470 354 100 640 218Z" fill="#010711" opacity=".3"/>
+      </svg>
+      <div class="mode-art mode-art-quiz" aria-hidden="true"><div class="quiz-beams"></div><div class="quiz-stage-question">؟</div><div class="quiz-stage-buttons"><span></span><span></span><span></span></div></div>
+      <div class="mode-art mode-art-guess" aria-hidden="true"><div class="guess-symbols">؟ ✦ ؟</div><div class="guess-word">خمّن!</div></div>
+      <div class="mode-art mode-art-race" aria-hidden="true"><div class="race-checkers"></div><div class="race-road"></div><div class="race-motor"><i></i><i></i></div></div>
+      <div class="mode-art mode-art-wheel" aria-hidden="true"><div class="wheel-main"><i class="wheel-pointer"></i><strong>★</strong></div></div>
+      <a href="/#games" class="event-back" aria-label="الرجوع إلى الألعاب"><svg class="i"><use href="/icons.svg#i-arrow"/></svg><span>رجوع للألعاب</span></a>
+      <div class="visual-shade"></div>
+    </div>
+    <div class="event-caption">
+      <span class="event-category" id="eventCategory">إقصاء</span>
+      <h1 id="eventName">الجسر الزجاجي</h1>
+      <div class="event-stats">
+        <span class="hero-stat"><strong id="statPlayers">30</strong><small>لاعب</small></span>
+        <span class="hero-stat"><strong id="statDuration">10 ث</strong><small id="statDurationLabel">وقت القفزة</small></span>
+      </div>
+    </div>
+    <p class="event-description" id="eventDescription">سؤال كل خطوة ولوحين: اكتب رقم إجابتك — واللي غلط ينكسر تحته</p>
+  </section>
+
+  <section class="join-banner" aria-label="كلمة المشاركة في التعليقات">
+    <span class="join-icon"><svg class="i"><use href="/icons.svg#i-chat"/></svg></span>
+    <div class="join-message"><span>متابعينك يكتبون بالشات</span><strong id="joinBannerWord">انضم</strong></div>
+  </section>
+
+  <section class="event-options" aria-label="إعدادات الفعالية">
+    <div class="setting-block length-block">
+      <h2 id="lengthHeading">طول اللعبة</h2>
+      <div class="length-selector" role="group" aria-labelledby="lengthHeading">
+       <button type="button" class="length-option" data-length="short" aria-pressed="false">قصيرة</button>
+       <button type="button" class="length-option active" data-length="normal" aria-pressed="true">عادية</button>
+       <button type="button" class="length-option" data-length="long" aria-pressed="false">طويلة</button>
+      </div>
+    </div>
+
+    <div class="setting-block entry-block">
+     <div class="section-row"><h2>الدخول</h2><button type="button" id="resetDefaults" class="reset-default"><svg class="i"><use href="/icons.svg#i-refresh"/></svg>الافتراضي</button></div>
+     <label class="form-strip join-setting" for="joinKeyword">
+      <span class="setting-icon"><svg class="i"><use href="/icons.svg#i-chat"/></svg></span>
+      <span class="setting-label">كلمة الانضمام</span>
+      <input id="joinKeyword" type="text" maxlength="32" value="انضم" spellcheck="false" aria-label="كلمة الانضمام" autocomplete="off">
+     </label>
+     <div class="form-strip players-setting">
+      <span class="setting-icon"><svg class="i"><use href="/icons.svg#i-users"/></svg></span>
+      <label class="setting-label" for="maxPlayers">أقصى لاعبين (حتى 30)</label>
+      <div class="stepper">
+       <button type="button" id="decreasePlayers" aria-label="تقليل عدد اللاعبين">−</button>
+       <input id="maxPlayers" aria-label="الحد الأقصى للمتسابقين" type="number" inputmode="numeric" min="1" max="30" value="30">
+       <button type="button" id="increasePlayers" aria-label="زيادة عدد اللاعبين">+</button>
+      </div>
+     </div>
+     <fieldset class="audience-setting">
+      <legend><svg class="i"><use href="/icons.svg#i-shield"/></svg>من ينضم؟</legend>
+      <div class="audience-selector" role="group" aria-label="نوع الجمهور المسموح له بالتسجيل">
+       <button type="button" data-audience="all" class="audience-option active" aria-pressed="true">الجميع</button>
+       <button type="button" data-audience="followers" class="audience-option" aria-pressed="false">المتابعون فقط</button>
+       <button type="button" data-audience="subscribers" class="audience-option" aria-pressed="false">المشتركون فقط</button>
+      </div>
+     </fieldset>
+     <p class="audience-hint" id="audienceHint" hidden>يعتمد التحقق على معلومات المشاهد التي يوفرها اتصال TikTok، وقد لا تكون متاحة دائمًا.</p>
+    </div>
+
+    <details class="advanced-panel" id="advancedSettings">
+      <summary><span class="advanced-icon"><svg class="i"><use href="/icons.svg#i-gear"/></svg></span><strong>إعدادات متقدمة</strong><small>3</small><svg class="i chevron"><use href="/icons.svg#i-arrow"/></svg></summary>
+      <div class="advanced-fields">
+       <label class="advanced-row"><span><strong id="timeFieldName">وقت القفزة</strong><small>من 5 إلى 60 ثانية</small></span><select id="stepSeconds"><option value="5">5 ثوانٍ</option><option value="10" selected>10 ثوانٍ</option><option value="15">15 ثانية</option><option value="20">20 ثانية</option><option value="30">30 ثانية</option><option value="45">45 ثانية</option><option value="60">60 ثانية</option></select></label>
+       <label class="advanced-row"><span><strong>جلسة جديدة</strong><small>مسح نتائج الجلسة السابقة عند بدء التسجيل</small></span><input id="resetSession" type="checkbox" class="event-switch"></label>
+       <label class="advanced-row"><span><strong>فتح شاشة العرض</strong><small>افتح شاشة OBS في نافذة جديدة عند بدء الفعالية</small></span><input id="openOverlay" type="checkbox" class="event-switch"></label>
+      </div>
+    </details>
+  </section>
+
+  <div class="start-footer">
+   <p class="event-feedback" id="eventFeedback" role="status" aria-live="polite"></p>
+   <div class="start-actions">
+    <button type="button" id="startGameButton" class="start-game"><svg class="i"><use href="/icons.svg#i-play"/></svg><span id="startButtonLabel">ابدأ اللعبة</span></button>
+    <a href="/overlay" target="_blank" rel="noopener" class="secondary-overlay" aria-label="شاشة البث المباشر" title="فتح شاشة البث"><svg class="i"><use href="/icons.svg#i-screen"/></svg></a>
+   </div>
+  </div>
+</main>
+
+<dialog class="access-dialog" id="accessDialog" aria-labelledby="accessTitle">
+ <form id="accessForm" autocomplete="off">
+  <div class="access-head"><h2 id="accessTitle">رمز إدارة SKY LIVE</h2><button id="closeAccess" type="button" aria-label="إغلاق"><svg class="i"><use href="/icons.svg#i-close"/></svg></button></div>
+  <p>هذه الإعدادات خاصة بمضيف البث. أدخل رمز الإدارة الموجود في إعدادات موقعك على Render.</p>
+  <label for="eventAdminToken">رمز الإدارة</label>
+  <input id="eventAdminToken" dir="ltr" type="password" autocomplete="off" required>
+  <p class="access-error" id="accessError" hidden role="alert"></p>
+  <button type="submit" class="verify-access">تفعيل صلاحية الإدارة</button>
+ </form>
+</dialog>
+</body>
+</html>
