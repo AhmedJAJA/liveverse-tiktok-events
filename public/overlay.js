@@ -81,11 +81,26 @@ function paintAvatar(container, player) {
   if (container.dataset.person === key) return;
   container.dataset.person=key;
   const initial=Array.from(player?.name?.trim()||'؟')[0].toUpperCase();
+  container.dataset.initial=initial;
+  container.classList.remove('is-loading-avatar','has-loaded-avatar','is-fallback-avatar');
   container.replaceChildren(document.createTextNode(initial));
   if (player?.avatar && /^https:\/\//.test(player.avatar)) {
+    container.classList.add('is-loading-avatar');
     const img=document.createElement('img');
     img.alt='';img.decoding='async';img.referrerPolicy='no-referrer';
-    img.addEventListener('error',()=>container.replaceChildren(document.createTextNode(initial)),{once:true});
+    img.className='avatar-photo';
+    img.addEventListener('load',()=>{
+      container.classList.remove('is-loading-avatar');
+      container.classList.add('has-loaded-avatar');
+      img.classList.add('is-loaded');
+    },{once:true});
+    img.addEventListener('error',()=>{
+      console.warn('[Sky Live Media] تعذر تحميل صورة المتسابق، تم تفعيل الواجهة البديلة:',player.avatar);
+      container.classList.remove('is-loading-avatar','has-loaded-avatar');
+      container.classList.add('is-fallback-avatar');
+      container.setAttribute('title',(player?.name||'متسابق')+' • الصورة غير متاحة حاليًا');
+      container.replaceChildren(document.createTextNode(initial));
+    },{once:true});
     img.src=player.avatar;container.replaceChildren(img);
   }
 }
@@ -355,5 +370,27 @@ function connect() {
   ws.addEventListener('close',()=>{$('connectionNotice').hidden=false;setTimeout(connect,3000);});
   ws.addEventListener('error',()=>ws.close());
 }
+function guardOverlayImages() {
+  document.querySelectorAll('img').forEach(img => {
+    const onOk = () => img.classList.add('is-loaded');
+    const onFail = () => {
+      console.warn('[Sky Live Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:', img.currentSrc || img.src);
+      img.hidden = true;
+      const parent = img.parentElement;
+      if (parent && !parent.querySelector('.brand-mark-fallback')) {
+        const fb = node('span', 'brand-mark-fallback', 'SL');
+        fb.title = 'الصورة غير متاحة حاليًا';
+        parent.prepend(fb);
+      }
+    };
+    if (img.complete) {
+      if (img.naturalWidth > 0) onOk(); else onFail();
+    } else {
+      img.addEventListener('load', onOk, { once: true });
+      img.addEventListener('error', onFail, { once: true });
+    }
+  });
+}
+guardOverlayImages();
 fetch('/api/state').then(res=>{if(!res.ok)throw new Error('API not available');return res.json();}).then(update).catch(()=>{$('overlayStatus').textContent='جارٍ الاتصال بالمنصة...';});
 connect();

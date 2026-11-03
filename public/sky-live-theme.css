@@ -246,11 +246,148 @@ body:has(.site-header){background:var(--sky-0)}
 }
 
 .cta-copy p{color:#cbe0ff}.cta-copy small{color:#9eb8e2}
-.cta-emblem{border-radius:25px;border:1px solid #7ce8ff99;box-shadow:0 0 65px #3d8bff66;object-fit:cover}
+.cta-emblem{border-radius:25px;border:1px solid #7ce8ff99;box-shadow:0 0 65px #3d8bff66;object-fit:cover;display:block;width:100%;height:100%}
 .site-footer{border-color:#3967aa59;background:rgba(4,12,38,.88)}
 .footer-logo strong{color:#7ce4ff}.footer-inner>a:last-child{color:#96e5ff}
+
+/* Smart Media Frames, Skeleton Loaders & Luxury Fallback UI */
+.sky-hero-cover.media-frame{
+  width:min(430px,84%);
+  padding:14px;
+  border-radius:32px;
+  background:
+    linear-gradient(180deg,rgba(150,225,255,.22),rgba(40,95,215,.18) 50%,rgba(120,90,235,.24)),
+    linear-gradient(155deg,#0d2868,#06153d);
+  border:1px solid rgba(150,225,255,.58);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 34px 85px rgba(1,5,20,.78),0 0 65px rgba(65,155,255,.35);
+}
+.hero-stage-card{
+  border-radius:24px;
+  padding:18px 16px 16px;
+  background:
+    radial-gradient(circle at 50% 24%,rgba(62,148,255,.38),rgba(12,34,92,.88) 62%,#051133 100%);
+  border:1px solid rgba(130,215,255,.38);
+  box-shadow:inset 0 1px 0 rgba(200,245,255,.22);
+  display:flex;flex-direction:column;gap:16px;
+}
+.hero-stage-topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:800}
+.stage-live-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 12px;border-radius:999px;
+  background:rgba(255,62,108,.18);border:1px solid rgba(255,110,145,.55);color:#ffd6e2;
+}
+.stage-live-dot{width:8px;height:8px;border-radius:50%;background:#ff4778;box-shadow:0 0 10px #ff4778;display:inline-block}
+.stage-round-pill{
+  padding:5px 12px;border-radius:999px;
+  background:rgba(28,82,180,.55);border:1px solid rgba(130,220,255,.45);color:#b4ecff;
+}
+.hero-medallion-wrap{
+  position:relative;display:grid;place-items:center;padding:8px 0;
+}
+.medallion-ring{
+  position:absolute;width:176px;height:176px;border-radius:50%;
+  border:1.5px dashed rgba(140,230,255,.48);
+  box-shadow:0 0 40px rgba(70,185,255,.28),inset 0 0 28px rgba(70,185,255,.18);
+  pointer-events:none;
+}
+.medallion-frame{
+  width:146px;height:146px;border-radius:32px;padding:5px;
+  background:linear-gradient(145deg,#9beeff,#3d8bff 52%,#9e67f5);
+  box-shadow:0 14px 36px rgba(2,8,32,.68),0 0 38px rgba(82,204,255,.45);
+  position:relative;overflow:hidden;display:grid;place-items:center;
+}
+.medallion-frame img{
+  width:100%!important;height:100%!important;aspect-ratio:1;
+  object-fit:cover;object-position:center;border-radius:27px!important;
+  display:block;
+}
+.hero-stage-preview{
+  background:rgba(4,14,44,.76);
+  border:1px solid rgba(120,210,255,.28);
+  border-radius:16px;padding:12px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.stage-preview-q{
+  background:linear-gradient(180deg,#ffffff,#eaf4ff);
+  color:#081c4a;font-weight:900;font-size:13.5px;text-align:center;
+  padding:9px 10px;border-radius:11px;
+  box-shadow:0 3px 0 rgba(130,185,245,.55);
+}
+.stage-preview-opts{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.sp-opt{
+  display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:9px;
+  font-size:11.5px;font-weight:800;color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28);
+}
+.sp-opt b{
+  width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.92);
+  color:#0b1e48;display:grid;place-items:center;font-size:11px;font-weight:900;flex-shrink:0;
+}
+.sp-opt.sp-1{background:linear-gradient(135deg,#ff4b72,#d92b54)}
+.sp-opt.sp-2{background:linear-gradient(135deg,#3898ff,#1d68d8)}
+.sp-opt.sp-3{background:linear-gradient(135deg,#ffb52e,#e0860b)}
+.sp-opt.sp-4{background:linear-gradient(135deg,#9d5cff,#6f34d5)}
+
+.cta-emblem-showcase{
+  position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;flex-shrink:0;z-index:1;
+}
+.cta-emblem-ring{
+  position:absolute;inset:-14px;border-radius:50%;
+  border:1.5px dashed rgba(140,230,255,.38);pointer-events:none;
+}
+.cta-emblem-frame{
+  width:168px;height:168px;border-radius:34px;padding:6px;
+  background:linear-gradient(145deg,#9beeff,#3d8bff 55%,#9e67f5);
+  box-shadow:0 18px 46px rgba(1,6,26,.7),0 0 48px rgba(65,165,255,.42);
+  position:relative;overflow:hidden;display:grid;place-items:center;
+}
+.cta-emblem-badge{
+  padding:5px 14px;border-radius:999px;font-size:12px;font-weight:800;
+  background:rgba(12,42,108,.85);border:1px solid rgba(140,225,255,.48);color:#c8f4ff;
+  box-shadow:0 8px 20px rgba(1,8,30,.55);
+}
+
+/* Skeleton Shimmer & Smooth Image Reveal */
+.img-skeleton,.is-loading-avatar{
+  position:relative;overflow:hidden;
+  background:linear-gradient(110deg,#0c2663 25%,#1b459c 50%,#0c2663 75%);
+  background-size:200% 100%;
+}
+.is-loading-avatar::before{
+  content:attr(data-initial);
+  position:absolute;inset:0;display:grid;place-items:center;
+  color:#e8f7ff;font-weight:900;z-index:1;pointer-events:none;
+}
+img[data-smart-img],.avatar-photo{
+  opacity:0;transform:scale(.96);
+  transition:opacity .28s ease,transform .28s var(--ease-spring);
+}
+img.is-loaded,.avatar-photo.is-loaded{
+  opacity:1;transform:scale(1);
+}
+.img-fallback-card{
+  width:100%;height:100%;min-height:110px;border-radius:22px;
+  background:linear-gradient(145deg,#0c245c,#07153a);
+  border:1px solid rgba(130,215,255,.42);
+  color:#bfeaff;padding:12px;text-align:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  font-size:12px;font-weight:800;
+}
+.img-fallback-card[hidden]{display:none!important}
+.brand-mark-fallback{
+  width:38px;height:38px;border-radius:11px;
+  background:linear-gradient(145deg,#3d8bff,#153a8a);
+  border:1px solid #9beeff;color:#fff;font:900 14px Arial,sans-serif;
+  display:inline-grid;place-items:center;box-shadow:0 0 14px rgba(61,139,255,.45);flex-shrink:0;
+}
+.is-fallback-avatar{
+  background:linear-gradient(145deg,#1d4fa8,#0d2359)!important;
+  border-color:#8ceeff!important;color:#eefaff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 16px rgba(82,204,255,.32)!important;
+}
+
 @media(max-width:850px){.nav-links{background:#07163b;border-color:#58bfff}}
-@media(max-width:560px){.logo>span{font-size:15px}.cta-emblem{width:155px}.game-logo img{width:115px}}
+@media(max-width:560px){.logo>span{font-size:15px}.cta-emblem-frame{width:136px;height:136px}.game-logo img{width:115px}.medallion-frame{width:116px;height:116px}}
 
 /* 6. Host Studio — Luminous Sky Control Center */
 body.presenter{

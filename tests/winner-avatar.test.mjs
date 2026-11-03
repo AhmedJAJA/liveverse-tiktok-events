@@ -75,3 +75,25 @@ test('winning wheel or race preserves the contestant avatar in winner announceme
   assert.equal(state.winner.avatar,avatarA);
   assert.equal(state.lastEvent.winner.avatar,avatarA);
 });
+
+test('all pages implement smart image loading, skeleton shimmer and luxury fallback UI without raw Image unavailable text',()=>{
+  const files=['landing.html','landing.js','index.html','app.js','overlay.html','overlay.js','sky-live-theme.css'];
+  for(const f of files){
+    const content=fs.readFileSync(new URL('../public/'+f,import.meta.url),'utf8');
+    assert.doesNotMatch(content,/Image unavailable\./i);
+  }
+  const landingHtml=fs.readFileSync(new URL('../public/landing.html',import.meta.url),'utf8');
+  const landingJs=fs.readFileSync(new URL('../public/landing.js',import.meta.url),'utf8');
+  const appJs=fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
+  const overlayJs=fs.readFileSync(new URL('../public/overlay.js',import.meta.url),'utf8');
+  const themeCss=fs.readFileSync(new URL('../public/sky-live-theme.css',import.meta.url),'utf8');
+  assert.match(landingHtml,/الصورة غير متاحة حاليًا/);
+  assert.match(landingHtml,/img-fallback-card/);
+  assert.match(landingJs,/initSmartImages/);
+  assert.match(appJs,/is-loading-avatar/);
+  assert.match(appJs,/is-fallback-avatar/);
+  assert.match(overlayJs,/is-loading-avatar/);
+  assert.match(overlayJs,/is-fallback-avatar/);
+  assert.match(themeCss,/\.img-skeleton/);
+  assert.match(themeCss,/\.img-fallback-card/);
+});

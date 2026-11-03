@@ -77,7 +77,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/api/dev-token' && req.method === 'GET') return json(res, 200, { token: process.env.NODE_ENV !== 'test' ? authToken : null });
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
-  const fileMap = { '/': 'landing.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp' };
+  const fileMap = { '/': 'landing.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!['index.html','landing.html','landing.css','sky-landing.css','landing.js','liveverse-brand.svg','sky-live-brand.svg','sky-live.webp','sky-live-theme.css','overlay.html','app.js','overlay.js','styles.css','overlay.css','broadcast-theme.css','presenter.css','liveverse-show.css','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
