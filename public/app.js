@@ -68,12 +68,53 @@ function socket() {
   ws.addEventListener('close',()=>setTimeout(socket,2500));
   ws.addEventListener('error',()=>ws.close());
 }
-async function verify() {authToken=el('adminToken').value.trim(); try {await api('verify');sessionStorage.setItem('liveverse_admin',authToken);el('authLabel').textContent='✓ صلاحية الإدارة مفعّلة في هذه الجلسة';el('authLabel').classList.add('valid');toast('تم تفعيل الإدارة');}catch{authToken='';sessionStorage.removeItem('liveverse_admin');}}
+async function verify() {authToken=el('adminToken').value.trim(); try {await api('verify');sessionStorage.setItem('liveverse_admin',authToken);el('authLabel').textContent='✓ صلاحية الإدارة مفعّلة في هذه الجلسة';el('authLabel').classList.add('valid');toast('تم تفعيل الإدارة');await refreshBank();}catch{authToken='';sessionStorage.removeItem('liveverse_admin');}}
+function paintBank(summary) {
+  if (!summary || !Number.isInteger(summary.total)) return;
+  el('bankCount').textContent = summary.total.toLocaleString('ar-SA') + ' سؤال';
+  el('bankRemaining').textContent = 'المتبقي: ' + summary.remaining.toLocaleString('ar-SA') + ' | المستخدم: ' + summary.used.toLocaleString('ar-SA');
+}
+async function refreshBank() {
+  if (!authToken) return;
+  const r = await fetch('/api/admin/bank', { headers:{ Authorization:'Bearer ' + authToken } });
+  if (!r.ok) throw new Error('تعذر قراءة بنك الأسئلة');
+  paintBank(await r.json());
+}
+function loadBankIntoForm(q) {
+  setMode('quiz');
+  el('gameTitle').value = 'تحدي المعلومات';
+  el('gamePrompt').value = q.question;
+  q.options.forEach((option,i) => { el('opt'+(i+1)).value=option; });
+  el('gameAnswer').value=q.answer;
+  const holder=el('bankSource');holder.replaceChildren();
+  if (/^https:\/\//.test(q.source)) {
+    holder.hidden=false;
+    holder.append(document.createTextNode('مرجع عام للموضوع: '));
+    const link=document.createElement('a');
+    link.href=q.source;link.target='_blank';link.rel='noopener noreferrer';
+    link.textContent='عرض المرجع ↗';holder.append(link);
+  } else holder.hidden=true;
+}
+async function drawBankQuestion(start=false) {
+  try {
+    if (state?.status.active) { toast('أوقف الجولة الحالية قبل اختيار سؤال جديد',true); return; }
+    const result=await api('bank-next',{category:el('bankCategory').value,difficulty:el('bankDifficulty').value,start});
+    loadBankIntoForm(result.question);
+    paintBank(result.bank);
+    toast(start ? 'بدأ السؤال الجديد! اكتبوا الإجابة في التعليقات' : 'تم تحميل السؤال وحفظه، يمكنك بدء الجولة الآن.');
+  } catch {}
+}
 function configureData() {return {mode:currentMode,title:el('gameTitle').value,prompt:el('gamePrompt').value,options:[1,2,3,4].map(i=>el('opt'+i).value),answer:el('gameAnswer').value,target:Number(el('gameTarget').value)};}
 function wire() {
   el('adminToken').value=authToken;
   if(authToken) el('authLabel').textContent='رمز سابق محفوظ مؤقتًا لهذه الجلسة؛ يمكنك التحقق مجددًا.';
   el('verifyButton').addEventListener('click',verify);
+  el('loadQuestionButton').addEventListener('click',()=>drawBankQuestion(false));
+  el('playQuestionButton').addEventListener('click',()=>drawBankQuestion(true));
+  el('bankResetButton').addEventListener('click',async()=>{
+    if(!confirm('ستُتاح إعادة الأسئلة المستخدمة خلال الجلسة. هل تريد المتابعة؟'))return;
+    try{const r=await api('bank-reset');paintBank(r.bank);toast('تمت إعادة ضبط سجل الأسئلة');}catch{}
+  });
   document.querySelectorAll('.mode').forEach(btn=>btn.addEventListener('click',()=>setMode(btn.dataset.mode)));
   el('gameForm').addEventListener('submit',async e=>{e.preventDefault();try{await api('configure',configureData());toast('تم حفظ إعدادات الجولة');}catch{}});
   el('startButton').addEventListener('click',async()=>{try{await api('configure',configureData());await api('start');toast('بدأت الجولة!');}catch{}});
@@ -85,4 +126,4 @@ function wire() {
   el('demoMessage').addEventListener('keydown',e=>{if(e.key==='Enter')el('simulateButton').click();});
   el('resetScoresButton').addEventListener('click',async()=>{if(!confirm('متأكد من تصفير جميع نقاط الجلسة؟'))return;try{await api('reset');toast('تم تصفير النقاط');}catch{}});
 }
-wire();fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
+wire();if(authToken)refreshBank().catch(()=>{});fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
