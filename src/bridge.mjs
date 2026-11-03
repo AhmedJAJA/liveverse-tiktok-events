@@ -1,4 +1,19 @@
 // TikTok LIVE integration is unofficial, so connectivity is best-effort.
+// A viewer is eligible only when TikTok explicitly reports that they follow
+// the broadcaster. followStatus takes precedence over legacy followRole: an
+// explicit zero must never be overridden by an older or conflicting field.
+export function isConfirmedFollower(event) {
+  const user = event?.user || {};
+  const status = user.followStatus ?? user.followInfo?.followStatus ??
+    event?.followStatus ?? event?.followInfo?.followStatus;
+  if (status !== undefined && status !== null && status !== '')
+    return Number(status) === 1 || Number(status) === 2;
+  const legacy = user.followRole ?? event?.followRole;
+  return Number(legacy) === 1 || Number(legacy) === 2;
+}
+export function isConfirmedSubscriber(event) {
+  return event?.user?.isSubscriber === true || event?.isSubscriber === true;
+}
 // The app works in demo mode without any LIVE connection.
 export class LiveBridge {
   constructor(engine) { this.engine = engine; this.connection = null; this.username = ''; this.generation = 0; this.retry = null; }
@@ -36,8 +51,8 @@ export class LiveBridge {
       if (!stableId) return;
       this.engine.receiveChat({ id: String(stableId), username: user.nickname || user.displayId || user.uniqueId || event.nickname || 'مشاهد', text: event.content || event.comment || '', avatar: user.avatarThumb?.urlList?.[0] || user.avatarMedium?.urlList?.[0] || user.avatarLarge?.urlList?.[0] || event.profilePictureUrl || '',
         // TikTok supplies follower/subscriber flags inconsistently; unverified users are not considered eligible for restricted events.
-        isFollower: user.followStatus === 1 || user.followStatus === 2 || user.followRole === 1 || user.followRole === 2 || user.followInfo?.followStatus === 1 || user.followInfo?.followStatus === 2 || event.followRole === 1 || event.followRole === 2,
-        isSubscriber: user.isSubscriber === true || event.isSubscriber === true });
+        isFollower: isConfirmedFollower(event),
+        isSubscriber: isConfirmedSubscriber(event) });
     });
     connection.on(ControlEvent.DISCONNECTED, () => {
       if (generation !== this.generation) return;

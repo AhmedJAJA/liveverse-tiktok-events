@@ -157,3 +157,15 @@ body[data-game="quiz"] .mode-art-quiz,body[data-game="guess"] .mode-art-guess,bo
 /* Fidelity adjustments: full-width gold start bar and consistent number direction. */
 .event-stats .hero-stat strong{direction:ltr;unicode-bidi:isolate}
 .start-actions .start-game{width:100%;flex:1 1 100%}
+
+/* Readable and evenly sized eligibility controls on desktop and mobile. */
+.audience-setting{min-width:0}
+.audience-selector{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;align-items:stretch}
+.audience-option{min-width:0;min-height:52px;padding:9px 6px;font-size:clamp(.92rem,1.7vw,1.11rem);line-height:1.35;font-weight:900;white-space:normal;text-align:center}
+.audience-setting legend{font-size:1.13rem;line-height:1.4;float:none;padding:0 0 12px}
+.audience-hint{font-size:.82rem;line-height:1.5}
+@media(max-width:560px){
+ .audience-selector{gap:6px}
+ .audience-option{min-height:47px;padding:7px 3px;font-size:clamp(.72rem,3.4vw,.91rem)}
+ .audience-setting legend{font-size:1.04rem}
+}

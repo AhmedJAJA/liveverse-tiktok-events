@@ -18,6 +18,9 @@ let token = sessionStorage.getItem('liveverse_admin') || '';
 let launchBusy=false;
 let resumeAfterAuth=false;
 let socketRetries=0;
+let audienceDirty=false;
+let pendingAudience=null;
+let audienceSaveQueue=Promise.resolve();
 
 function makeSvgNode(tag,attributes={}) {
  const item=document.createElementNS('http://www.w3.org/2000/svg',tag);
@@ -121,8 +124,12 @@ function setLength(value) {
  if(game==='glass')$('stepSeconds').value='10';
  updateStats();
 }
-function setAudience(value) {
+function setAudience(value, persist=false) {
  if(!['all','followers','subscribers'].includes(value))return;
+ if(persist && currentState?.status?.active){
+   report('لا يمكن تغيير أهلية التسجيل أثناء الجولة. أنهِ الجولة أولًا.',true);
+   return;
+ }
  selectedAudience=value;
  document.querySelectorAll('.audience-option').forEach(el=>{
    const active=el.dataset.audience===value;
@@ -130,6 +137,50 @@ function setAudience(value) {
    el.setAttribute('aria-pressed',String(active));
  });
  $('audienceHint').hidden=value==='all';
+ $('audienceHint').textContent=value==='followers'
+  ? 'يسجّل الموقع المتابعين المؤكدين فقط. إذا تابعت الحساب الآن، اكتب «انضم» مرة أخرى ليتم التحقق.'
+  : 'المشتركون فقط: لا يُقبل التسجيل إذا لم تؤكد بيانات TikTok وجود اشتراك فعّال.';
+ if(persist) {
+   audienceDirty=true;
+   void persistAudience(value);
+ }
+}
+function persistAudience(value) {
+ if(!token){
+   pendingAudience=value;
+   openAuth('أدخل رمز الإدارة لحفظ شرط المتابعة وتطبيقه على التسجيل.');
+   return Promise.resolve(false);
+ }
+ const job=audienceSaveQueue.catch(()=>{}).then(async()=>{
+   if(value!==selectedAudience)return false;
+   try {
+     const result=await admin('registration-settings',{audience:value});
+     if(value===selectedAudience){
+       audienceDirty=false;
+       pendingAudience=null;
+       const n=Number(result.registration?.removed||0);
+       const label=value==='followers'?'المتابعون فقط':value==='subscribers'?'المشتركون فقط':'الجميع';
+       report('تم تطبيق «'+label+'» على السيرفر فورًا.'+(n?' واستبعاد '+n+' غير مؤهلين من التسجيل.':''));
+     }
+     await requestState().catch(()=>{});
+     return true;
+   }catch(error){
+     if(value===selectedAudience){
+       if(error.code===401){
+         token='';sessionStorage.removeItem('liveverse_admin');
+         pendingAudience=value;
+         openAuth('رمز الإدارة غير صحيح. أعد إدخاله لتطبيق شرط المتابعة.');
+       }else{
+         audienceDirty=false;
+         setAudience(currentState?.registration?.audience||'all');
+         report('لم يتم تطبيق شرط التسجيل: '+error.message,true);
+       }
+     }
+     return false;
+   }
+ });
+ audienceSaveQueue=job;
+ return job;
 }
 function joinWord() {
  const word=$('joinKeyword').value.trim();
@@ -142,6 +193,9 @@ function report(msg,error=false){
 function viewState(data) {
  if(!data?.status)return;
  currentState=data;
+ // Show the server-enforced setting, not an unsaved default from the browser.
+ if(!audienceDirty && data.registration?.audience && selectedAudience!==data.registration.audience)
+   setAudience(data.registration.audience);
  if(data.status.active) {
    $('startButtonLabel').textContent=game==='wheel'&&data.status.mode==='wheel'?'اختيار الفائز':'الجولة جارية';
  }else if(data.registration?.phase==='open'){
@@ -201,7 +255,7 @@ function configForGame() {
 }
 async function startEvent() {
  if(launchBusy)return;
- const state=currentState;
+ let state=currentState;
  if(state?.status.active){
    if(game==='wheel' && state.status.mode==='wheel'){
      if(!token){resumeAfterAuth=true;openAuth();return;}
@@ -213,6 +267,13 @@ async function startEvent() {
    return;
  }
  if(!token){resumeAfterAuth=true;openAuth();return;}
+ // Finish saving the selected follower restriction before opening signups.
+ await audienceSaveQueue.catch(()=>{});
+ if(audienceDirty) {
+   const applied=await persistAudience(selectedAudience);
+   if(!applied)return;
+ }
+ state=currentState;
  let configuration;
  try{configuration=configForGame();}catch(error){report(error.message,true);$('advancedSettings').open=true;return;}
  const word=joinWord();
@@ -259,7 +320,7 @@ function resetDefaults(){
  $('resetSession').checked=false;
  $('openOverlay').checked=false;
  $('stepSeconds').value=String(meta.seconds||10);
- setLength('normal');setAudience('all');
+ setLength('normal');setAudience('all',true);
  $('advancedSettings').open=false;
  report('تمت إعادة الإعدادات إلى الوضع الافتراضي.');
 }
@@ -271,7 +332,7 @@ $('increasePlayers').addEventListener('click',()=>{$('maxPlayers').value=String(
 $('decreasePlayers').addEventListener('click',()=>{$('maxPlayers').value=String(Math.max(1,numPlayers()-1));updateStats();});
 $('stepSeconds').addEventListener('change',updateStats);
 document.querySelectorAll('.length-option').forEach(btn=>btn.addEventListener('click',()=>setLength(btn.dataset.length)));
-document.querySelectorAll('.audience-option').forEach(btn=>btn.addEventListener('click',()=>setAudience(btn.dataset.audience)));
+document.querySelectorAll('.audience-option').forEach(btn=>btn.addEventListener('click',()=>setAudience(btn.dataset.audience,true)));
 $('resetDefaults').addEventListener('click',resetDefaults);
 $('startGameButton').addEventListener('click',startEvent);
 $('closeAccess').addEventListener('click',()=>$('accessDialog').close());
@@ -286,6 +347,11 @@ $('accessForm').addEventListener('submit',async ev=>{
   token=value;sessionStorage.setItem('liveverse_admin',value);
   $('eventAdminToken').value='';$('accessDialog').close();
   report('صلاحية الإدارة مفعّلة.');
+  if(pendingAudience!==null){
+    const audience=pendingAudience;
+    pendingAudience=null;
+    await persistAudience(audience);
+  }
   if(resumeAfterAuth){resumeAfterAuth=false;await startEvent();}
  }catch(error){$('accessError').textContent=error.message;$('accessError').hidden=false;}
  finally{button.disabled=false;}

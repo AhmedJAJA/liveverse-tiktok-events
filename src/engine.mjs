@@ -101,6 +101,52 @@ export class Engine {
     if (image) player.avatar = image;
     return player;
   }
+  eligibleForAudience(player, audience) {
+    return audience === 'all' ||
+      (audience === 'followers' && player.isFollower === true) ||
+      (audience === 'subscribers' && player.isSubscriber === true);
+  }
+  pruneForAudience(audience) {
+    let removed = 0;
+    for (const [id, player] of this.players) {
+      if (this.eligibleForAudience(player, audience)) continue;
+      this.players.delete(id);
+      this.raceProgress.delete(id);
+      this.raceLastMove.delete(id);
+      this.wheelEntries.delete(id);
+      this.glass.survivors.delete(id);
+      this.glass.choices.delete(id);
+      this.glass.choiceTimes.delete(id);
+      this.firstAnswers.delete(id);
+      removed++;
+    }
+    if (removed) {
+      this.correctAnswers = this.correctAnswers.filter(answer => this.players.has(answer.id));
+      this.registrationRecent = [...this.players.values()].slice(-REGISTRATION_PREVIEW).reverse()
+        .map(p => ({ name:p.name, joinedAt:p.firstSeen, ...(p.avatar ? {avatar:p.avatar} : {}) }));
+    }
+    return removed;
+  }
+  updateRegistration({ keyword = this.registration.keyword, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience } = {}) {
+    if (this.status.active) throw new Error('لا يمكن تعديل التسجيل أثناء الجولة');
+    const rawKeyword = String(keyword ?? '').trim();
+    const clean = safeLine(rawKeyword, 32).trim();
+    if (!clean || !normalizeAnswer(clean) || rawKeyword.length > 32 || /[\r\n]/.test(rawKeyword))
+      throw new Error('اكتب كلمة تسجيل صالحة من 1 إلى 32 حرفًا');
+    if (!Number.isInteger(maxPlayers) || maxPlayers < 1 || maxPlayers > MAX_PLAYERS)
+      throw new Error('عدد اللاعبين يجب أن يكون بين 1 و1500');
+    if (!['all','followers','subscribers'].includes(audience))
+      throw new Error('نوع الجمهور غير صالح');
+    const eligibleCount = [...this.players.values()].filter(player => this.eligibleForAudience(player,audience)).length;
+    if (eligibleCount > maxPlayers) throw new Error('الحد أقل من عدد المتسابقين المؤهلين المسجلين');
+    const removed = this.pruneForAudience(audience);
+    Object.assign(this.registration, { keyword:clean, maxPlayers, audience });
+    this.status.notice = this.registration.phase === 'open'
+      ? 'التسجيل مفتوح ' + (audience === 'followers' ? 'للمتابعين فقط' : audience === 'subscribers' ? 'للمشتركين فقط' : 'للجميع')
+      : this.status.notice;
+    this.emit();
+    return { phase:this.registration.phase, audience, maxPlayers, removed, remaining:this.players.size };
+  }
   openRegistration({ keyword = this.registration.keyword, reset = false, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience } = {}) {
     if (this.status.active) throw new Error('أنهِ الجولة قبل فتح التسجيل');
     const rawKeyword = String(keyword ?? '').trim();
@@ -108,7 +154,8 @@ export class Engine {
     if (!clean || !normalizeAnswer(clean) || rawKeyword.length > 32 || /[\r\n]/.test(rawKeyword)) throw new Error('اكتب كلمة تسجيل صالحة من 1 إلى 32 حرفًا');
     if (!Number.isInteger(maxPlayers) || maxPlayers < 1 || maxPlayers > MAX_PLAYERS) throw new Error('عدد اللاعبين يجب أن يكون بين 1 و1500');
     if (!['all','followers','subscribers'].includes(audience)) throw new Error('نوع الجمهور غير صالح');
-    if (!reset && maxPlayers < this.players.size) throw new Error('حد اللاعبين أقل من عدد المسجلين حاليًا');
+    const eligibleCount = reset ? 0 : [...this.players.values()].filter(player => this.eligibleForAudience(player,audience)).length;
+    if (!reset && maxPlayers < eligibleCount) throw new Error('الحد أقل من عدد المتسابقين المؤهلين المسجلين');
     if (reset) {
       this.players.clear(); this.recent = []; this.round = 0;
       this.lastChatAt.clear();
@@ -117,6 +164,7 @@ export class Engine {
       this.status.results = null; this.status.winner = null; this.status.submissionCount = 0;
       this.registrationRecent = [];
     }
+    if (!reset) this.pruneForAudience(audience);
     this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience };
     this.status.results = null; this.status.winner = null; this.status.endsAt = null;
     this.status.notice = `التسجيل مفتوح! اكتب ${clean} في شات البث`;
@@ -139,6 +187,8 @@ export class Engine {
     if (this.registration.audience === 'subscribers' && !isSubscriber) return false;
     const player = this.player(id, name, avatar);
     if (!player) return false;
+    player.isFollower = isFollower === true;
+    player.isSubscriber = isSubscriber === true;
     this.registrationRecent.unshift({ name: player.name, joinedAt: this.now(), ...(player.avatar ? { avatar: player.avatar } : {}) });
     this.registrationRecent.length = Math.min(this.registrationRecent.length, REGISTRATION_PREVIEW);
     this.emit();

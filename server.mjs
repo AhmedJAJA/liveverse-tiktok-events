@@ -38,6 +38,7 @@ async function handleAction(action, body) {
   switch (action) {
     case 'configure': engine.configure(body); return { ok: true };
     case 'registration-open': engine.openRegistration(body); return { ok: true };
+    case 'registration-settings': return { ok: true, registration: engine.updateRegistration(body) };
     case 'registration-close': engine.closeRegistration(); return { ok: true };
     case 'bank-next': {
       if (engine.status.active) throw new Error('أوقف الجولة الحالية قبل اختيار سؤال جديد');
