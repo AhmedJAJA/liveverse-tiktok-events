@@ -38,6 +38,6 @@ test('mobile and accessibility support retained in original and new styles',()=>
 test('original own branding used, no impersonation or external third-party source',()=>{
   assert.doesNotMatch(theme,/hudhudlive\.com/i);
   assert.doesNotMatch(home,/hudhudlive\.com/i);
-  assert.match(home,/LIVEVERSE/);
-  assert.match(overlay,/LIVEVERSE/);
+  assert.match(home,/SKY LIVE/);
+  assert.match(overlay,/SKY LIVE/);
 });
