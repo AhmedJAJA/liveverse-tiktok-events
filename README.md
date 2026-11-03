@@ -14,6 +14,22 @@ SKY LIVE is an Arabic interactive livestream events website with a public homepa
 - Automatic WebSocket updates, reconnect attempts and basic tests.
 - RTL / mobile-friendly dashboard with English technical labels.
 
+## TIME BOMB | القنبلة المؤقتة
+
+A server-authoritative "pass the bomb" elimination game. Page: **`/bomb`** (intro + host control room). Broadcast: the existing **`/overlay`** OBS source switches to the bomb view automatically.
+
+**Rules (enforced by the server, `src/bomb.mjs`):**
+- Registration uses the normal chat keyword; each viewer joins once and keeps their registration number. Nobody can join after kick-off.
+- A random alive player gets the bomb and a shared timer starts (15 s by default, 5–60 s configurable).
+- Only the current holder can pass, by typing `!مرر 12` or `!bomb 12` (Arabic-Indic digits accepted). Identity is the stable TikTok user id, never the display name. Passing to yourself, to an eliminated or unknown number, or after the deadline is rejected.
+- **Passing never resets the timer.** At zero the current holder is eliminated, a 3.5 s transition plays, and a new random survivor gets the bomb with a fresh timer.
+- The match ends only when one player remains; the survivor is announced and earns 10 points.
+- Each match and turn has an id; stale, duplicate or concurrent requests can't touch a newer turn. Explosions are idempotent.
+
+**Host tools** (all `POST /api/admin/*`, token-protected): `registration-open/close`, `start`, `bomb-pause`, `bomb-resume`, `bomb-end`, `bomb-restart`, `bomb-settings {seconds, sound, autoBots}`, `bomb-demo {count}` (test players), `bomb-pass {target, turn, match}` (manual pass for testing).
+
+**Tests:** `tests/bomb.test.mjs` covers the required rule cases plus simulations of 2/10/50/100-player matches (880 matches on a virtual clock); `tests/bomb-http.test.mjs` checks viewer sync, reconnection, pause/resume and server-side auth through a real server and WebSockets.
+
 ## v0.7 — Royal Black redesign
 
 SKY LIVE moves from the blue interface to a **Royal Black & Gold** identity across the landing page, presenter studio and broadcast screen.

@@ -33,7 +33,7 @@ test('champion cards and score progress are populated from real API state',()=>{
 test('home game links select working studio game modes, without fake gameplay',()=>{
   for(const mode of ['quiz','race','guess','wheel']) {
     assert.ok(home.includes('mode='+mode),mode);
-    assert.ok(studio.includes("['quiz','guess','race','wheel','glass'].includes(requestedMode)"));
+    assert.ok(studio.includes("['quiz','guess','race','wheel','glass','bomb'].includes(requestedMode)"));
   }
   assert.match(studio,/urlOptions\.get\('panel'\) === 'games'/);
 });
@@ -45,4 +45,9 @@ test('approved mobile visual layout, animations and accessible fallback are pres
   assert.match(css,/prefers-reduced-motion:reduce/);
   assert.match(home,/aria-label="أبطال الجلسة"/);
   assert.match(home,/الصورة غير متاحة حاليًا/);
+});
+test('TIME BOMB is listed on the homepage and in the studio game modes',()=>{
+  assert.match(home,/href="\/bomb"/);
+  assert.match(home,/القنبلة المؤقتة/);
+  assert.match(fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8'),/data-mode="bomb"/);
 });

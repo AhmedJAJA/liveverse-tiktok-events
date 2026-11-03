@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08090B">
+<meta name="description" content="القنبلة المؤقتة | TIME BOMB — لعبة إقصاء جماعية مباشرة لجمهور SKY LIVE: مرّر القنبلة قبل أن تنفجر.">
+<title>القنبلة المؤقتة | TIME BOMB — SKY LIVE</title>
+<link rel="icon" href="/sky-live-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/royal-core.css">
+<link rel="stylesheet" href="/bomb.css">
+<script type="module" src="/bomb.js"></script>
+</head>
+<body class="bomb-page">
+<header class="bp-header">
+  <a class="bp-back" href="/#games"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg><span>الألعاب</span></a>
+  <a class="bp-brand" href="/" aria-label="SKY LIVE"><img src="/sky-live-mark.svg" width="36" height="36" alt=""><b dir="ltr">SKY LIVE</b></a>
+  <button type="button" class="bp-auth" id="authButton"><span class="live-dot" id="authDot"></span><span id="authLabel">دخول المشرف</span></button>
+</header>
+
+<main>
+<section class="bp-hero" aria-labelledby="bpTitle">
+  <div class="bp-copy">
+    <span class="bp-eyebrow">لعبة إقصاء جماعية مباشرة</span>
+    <h1 id="bpTitle">القنبلة المؤقتة</h1>
+    <span class="bp-latin caps">Time Bomb</span>
+    <p class="bp-lead">قنبلة واحدة، مؤقت واحد، ولاعب واحد ينجو. من يحملها عند الصفر يُقصى — والباقون يكملون حتى يبقى الأخير.</p>
+    <ol class="bp-rules">
+      <li><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-user-plus"/></svg></span><div><b>سجّل من الشات</b><small>اكتب <q id="ruleKeyword">انضم</q> لتحصل على رقمك في المباراة</small></div></li>
+      <li><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-bomb"/></svg></span><div><b>القنبلة تبدأ عند لاعب عشوائي</b><small>مؤقت مشترك <span class="num" id="ruleSeconds">15</span> ثانية لكل دورة</small></div></li>
+      <li><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-bolt"/></svg></span><div><b>مرّرها بسرعة</b><small>حاملها يكتب <bdi dir="rtl" class="cmd">!مرر 12</bdi> أو <bdi dir="ltr" class="cmd">!bomb 12</bdi> — الوقت لا يُعاد</small></div></li>
+      <li><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-crown"/></svg></span><div><b>الناجي الأخير يفوز</b><small>تنفجر عند الصفر ويُقصى حاملها، وتستمر حتى يبقى لاعب واحد</small></div></li>
+    </ol>
+    <div class="bp-cta">
+      <label class="bp-keyword"><span>كلمة الانضمام</span><input id="keywordInput" value="انضم" maxlength="32" autocomplete="off" dir="auto"></label>
+      <button type="button" class="btn btn-big bp-fire" id="registrationButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg><span id="registrationLabel">بدء التسجيل</span></button>
+      <button type="button" class="btn btn-big btn-line" id="startButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span id="startLabel">بدء المباراة</span></button>
+    </div>
+    <div class="bp-count"><b class="num" id="registeredCount">0</b><span>لاعب مسجّل</span><span class="bp-phase" id="phaseBadge">التسجيل مغلق</span></div>
+    <p class="bp-feedback" id="feedback" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="bp-visual" aria-hidden="true">
+    <i class="bp-halo"></i><i class="bp-smoke s1"></i><i class="bp-smoke s2"></i><i class="bp-smoke s3"></i>
+    <svg class="bp-bomb" viewBox="0 0 400 420">
+      <defs>
+        <radialGradient id="bpBody" cx="38%" cy="32%" r="72%"><stop offset="0" stop-color="#5a5b62"/><stop offset=".28" stop-color="#26272c"/><stop offset=".7" stop-color="#101114"/><stop offset="1" stop-color="#050506"/></radialGradient>
+        <radialGradient id="bpRim" cx="50%" cy="60%" r="60%"><stop offset=".78" stop-color="#ff5a1f" stop-opacity="0"/><stop offset="1" stop-color="#ff5a1f" stop-opacity=".6"/></radialGradient>
+        <linearGradient id="bpCap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a3b41"/><stop offset=".45" stop-color="#9a9ba3"/><stop offset=".6" stop-color="#5b5c63"/><stop offset="1" stop-color="#1c1d21"/></linearGradient>
+        <linearGradient id="bpFuse" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#6b4a2a"/><stop offset="1" stop-color="#b98a52"/></linearGradient>
+        <radialGradient id="bpSparkGlow"><stop offset="0" stop-color="#fff7d6"/><stop offset=".35" stop-color="#ffb347"/><stop offset=".7" stop-color="#ff5a1f" stop-opacity=".6"/><stop offset="1" stop-color="#ff2d1f" stop-opacity="0"/></radialGradient>
+      </defs>
+      <ellipse cx="190" cy="402" rx="120" ry="14" fill="#000" opacity=".6"/>
+      <path d="M232 112 C 252 70, 300 78, 312 48 S 340 12, 362 22" fill="none" stroke="#2a1d12" stroke-width="9" stroke-linecap="round"/>
+      <path id="bpFusePath" d="M232 112 C 252 70, 300 78, 312 48 S 340 12, 362 22" pathLength="100" fill="none" stroke="url(#bpFuse)" stroke-width="7" stroke-linecap="round" stroke-dasharray="100 100"/>
+      <g id="bpSpark" class="bp-spark"><circle r="28" fill="url(#bpSparkGlow)"/><g class="bp-rays" stroke="#ffd27a" stroke-width="2.4" stroke-linecap="round"><path d="M0 -20v-12"/><path d="M14 -14l8 -8"/><path d="M20 0h12"/><path d="M14 14l8 8"/><path d="M-14 -14l-8 -8"/><path d="M-20 0h-12"/></g><circle r="6" fill="#fffbe8"/></g>
+      <g class="bp-body">
+        <circle cx="190" cy="250" r="140" fill="url(#bpBody)"/>
+        <circle cx="190" cy="250" r="140" fill="url(#bpRim)"/>
+        <path d="M98 196 a120 120 0 0 1 70 -70" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"/>
+        <ellipse cx="140" cy="168" rx="26" ry="14" fill="#fff" opacity=".18" transform="rotate(-38 140 168)"/>
+        <rect x="190" y="98" width="62" height="40" rx="6" fill="url(#bpCap)" transform="rotate(32 221 118)"/>
+        <rect x="118" y="270" width="144" height="66" rx="10" fill="#0a0a0b" stroke="#3a1a14" stroke-width="2"/>
+        <circle class="bp-led" cx="136" cy="303" r="6" fill="#ff3b2f"/>
+      </g>
+    </svg>
+    <div class="bp-display"><span class="num" id="demoTimer">00:15</span></div>
+  </div>
+</section>
+
+<section class="bp-control" aria-labelledby="controlTitle">
+  <div class="bp-control-head">
+    <div><span class="eyebrow">للمشرف فقط</span><h2 id="controlTitle">غرفة التحكم بالمباراة</h2></div>
+    <a class="btn btn-line" href="/overlay" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg>شاشة البث</a>
+  </div>
+  <div class="bp-grid">
+    <article class="bp-card bp-live">
+      <header><h3>المباراة الآن</h3><span class="bp-state" id="matchState">لا توجد مباراة</span></header>
+      <div class="bp-live-row">
+        <div class="bp-live-holder"><span class="bp-mini-avatar" id="liveHolderAvatar">؟</span><div><small>حامل القنبلة</small><b id="liveHolder">—</b></div></div>
+        <div class="bp-live-timer"><b class="num" id="liveTimer">15</b><small>ثانية</small></div>
+      </div>
+      <dl class="bp-live-stats"><div><dt>الدورة</dt><dd class="num" id="liveTurn">0</dd></div><div><dt>متبقٍ</dt><dd class="num" id="liveAlive">0</dd></div><div><dt>مُقصى</dt><dd class="num" id="liveOut">0</dd></div><div><dt>تمريرات</dt><dd class="num" id="livePasses">0</dd></div></dl>
+      <div class="bp-actions">
+        <button type="button" class="btn" id="pauseButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-hourglass"/></svg><span id="pauseLabel">إيقاف مؤقت</span></button>
+        <button type="button" class="btn" id="endButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-stop"/></svg>إنهاء المباراة</button>
+        <button type="button" class="btn" id="restartButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg>إعادة المباراة</button>
+      </div>
+    </article>
+
+    <article class="bp-card bp-settings">
+      <header><h3>الإعدادات</h3></header>
+      <label class="bp-row"><span><b>مدة كل دورة</b><small>الافتراضي 15 ثانية</small></span>
+        <select id="secondsSelect"><option value="5">5 ثوانٍ</option><option value="10">10 ثوانٍ</option><option value="15" selected>15 ثانية</option><option value="20">20 ثانية</option><option value="30">30 ثانية</option><option value="45">45 ثانية</option><option value="60">60 ثانية</option></select></label>
+      <label class="bp-row"><span><b>الأصوات</b><small>تكتكة المؤقت والانفجار في شاشة البث</small></span><input type="checkbox" class="bp-switch" id="soundToggle" checked></label>
+      <label class="bp-row"><span><b>لاعبو التجربة يمرّرون تلقائيًا</b><small>للاختبار بدون بث حقيقي</small></span><input type="checkbox" class="bp-switch" id="botsToggle" checked></label>
+    </article>
+
+    <article class="bp-card bp-test">
+      <header><h3>وضع التجربة</h3><small>لاعبون وهميون وتمرير يدوي</small></header>
+      <div class="bp-actions"><button type="button" class="btn" data-demo="4">+4 لاعبين</button><button type="button" class="btn" data-demo="10">+10 لاعبين</button><button type="button" class="btn" data-demo="50">+50 لاعبًا</button></div>
+      <label class="bp-row bp-pass"><span><b>مرّر القنبلة إلى</b><small>نيابةً عن الحامل الحالي — بنفس قواعد الشات</small></span>
+        <span class="bp-pass-controls"><select id="passTarget" aria-label="اللاعب المستلم"><option value="">—</option></select><button type="button" class="btn bp-fire" id="passButton">مرّر</button></span></label>
+    </article>
+
+    <article class="bp-card bp-players">
+      <header><h3>اللاعبون</h3>
+        <div class="bp-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" data-tab="alive">النشطون <b class="num" id="tabAlive">0</b></button><button type="button" role="tab" aria-selected="false" data-tab="out">المُقصَون <b class="num" id="tabOut">0</b></button></div>
+      </header>
+      <ul class="bp-list" id="playerList"><li class="bp-empty">سيظهر المسجلون هنا</li></ul>
+    </article>
+
+    <article class="bp-card bp-log">
+      <header><h3>سجل المباراة</h3><small>التمريرات والانفجارات</small></header>
+      <ol class="bp-timeline" id="timeline"><li class="bp-empty">لا أحداث بعد</li></ol>
+    </article>
+  </div>
+</section>
+</main>
+
+<dialog class="bp-dialog" id="authDialog" aria-labelledby="authTitle">
+  <form id="authForm" autocomplete="off">
+    <h2 id="authTitle">رمز إدارة SKY LIVE</h2>
+    <p>أدوات المباراة محمية في السيرفر. أدخل رمز الإدارة الموجود في إعدادات موقعك.</p>
+    <input id="authToken" type="password" dir="ltr" required aria-label="رمز الإدارة">
+    <p class="bp-error" id="authError" hidden role="alert"></p>
+    <div class="bp-actions"><button type="submit" class="btn btn-gold">تفعيل</button><button type="button" class="btn btn-line" id="authCancel">إلغاء</button></div>
+  </form>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

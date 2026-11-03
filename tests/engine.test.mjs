@@ -15,7 +15,7 @@ const fixture = () => {
   return {e,send,advance,enroll,finish};
 };
 
-test('supports all five modes',()=>assert.deepEqual(MODES,['quiz','guess','race','wheel','glass']));
+test('supports all six modes',()=>assert.deepEqual(MODES,['quiz','guess','race','wheel','glass','bomb']));
 test('normalizes accented Arabic and punctuation',()=>assert.equal(normalizeAnswer('إِجَابَة!'),'اجابه'));
 test('normalizes case',()=>assert.equal(normalizeAnswer('Riyadh !!'),'riyadh'));
 test('strips control characters',()=>assert.equal(safeLine('a\nb',2),'a '));
