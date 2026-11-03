@@ -1,0 +1,40 @@
+name: LIVEVERSE v0.3 locked answers and speed podium
+on:
+  push:
+    paths:
+      - 'release/v03/**'
+      - '.github/workflows/upgrade-v03.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: liveverse-upgrade-v03
+  cancel-in-progress: false
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Verify and apply source upgrade
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f release/v03/part1.txt ]; then
+            echo "v0.3 upgrade has already been applied"
+            exit 0
+          fi
+          cat release/v03/part{1,2,3,4,5}.txt | base64 -d > /tmp/liveverse-v03.patch.xz
+          echo 'b00ef165d5c12ea9ddcef6eba8e2ec209398cd1a14a5af93de8e8c6e627c9704  /tmp/liveverse-v03.patch.xz' | sha256sum --check
+          xz -dc /tmp/liveverse-v03.patch.xz > /tmp/liveverse-v03.patch
+          patch --batch --forward -p1 < /tmp/liveverse-v03.patch
+          node --version
+          npm run check
+          npm test
+          rm -rf release/v03
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Implement locked first answers and timed speed podium (v0.3)'
+          git push
