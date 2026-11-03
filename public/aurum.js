@@ -14,16 +14,20 @@
   /* Page wiring: which existing elements receive which effect. */
   const CONFIG = {
     movingBorder: [
-      ['.gold-button,.btn-gold,.button.primary,.play-button,.presenter-start,.start-game,.verify-access', { dur: 3.6, size: 70 }],
+      ['.gold-button,.btn-gold,.button.primary,.play-button,.presenter-start,.start-game,.verify-access,.sh-btn-gold', { dur: 3, size: 80 }],
       ['.signup-command', { dur: 5, size: 180, w: 2 }],
-      ['.connect-card,.cta-card,.season-hero,.event-hero,.question-card', { dur: 7, size: 160 }],
+      ['.connect-card,.cta-card,.season-hero,.event-hero,.question-card,.sh-final,.sh-plan.is-annual,.sh-platforms', { dur: 7, size: 160 }],
+      ['.sh-phone', { dur: 6, size: 140, w: 2 }],
       ['.hero-player.rank-one,.winner-stage,.victory-card', { dur: 4.2, size: 120, w: 2 }],
       ['.mode,.signup-member-card,.length-option,.audience-option', { dur: 4, size: 110, when: true }]
     ],
-    spotlight: '.game-tile,.category-card,.hero-player,.mode,.stat,.panel,.how-grid>div,.form-strip,.audience-setting,.advanced-panel,.connect-card,.pass-card,.cta-card,.daily-strip,.tools-strip,.block,.reg-person,.leader-row',
+    spotlight: '.sh-quick-row,.game-tile,.category-card,.hero-player,.mode,.stat,.panel,.how-grid>div,.form-strip,.audience-setting,.advanced-panel,.connect-card,.pass-card,.cta-card,.daily-strip,.tools-strip,.block,.reg-person,.leader-row',
     reveal: '.landing h1,.landing h2,.event-page .setting-block h2,.event-page .section-row h2,.presenter .section-heading h2,.presenter .block-head h3,.bomb-page h2',
     retext: '#overlayPrompt,#signupLatestName,#winnerName,#signupTitle,#bombHolderName,#bombWinnerName,.event-caption h1,#presenterStartLabel',
-    shimmer: '.season-copy h2 span,#signupKeyword,.results-heading h2 span,.signup-counter b,.winner-banner-copy strong,.event-caption h1,.how-grid span',
+    shimmer: '.sh-gold,.sh-plan.is-annual .sh-price b,.season-copy h2 span,#signupKeyword,.results-heading h2 span,.signup-counter b,.winner-banner-copy strong,.event-caption h1,.how-grid span',
+    glowing: '.sh-step,.sh-plan,.sh-platform,.sh-champions,.sh-pass,.presenter .stat,.presenter .panel,.how-grid>div',
+    card3d: '.sh-cover,.sh-live-card,.presenter .mode',
+    spot: '.sh-hero,.sh-final',
     tooltip: '[data-tooltip],[data-au-tip]',
     beams: broadcast ? '.arena' : 'body'
   };
@@ -93,31 +97,29 @@
   /* ================= Background Beams ================= */
   function beams(container) {
     if (!container || container.querySelector(':scope>.au-beams')) return;
-    const n = broadcast ? 30 : 40;
-    let paths = '';
-    for (let i = 0; i < n; i++) {
-      const x = i * 7, y = i * 8;
-      paths += `M${-380 + x} ${-189 - y}C${-380 + x} ${-189 - y} ${-312 + x} ${216 - y} ${152 + x} ${343 - y}C${616 + x} ${470 - y} ${684 + x} ${875 - y} ${684 + x} ${875 - y}`;
-    }
-    const lit = [];
-    for (let i = 0; i < n; i += broadcast ? 3 : 2) {
-      const x = i * 7, y = i * 8;
-      lit.push(`M${-380 + x} ${-189 - y}C${-380 + x} ${-189 - y} ${-312 + x} ${216 - y} ${152 + x} ${343 - y}C${616 + x} ${470 - y} ${684 + x} ${875 - y} ${684 + x} ${875 - y}`);
-    }
+    // Same path family as Aceternity's BackgroundBeams: each path shifted 7px right / 8px up.
+    const n = broadcast ? 30 : 50;
+    const path = (i) => { const x = i * 7, y = i * 8; return `M${-380 + x} ${-189 - y}C${-380 + x} ${-189 - y} ${-312 + x} ${216 - y} ${152 + x} ${343 - y}C${616 + x} ${470 - y} ${684 + x} ${875 - y} ${684 + x} ${875 - y}`; };
+    const all = Array.from({ length: n }, (_, i) => path(i));
+    const animate = !reduce.matches;
+    // Every path carries its own gradient whose x1/x2/y1/y2 sweep 0% → 100% (10–20s, 0–10s delay).
+    const grads = all.map((_, i) => {
+      const dur = rand(10, 20).toFixed(2) + 's', begin = rand(0, 10).toFixed(2) + 's', y2 = (93 + rand(0, 8)).toFixed(1) + '%';
+      const sweep = (attr, to) => animate ? `<animate attributeName="${attr}" values="0%;${to}" dur="${dur}" begin="${begin}" repeatCount="indefinite"/>` : '';
+      return `<linearGradient id="au-bg-${i}" x1="0%" x2="0%" y1="0%" y2="0%">${sweep('x1', '100%')}${sweep('x2', '95%')}${sweep('y1', '100%')}${sweep('y2', y2)}
+        <stop stop-color="#FFF1C2" stop-opacity="0"/><stop stop-color="#FFF1C2"/><stop offset="32.5%" stop-color="#D4AF37"/><stop offset="100%" stop-color="#9C7A22" stop-opacity="0"/></linearGradient>`;
+    }).join('');
     const wrap = tpl(`<div class="au-beams${container === body ? ' is-fixed' : ''}" aria-hidden="true"><svg viewBox="0 0 696 316" preserveAspectRatio="xMidYMid slice" focusable="false">
-      <defs>
-        <linearGradient id="au-beam-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF6D8"/><stop offset=".4" stop-color="#F1D58C"/><stop offset=".7" stop-color="#D4AF37"/><stop offset="1" stop-color="#9C7A22" stop-opacity="0"/></linearGradient>
-        <radialGradient id="au-beam-fade" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(352 34) rotate(90) scale(555 1560)"><stop offset=".07" stop-color="#D4AF37" stop-opacity=".55"/><stop offset=".55" stop-color="#9C7A22" stop-opacity=".2"/><stop offset="1" stop-color="#9C7A22" stop-opacity="0"/></radialGradient>
+      <path class="au-beam-base" d="${all.join('')}" stroke="url(#au-beam-fade)" stroke-opacity=".05" stroke-width=".5"/>
+      ${all.map((d, i) => `<path class="au-beam" d="${d}" stroke="url(#au-bg-${i})" stroke-opacity=".4" stroke-width=".5"/>`).join('')}
+      <defs>${grads}
+        <radialGradient id="au-beam-fade" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(352 34) rotate(90) scale(555 1560.62)"><stop offset=".0667" stop-color="#E6C463"/><stop offset=".2432" stop-color="#E6C463"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
       </defs>
-      <path class="au-beam-base" d="${paths}"/>
-      ${lit.map((p) => `<path class="au-beam is-glow" d="${p}" pathLength="1"/><path class="au-beam" d="${p}" pathLength="1"/>`).join('')}
     </svg></div>`);
-    const live = wrap.querySelectorAll('.au-beam');
-    for (let i = 0; i < live.length; i += 2) {
-      const dur = rand(9, 19).toFixed(1) + 's', delay = (-rand(0, 18)).toFixed(1) + 's';
-      for (const el of [live[i], live[i + 1]]) { el.style.setProperty('--d', dur); el.style.setProperty('--dl', delay); }
-    }
     container.prepend(wrap);
+    const svg = wrap.firstElementChild;
+    if (visibility && svg.pauseAnimations) new IntersectionObserver(([e]) => { e.isIntersecting ? svg.unpauseAnimations() : svg.pauseAnimations(); }).observe(wrap);
+    d.addEventListener('visibilitychange', () => { if (svg.pauseAnimations) d.hidden ? svg.pauseAnimations() : svg.unpauseAnimations(); });
   }
 
   /* ================= Sparkles ================= */
@@ -194,6 +196,75 @@
     size(); run();
   }
 
+
+  /* ================= 3D Card (CardContainer: rotateY/rotateX = offset / 25, perspective 1000px) ================= */
+  function card3d(host) {
+    if (host.classList.contains('au-3d')) return;
+    host.classList.add('au-3d'); host.parentElement?.classList.add('au-3d-scene');
+    host.querySelectorAll(':scope>.sh-cover-title,:scope>.crest,:scope>.sh-live-info,:scope>.sh-live-top').forEach((el) => el.classList.add('au-3d-item'));
+  }
+  let t3Frame = 0, t3Host = null;
+  d.addEventListener('pointermove', (ev) => {
+    if (ev.pointerType === 'touch' || reduce.matches) return;
+    const host = ev.target.closest?.('.au-3d');
+    if (t3Host && t3Host !== host) { t3Host.style.setProperty('--au-ry', '0deg'); t3Host.style.setProperty('--au-rx', '0deg'); t3Host.classList.remove('is-tilting'); }
+    t3Host = host; if (!host) return;
+    const { clientX, clientY } = ev;
+    cancelAnimationFrame(t3Frame);
+    t3Frame = requestAnimationFrame(() => {
+      const b = host.getBoundingClientRect();
+      host.style.setProperty('--au-ry', ((clientX - b.left - b.width / 2) / 25).toFixed(2) + 'deg');
+      host.style.setProperty('--au-rx', ((clientY - b.top - b.height / 2) / 25).toFixed(2) + 'deg');
+      host.classList.add('is-tilting');
+    });
+  }, { passive: true });
+  d.addEventListener('pointerleave', () => { if (t3Host) { t3Host.style.setProperty('--au-ry', '0deg'); t3Host.style.setProperty('--au-rx', '0deg'); t3Host.classList.remove('is-tilting'); t3Host = null; } }, true);
+
+  /* ================= Glowing Effect (inactiveZone .7, proximity 64, spread 20, movementDuration 2s) ================= */
+  const glows = new Set();
+  function glowing(host) {
+    if (host.querySelector(':scope>.au-glow')) return;
+    positioned(host);
+    const g = span('au-glow'); g.angle = 0; g.target = 0; host.append(g); glows.add(g);
+  }
+  let glowFrame = 0, glowPoint = null, glowAnim = 0;
+  function glowTick() {
+    if (!glowPoint) return;
+    let moving = false;
+    for (const g of glows) {
+      const host = g.parentElement; if (!host) { glows.delete(g); continue; }
+      const b = host.getBoundingClientRect();
+      if (b.bottom < -100 || b.top > innerHeight + 100) { g.style.setProperty('--au-active', '0'); continue; }
+      const cx = b.left + b.width / 2, cy = b.top + b.height / 2, [mx, my] = glowPoint, prox = 64;
+      const inactive = .5 * Math.min(b.width, b.height) * .7;
+      const near = mx > b.left - prox && mx < b.right + prox && my > b.top - prox && my < b.bottom + prox;
+      const active = near && Math.hypot(mx - cx, my - cy) >= inactive;
+      g.style.setProperty('--au-active', active ? '1' : '0');
+      if (!active) continue;
+      g.target = (180 * Math.atan2(my - cy, mx - cx)) / Math.PI + 90;
+      const diff = ((g.target - g.angle + 180) % 360 + 360) % 360 - 180;
+      if (Math.abs(diff) > .3) { g.angle += diff * .06; moving = true; }   // eased approach ≈ 2s like the original
+      g.style.setProperty('--au-start', g.angle.toFixed(2));
+    }
+    glowAnim = moving ? requestAnimationFrame(glowTick) : 0;
+  }
+  if (!broadcast) {
+    d.addEventListener('pointermove', (ev) => {
+      if (ev.pointerType === 'touch' || reduce.matches) return;
+      glowPoint = [ev.clientX, ev.clientY];
+      cancelAnimationFrame(glowFrame);
+      glowFrame = requestAnimationFrame(() => { if (!glowAnim) glowAnim = requestAnimationFrame(glowTick); });
+    }, { passive: true });
+    addEventListener('scroll', () => { if (glowPoint && !glowAnim) glowAnim = requestAnimationFrame(glowTick); }, { passive: true });
+  }
+
+  /* ================= Spotlight (blurred light beam that sweeps into the hero) ================= */
+  function heroSpot(host) {
+    if (host.querySelector(':scope>.au-spot')) return;
+    positioned(host);
+    host.prepend(tpl(`<svg class="au-spot" viewBox="0 0 3787 2842" fill="none" aria-hidden="true" focusable="false"><g filter="url(#au-spot-blur)"><ellipse cx="1924.71" cy="273.501" rx="1924.71" ry="273.501" transform="matrix(-0.822377 -0.568943 -0.568943 0.822377 3631.88 2291.09)" fill-opacity=".21"/></g><defs><filter id="au-spot-blur" x="0.86" y="0.84" width="3785.16" height="2840.26" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="bg"/><feBlend mode="normal" in="SourceGraphic" in2="bg" result="shape"/><feGaussianBlur stdDeviation="151"/></filter></defs></svg>`));
+  }
+
   /* ================= Animated Tooltip ================= */
   let tip = null, tipHost = null, tipFrame = 0;
   function ensureTip() {
@@ -236,9 +307,10 @@
       tipFrame = requestAnimationFrame(() => {
         if (!tipHost) return;
         const b = tipHost.getBoundingClientRect();
-        const rel = Math.max(-1, Math.min(1, (clientX - (b.left + b.width / 2)) / Math.max(b.width / 2, 1)));
-        tip.style.setProperty('--au-rot', (rel * 8).toFixed(2) + 'deg');
-        tip.style.setProperty('--au-shift', (rel * 16).toFixed(1) + 'px');
+        // Aceternity AnimatedTooltip: x = offset from the element centre, mapped [-100,100] → [-45°,45°] and [-50,50]px.
+        const x = Math.max(-100, Math.min(100, clientX - (b.left + b.width / 2)));
+        tip.style.setProperty('--au-rot', (x * .45).toFixed(2) + 'deg');
+        tip.style.setProperty('--au-shift', (x * .5).toFixed(1) + 'px');
       });
     }, { passive: true });
     d.addEventListener('focusin', (ev) => { const host = ev.target.closest?.(CONFIG.tooltip); if (host && ev.target.matches(':focus-visible')) showTip(host); });
@@ -332,7 +404,11 @@
   /* ================= Apply & keep applying ================= */
   function decorate(root) {
     for (const [sel, opts] of CONFIG.movingBorder) root.querySelectorAll(sel).forEach((el) => movingBorder(el, opts));
-    if (fine.matches && !broadcast) root.querySelectorAll(CONFIG.spotlight).forEach(spotlight);
+    if (fine.matches && !broadcast) {
+      root.querySelectorAll(CONFIG.spotlight).forEach(spotlight);
+      root.querySelectorAll(CONFIG.glowing).forEach(glowing);
+      root.querySelectorAll(CONFIG.card3d).forEach(card3d);
+    }
     root.querySelectorAll(CONFIG.shimmer).forEach((el) => el.classList.add('au-shimmer'));
     tagIcons(root);
   }
@@ -342,17 +418,18 @@
   function init() {
     stage();
     beams(d.querySelector(CONFIG.beams));
+    if (!broadcast) d.querySelectorAll(CONFIG.spot).forEach(heroSpot);
     decorate(body);
     d.querySelectorAll(CONFIG.reveal).forEach(reveal);
     d.querySelectorAll(CONFIG.retext).forEach((el) => { retextSeen.set(el, el.textContent); retextMO.observe(el, { childList: true, characterData: true, subtree: true }); });
     wireTooltips();
     celebrate();
     // Ambient sparkles around celebration moments and the registration spotlight.
-    d.querySelectorAll('.signup-spotlight,.winner-banner,.bomb-victory,.season-hero,.results-heading').forEach((el) => sparkleField(el, broadcast ? .6 : .8));
+    d.querySelectorAll('.signup-spotlight,.winner-banner,.bomb-victory,.season-hero,.results-heading,.sh-final,.sh-hero').forEach((el) => sparkleField(el, broadcast ? .6 : .8));
     mo.observe(body, { childList: true, subtree: true });
     d.documentElement.classList.add('au-ready');
   }
 
-  window.Aurum = Object.freeze({ burst, sparkleField, movingBorder, spotlight, reveal });
+  window.Aurum = Object.freeze({ burst, sparkleField, movingBorder, spotlight, reveal, glowing, card3d });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', init, { once: true }); else init();
 })();
