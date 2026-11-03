@@ -237,3 +237,134 @@ body.event-page{background:radial-gradient(ellipse 80% 35% at 70% 22%,rgba(212,1
 .event-page .mode-art-wheel{background:radial-gradient(circle at 50% 45%,rgba(212,175,55,.28),#14120d 63%,#08090B 100%)}
 .event-page .wheel-main{border-color:#F1D58C;background:conic-gradient(#D4AF37 0 45deg,#1b1b1e 45deg 90deg,#F1D58C 90deg 135deg,#2a2720 135deg 180deg,#C9982F 180deg 225deg,#141416 225deg 270deg,#E6C463 270deg 315deg,#232126 315deg 360deg)}
 .event-page .wheel-main strong{border-color:#F1D58C;background:#0b0b0d;color:var(--champagne)}
+
+/* ============================ Studio ============================ */
+/* Game selection: cinematic game cards (Card Spotlight + Moving Border on the chosen one) */
+.presenter .modes{grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;counter-reset:game}
+.presenter .mode{counter-increment:game;grid-template-columns:minmax(0,1fr);grid-template-rows:7.4rem 1fr auto;align-items:start;justify-items:start;gap:0;padding:0;min-height:16.5rem;border-radius:22px;
+  background:linear-gradient(180deg,#19181b 0%,#111113 55%,#0c0c0e 100%) padding-box,linear-gradient(180deg,rgba(241,213,140,.3),rgba(241,213,140,.05) 50%,rgba(241,213,140,.12)) border-box;border:1px solid transparent;
+  box-shadow:0 26px 50px -30px rgba(0,0,0,.95);transition:transform .5s var(--au-spring),box-shadow .4s ease}
+.presenter .mode::before{content:"";position:absolute;inset:0 0 auto;height:7.4rem;z-index:-1;border-radius:22px 22px 0 0;pointer-events:none;
+  background:repeating-conic-gradient(from 200deg at 50% 120%,rgba(241,213,140,.09) 0 2deg,transparent 2deg 11deg),radial-gradient(80% 110% at 50% 100%,rgba(212,175,55,.32),transparent 70%),linear-gradient(180deg,#1f1c15,#121113);
+  -webkit-mask:linear-gradient(180deg,#000 60%,transparent);mask:linear-gradient(180deg,#000 60%,transparent)}
+.presenter .mode::after{content:counter(game,decimal-leading-zero);position:absolute;top:.85rem;inset-inline-end:1rem;font:300 2.2rem/1 var(--font-latin);letter-spacing:-.02em;color:transparent;-webkit-text-stroke:1px rgba(241,213,140,.35)}
+.presenter .mode .crest{grid-row:1;align-self:center;justify-self:center;--crest-size:4.4rem;filter:drop-shadow(0 12px 22px rgba(0,0,0,.7)) drop-shadow(0 0 18px rgba(212,175,55,.25));transition:transform .6s var(--au-spring)}
+.presenter .mode-copy{grid-row:2;padding:.9rem 1.15rem 0;gap:.35rem}
+.presenter .mode-tag-pill{padding:.12rem .6rem;border-radius:999px;background:rgba(212,175,55,.1);border:1px solid rgba(241,213,140,.2);opacity:1}
+.presenter .mode strong{font-size:1.18rem}
+.presenter .mode-cta{grid-row:3;grid-column:1;margin:.8rem 1.15rem 1.05rem;padding:.25rem .75rem;border-radius:999px;border:1px solid var(--line-2);color:var(--text-2)}
+.presenter .mode:hover{transform:translateY(-6px);box-shadow:0 34px 60px -30px rgba(0,0,0,.95),0 0 40px -18px rgba(212,175,55,.5)}
+.presenter .mode:hover .crest{transform:translateY(-4px) scale(1.06)}
+.presenter .mode.is-selected{background:radial-gradient(90% 60% at 50% 0%,rgba(212,175,55,.26),transparent 70%),linear-gradient(180deg,#221f17 0%,#141310 60%,#0d0c0b 100%) padding-box,var(--metal) border-box;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.95),0 0 50px -14px rgba(212,175,55,.55)}
+.presenter .mode.is-selected::after{color:rgba(212,175,55,.18);-webkit-text-stroke:1px rgba(255,241,194,.7)}
+.presenter .mode.is-selected .mode-cta{border-color:transparent}
+.presenter .mode[data-mode=bomb]::before{background:repeating-conic-gradient(from 200deg at 50% 120%,rgba(255,154,90,.09) 0 2deg,transparent 2deg 11deg),radial-gradient(80% 110% at 50% 100%,rgba(224,105,75,.38),transparent 70%),linear-gradient(180deg,#22130f,#121113)}
+.presenter .mode[data-mode=bomb] .crest{--crest-color:#ffcfae}
+
+/* Studio participant cards (registration) */
+.presenter .registration-recent{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.6rem,1fr));gap:.6rem}
+.presenter .registration-recent>span:not(.reg-person){grid-column:1/-1;padding:1rem;border:1px dashed var(--line-2);border-radius:16px;text-align:center}
+.presenter .reg-person{position:relative;flex-direction:column;justify-content:center;gap:.4rem;min-width:0;padding:.85rem .5rem .7rem;border-radius:16px;text-align:center;
+  background:radial-gradient(90% 60% at 50% 0%,rgba(212,175,55,.14),transparent 70%),linear-gradient(180deg,#1a191c,#101012) padding-box,linear-gradient(180deg,rgba(241,213,140,.35),rgba(241,213,140,.05) 60%) border-box;border:1px solid transparent;
+  animation:au-retext .6s var(--ease-out) both}
+.presenter .reg-person>span:last-child{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.8rem}
+.presenter .reg-person-avatar{width:2.9rem;height:2.9rem;font-size:1.05rem;border-width:2px;box-shadow:0 0 0 3px rgba(8,9,11,.9),0 0 0 4px rgba(241,213,140,.25)}
+.presenter .reg-person:first-child{background:radial-gradient(90% 60% at 50% 0%,rgba(212,175,55,.3),transparent 70%),linear-gradient(180deg,#252117,#141310) padding-box,var(--metal) border-box;box-shadow:0 0 26px -8px rgba(212,175,55,.6)}
+.presenter .registration-counter strong{font-size:2.3rem}
+
+/* Leaderboard rows with metal rank plates */
+.presenter .leader-row{border:1px solid transparent;transition:background-color .25s,border-color .25s}
+.presenter .leader-row:hover{border-color:var(--line);background:rgba(212,175,55,.05)}
+.presenter .leader-row .rank{display:grid;place-items:center;width:1.9rem;height:1.9rem;border-radius:50%;background:#18181b;border:1px solid var(--line);font-size:.78rem}
+.presenter .leader-row .rank:is(.top-0,.top-1,.top-2){color:var(--gold-ink);border:0}
+.presenter .leader-row .rank.top-0{background:var(--metal);box-shadow:0 0 14px rgba(212,175,55,.5)}
+.presenter .leader-row .rank.top-1{background:var(--silver)}
+.presenter .leader-row .rank.top-2{background:var(--bronze)}
+.presenter .studio-podium-slot{border-radius:16px}
+.presenter .studio-podium-slot.place-1{box-shadow:0 0 30px -10px rgba(212,175,55,.6)}
+
+/* Dashboard sections */
+.presenter .stat{transition:transform .4s var(--au-spring),box-shadow .3s}
+.presenter .stat:hover{transform:translateY(-3px);box-shadow:0 24px 44px -26px rgba(0,0,0,.95),0 0 30px -14px rgba(212,175,55,.45)}
+.presenter .stat-number{letter-spacing:-.01em}
+.presenter .monitor-screen{box-shadow:0 40px 90px -40px rgba(0,0,0,.95),0 0 60px -30px rgba(212,175,55,.45)}
+
+@media (max-width:1100px){.presenter .modes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:780px){
+  .presenter .modes{grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
+  .presenter .mode{grid-template-rows:5.6rem 1fr auto;min-height:14rem}
+  .presenter .mode::before{height:5.6rem}
+  .presenter .mode .crest{--crest-size:3.4rem}
+  .presenter .mode-copy{padding:.7rem .85rem 0}
+  .presenter .mode-desc{display:none}
+  .presenter .mode-cta{margin:.6rem .85rem .85rem}
+}
+@media (max-width:420px){.presenter .mode::after{font-size:1.6rem}}
+
+/* ===================== Landing — Aurum layer ===================== */
+/* New SVG glyphs that replaced emoji/text symbols */
+.landing .live-phone .live-note{width:58px;height:58px;color:var(--ivory);filter:drop-shadow(3px 2px 0 #C9982F) drop-shadow(-2px -1px 0 rgba(246,241,231,.3))}
+.landing .tiktok-symbol .i{width:20px;height:20px;color:var(--champagne)}
+.landing .gift-decoration{color:var(--champagne);font-size:1rem;filter:drop-shadow(0 0 16px rgba(212,175,55,.6))}
+.landing .gift-decoration .i{width:74px;height:74px}
+.landing .player-laurel{display:grid;place-items:center;font-size:1rem;color:rgba(241,213,140,.22)}
+.landing .player-laurel .i{width:96px;height:96px}
+.landing .rank-one .player-laurel{color:rgba(241,213,140,.42)}
+.landing .art-sparks .i{width:30px;height:30px;color:var(--au-gold-1)}
+.landing .info-button .i{width:20px;height:20px}
+.landing .category-arrow{display:grid;place-items:center;bottom:8px;left:10px}
+.landing .category-arrow .i{width:18px;height:18px}
+.landing .section-head h2 .i{width:1.05em;height:1.05em}
+
+/* Typography & hierarchy */
+.landing .section-head{margin:22px 0 16px}
+.landing .section-head h2{font-size:clamp(1.55rem,3vw,2.3rem);letter-spacing:-.01em}
+.landing .section-head h2::after{content:"";display:block;width:56px;height:2px;margin-inline-start:10px;align-self:center;background:linear-gradient(90deg,var(--gold),transparent);border-radius:2px}
+.landing .season-copy h2{font-size:clamp(2.4rem,6vw,5rem)}
+.landing .sky-home{gap:22px}
+
+/* Hero: sparkles + beams sit behind the crown */
+.landing .season-hero>.au-sparkles{z-index:0;opacity:.85}
+.landing .season-hero>:not(.au-sparkles,.au-mb){position:relative;z-index:1}
+.landing .hero-crown{filter:drop-shadow(0 0 22px rgba(212,175,55,.55)) drop-shadow(0 20px 30px rgba(0,0,0,.6))}
+
+/* Game tiles: deeper cards, lit art window */
+.landing .game-tile{border-radius:28px;transition:transform .55s var(--au-spring),box-shadow .4s ease,border-color .4s}
+.landing .game-tile:hover{transform:translateY(-8px)}
+.landing .game-art{border-radius:20px;box-shadow:inset 0 0 0 1px rgba(241,213,140,.08),inset 0 -40px 60px -30px rgba(0,0,0,.8)}
+.landing .game-copy h3{font-size:clamp(1.3rem,2.6vw,1.9rem);letter-spacing:-.01em}
+.landing .play-button{border-radius:16px;font-size:1.02rem;letter-spacing:.01em}
+
+/* Participant cards (podium) */
+.landing .hero-player{border-radius:28px;transition:transform .55s var(--au-spring),box-shadow .4s}
+.landing .hero-player:hover{transform:translateY(-6px)}
+.landing .rank-one{transform:translateY(-10px)}
+.landing .rank-one:hover{transform:translateY(-16px)}
+.landing .player-avatar{width:82px;height:82px;top:-30px}
+.landing .player-name{font-size:clamp(.9rem,2.4vw,1.5rem);letter-spacing:-.01em}
+
+/* Category cards: icon inside a gold medallion */
+.landing .category-card>.i{width:30px;height:30px;padding:14px;box-sizing:content-box;border-radius:50%;background:radial-gradient(circle at 50% 30%,#2e281b,#121214 70%);box-shadow:0 0 0 1px rgba(241,213,140,.35),0 10px 24px -8px rgba(0,0,0,.8),0 0 24px -6px rgba(212,175,55,.45);filter:none}
+.landing .category-card{gap:9px;border-radius:22px;transition:transform .5s var(--au-spring),box-shadow .35s,border-color .35s}
+.landing .category-card:hover{transform:translateY(-5px)}
+
+/* How-to steps */
+.landing .how-grid>div{border-radius:22px;padding:22px}
+.landing .how-grid span{font-size:2rem;font-weight:300;letter-spacing:-.02em}
+
+@media (max-width:560px){
+  .landing .gift-decoration .i{width:52px;height:52px}
+  .landing .player-avatar{width:62px;height:62px;top:-24px}
+  .landing .player-laurel .i{width:64px;height:64px}
+  .landing .category-card>.i{width:22px;height:22px;padding:10px}
+  .landing .rank-one{transform:none}
+}
+/* laurel wreath frames the podium avatar instead of sitting behind the name */
+.landing .player-laurel{top:-62px;left:0;right:0;height:142px;z-index:0;pointer-events:none}
+.landing .player-laurel .i{width:142px;height:142px}
+.landing .player-avatar{z-index:1}
+@media (max-width:560px){.landing .player-laurel{top:-46px;height:104px}.landing .player-laurel .i{width:104px;height:104px}}
+.landing .sky-home{grid-template-columns:minmax(0,1fr)}
+.landing .section-head>div{min-width:0}
+@media (max-width:560px){.landing .section-head h2::after{display:none}}

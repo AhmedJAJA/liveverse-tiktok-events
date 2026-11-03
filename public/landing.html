@@ -13,9 +13,9 @@
 <link rel="stylesheet" href="/royal-core.css">
 <link rel="stylesheet" href="/royal-landing.css">
 <link rel="stylesheet" href="/royal-luxe.css">
-<link rel="stylesheet" href="/royal-fx.css">
+<link rel="stylesheet" href="/aurum.css">
 <script src="/landing.js" defer></script>
-<script src="/royal-fx.js" defer></script>
+<script src="/aurum.js" defer></script>
 </head>
 <body class="landing">
 <header class="site-header" id="top">
@@ -25,28 +25,28 @@
    <span class="brand-words"><b dir="ltr"><span>SKY</span> <em>LIVE</em></b><small>البث المباشر • الفعاليات • الألعاب المصغرة</small></span>
   </a>
   <div class="header-utilities">
-   <a class="utility-icon" href="/overlay" aria-label="شاشة البث" title="شاشة البث"><svg class="i"><use href="/icons.svg#i-screen"/></svg></a>
-   <a class="utility-icon" href="/studio" aria-label="الاستوديو" title="الاستوديو"><svg class="i"><use href="/icons.svg#i-gear"/></svg></a>
+   <a class="utility-icon" href="/overlay" aria-label="شاشة البث" data-au-tip="شاشة البث لـ OBS"><svg class="i"><use href="/icons.svg#i-screen"/></svg></a>
+   <a class="utility-icon" href="/studio" aria-label="الاستوديو" data-au-tip="استوديو التحكم بالفعالية"><svg class="i"><use href="/icons.svg#i-gear"/></svg></a>
    <a class="profile-pill" href="#leaderboard" aria-label="أبطال الجلسة"><span class="profile-avatar"><svg class="i"><use href="/icons.svg#i-crown"/></svg></span><span><strong>أبطال البث</strong><small id="headerPlayers">0 مشارك</small></span></a>
   </div>
   <button class="menu-toggle" id="menuToggle" type="button" aria-label="فتح القائمة" aria-controls="navLinks" aria-expanded="false"><span></span><span></span><span></span></button>
  </div>
  <nav class="nav-links wrap" id="navLinks" aria-label="أقسام SKY LIVE">
   <a class="nav-active" href="#top"><svg class="i"><use href="/icons.svg#i-games"/></svg>الرئيسية</a>
-  <a href="#games"><svg class="i"><use href="/icons.svg#i-games"/></svg>الألعاب</a>
-  <a href="#tools"><svg class="i"><use href="/icons.svg#i-live"/></svg>الفعاليات</a>
-  <a href="#leaderboard"><svg class="i"><use href="/icons.svg#i-trophy"/></svg>المتصدرون</a>
-  <a href="#season"><svg class="i"><use href="/icons.svg#i-crown"/></svg>الموسم</a>
+  <a href="#games" data-au-tip="ألعاب تفاعلية جديدة"><svg class="i"><use href="/icons.svg#i-games"/></svg>الألعاب</a>
+  <a href="#tools" data-au-tip="أدوات إدارة البث"><svg class="i"><use href="/icons.svg#i-live"/></svg>الفعاليات</a>
+  <a href="#leaderboard" data-au-tip="أبطال الجلسة الحالية"><svg class="i"><use href="/icons.svg#i-trophy"/></svg>المتصدرون</a>
+  <a href="#season" data-au-tip="موسم الأبطال والنقاط"><svg class="i"><use href="/icons.svg#i-crown"/></svg>الموسم</a>
  </nav>
 </header>
 
 <main class="sky-home wrap">
  <section class="connect-card" id="platforms" aria-labelledby="connectTitle">
-  <div class="connect-illustration" aria-hidden="true"><div class="phone-orbit"></div><div class="live-phone"><span>♪</span><b>LIVE</b></div></div>
+  <div class="connect-illustration" aria-hidden="true"><div class="phone-orbit"></div><div class="live-phone"><svg class="i live-note" aria-hidden="true"><use href="/icons.svg#i-note"/></svg><b>LIVE</b></div></div>
   <div class="connect-info">
    <div class="connect-heading"><span class="yellow-icon"><svg class="i"><use href="/icons.svg#i-live"/></svg></span><div><h1 id="connectTitle">اربط بثك وابدأ التفاعل</h1><p>أدخل اسم قناتك على TikTok لربط البث المباشر</p></div></div>
    <form id="liveConnectForm" class="connect-controls" autocomplete="off">
-    <label class="live-input"><span class="sr-only">اسم حساب TikTok</span><span class="tiktok-symbol" aria-hidden="true">♪</span><input id="liveUsername" name="username" type="text" maxlength="30" placeholder="اسم قناتك على TikTok..." dir="ltr" spellcheck="false" autocapitalize="none" autocomplete="off" required></label>
+    <label class="live-input"><span class="sr-only">اسم حساب TikTok</span><span class="tiktok-symbol" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-note"/></svg></span><input id="liveUsername" name="username" type="text" maxlength="30" placeholder="اسم قناتك على TikTok..." dir="ltr" spellcheck="false" autocapitalize="none" autocomplete="off" required></label>
     <button type="submit" class="gold-button" id="liveConnectButton"><svg class="i"><use href="/icons.svg#i-plug"/></svg>اتصل بالبث</button>
     <span class="connection-pill" id="liveConnectionBadge" role="status"><i></i><span id="liveConnectionStatus">غير متصل</span></span>
    </form>
@@ -97,7 +97,7 @@
    <strong class="pass-count" id="scoreProgress">0 / 50 نقطة</strong>
   </div>
   <a class="gold-button pass-cta" href="#leaderboard"><svg class="i"><use href="/icons.svg#i-trophy"/></svg>شاهد الأبطال</a>
-  <div class="gift-decoration" aria-hidden="true">🎁</div>
+  <div class="gift-decoration" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gift"/></svg></div>
  </section>
 
  <section class="tools-strip" id="tools" aria-labelledby="toolsTitle">
@@ -110,37 +110,37 @@
  </section>
 
  <section class="games-section" id="games" aria-labelledby="gamesTitle">
-  <div class="section-head"><div><h2 id="gamesTitle"><span>🔥</span> الألعاب الجديدة</h2><p>ألعاب تفاعلية ممتعة لزيادة تفاعل جمهورك</p></div><a class="outline-mini" href="#allGames">عرض الكل <span aria-hidden="true">‹</span></a></div>
+  <div class="section-head"><div><h2 id="gamesTitle"><svg class="i gold-icon" aria-hidden="true"><use href="/icons.svg#i-flame"/></svg> الألعاب الجديدة</h2><p>ألعاب تفاعلية ممتعة لزيادة تفاعل جمهورك</p></div><a class="outline-mini" href="#allGames">عرض الكل <svg class="i" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></a></div>
   <div class="games-grid">
    <article class="game-tile bomb-tile">
     <div class="game-art bomb-art" aria-hidden="true"><i class="bomb-art-glow"></i><svg class="bomb-art-icon"><use href="/icons.svg#i-bomb"/></svg><span class="bomb-art-timer">00:15</span><span class="bomb-art-new">جديد</span></div>
     <div class="game-copy"><span class="game-tag"><svg class="i"><use href="/icons.svg#i-bomb"/></svg>إقصاء</span><h3>القنبلة المؤقتة <small dir="ltr">TIME BOMB</small></h3><p>مرّر القنبلة قبل أن تنفجر — من يحملها عند الصفر يُقصى، والناجي الأخير يفوز</p></div>
-    <div class="game-actions"><a class="play-button" href="/bomb"><svg class="i"><use href="/icons.svg#i-play"/></svg>العب الآن</a><a class="info-button" href="/bomb" aria-label="قواعد القنبلة المؤقتة">؟</a></div>
+    <div class="game-actions"><a class="play-button" href="/bomb"><svg class="i"><use href="/icons.svg#i-play"/></svg>العب الآن</a><a class="info-button" href="/bomb" aria-label="قواعد القنبلة المؤقتة"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></a></div>
    </article>
    <article class="game-tile quiz-tile">
-    <div class="game-art quiz-art" aria-hidden="true"><div class="art-spotlight"></div><div class="quiz-sign"><span>؟</span></div><div class="quiz-buzzers"><i></i><i></i><i></i></div><span class="art-sparks">✦</span></div>
+    <div class="game-art quiz-art" aria-hidden="true"><div class="art-spotlight"></div><div class="quiz-sign"><span>؟</span></div><div class="quiz-buzzers"><i></i><i></i><i></i></div><span class="art-sparks"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-star"/></svg></span></div>
     <div class="game-copy"><span class="game-tag"><svg class="i"><use href="/icons.svg#i-target"/></svg>ذكاء</span><h3>تحدي المعلومات</h3><p>أسئلة سريعة، إجابات مباشرة، وجوائز نقاط فورية</p></div>
-    <div class="game-actions"><a class="play-button" href="/event?mode=quiz"><svg class="i"><use href="/icons.svg#i-play"/></svg>العب الآن</a><a class="info-button" href="#how" aria-label="طريقة تحدي المعلومات">؟</a></div>
+    <div class="game-actions"><a class="play-button" href="/event?mode=quiz"><svg class="i"><use href="/icons.svg#i-play"/></svg>العب الآن</a><a class="info-button" href="#how" aria-label="طريقة تحدي المعلومات"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></a></div>
    </article>
    <article class="game-tile race-tile">
     <div class="game-art race-art" aria-hidden="true"><div class="checkered-finish"></div><div class="road-lines"></div><div class="race-car"><span class="car-window"></span><span class="taillight"></span><span class="taillight"></span></div></div>
     <div class="game-copy"><span class="game-tag"><svg class="i"><use href="/icons.svg#i-bolt"/></svg>سرعة</span><h3>سباق الجمهور</h3><p>تحدَّ المتابعين في سباق مباشر مليء بالإثارة</p></div>
-    <div class="game-actions"><a class="play-button" href="/event?mode=race"><svg class="i"><use href="/icons.svg#i-play"/></svg>العب الآن</a><a class="info-button" href="#how" aria-label="طريقة سباق الجمهور">؟</a></div>
+    <div class="game-actions"><a class="play-button" href="/event?mode=race"><svg class="i"><use href="/icons.svg#i-play"/></svg>العب الآن</a><a class="info-button" href="#how" aria-label="طريقة سباق الجمهور"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></a></div>
    </article>
   </div>
  </section>
 
  <section class="leaderboard-section" id="leaderboard" aria-labelledby="leaderboardTitle">
-  <div class="section-head"><div><h2 id="leaderboardTitle"><svg class="i gold-icon"><use href="/icons.svg#i-crown"/></svg> أبطال <span dir="ltr">SKY LIVE</span></h2><p>أفضل المتسابقين في جلسة البث الحالية</p></div><a class="outline-mini" href="/studio">لوحة النتائج <span aria-hidden="true">‹</span></a></div>
+  <div class="section-head"><div><h2 id="leaderboardTitle"><svg class="i gold-icon"><use href="/icons.svg#i-crown"/></svg> أبطال <span dir="ltr">SKY LIVE</span></h2><p>أفضل المتسابقين في جلسة البث الحالية</p></div><a class="outline-mini" href="/studio">لوحة النتائج <svg class="i" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></a></div>
   <div class="podium-grid">
    <article class="hero-player rank-one" id="leaderOne">
-    <span class="rank-medal">1</span><span class="player-laurel">✦</span><div class="player-avatar" id="avatarOne"><svg class="i"><use href="/icons.svg#i-crown"/></svg></div><strong class="player-name" id="nameOne">بانتظار البطل</strong><span class="player-achievement">👑 المركز الأول</span><span class="player-points"><b id="pointsOne">0</b> نقطة</span>
+    <span class="rank-medal">1</span><span class="player-laurel" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-laurel"/></svg></span><div class="player-avatar" id="avatarOne"><svg class="i"><use href="/icons.svg#i-crown"/></svg></div><strong class="player-name" id="nameOne">بانتظار البطل</strong><span class="player-achievement">👑 المركز الأول</span><span class="player-points"><b id="pointsOne">0</b> نقطة</span>
    </article>
    <article class="hero-player rank-two" id="leaderTwo">
-    <span class="rank-medal">2</span><span class="player-laurel">✦</span><div class="player-avatar" id="avatarTwo"><svg class="i"><use href="/icons.svg#i-medal"/></svg></div><strong class="player-name" id="nameTwo">المركز الثاني</strong><span class="player-achievement">⭐ المركز الثاني</span><span class="player-points"><b id="pointsTwo">0</b> نقطة</span>
+    <span class="rank-medal">2</span><span class="player-laurel" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-laurel"/></svg></span><div class="player-avatar" id="avatarTwo"><svg class="i"><use href="/icons.svg#i-medal"/></svg></div><strong class="player-name" id="nameTwo">المركز الثاني</strong><span class="player-achievement">⭐ المركز الثاني</span><span class="player-points"><b id="pointsTwo">0</b> نقطة</span>
    </article>
    <article class="hero-player rank-three" id="leaderThree">
-    <span class="rank-medal">3</span><span class="player-laurel">✦</span><div class="player-avatar" id="avatarThree"><svg class="i"><use href="/icons.svg#i-medal"/></svg></div><strong class="player-name" id="nameThree">المركز الثالث</strong><span class="player-achievement">⭐ المركز الثالث</span><span class="player-points"><b id="pointsThree">0</b> نقطة</span>
+    <span class="rank-medal">3</span><span class="player-laurel" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-laurel"/></svg></span><div class="player-avatar" id="avatarThree"><svg class="i"><use href="/icons.svg#i-medal"/></svg></div><strong class="player-name" id="nameThree">المركز الثالث</strong><span class="player-achievement">⭐ المركز الثالث</span><span class="player-points"><b id="pointsThree">0</b> نقطة</span>
    </article>
   </div>
  </section>
@@ -148,10 +148,10 @@
  <section class="categories-section" id="allGames" aria-labelledby="categoriesTitle">
   <div class="section-head"><div><h2 id="categoriesTitle"><svg class="i gold-icon"><use href="/icons.svg#i-games"/></svg> استكشف المزيد من الألعاب</h2><p>فعاليات متنوعة تناسب كل الأذواق</p></div></div>
   <div class="category-grid">
-   <a class="category-card category-eliminate" href="/event?mode=glass"><svg class="i"><use href="/icons.svg#i-target"/></svg><b>ألعاب إقصاء</b><span>اعبر الجسر الزجاجي</span><i class="category-arrow">‹</i></a>
-   <a class="category-card category-team" href="/event?mode=race"><svg class="i"><use href="/icons.svg#i-users"/></svg><b>ألعاب جماعية</b><span>شارك جمهورك المنافسة</span><i class="category-arrow">‹</i></a>
-   <a class="category-card category-speed" href="/event?mode=quiz"><svg class="i"><use href="/icons.svg#i-bolt"/></svg><b>ذكاء وسرعة</b><span>اختبر التركيز والسرعة</span><i class="category-arrow">‹</i></a>
-   <a class="category-card category-other" href="/event?mode=guess"><svg class="i"><use href="/icons.svg#i-sparkle"/></svg><b>ألعاب أخرى</b><span>خمن الكلمة واكسب</span><i class="category-arrow">‹</i></a>
+   <a class="category-card category-eliminate" href="/event?mode=glass"><svg class="i"><use href="/icons.svg#i-target"/></svg><b>ألعاب إقصاء</b><span>اعبر الجسر الزجاجي</span><i class="category-arrow" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></i></a>
+   <a class="category-card category-team" href="/event?mode=race"><svg class="i"><use href="/icons.svg#i-users"/></svg><b>ألعاب جماعية</b><span>شارك جمهورك المنافسة</span><i class="category-arrow" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></i></a>
+   <a class="category-card category-speed" href="/event?mode=quiz"><svg class="i"><use href="/icons.svg#i-bolt"/></svg><b>ذكاء وسرعة</b><span>اختبر التركيز والسرعة</span><i class="category-arrow" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></i></a>
+   <a class="category-card category-other" href="/event?mode=guess"><svg class="i"><use href="/icons.svg#i-sparkle"/></svg><b>ألعاب أخرى</b><span>خمن الكلمة واكسب</span><i class="category-arrow" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></i></a>
   </div>
   <a class="wheel-shortcut bomb-shortcut" href="/bomb"><svg class="i"><use href="/icons.svg#i-bomb"/></svg> القنبلة المؤقتة — مرّرها قبل الانفجار</a>
   <a class="wheel-shortcut" href="/event?mode=wheel"><svg class="i"><use href="/icons.svg#i-wheel"/></svg> عجلة الأسماء والسحب على الفائز</a>
