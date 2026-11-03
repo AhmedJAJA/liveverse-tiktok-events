@@ -309,3 +309,8 @@ button,a,input{outline-offset:3px}
  .hero-crown,.connection-pill.connecting i{animation:none!important}
  *,*::before,*::after{transition:none!important;animation-duration:.001ms!important;animation-iteration-count:1!important}
 }
+
+/* Subtle route to the classic lucky draw, alongside the new elimination category. */
+.wheel-shortcut{display:inline-flex;align-items:center;gap:8px;padding:10px 13px;margin-top:12px;border:1px solid #436694;border-radius:13px;color:#bce9fb;background:#102345;font-size:.82rem;font-weight:800;transition:transform .2s,border-color .2s}
+.wheel-shortcut:hover{transform:translateY(-2px);border-color:#80d6f0}
+.wheel-shortcut .i{color:#ffd580;font-size:1.1rem}

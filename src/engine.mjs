@@ -111,6 +111,7 @@ export class Engine {
     if (!reset && maxPlayers < this.players.size) throw new Error('حد اللاعبين أقل من عدد المسجلين حاليًا');
     if (reset) {
       this.players.clear(); this.recent = []; this.round = 0;
+      this.lastChatAt.clear();
       this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear();
       this.firstAnswers.clear(); this.correctAnswers = [];
       this.status.results = null; this.status.winner = null; this.status.submissionCount = 0;
