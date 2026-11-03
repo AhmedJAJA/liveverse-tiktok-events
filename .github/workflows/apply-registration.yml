@@ -32,6 +32,18 @@ jobs:
           base64 --decode release/signup/source.b64 > /tmp/liveverse-v05.tar.xz
           echo "63e4312dfef66aa5d026e91cd455474f81fbf24846ead5c08ae990dd72e7001d  /tmp/liveverse-v05.tar.xz" | sha256sum -c -
           tar -xJf /tmp/liveverse-v05.tar.xz -C .
+          # Preserve the verified production question-bank tests and update their
+          # registration integration expectation for the new signup gate.
+          git show HEAD:tests/question-bank.test.mjs > tests/question-bank.test.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('tests/question-bank.test.mjs')
+          s = p.read_text()
+          old = ";e.start();e.receiveChat({id:'1',username:'A',text:q.answer})"
+          new = ";e.openRegistration();e.receiveChat({id:'1',username:'A',text:'انضم'});e.start();e.receiveChat({id:'1',username:'A',text:q.answer})"
+          assert old in s, 'Expected bank test integration snippet missing'
+          p.write_text(s.replace(old, new))
+          PY
           npm run check
           npm test
           rm -rf release/signup
