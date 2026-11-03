@@ -149,3 +149,21 @@ body.presenter .presenter-info-chip>b,body.presenter .presenter-round-chip>b{col
  .sky-overlay-mark{width:40px;height:40px;border-radius:9px}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* Distinct Sky Live lockups on enrollment and winner screens. */
+.sky-signup-brand,.sky-results-lockup{display:inline-flex;align-items:center;gap:9px;direction:ltr;color:#bcf2ff}
+.sky-signup-brand img,.sky-results-lockup img{
+  display:block;flex:none;border-radius:9px;object-fit:cover;border:1px solid #85e4ffa8;
+  box-shadow:0 0 15px #2aabff53
+}
+.sky-signup-brand small{font:900 clamp(12px,1.2vw,17px)/1.2 Arial,sans-serif;letter-spacing:.06em;color:#a2ecff}
+.sky-signup-brand img{height:36px;width:36px}
+.sky-results-lockup img{height:34px;width:34px}
+.sky-results-lockup .results-brand{color:#b4efff}
+.cta-emblem{width:min(190px,20vw);max-width:100%}
+@media(max-width:560px){
+ .sky-signup-brand img{height:29px;width:29px}
+ .sky-results-lockup img{height:27px;width:27px}
+ .sky-signup-brand small{font-size:11px}
+ .cta-emblem{width:155px}
+}
