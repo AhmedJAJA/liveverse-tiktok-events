@@ -22,6 +22,13 @@ jobs:
             echo SKY_EVENT_IMAGE_BEGIN
             base64 -w 1000 /tmp/sky-event.jpg
             echo SKY_EVENT_IMAGE_END
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --hide-scrollbars --window-size=390,1600 --force-device-scale-factor=2 --virtual-time-budget=5000 --screenshot=/tmp/sky-event-full.png "https://liveverse-tiktok-events.onrender.com/event?mode=glass" 2>/tmp/sky-chrome-full.log
+            if [ -s /tmp/sky-event-full.png ]; then
+              if command -v convert >/dev/null; then convert /tmp/sky-event-full.png -resize 600x -quality 78 /tmp/sky-event-full.jpg; else cp /tmp/sky-event-full.png /tmp/sky-event-full.jpg; fi
+              echo SKY_EVENT_FULL_BEGIN
+              base64 -w 1000 /tmp/sky-event-full.jpg
+              echo SKY_EVENT_FULL_END
+            fi
           else
             echo SCREENSHOT_FAILED
             cat /tmp/sky-chrome.log | tail -25
