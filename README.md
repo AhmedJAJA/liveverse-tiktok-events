@@ -1,4 +1,12 @@
-# LIVEVERSE — TikTok LIVE Event Studio
+# SKY LIVE — TikTok LIVE Event Studio
+## SKY LIVE identity and routes (Nov 2026)
+
+- The public marketing page is `/`, showing the approved Sky Live artwork, working games, platform availability and transparent preview pricing.
+- `/studio` (or `/dashboard`) is the original password-protected live presenter dashboard.
+- `/overlay` remains the read-only OBS/TikTok Live Studio broadcast display.
+- TikTok connection uses an unofficial library and must be tested on real live chat. Kick is **not connected**; future-game and monetization cards are labels only, not purchasing options.
+- The GitHub repository and Render service retain their original technical slug to preserve existing links.
+
 
 A standalone Arabic interactive livestream events dashboard. Built with Node.js and WebSockets, with an OBS overlay and a **best-effort unofficial** TikTok LIVE chat bridge.
 
