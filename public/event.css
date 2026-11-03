@@ -153,3 +153,7 @@ body[data-game="quiz"] .mode-art-quiz,body[data-game="guess"] .mode-art-guess,bo
 @media (prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
 }
+
+/* Fidelity adjustments: full-width gold start bar and consistent number direction. */
+.event-stats .hero-stat strong{direction:ltr;unicode-bidi:isolate}
+.start-actions .start-game{width:100%;flex:1 1 100%}
