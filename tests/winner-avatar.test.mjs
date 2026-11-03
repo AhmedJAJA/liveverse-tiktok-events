@@ -53,11 +53,25 @@ test('does not publish untrusted avatar URLs on the winner board',()=>{
   assert.equal(engine.snapshot().status.winner.avatar,undefined);
 });
 
-test('results podium uses the shared image-or-initial fallback renderer',()=>{
+test('results podium and winner banner use the shared image-or-initial fallback renderer',()=>{
   const js=fs.readFileSync(new URL('../public/overlay.js',import.meta.url),'utf8');
   const css=fs.readFileSync(new URL('../public/overlay.css',import.meta.url),'utf8');
+  const html=fs.readFileSync(new URL('../public/overlay.html',import.meta.url),'utf8');
   assert.match(js,/function podiumCard\(/);
   assert.match(js,/paintAvatar\(avatar,p\)/);
+  assert.match(js,/paintAvatar\(\$\('winnerAvatar'\),s\.lastEvent\.winner\)/);
+  assert.match(html,/id="winnerAvatar"/);
   assert.match(css,/\.podium-avatar img/);
   assert.match(css,/\.result-avatar img/);
+});
+
+test('winning wheel or race preserves the contestant avatar in winner announcement',()=>{
+  const {engine,chat}=setup();
+  chat('u1','أحمد','انضم',avatarA);
+  engine.configure({mode:'wheel'});
+  engine.start();
+  engine.drawWheel();
+  const state=engine.snapshot().status;
+  assert.equal(state.winner.avatar,avatarA);
+  assert.equal(state.lastEvent.winner.avatar,avatarA);
 });

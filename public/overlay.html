@@ -15,10 +15,11 @@
 </head>
 <body>
   <main class="arena" id="arena" data-mode="quiz" data-phase="waiting">
+    <div class="confetti-stage" id="confettiStage" aria-hidden="true"></div>
     <header class="top-line">
-      <div class="brand-lockup"><img class="sky-overlay-mark" src="/sky-live.webp" width="54" height="54" alt=""><strong dir="ltr">SKY LIVE</strong></div>
+      <div class="brand-lockup"><img class="sky-overlay-mark" src="/sky-live.webp" width="54" height="54" alt="" decoding="async"><strong dir="ltr">SKY LIVE</strong></div>
       <span class="live-pill" id="overlayLive"><i></i><span id="overlayLiveText">في انتظار البداية</span></span>
-      <span class="header-caption">مسابقات البث المباشر</span>
+      <span class="header-caption">🔥 مسابقات البث المباشر</span>
     </header>
     <div class="arena-body">
       <section class="competition-zone" aria-label="السؤال والخيارات">
@@ -33,38 +34,38 @@
         <div class="question-card" id="questionCard"><h1 class="question-main" id="overlayPrompt">ما هي عاصمة المملكة العربية السعودية؟</h1></div>
         <div class="choices-grid" id="overlayOptions" aria-label="الخيارات"></div>
         <div id="overlayRace" class="race-panel" hidden></div>
-        <div id="overlayWheel" class="wheel-panel" hidden><div class="wheel-orbit" aria-hidden="true">✦</div><strong id="overlayWheelCount">0 مشاركين</strong><span id="wheelEntriesPreview">أسماء المسجلين في الفعالية</span></div>
-        <div class="answer-callout"><span id="overlayHint">اكتب رقم الإجابة 1 – 4 في الشات</span><span class="answer-total">جاوب <b id="overlaySubmissions">0</b></span></div>
+        <div id="overlayWheel" class="wheel-panel" hidden><div class="wheel-orbit" aria-hidden="true">👑</div><strong id="overlayWheelCount">0 مشاركين</strong><span id="wheelEntriesPreview">أسماء المسجلين في الفعالية</span></div>
+        <div class="answer-callout"><span id="overlayHint">🎯 اكتب رقم الإجابة 1 – 4 في الشات</span><span class="answer-total">جاوب <b id="overlaySubmissions">0</b> ⚡</span></div>
       </section>
     </div>
     <section class="signup-screen" id="registrationOverlay" hidden aria-label="تسجيل المشاركين">
       <div class="signup-layout">
         <header class="signup-bar">
-          <div class="signup-event"><small>اللعبة الجاية</small><h1 id="signupTitle">تحدي المعلومات</h1></div>
+          <div class="signup-event"><small>🎮 اللعبة الجاية</small><h1 id="signupTitle">تحدي المعلومات</h1></div>
           <div class="signup-command"><span>اكتب بالشات</span><strong id="signupKeyword">انضم</strong></div>
           <span class="signup-live-badge"><i></i> <span id="signupStateLabel">التسجيل مفتوح</span></span>
         </header>
         <div class="signup-board">
           <div class="signup-wall">
-            <div class="signup-wall-heading"><span>المشاركون</span><span><b id="signupCount">0</b> متسابق</span></div>
+            <div class="signup-wall-heading"><span>👥 المشاركون المسجلون</span><span><b id="signupCount">0</b> متسابق</span></div>
             <div class="signup-member-grid" id="signupRecent" aria-label="المتسابقون المسجلون"></div>
-            <div class="signup-empty" id="signupEmpty"><span class="empty-chat" aria-hidden="true">＋</span><strong>مين أول متسابق؟</strong><p id="signupEmptyHint">اكتب كلمة الانضمام في شات البث<br>وبيظهر اسمك هنا مباشرة</p></div>
+            <div class="signup-empty" id="signupEmpty"><span class="empty-chat" aria-hidden="true">🎮</span><strong>مين أول متسابق؟ 🔥</strong><p id="signupEmptyHint">اكتب كلمة الانضمام في شات البث<br>وبيظهر اسمك وصورتك هنا مباشرة</p></div>
           </div>
           <aside class="signup-spotlight" aria-label="آخر مشارك انضم" aria-live="polite">
-            <div class="spotlight-inner"><h2>دخل الحين</h2><div class="spotlight-card"><span class="signup-latest-num" id="signupLatestNumber">#0</span><div class="spotlight-profile"><div class="signup-spotlight-avatar" id="signupLatestAvatar" aria-hidden="true">؟</div><strong id="signupLatestName" dir="auto">بانتظارك</strong></div></div><p id="signupLatestDescription">مكانك محجوز للتحدي</p></div>
+            <div class="spotlight-inner"><h2>⚡ دخل الحين</h2><div class="spotlight-card"><span class="signup-latest-num" id="signupLatestNumber">#0</span><div class="spotlight-profile"><div class="signup-spotlight-avatar" id="signupLatestAvatar" aria-hidden="true">؟</div><strong id="signupLatestName" dir="auto">بانتظارك</strong></div></div><p id="signupLatestDescription">مكانك محجوز للتحدي 🔥</p></div>
           </aside>
         </div>
-        <footer class="signup-footer"><span><i class="connection-dot"></i> الانضمام من تعليقات البث</span><span class="signup-ready" id="signupReady">بانتظار المشاركين</span></footer>
+        <footer class="signup-footer"><span><i class="connection-dot"></i> الانضمام من تعليقات البث المباشر</span><span class="signup-ready" id="signupReady">بانتظار المشاركين</span></footer>
       </div>
     </section>
     <section class="results-screen" id="roundResultsOverlay" hidden aria-label="نتائج الجولة" aria-live="polite">
-      <header class="results-head"><span class="results-brand" dir="ltr">SKY LIVE</span><span id="resultsRoundLabel">نتائج الجولة</span></header>
-      <div class="results-heading"><span class="results-eyebrow">السرعة تصنع الفارق</span><h2>أبطال <span>الجولة</span></h2><p id="resultsSubtitle">أسرع الإجابات الصحيحة</p></div>
-      <div class="results-container"><div class="results-podium" id="resultsPodium"></div><div class="results-details"><div class="results-details-head"><strong>ترتيب المتسابقين</strong><span>أسرع 10 إجابات</span></div><div id="resultsOthers" class="results-others"></div></div></div>
-      <div class="results-bottom"><div class="results-metric"><span>الإجابة الصحيحة</span><strong id="resultsCorrect">—</strong></div><div class="results-metric"><span>مشاركات الجولة</span><strong id="resultsAnswers">—</strong></div><span class="results-next">استعد للسؤال الجاي</span></div>
+      <header class="results-head"><span class="results-brand" dir="ltr">SKY LIVE 🏆</span><span id="resultsRoundLabel">نتائج الجولة</span></header>
+      <div class="results-heading"><span class="results-eyebrow">⚡ السرعة تصنع الفارق</span><h2>👑 أبطال <span>الجولة</span> 🎉</h2><p id="resultsSubtitle">أسرع الإجابات الصحيحة</p></div>
+      <div class="results-container"><div class="results-podium" id="resultsPodium"></div><div class="results-details"><div class="results-details-head"><strong>🏆 ترتيب المتسابقين</strong><span>أسرع 10 إجابات ⚡</span></div><div id="resultsOthers" class="results-others"></div></div></div>
+      <div class="results-bottom"><div class="results-metric"><span>✅ الإجابة الصحيحة</span><strong id="resultsCorrect">—</strong></div><div class="results-metric"><span>👥 مشاركات الجولة</span><strong id="resultsAnswers">—</strong></div><span class="results-next">🔥 استعد للسؤال الجاي</span></div>
     </section>
-    <div class="winner-banner" id="winnerBanner" hidden role="status"><span>★</span><div><small>الفائز</small><strong id="winnerName"></strong></div><b>+5 نقاط</b></div>
-    <div class="connection-notice" id="connectionNotice" hidden role="status">انقطع الاتصال، نحاول الرجوع للبث…</div>
+    <div class="winner-banner" id="winnerBanner" hidden role="status"><div class="winner-banner-avatar" id="winnerAvatar" aria-hidden="true">🏆</div><div class="winner-banner-copy"><small>👑 الفائز بالجولة 🎉</small><strong id="winnerName"></strong></div><b>+5 نقاط 🏆</b></div>
+    <div class="connection-notice" id="connectionNotice" hidden role="status">⏳ انقطع الاتصال، نحاول الرجوع للبث…</div>
     <div hidden><span id="topProgress"></span><span id="modeTag"></span><span id="questionMode"></span><span id="questionLabel"></span><span id="stageTag"></span><span id="overlayTitle"></span><span id="overlayPlayers"></span><span id="overlayStatus"></span><span id="footerDetail"></span><span id="footerRound"></span><div id="overlayStandings"></div></div>
   </main>
   <script type="module" src="/overlay.js"></script>

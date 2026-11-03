@@ -306,7 +306,7 @@ export class Engine {
     if (!this.status.active) return;
     this.addScore(player, score);
     this.status.active = false;
-    this.announce(`🏆 الفائز: ${player.name} (+${score} نقاط)`, { name: player.name, id: player.id, score });
+    this.announce(`🏆 الفائز: ${player.name} (+${score} نقاط)`, { name: player.name, id: player.id, score, ...(player.avatar ? { avatar: player.avatar } : {}) });
   }
   drawWheel() {
     if (this.status.mode !== 'wheel' || !this.status.active) throw new Error('ابدأ جولة العجلة أولًا');
