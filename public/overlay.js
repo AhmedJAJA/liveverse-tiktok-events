@@ -1,5 +1,50 @@
 const $=id=>document.getElementById(id);
 let lastWinner;
+let currentResultsKey;
+let clockInfo = { endsAt:null, offset:0 };
+const formatTime = ms => (Math.max(0, ms)/1000).toFixed(2) + 's';
+function refreshCountdown() {
+  if (!clockInfo.endsAt) return;
+  const seconds = Math.max(0, Math.ceil((clockInfo.endsAt - (Date.now() + clockInfo.offset))/1000));
+  $('overlaySeconds').textContent = Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');
+  $('overlayTimer').classList.toggle('urgent',seconds<=10);
+}
+setInterval(refreshCountdown,200);
+function displayRoundResults(data) {
+  const result = data.status.results;
+  const stage = $('roundResultsOverlay');
+  stage.hidden = !result || !['quiz','guess'].includes(data.status.mode);
+  if (stage.hidden) { currentResultsKey = null; return; }
+  const key = data.round + ':' + result.completedAt;
+  if (key === currentResultsKey) return;
+  currentResultsKey = key;
+  $('resultsSubtitle').textContent = result.correctCount ? 'الترتيب حسب أول إجابة صحيحة وصلت خلال الجولة' : 'ما أحد جاوب صح هذه الجولة';
+  $('resultsAnswers').textContent = `${result.correctCount} صحيحة من ${result.totalAnswers} مشاركة`;
+  $('resultsCorrect').textContent = '✓ الإجابة الصحيحة: ' + result.correctAnswer;
+  const podium = $('resultsPodium'); podium.replaceChildren();
+  const others = $('resultsOthers'); others.replaceChildren();
+  result.rankings.slice(0,3).forEach((p,i) => {
+    const box = document.createElement('div'); box.className = 'result-podium-place place-' + (i+1);
+    const medal = document.createElement('span'); medal.className='result-medal'; medal.textContent = ['🥇','🥈','🥉'][i];
+    const name = document.createElement('strong'); name.textContent = p.name;
+    const time = document.createElement('span'); time.textContent = formatTime(p.elapsedMs);
+    const points = document.createElement('b'); points.textContent = '+'+p.points+' نقطة';
+    box.append(medal,name,time,points); podium.append(box);
+  });
+  result.rankings.slice(3,10).forEach(p=>{
+    const row=document.createElement('div'); row.className='result-other-row';
+    const rank=document.createElement('span');rank.textContent='#'+p.rank;
+    const name=document.createElement('strong');name.textContent=p.name;
+    const time=document.createElement('span');time.textContent=formatTime(p.elapsedMs);
+    const pts=document.createElement('b');pts.textContent='+'+p.points;
+    row.append(rank,name,time,pts);others.append(row);
+  });
+  if (!result.rankings.length) {
+    const empty=document.createElement('p');empty.className='result-empty';empty.textContent='حظ أوفر للجميع! 🎯';podium.append(empty);
+  }
+  stage.classList.remove('appear'); void stage.offsetWidth; stage.classList.add('appear');
+}
+
 const modeLabels={quiz:'QUIZ',guess:'GUESS',race:'RACE',wheel:'WHEEL'};
 function update(s) {
  const status=s.status;
@@ -22,10 +67,15 @@ function update(s) {
   }
  }
  $('overlayWheelCount').textContent=s.entriesCount+' مشاركين';
- $('overlayHint').textContent=({quiz:'اكتب رقم الإجابة الصحيحة في الشات',guess:'اكتب الحل الصحيح في الشات',race:'!join للانضمام • !go للتقدم',wheel:'!join للمشاركة في السحب'})[status.mode];
+ $('overlayHint').textContent=({quiz:'إجابة واحدة فقط لكل مشاهد • الأسرع يتصدر',guess:'تخمين واحد لكل مشاهد • الأسرع يتصدر',race:'!join للانضمام • !go للتقدم',wheel:'!join للمشاركة في السحب'})[status.mode];
+ const isTimed = ['quiz','guess'].includes(status.mode) && status.active && status.endsAt;
+ $('overlayTimer').hidden = !isTimed;
+ clockInfo = {endsAt: isTimed ? status.endsAt : null, offset: s.serverTime - Date.now()};
+ if(isTimed){refreshCountdown(); $('overlaySubmissions').textContent = (status.submissionCount || 0) + ' إجابة';}
  $('overlayStatus').textContent=status.active?'الجولة جارية الآن':status.notice || 'جاهز للبدء';
+ displayRoundResults(s);
  const standing=$('overlayStandings');standing.replaceChildren();s.leaderboard.slice(0,3).forEach((p,i)=>{const item=document.createElement('span');item.textContent=`${['🥇','🥈','🥉'][i]} ${p.name} · ${p.score}`;standing.append(item);});
- if(status.lastEvent?.winner){
+ if(status.lastEvent?.winner && !status.results){
   if(lastWinner!==status.lastEvent.at){lastWinner=status.lastEvent.at;const banner=$('winnerBanner');$('winnerName').textContent=status.lastEvent.winner.name;banner.hidden=false;banner.classList.remove('appear');void banner.offsetWidth;banner.classList.add('appear');}
  }else $('winnerBanner').hidden=true;
 }

@@ -86,7 +86,7 @@ The site includes **1,207 Arabic multiple-choice questions** in `data/questions.
 1. Open LIVEVERSE and activate your admin code.
 2. Select a subject and difficulty in the question library.
 3. Choose **تحميل سؤال** to prepare the round, or **سؤال عشوائي وابدأ** to save and start instantly.
-4. The first viewer to send the correct option number (1–4) or matching answer earns 5 points.
+4. The first valid answer per viewer is locked for the round. After the timer, correct entries are ranked by server arrival time (10, 7, 5, 3, 2, then 1 point).
 
 Questions are unique by text/ID and do not repeat within the current server session. Reset usage history with **إعادة ضبط التكرار**. History and leaderboard currently live in memory; both reset on redeploy/restart.
 
@@ -105,3 +105,14 @@ The correct answer is never present in public `/api/state` or the OBS overlay; s
 
 Open Trivia Database was researched but **no third-party trivia question text was imported** into the 1,207-question dataset. Its question content uses CC BY-SA 4.0: https://opentdb.com/api_config.php. The Trivia API has a non-commercial license, so it was not used for this public stream project.
 
+
+
+## LIVEVERSE v0.3: One locked answer and speed podium
+
+- Quiz and guessing: one first valid answer per viewer per round, even if incorrect. Repeated attempts never change it.
+- Timed 10–180-second rounds; default 30 seconds. A host can manually stop the question and publish results early.
+- OBS shows up to ten quickest correct answers, their times, and a podium; the host dashboard shows up to twenty.
+- Scoring by place: 10, 7, 5, 3, 2 then 1 point per correct player. Cumulative leaderboard ties use average answer speed.
+- Ranking uses server receipt time. TikTok delivery delay may affect perceived relative speed.
+- Secret answers stay hidden from public game state until the results are displayed.
+- Race and wheel are unchanged; only quiz and guessing use locked attempts.

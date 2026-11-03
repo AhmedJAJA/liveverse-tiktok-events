@@ -4,8 +4,8 @@ let authToken = sessionStorage.getItem('liveverse_admin') || '';
 let currentMode = 'quiz';
 let toastTimeout;
 const instructions = {
-  quiz: ['أول إجابة صحيحة تفوز بـ 5 نقاط', 'المشاهد يكتب رقم الإجابة في التعليقات: 1 أو 2 أو 3 أو 4'],
-  guess: ['أول شخص يكتب الإجابة الصحيحة يفوز', 'اكتب الإجابة في الحقل المخصص؛ لا تظهر للجمهور في شاشة OBS.'],
+  quiz: ['إجابة واحدة لكل مشاهد • ترتيب الأسرع بعد انتهاء الوقت', 'أول اختيار صحيح أو خاطئ يُعتمد ولا يمكن تغييره. ترتيب الفائزين حسب سرعة الإجابة الصحيحة.'],
+  guess: ['محاولة واحدة • ترتيب الإجابات الصحيحة حسب السرعة', 'أول تخمين فقط لكل مشاهد؛ لا يمكن تعديله حتى لو كان خاطئًا.'],
   race: ['كل مشاهد يتقدم بكتابة !go', 'المشاهد يكتب !join للانضمام ثم !go للتقدم. هناك مهلة 1.2 ثانية لكل حركة.'],
   wheel: ['جمع الأسماء ثم السحب العشوائي', 'المشاهد يكتب !join أو !انضم للمشاركة. اضغط اختيار الفائز عند انتهاء التسجيل.']
 };
@@ -27,6 +27,7 @@ function setMode(mode) {
   el('optionsWrap').hidden=mode!=='quiz';
   el('answerWrap').hidden=mode==='race'||mode==='wheel';
   el('targetWrap').hidden=mode!=='race';
+  el('durationWrap').hidden=mode!=='quiz'&&mode!=='guess';
   el('drawButton').hidden=mode!=='wheel';
   el('answerLabel').textContent=mode==='quiz'?'الإجابة الصحيحة':'الكلمة أو الإجابة الصحيحة';
   const answer=el('gameAnswer');
@@ -43,6 +44,7 @@ function setMode(mode) {
 function populate(snapshot) {
   state=snapshot;
   el('totalPlayers').textContent=state.playerCount.toLocaleString('ar-SA');
+  paintRoundStatus(state);
   el('roundNumber').textContent=String(state.round).padStart(2,'0');
   el('statusText').textContent=state.status.active?'جولة جارية':'في الانتظار';
   const live=state.connection.state;
@@ -58,8 +60,46 @@ function populate(snapshot) {
   const feed=el('chatFeed');feed.replaceChildren();
   if (!state.recent.length) feed.append(empty('التعليقات ستظهر هنا عند الاتصال أو المحاكاة.'));
   else state.recent.slice(0,12).forEach(c=>{const row=document.createElement('div');row.className='feed-row';const icon=document.createElement('span');icon.className='chat-icon';icon.textContent='✦';const user=document.createElement('strong');user.textContent=c.name;const text=document.createElement('span');text.textContent=c.message;const time=document.createElement('small');time.textContent=new Date(c.at).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});row.append(icon,user,text,time);feed.append(row);});
-  if(state.status.lastEvent?.winner && state.status.lastEvent.at!==populate.lastWinner) { populate.lastWinner=state.status.lastEvent.at;toast('🏆 '+state.status.lastEvent.winner.name+' فاز بالجولة!'); }
+  if(state.status.lastEvent?.winner && state.status.lastEvent.at!==populate.lastWinner) { populate.lastWinner=state.status.lastEvent.at;toast('🏆 '+state.status.lastEvent.winner.name+' تصدّر الجولة!'); }
 }
+const formatSeconds = ms => (Math.max(0, ms) / 1000).toFixed(2) + ' ث';
+let liveClock = { endsAt: null, serverOffset: 0 };
+function updateRoundClock() {
+  const clock = el('roundCountdown');
+  if (!clock || !liveClock.endsAt) return;
+  const ms = Math.max(0, liveClock.endsAt - (Date.now() + liveClock.serverOffset));
+  const seconds = Math.ceil(ms / 1000);
+  clock.textContent = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2,'0');
+  clock.classList.toggle('time-critical', seconds <= 10);
+}
+function paintRoundStatus(data) {
+  const { status } = data;
+  const timedMode = status.mode === 'quiz' || status.mode === 'guess';
+  const liveTimed = timedMode && status.active && status.endsAt;
+  el('roundTimeCard').hidden = !liveTimed;
+  liveClock = { endsAt: liveTimed ? status.endsAt : null, serverOffset: data.serverTime - Date.now() };
+  if (liveTimed) {
+    updateRoundClock();
+    el('roundAnswerCount').textContent = (status.submissionCount || 0).toLocaleString('ar-SA') + ' إجابة مسجلة';
+  }
+  const results = timedMode ? status.results : null;
+  const section = el('roundResults'); section.hidden = !results;
+  if (!results) return;
+  el('roundResultsSummary').textContent = `${results.correctCount} إجابة صحيحة من ${results.totalAnswers} مشاركة • ترتيب حسب سرعة وصول الإجابة`;
+  el('roundWinnerMark').textContent = results.correctCount ? '🏆' : '⌛';
+  const list = el('roundResultsList'); list.replaceChildren();
+  if (!results.rankings.length) { list.append(empty('لم يسجل أحد إجابة صحيحة في هذه الجولة.')); }
+  for (const person of results.rankings) {
+    const item = document.createElement('div'); item.className = 'round-rank-row';
+    const rank = document.createElement('span'); rank.className='round-rank-number'; rank.textContent = ['🥇','🥈','🥉'][person.rank - 1] || '#' + person.rank;
+    const username = document.createElement('strong'); username.textContent = person.name;
+    const time = document.createElement('span'); time.textContent = formatSeconds(person.elapsedMs);
+    const pts = document.createElement('b'); pts.textContent = '+' + person.points + ' PTS';
+    item.append(rank, username, time, pts); list.append(item);
+  }
+  el('roundResultsAnswer').textContent = 'الإجابة الصحيحة: ' + results.correctAnswer;
+}
+setInterval(updateRoundClock, 200);
 function empty(text) { const div=document.createElement('div');div.className='empty';div.textContent=text;return div; }
 function socket() {
   const proto=location.protocol==='https:'?'wss':'ws';
@@ -104,7 +144,7 @@ async function drawBankQuestion(start=false) {
     toast(start ? 'بدأ السؤال الجديد! اكتبوا الإجابة في التعليقات' : 'تم تحميل السؤال وحفظه، يمكنك بدء الجولة الآن.');
   } catch {}
 }
-function configureData() {return {mode:currentMode,title:el('gameTitle').value,prompt:el('gamePrompt').value,options:[1,2,3,4].map(i=>el('opt'+i).value),answer:el('gameAnswer').value,target:Number(el('gameTarget').value)};}
+function configureData() {return {mode:currentMode,title:el('gameTitle').value,prompt:el('gamePrompt').value,options:[1,2,3,4].map(i=>el('opt'+i).value),answer:el('gameAnswer').value,target:Number(el('gameTarget').value),duration:Number(el('gameDuration').value)};}
 function wire() {
   el('adminToken').value=authToken;
   if(authToken) el('authLabel').textContent='رمز سابق محفوظ مؤقتًا لهذه الجلسة؛ يمكنك التحقق مجددًا.';

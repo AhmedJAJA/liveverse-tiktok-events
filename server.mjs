@@ -97,8 +97,10 @@ wss.on('connection', ws => {
   ws.on('close', () => clients.delete(ws));
   send(ws, { type: 'state', data: engine.snapshot() });
 });
+const roundClock = setInterval(() => engine.tick(), 250);
+roundClock.unref?.();
 const heartbeat = setInterval(() => { for (const ws of clients) { if (!ws.isAlive) { ws.terminate(); continue; } ws.isAlive = false; ws.ping(); } }, 30000);
 heartbeat.unref?.();
 server.listen(PORT, '0.0.0.0', () => console.log(`TikTok LIVE Events ready on http://localhost:${PORT}`));
-const shutdown = async () => { clearInterval(heartbeat); await bridge.disconnect(); wss.close(); server.close(); };
+const shutdown = async () => { clearInterval(roundClock); clearInterval(heartbeat); await bridge.disconnect(); wss.close(); server.close(); };
 process.on('SIGTERM', shutdown); process.on('SIGINT', shutdown);

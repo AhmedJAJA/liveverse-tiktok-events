@@ -16,7 +16,7 @@ test('filters return only requested categories and difficulties',()=>{const bank
 test('unknown category or difficulty are blocked',()=>{const bank=make();assert.throws(()=>bank.draw({category:'invalid'}));assert.throws(()=>bank.draw({difficulty:'invalid'}))});
 test('exhaustion and reset controls work',()=>{const bank=new QuestionBank(data.filter(q=>q.category==='general').slice(0,3),()=>0);for(let i=0;i<3;i++)bank.draw();assert.throws(()=>bank.draw(),/لا توجد أسئلة/);bank.reset();assert.equal(bank.stats().used,0)});
 test('public game state hides the correct answer',()=>{const q=make().draw();const engine=new Engine();engine.configure({mode:'quiz',prompt:q.question,options:q.options,answer:q.answer});assert.equal(engine.snapshot().status.answer,undefined);assert.ok(!JSON.stringify(engine.snapshot()).includes('"answer"'))});
-test('correct selection from bank scores winner',()=>{const q=make().draw({category:'geography'});const e=new Engine();e.configure({mode:'quiz',prompt:q.question,options:q.options,answer:q.answer});e.start();e.receiveChat({id:'1',username:'A',text:q.answer});assert.equal(e.status.winner.name,'A')});
+test('correct selection from bank scores winner',()=>{const q=make().draw({category:'geography'});const e=new Engine();e.configure({mode:'quiz',prompt:q.question,options:q.options,answer:q.answer});e.start();e.receiveChat({id:'1',username:'A',text:q.answer});e.stop();assert.equal(e.status.results.rankings[0].name,'A')});
 test('bank statistics never leak answer keys',()=>{const s=JSON.stringify(make().stats());assert.equal(s.includes('options'),false);assert.equal(s.includes('"answer"'),false)});
 test('439 generated arithmetic questions have independent correct evaluation',()=>{
   let checked=0;
