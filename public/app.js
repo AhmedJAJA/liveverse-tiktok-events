@@ -220,6 +220,27 @@ function wirePresenter() {
   });
   document.addEventListener('fullscreenchange',()=>el('presenterFullscreen').setAttribute('aria-label',document.fullscreenElement?'الخروج من ملء الشاشة':'ملء الشاشة'));
 }
+function askConfirm(btn, promptText, action) {
+  if (btn.dataset.confirming === '1') {
+    delete btn.dataset.confirming;
+    btn.textContent = btn.dataset.origLabel || btn.textContent;
+    btn.classList.remove('is-confirming');
+    action();
+    return;
+  }
+  btn.dataset.origLabel = btn.textContent;
+  btn.dataset.confirming = '1';
+  btn.textContent = 'تأكيد؟ اضغط مرة أخرى';
+  btn.classList.add('is-confirming');
+  toast(promptText);
+  setTimeout(() => {
+    if (btn.dataset.confirming === '1') {
+      delete btn.dataset.confirming;
+      btn.textContent = btn.dataset.origLabel || btn.textContent;
+      btn.classList.remove('is-confirming');
+    }
+  }, 4500);
+}
 function wire() {
   el('adminToken').value=authToken;
   if(authToken) el('authLabel').textContent='رمز سابق محفوظ مؤقتًا لهذه الجلسة؛ يمكنك التحقق مجددًا.';
@@ -230,16 +251,18 @@ function wire() {
   el('closeRegistrationButton').addEventListener('click', async()=>{
     try { await api('registration-close'); toast('تم إغلاق التسجيل. يمكن بدء الجولة.'); } catch {}
   });
-  el('newRegistrationButton').addEventListener('click', async()=>{
-    if (!confirm('هل تريد فعالية جديدة؟ سيُمسح جميع المتسابقين ونقاطهم وتُفتح مرحلة تسجيل جديدة.')) return;
-    try { await api('registration-open',{keyword:el('registrationKeyword').value, reset:true}); toast('بدأ تسجيل جديد وتم تصفير نتائج الفعالية السابقة'); } catch {}
+  el('newRegistrationButton').addEventListener('click', e=>{
+    askConfirm(e.currentTarget, 'سيُمسح جميع المتسابقين ونقاطهم وتُفتح مرحلة تسجيل جديدة — اضغط مجددًا للتأكيد.', async()=>{
+      try { await api('registration-open',{keyword:el('registrationKeyword').value, reset:true}); toast('بدأ تسجيل جديد وتم تصفير نتائج الفعالية السابقة'); } catch {}
+    });
   });
 
   el('loadQuestionButton').addEventListener('click', () => drawBankQuestion(false));
   el('playQuestionButton').addEventListener('click', () => drawBankQuestion(true));
-  el('bankResetButton').addEventListener('click', async () => {
-    if (!confirm('سيُسمح بإعادة استخدام جميع الأسئلة في الجلسة. هل تريد المتابعة؟')) return;
-    try { const r = await api('bank-reset'); paintBank(r.bank); toast('تم تصفير سجل الأسئلة المستخدمة'); } catch {}
+  el('bankResetButton').addEventListener('click', e => {
+    askConfirm(e.currentTarget, 'سيُسمح بإعادة استخدام جميع الأسئلة في الجلسة — اضغط مجددًا للتأكيد.', async () => {
+      try { const r = await api('bank-reset'); paintBank(r.bank); toast('تم تصفير سجل الأسئلة المستخدمة'); } catch {}
+    });
   });
   document.querySelectorAll('.mode').forEach(btn=>btn.addEventListener('click',()=>setMode(btn.dataset.mode)));
   el('gameForm').addEventListener('submit',async e=>{e.preventDefault();try{await api('configure',configureData());toast('تم حفظ إعدادات الجولة');}catch{}});
@@ -250,7 +273,27 @@ function wire() {
   el('disconnectButton').addEventListener('click',async()=>{try{await api('disconnect');toast('تم فصل البث');}catch{}});
   el('simulateButton').addEventListener('click',async()=>{try{await api('simulate',{username:el('demoName').value,text:el('demoMessage').value});el('demoMessage').value='';}catch{}});
   el('demoMessage').addEventListener('keydown',e=>{if(e.key==='Enter')el('simulateButton').click();});
-  el('resetScoresButton').addEventListener('click',async()=>{if(!confirm('هل تريد مسح المتسابقين ونقاطهم؟ ستحتاج إلى فتح التسجيل من جديد.'))return;try{await api('reset');toast('تم تصفير النقاط');}catch{}});
+  el('resetScoresButton').addEventListener('click',e=>{
+    askConfirm(e.currentTarget, 'سيتم مسح المتسابقين ونقاطهم — اضغط مجددًا للتأكيد.', async()=>{
+      try{await api('reset');toast('تم تصفير النقاط');}catch{}
+    });
+  });
 }
-wire();wirePresenter();if (authToken) refreshBank().catch(() => {});fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
+async function autoDevAuth() {
+  if (authToken) return;
+  try {
+    const r = await fetch('/api/dev-token');
+    if (!r.ok) return;
+    const { token } = await r.json();
+    if (token) {
+      authToken = token;
+      el('adminToken').value = token;
+      sessionStorage.setItem('liveverse_admin', token);
+      el('authLabel').textContent = '✓ صلاحية الإدارة مفعّلة تلقائيًا لبيئة التطوير';
+      el('authLabel').classList.add('valid');
+      await refreshBank();
+    }
+  } catch {}
+}
+wire();wirePresenter();if (authToken) refreshBank().catch(() => {});else autoDevAuth();fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
 

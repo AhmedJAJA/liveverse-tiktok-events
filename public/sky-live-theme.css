@@ -126,14 +126,16 @@ body.presenter .presenter-info-chip>b,body.presenter .presenter-round-chip>b{col
 .arena .brand-lockup{gap:12px}
 .arena .brand-lockup strong{color:#dffaff;letter-spacing:.03em}
 .arena .live-pill{background:#24437a7a;border-color:#4ca9e8;color:#bbf6ff}
-.arena .round-pill{border-color:#6aa6ed8a;background:#142a69aa}
-.arena .clock-face{box-shadow:0 0 0 1px #74caff80,0 0 23px #37c0ff73}
+.arena .round-pill{border-color:#6aa6ed8a;background:#142a69aa;font-variant-numeric:tabular-nums}
+.arena .clock-face{box-shadow:0 0 0 1px #74caff80,0 0 23px #37c0ff73;transition:box-shadow .25s ease}
+.arena .answer-total,.presenter-info-chip b,.presenter-round-chip b,.stat-number,.score,.signup-wall-heading b,#signupCount,#signupLatestNumber,.podium-time,.result-speed,.choice-count{font-variant-numeric:tabular-nums}
 .arena .arena-body{background:radial-gradient(ellipse 100% 75% at 50% -6%,#244bb7 0%,#1b2d75 47%,#0e1a4b 100%)}
 .arena .arena-body:before{background:repeating-conic-gradient(from -9deg at 50% -45%,transparent 0deg 7deg,#7cdcff0d 7deg 9deg,transparent 9deg 19deg)}
 .arena .answer-total{background:#244782c4;border-color:#89bbff78}
 .arena .signup-screen{background:radial-gradient(ellipse at 49% 0%,#244eb7,#132960 65%,#080e2d)}
-.arena .signup-command{border-color:#9be9ff;background:#effaff;box-shadow:0 4px 0 #6599df,0 8px 23px #080f2c99}
+.arena .signup-command{border-color:#9be9ff;background:#effaff;box-shadow:0 4px 0 #6599df,0 8px 23px #080f2c99;transition:transform .2s cubic-bezier(.16,1,.3,1)}
 .arena .signup-command strong{background:linear-gradient(140deg,#b7faff,#5cbfff);color:#092f6b}
+.arena .signup-member-card{transition:transform .22s cubic-bezier(.16,1,.3,1),border-color .22s ease,box-shadow .22s ease}
 .arena .signup-member-card.is-latest{border-color:#8deaff;box-shadow:0 0 25px #5cbfff99}
 .arena .signup-spotlight{border-color:#9e8aff;background:linear-gradient(150deg,#2d3a95,#402b7c 70%)}
 .arena .spotlight-card{border-color:#81dafa;box-shadow:0 0 22px #3bbdff80}
@@ -142,28 +144,28 @@ body.presenter .presenter-info-chip>b,body.presenter .presenter-round-chip>b{col
 .arena .results-screen{background:radial-gradient(ellipse at 50% 5%,#254591,#111d50 65%,#060c27)}
 .arena .results-brand{color:#8de8ff}
 .arena .results-heading h2 span{color:#86dfff}
+.arena .results-podium .podium-card{animation:skyRise .5s cubic-bezier(.16,1,.3,1) both}
+.arena .results-podium .podium-card.place-2{animation-delay:.08s}
+.arena .results-podium .podium-card.place-3{animation-delay:.16s}
 .arena .results-podium .podium-card.place-1 .podium-avatar{border-color:#ffd792}
 .arena .results-next{color:#a7dfff}
+.is-confirming{border-color:#ff6b85!important;background:linear-gradient(145deg,#5a1f32,#3a1523)!important;color:#ffd4dc!important;box-shadow:0 0 18px #ff5e7445!important}
+@keyframes skyRise{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:1100px){
+  body.presenter .presenter-info-chip,body.presenter .presenter-round-chip{display:inline-flex;font-size:11px;padding:6px 10px 4px}
+}
 @media(max-width:780px){
  .sky-studio-mark{width:32px;height:32px}
  .sky-overlay-mark{width:40px;height:40px;border-radius:9px}
+ body.presenter .presenter-info-chip,body.presenter .presenter-round-chip{font-size:11px;padding:5px 9px 3px}
+ .settings-dialog .dual-fields{flex-direction:column;gap:0}
+ .settings-dialog .option-grid{grid-template-columns:1fr}
+ .settings-dialog .bank-controls{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+ body.presenter .presenter-toolbar{gap:6px;padding:8px}
+ body.presenter .presenter-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;gap:6px}
+ body.presenter .presenter-actions #presenterFullscreen{grid-column:auto}
+ body.presenter .presenter-stage{margin:6px 6px 0;border-radius:12px}
 }
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
-
-/* Distinct Sky Live lockups on enrollment and winner screens. */
-.sky-signup-brand,.sky-results-lockup{display:inline-flex;align-items:center;gap:9px;direction:ltr;color:#bcf2ff}
-.sky-signup-brand img,.sky-results-lockup img{
-  display:block;flex:none;border-radius:9px;object-fit:cover;border:1px solid #85e4ffa8;
-  box-shadow:0 0 15px #2aabff53
-}
-.sky-signup-brand small{font:900 clamp(12px,1.2vw,17px)/1.2 Arial,sans-serif;letter-spacing:.06em;color:#a2ecff}
-.sky-signup-brand img{height:36px;width:36px}
-.sky-results-lockup img{height:34px;width:34px}
-.sky-results-lockup .results-brand{color:#b4efff}
-.cta-emblem{width:min(190px,20vw);max-width:100%}
-@media(max-width:560px){
- .sky-signup-brand img{height:29px;width:29px}
- .sky-results-lockup img{height:27px;width:27px}
- .sky-signup-brand small{font-size:11px}
- .cta-emblem{width:155px}
-}
