@@ -1,0 +1,35 @@
+name: LIVEVERSE ARENA UI import and test
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release/arena-parts/04.txt'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify and unpack live broadcast overlay source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f release/arena-parts/04.txt
+          cat release/arena-parts/{01,02,03,04}.txt | base64 -d > /tmp/liveverse-arena-v04.tar.xz
+          echo '4425e802db0df967e3da79168e69cbde4c64ed0aced8ca1d96ff0fee02a72e0e  /tmp/liveverse-arena-v04.tar.xz' | sha256sum -c -
+          tar -xJf /tmp/liveverse-arena-v04.tar.xz -C .
+          npm test
+          npm run check
+          rm -rf release/arena-parts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Redesign LIVEVERSE spectator arena and podium"
+          git push
