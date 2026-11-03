@@ -1,58 +1,214 @@
-const toggle=document.getElementById('menuToggle');
-const nav=document.getElementById('navLinks');
-if(toggle&&nav){
-  toggle.addEventListener('click',()=>{
-    const open=nav.classList.toggle('open');
-    toggle.setAttribute('aria-expanded',String(open));
-    toggle.setAttribute('aria-label',open?'إغلاق القائمة':'فتح القائمة');
+/* SKY LIVE homepage: real session scores, connection state and working studio links. */
+const byId = id => document.getElementById(id);
+const allowedAvatars = ['tiktokcdn.com','tiktokcdn-us.com','tiktokcdn-eu.com','tiktokcdn-in.com','byteoversea.com','ibytedtos.com','ibyteimg.com','muscdn.com'];
+let sessionState = null;
+let socketRetry = 0;
+let adminToken = sessionStorage.getItem('liveverse_admin') || '';
+const menuToggle = byId('menuToggle');
+const nav = byId('navLinks');
+
+if (menuToggle && nav) {
+  menuToggle.addEventListener('click', () => {
+    const open = nav.classList.toggle('open');
+    menuToggle.setAttribute('aria-expanded', String(open));
+    menuToggle.setAttribute('aria-label', open ? 'إغلاق القائمة' : 'فتح القائمة');
   });
-  nav.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>{
+  nav.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
     nav.classList.remove('open');
-    toggle.setAttribute('aria-expanded','false');
-    toggle.setAttribute('aria-label','فتح القائمة');
+    menuToggle.setAttribute('aria-expanded','false');
   }));
-  document.addEventListener('keydown',event=>{
-    if(event.key==='Escape'&&nav.classList.contains('open')){
-      nav.classList.remove('open');toggle.setAttribute('aria-expanded','false');toggle.focus();
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && nav.classList.contains('open')) {
+      nav.classList.remove('open');
+      menuToggle.setAttribute('aria-expanded','false');
+      menuToggle.focus();
     }
   });
 }
 
-function initSmartImages(){
-  document.querySelectorAll('img').forEach(img=>{
-    const frame=img.closest('.img-skeleton')||img.parentElement;
-    const fallback=frame?frame.querySelector('.img-fallback-card'):null;
-    const markLoaded=()=>{
-      img.classList.add('is-loaded');
-      img.classList.remove('is-broken');
-      if(frame)frame.classList.remove('img-skeleton','has-img-error');
-      if(fallback)fallback.hidden=true;
-    };
-    const markFallback=()=>{
-      console.warn('[Sky Live Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:',img.currentSrc||img.src);
-      img.classList.add('is-broken');
-      img.hidden=true;
-      if(frame){
-        frame.classList.remove('img-skeleton');
-        frame.classList.add('has-img-error');
-      }
-      if(fallback){
-        fallback.hidden=false;
-      }else if(frame&&!frame.querySelector('.brand-mark-fallback')){
-        const badge=document.createElement('span');
-        badge.className='brand-mark-fallback';
-        badge.setAttribute('title','الصورة غير متاحة حاليًا');
-        badge.textContent='SL';
-        frame.prepend(badge);
-      }
-    };
-    if(img.complete){
-      if(img.naturalWidth>0)markLoaded();
-      else markFallback();
-    }else{
-      img.addEventListener('load',markLoaded,{once:true});
-      img.addEventListener('error',markFallback,{once:true});
-    }
+function initSmartImages() {
+  document.querySelectorAll('img[data-smart-img]').forEach(img => {
+    const frame = img.closest('.img-skeleton');
+    const fallback = frame?.querySelector('.img-fallback-card');
+    function loaded() { frame?.classList.remove('img-skeleton','has-img-error'); if(fallback)fallback.hidden=true; }
+    function failed() { img.hidden=true; frame?.classList.add('has-img-error'); frame?.classList.remove('img-skeleton'); if(fallback)fallback.hidden=false; }
+    if (img.complete) { if(img.naturalWidth)loaded(); else failed(); }
+    else { img.addEventListener('load',loaded,{once:true});img.addEventListener('error',failed,{once:true}); }
   });
 }
 initSmartImages();
+
+function safeAvatar(raw) {
+  if (typeof raw !== 'string' || raw.length > 2048) return '';
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return '';
+    if (!allowedAvatars.some(host => url.hostname === host || url.hostname.endsWith('.'+host))) return '';
+    return url.href;
+  } catch { return ''; }
+}
+function initials(name) { return Array.from(String(name || '؟').trim())[0] || '؟'; }
+function appendAvatar(box, person) {
+  box.replaceChildren();
+  const avatar = safeAvatar(person?.avatar);
+  if (!avatar) { box.textContent=initials(person?.name);return; }
+  const image=document.createElement('img');
+  image.alt='';
+  image.loading='lazy';
+  image.decoding='async';
+  image.referrerPolicy='no-referrer';
+  image.addEventListener('error', () => { box.textContent=initials(person?.name); }, {once:true});
+  image.src=avatar;
+  box.append(image);
+}
+function renderChampions(list) {
+  const box = byId('seasonChampions');
+  box.replaceChildren();
+  if (!list.length || !list.some(p => Number(p.score) > 0)) {
+    const empty=document.createElement('span');
+    empty.className='season-empty';
+    empty.textContent='كن أول أبطال الجلسة';
+    box.append(empty);
+    return;
+  }
+  for(const person of list.filter(p => Number(p.score)>0).slice(0,3)) {
+    const chip=document.createElement('span');
+    chip.className='champion-chip';
+    const avatar=document.createElement('span');
+    avatar.className='chip-avatar';
+    appendAvatar(avatar,person);
+    const label=document.createElement('b');
+    label.textContent=person.name;
+    chip.append(avatar,label);
+    box.append(chip);
+  }
+}
+function renderLeaderboard(list) {
+  const display = [
+    ['One','الأول'],['Two','الثاني'],['Three','الثالث']
+  ];
+  for(let i=0;i<display.length;i++) {
+    const [suffix,ordinal]=display[i];
+    const player=list[i];
+    byId('name'+suffix).textContent=player?.name || (i===0?'بانتظار البطل':'المركز '+ordinal);
+    byId('points'+suffix).textContent=Number(player?.score||0).toLocaleString('en-US');
+    const box=byId('avatar'+suffix);
+    if (player) appendAvatar(box,player);
+    else {
+      box.replaceChildren();
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('class','i');
+      const use=document.createElementNS('http://www.w3.org/2000/svg','use');
+      use.setAttribute('href','/icons.svg#i-crown');
+      svg.append(use);box.append(svg);
+    }
+  }
+  const score=Math.max(0,Number(list[0]?.score||0));
+  const nextGoal=Math.max(50,Math.ceil((score+1)/50)*50);
+  const prevGoal=Math.max(0,nextGoal-50);
+  const current=score-prevGoal;
+  const pct=Math.max(0,Math.min(100,(current/50)*100));
+  byId('scoreLevel').textContent='الهدف '+nextGoal.toLocaleString('en-US');
+  byId('scoreProgress').textContent=score.toLocaleString('en-US')+' / '+nextGoal.toLocaleString('en-US')+' نقطة';
+  byId('passFill').style.width=pct+'%';
+  const progress=byId('passProgress');
+  progress.setAttribute('aria-valuenow',String(current));
+  progress.setAttribute('aria-valuetext',score+' من '+nextGoal+' نقطة');
+}
+function renderConnection(connection) {
+  const state=connection?.state || 'disconnected';
+  const badge=byId('liveConnectionBadge');
+  badge.classList.toggle('connected',state==='connected');
+  badge.classList.toggle('connecting',state==='connecting');
+  badge.classList.toggle('error',state==='error');
+  const messages={connected:'متصل بالبث',connecting:'جارٍ الاتصال',error:'خطأ بالاتصال',disconnected:'غير متصل'};
+  byId('liveConnectionStatus').textContent=messages[state]||'غير متصل';
+  byId('connectionNote').textContent=connection?.detail || 'ربط تجريبي • يمكنك تجربة الفعاليات دون الاتصال ببث فعلي.';
+  if (state==='connected' && connection.username && !byId('liveUsername').value) {
+    byId('liveUsername').value=connection.username;
+  }
+}
+function populate(state) {
+  if(!state || !state.status)return;
+  sessionState=state;
+  renderConnection(state.connection);
+  const leaderboard=Array.isArray(state.leaderboard)?state.leaderboard:[];
+  renderChampions(leaderboard);
+  renderLeaderboard(leaderboard);
+  byId('headerPlayers').textContent=Number(state.playerCount||0).toLocaleString('en-US')+' مشارك';
+}
+async function refresh() {
+  const response=await fetch('/api/state',{cache:'no-store'});
+  if (!response.ok)throw new Error('تعذر قراءة بيانات البث');
+  populate(await response.json());
+}
+function socket() {
+  const proto=location.protocol==='https:'?'wss':'ws';
+  const ws=new WebSocket(proto+'://'+location.host+'/ws');
+  ws.addEventListener('open',()=>{socketRetry=0;});
+  ws.addEventListener('message',event=>{
+    try {const packet=JSON.parse(event.data);if(packet.type==='state')populate(packet.data);}catch { /* ignore invalid packet */ }
+  });
+  ws.addEventListener('close',()=>{
+    const delay=Math.min(15000,2000*(++socketRetry));
+    setTimeout(socket,delay);
+  });
+  ws.addEventListener('error',()=>ws.close());
+}
+async function callAdmin(action, body, token=adminToken) {
+  const response=await fetch('/api/admin/'+action,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body||{})});
+  let result={};
+  try{result=await response.json();}catch{}
+  if(!response.ok){const error=new Error(result.error||'تعذر تنفيذ الطلب');error.code=response.status;throw error;}
+  return result;
+}
+function showAdminDialog(message='') {
+  const dialog=byId('adminDialog');
+  byId('landingAuthError').hidden=!message;
+  byId('landingAuthError').textContent=message;
+  if(!dialog.open)dialog.showModal();
+  byId('landingAdminToken').focus();
+}
+async function connectBroadcast() {
+  const username=byId('liveUsername').value.trim().replace(/^@/,'');
+  if(!/^[\w.]{2,30}$/.test(username)) {
+    byId('connectionNote').textContent='أدخل اسم مستخدم TikTok صحيحًا، بدون رابط أو مسافات.';
+    byId('liveUsername').focus();
+    return;
+  }
+  if(!adminToken){showAdminDialog();return;}
+  const button=byId('liveConnectButton');
+  button.disabled=true;
+  byId('liveConnectionStatus').textContent='جارٍ الاتصال';
+  byId('liveConnectionBadge').classList.add('connecting');
+  try {
+    await callAdmin('connect',{username});
+    byId('connectionNote').textContent='تم ربط البث. يمكنك بدء التسجيل من الاستوديو.';
+    await refresh();
+  } catch(error) {
+    byId('connectionNote').textContent=error.message;
+    if(error.code===401){adminToken='';sessionStorage.removeItem('liveverse_admin');showAdminDialog('انتهت صلاحية الرمز. أعد إدخال رمز الإدارة.');}
+    else await refresh().catch(()=>{});
+  } finally {button.disabled=false;}
+}
+byId('liveConnectForm').addEventListener('submit',event=>{event.preventDefault();connectBroadcast();});
+byId('adminClose').addEventListener('click',()=>byId('adminDialog').close());
+byId('adminLoginForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const token=byId('landingAdminToken').value.trim();
+  const button=byId('adminSubmit');
+  button.disabled=true;
+  try {
+    await callAdmin('verify',{},token);
+    adminToken=token;
+    sessionStorage.setItem('liveverse_admin',token);
+    byId('landingAdminToken').value='';
+    byId('adminDialog').close();
+    await connectBroadcast();
+  } catch(error) {
+    byId('landingAuthError').textContent=error.message;
+    byId('landingAuthError').hidden=false;
+  } finally {button.disabled=false;}
+});
+refresh().catch(()=>{byId('connectionNote').textContent='تعذر تحميل حالة البث. حدّث الصفحة للمحاولة مجددًا.';});
+socket();

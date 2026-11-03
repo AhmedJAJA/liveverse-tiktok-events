@@ -530,4 +530,10 @@ function guardStudioImages() {
   });
 }
 guardStudioImages();
-wire();wirePresenter();setMode('quiz');if (authToken) refreshBank().catch(() => {});else autoDevAuth();fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
+// Game cards on the homepage deep-link to the actual mode in the working studio.
+const urlOptions = new URLSearchParams(location.search);
+const requestedMode = urlOptions.get('mode');
+const selectedMode = ['quiz','guess','race','wheel'].includes(requestedMode) ? requestedMode : 'quiz';
+wire();wirePresenter();setMode(selectedMode);
+if (urlOptions.get('panel') === 'games') openSettings();
+if (authToken) refreshBank().catch(() => {});else autoDevAuth();fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
