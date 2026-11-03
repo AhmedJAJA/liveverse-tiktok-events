@@ -10,7 +10,7 @@ const instructions = {
   wheel: ['سحب عشوائي بين المسجلين', 'الأسماء المسجلة في الفعالية تدخل السحب تلقائيًا، ثم يختار المضيف الفائز.']
 };
 const modeLabels = { quiz: 'الأسئلة', guess: 'التخمين', race: 'السباق', wheel: 'العجلة' };
-function toast(message, error=false) { const box=el('toast'); box.textContent=message; box.classList.toggle('error', error); box.classList.add('show'); clearTimeout(toastTimeout); toastTimeout=setTimeout(()=>box.classList.remove('show'),4500); }
+function toast(message, error=false) { const box=el('toast'); const dialog=el('settingsDialog'); (dialog?.open?dialog:document.body).append(box); box.textContent=message; box.classList.toggle('error', error); box.classList.add('show'); clearTimeout(toastTimeout); toastTimeout=setTimeout(()=>box.classList.remove('show'),4500); }
 function safeText(v) { return String(v ?? ''); }
 async function api(action, data={}) {
   if (!authToken) { openSettings('adminToken'); toast('أدخل رمز الإدارة وفعّله أولًا', true); throw new Error('Authentication required'); }
