@@ -1,0 +1,28 @@
+name: Event visual verification
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-screenshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Capture real mobile viewport from production
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME" ]; then echo "CHROME_NOT_FOUND"; exit 0; fi
+          "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --hide-scrollbars --window-size=390,844 --force-device-scale-factor=2 --virtual-time-budget=5000 --screenshot=/tmp/sky-event.png "https://liveverse-tiktok-events.onrender.com/event?mode=glass" 2>/tmp/sky-chrome.log
+          if [ -s /tmp/sky-event.png ]; then
+            file /tmp/sky-event.png
+            if command -v ffmpeg >/dev/null; then ffmpeg -y -loglevel error -i /tmp/sky-event.png -q:v 8 /tmp/sky-event.jpg; else cp /tmp/sky-event.png /tmp/sky-event.jpg; fi
+            echo SKY_EVENT_IMAGE_BEGIN
+            base64 -w 1000 /tmp/sky-event.jpg
+            echo SKY_EVENT_IMAGE_END
+          else
+            echo SCREENSHOT_FAILED
+            cat /tmp/sky-chrome.log | tail -25
+          fi
