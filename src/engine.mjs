@@ -61,7 +61,7 @@ export class Engine {
     const race = [...this.raceProgress.entries()].map(([id, progress]) => ({ id, name: this.players.get(id)?.name || id, progress }))
       .sort((a,b) => b.progress - a.progress).slice(0, 15);
     return {
-      status: { ...this.status, answer: undefined },
+      status: { ...this.status, answer: undefined, choiceCounts: [1, 2, 3, 4].map(n => [...this.firstAnswers.values()].filter(a => a.choice === String(n)).length) },
       connection: this.connection,
       leaderboard: players,
       race,
@@ -70,7 +70,7 @@ export class Engine {
       recent: this.recent,
       round: this.round,
       playerCount: this.players.size,
-      registration: { ...this.registration, count: this.players.size, recent: [...this.registrationRecent] },
+      registration: { ...this.registration, count: this.players.size, recent: [...this.registrationRecent], participants: [...this.players.values()].slice(-100).map((p, i, tail) => ({ name: p.name, number: this.players.size - tail.length + i + 1 })) },
       serverTime: this.now()
     };
   }
@@ -218,9 +218,9 @@ export class Engine {
     this.emit();
     return true;
   }
-  recordAnswer(player, isCorrect, timestamp) {
+  recordAnswer(player, isCorrect, timestamp, choice = null) {
     if (this.firstAnswers.has(player.id)) return; // لا تغيير للإجابة الأولى حتى لو كانت خاطئة
-    this.firstAnswers.set(player.id, { correct: isCorrect, at: timestamp });
+    this.firstAnswers.set(player.id, { correct: isCorrect, at: timestamp, choice });
     this.status.submissionCount = this.firstAnswers.size;
     if (isCorrect) this.correctAnswers.push({ id: player.id, name: player.name, at: timestamp,
       elapsedMs: Math.max(0, timestamp - this.status.startedAt), order: this.answerSequence++ });
@@ -271,7 +271,7 @@ export class Engine {
       const option = choices[raw.toLowerCase()] || choices[key] ||
         String(this.status.options.findIndex(text => key && normalizeAnswer(text) === key) + 1);
       if (!['1','2','3','4'].includes(option)) return;
-      this.recordAnswer(player, option === this.status.answer, timestamp);
+      this.recordAnswer(player, option === this.status.answer, timestamp, option);
     } else if (this.status.mode === 'guess') {
       if (!input || message.trim().startsWith('!')) return;
       this.recordAnswer(player, input === normalizeAnswer(this.status.answer), timestamp);
