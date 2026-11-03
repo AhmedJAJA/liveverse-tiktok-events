@@ -1,0 +1,151 @@
+/*
+ * SKY LIVE — site-wide identity
+ * Artwork: original Sky Live poster created for this project.
+ * Preserves gameplay, auth, round timers, read-only audience overlay and responsive layouts.
+ */
+:root{
+  --sky-black:#050b20;--sky-night:#09153a;--sky-blue:#368bff;
+  --sky-cyan:#59e8ff;--sky-violet:#9e67f5;--sky-white:#f2f9ff;
+  --sky-edge:#577bdb;
+  --gold:#66d8ff;--gold2:#b2f4ff;--cream:#f3f9ff;--border:#385598;
+}
+html{scrollbar-color:#3467bd #080e26}
+body{color:var(--sky-white)}
+/* Public homepage, high-contrast night-sky identity */
+body:has(.site-header){background:#060b1f}
+.site-header{background:#070e27f5;border-color:#62a9ff44;box-shadow:0 8px 25px #02071b55}
+.logo img,.footer-logo img{border-radius:14px;object-fit:cover;border:1px solid #70baff82;box-shadow:0 0 18px #3bc9ff5e}
+.logo>span{color:#f9fcff}
+.logo .blue{color:#5ee0ff;text-shadow:0 0 18px #58adff70}
+.nav-links a{color:#d1ddf9}.nav-links a:hover{color:#7ce4ff}
+.btn{border-color:#759ce16c}
+.btn-ghost{background:#111a38;border-color:#5973ae8c}
+.btn-ghost:hover{background:#22345b;border-color:#72d4ff}
+.btn-gold{
+  color:#051d3e;background:linear-gradient(155deg,#bbf6ff,#63d4ff 42%,#4787f4);
+  border-color:#a4efff;box-shadow:0 8px 26px #2581ff52,inset 0 2px #fff9
+}
+.btn-gold:hover{box-shadow:0 10px 38px #23aaff75;filter:brightness(1.07)}
+.hero{
+  background:radial-gradient(ellipse 76% 88% at 8% 42%,#184b9870,#0c1648 52%,transparent 83%),
+  radial-gradient(ellipse 50% 58% at 80% 10%,#6d38bf2c,transparent 74%),#070b20;
+}
+.hero-beam{background:radial-gradient(ellipse at 16% 40%,#3896ff2c,transparent 51%),linear-gradient(90deg,transparent 40%,#d6bbff06 55%,transparent 67%)}
+.eyebrow{border-color:#6daaf3a3;background:#1946816e;color:#b4f2ff;box-shadow:0 0 26px #3a96ff24}
+.eyebrow .live-dot{background:#fe477b;box-shadow:0 0 0 5px #ff4e6942,0 0 14px #fe477b}
+.hero h1 em{color:#70dcff;text-shadow:0 0 30px #2aa8ff44}
+.hero h1 .underlined{text-decoration-color:#569dff}
+.hero-description{color:#c7dcfc}
+.hero-metrics strong{color:#fff}.hero-metrics span{color:#86bde8}
+.hero-halo{background:radial-gradient(circle,#4e6aff37,transparent 65%)}
+.halo-b{background:radial-gradient(circle,#952cff30,transparent 70%)}
+.showcase-phone{
+  background:linear-gradient(115deg,#7cbfff,#182f66 20%,#161e53 80%,#65b8ff);
+  border-color:#508de7;box-shadow:0 0 0 3px #0e295d,0 25px 95px #05051fdb,0 0 80px #415efe50
+}
+.phone-inner{background:radial-gradient(ellipse at 49% 15%,#8245be,#18215f 63%,#08133a)}
+.phone-topline small{color:#7ce8ff}
+.game-logo img{border-radius:20px;box-shadow:0 0 45px #4ce0ff7a;border:1px solid #83efff6e;object-fit:cover}
+.phone-bottom b{color:#9becff}
+.floating-pill{background:#0b1635f5;border-color:#62abffb5;box-shadow:0 8px 25px #050b27b8}
+.floating-pill b,.floating-pill strong{color:#6ae9ff}
+.winner-icon{color:#b99bff!important}
+.floating-mini{border-color:#79d8ff88;background:linear-gradient(155deg,#36469a,#0d1b4d)}
+.platform-box{background:linear-gradient(115deg,#101b3e,#0a1030);border-color:#466ec66e}
+.platform-heading p{color:#a8c3ec}
+.platform-item{background:linear-gradient(145deg,#1a2b5e,#111935);border-color:#4572bb78}
+.small-overline{color:#87e7ff}
+.supported-status{background:#208a6960}.beta-status{background:#2459a964;color:#91eaff}
+.how-section .section-heading em,.games-section .section-heading em{color:#80e1ff}
+.section-heading p{color:#bbd5fd}
+.step{background:linear-gradient(135deg,#10264c,#0b1738 75%);border-color:#487ccf8c;box-shadow:inset 0 1px #ffffff18}
+.step:after{background:#367aff1d}.step-number{background:linear-gradient(#b8f4ff,#5496ef);color:#06204a;box-shadow:0 7px 22px #519dff47}
+.step-symbol{color:#86ccff}.step p{color:#b8ccef}
+.games-section{background:linear-gradient(180deg,#070c1f,#0b1336 55%,#070a1d)}
+.game-tile{border-color:#3d72da77;background:#0d173b}
+.game-tile:hover{border-color:#61e2ff;box-shadow:0 16px 38px #041733b0}
+.game-art{background:radial-gradient(ellipse at 50% 29%,#2447a7,#0b1b54 83%)}
+.art-big{color:#84deff;text-shadow:0 0 35px #75d9ff80}
+.guess-tile .art-big{color:#af95ff}
+.game-tag,.tile-icon{color:#79dfff}
+.cta-card{background:linear-gradient(125deg,#0f2d66,#10143d 65%);border-color:#3678d982}
+.cta-pattern{background:#4875ff28}
+.cta-copy p{color:#bcd5ff}.cta-copy small{color:#9dafdc}
+.cta-emblem{border-radius:25px;border:1px solid #5ce9ff7d;box-shadow:0 0 65px #5980ff66;object-fit:cover}
+.site-footer{border-color:#3967aa59;background:#080f27}
+.footer-logo strong{color:#7ce4ff}.footer-inner>a:last-child{color:#96e5ff}
+@media(max-width:850px){.nav-links{background:#0b1533;border-color:#58bfff}}
+@media(max-width:560px){.logo>span{font-size:15px}.cta-emblem{width:155px}.game-logo img{width:115px}}
+/* Host studio — blue neon counterpart to the audience broadcast */
+body.presenter{
+  background:radial-gradient(ellipse 75% 50% at 50% 35%,#162c6b,#070f2b 78%);
+}
+body.presenter .presenter-toolbar{
+  background:linear-gradient(180deg,#090d20,#101b3a);
+  border-color:#507cb55c
+}
+body.presenter .presenter-toolbar:after{background:linear-gradient(90deg,transparent,#7fbbff80,transparent)}
+body.presenter .presenter-brand{
+  background:linear-gradient(145deg,#173c78,#0e1c48);
+  border-color:#5b9cf6b0;color:white;
+  box-shadow:inset 0 1px #ffffff32,0 0 22px #3278ff4d
+}
+.sky-studio-mark{width:38px;height:38px;object-fit:cover;border-radius:9px;border:1px solid #84e6ffb0;box-shadow:0 0 12px #3d9fff77;flex:none}
+body.presenter .presenter-brand strong{color:#e7fbff;text-shadow:0 0 18px #77d2ff56;font-size:18px}
+body.presenter .presenter-keyword{background:#1d4f9b36;border-color:#62adff7e;color:#c1e5ff}
+body.presenter .presenter-keyword b{color:#8deaff}
+body.presenter .presenter-actions button{background:linear-gradient(#243054,#121e40);border-color:#4d6bbf6a}
+body.presenter .presenter-actions button>span:first-child{color:#87dfff}
+body.presenter .presenter-actions button:hover:not(:disabled){border-color:#7cdfff;background:#1e3b77}
+body.presenter .presenter-actions #presenterRegistration{background:linear-gradient(#253d68,#0b254d);border-color:#3b89ff;color:#cdf7ff}
+body.presenter .presenter-actions #presenterNext{border-color:#5972f0b0}
+body.presenter .presenter-stage{border-color:#70aaff85;box-shadow:0 14px 45px #030925a6,0 0 0 4px #2c71bb2c}
+body.presenter .presenter-start{background:linear-gradient(150deg,#54e7c8,#1bba87);border-color:#b4ffef;color:#063323;box-shadow:0 4px 0 #086b56,0 0 25px #2abfbb3a}
+body.presenter .presenter-footer{background:#070d24;color:#c0d8ff}
+body.presenter .presenter-output{color:#b2e9ff;border-color:#63d0ff70;background:#102653}
+body.presenter .presenter-toolbar .pill{background:#20345d;border-color:#4f9dff7b;color:#d8e9ff}
+body.presenter .presenter-info-chip,body.presenter .presenter-round-chip{border-color:#3d8be88a;background:#102854}
+body.presenter .presenter-info-chip>b,body.presenter .presenter-round-chip>b{color:#93ebff}
+.settings-dialog{background:linear-gradient(135deg,#081534,#0c1235 74%);border-color:#4e97f78a}
+.settings-dialog .settings-header{background:linear-gradient(100deg,#1a2857,#0c1d43);border-color:#5f8fe26b}
+.settings-dialog .settings-header small{color:#76dcff}
+.settings-dialog .dialog-close{color:#caf3ff;border-color:#438de8}
+.settings-dialog .stat{background:linear-gradient(155deg,#183868,#0c2146)!important;border-color:#5c87d694!important}
+.settings-dialog .stat-number{color:#a6f5ff!important}
+.settings-dialog .panel{background:linear-gradient(135deg,#132957,#0e1a3b)!important;border-color:#678ede70!important}
+.settings-dialog .registration-studio,.settings-dialog .panel-inset,.settings-dialog .form-card{background:#101e43!important;border-color:#6c8ed484!important}
+.settings-dialog .overline,.settings-dialog .bank-eyebrow,.settings-dialog .registration-header small{color:#78dbff!important}
+.settings-dialog .mode.is-selected{background:#234e8360!important;border-color:#63cbff!important}
+.settings-dialog .button.primary{background:linear-gradient(145deg,#c5fbff,#5cc8ff)!important;border-color:#abebff!important;color:#082443!important}
+.settings-dialog .input:focus,.settings-dialog input:focus{border-color:#70cfff!important}
+.settings-dialog .text-link{color:#93d9ff!important}
+/* Audience overlays retain contrast and quiz answer semantics */
+.arena{--gold:#77e1ff;--font:Tajawal,Arial,sans-serif}
+.arena .top-line{background:linear-gradient(180deg,#0a173d,#102856);border-color:#63aaff70}
+.sky-overlay-mark{height:54px;width:54px;object-fit:cover;border-radius:12px;border:1px solid #88e8ffb5;box-shadow:0 0 18px #348cff70;flex-shrink:0}
+.arena .brand-lockup{gap:12px}
+.arena .brand-lockup strong{color:#dffaff;letter-spacing:.03em}
+.arena .live-pill{background:#24437a7a;border-color:#4ca9e8;color:#bbf6ff}
+.arena .round-pill{border-color:#6aa6ed8a;background:#142a69aa}
+.arena .clock-face{box-shadow:0 0 0 1px #74caff80,0 0 23px #37c0ff73}
+.arena .arena-body{background:radial-gradient(ellipse 100% 75% at 50% -6%,#244bb7 0%,#1b2d75 47%,#0e1a4b 100%)}
+.arena .arena-body:before{background:repeating-conic-gradient(from -9deg at 50% -45%,transparent 0deg 7deg,#7cdcff0d 7deg 9deg,transparent 9deg 19deg)}
+.arena .answer-total{background:#244782c4;border-color:#89bbff78}
+.arena .signup-screen{background:radial-gradient(ellipse at 49% 0%,#244eb7,#132960 65%,#080e2d)}
+.arena .signup-command{border-color:#9be9ff;background:#effaff;box-shadow:0 4px 0 #6599df,0 8px 23px #080f2c99}
+.arena .signup-command strong{background:linear-gradient(140deg,#b7faff,#5cbfff);color:#092f6b}
+.arena .signup-member-card.is-latest{border-color:#8deaff;box-shadow:0 0 25px #5cbfff99}
+.arena .signup-spotlight{border-color:#9e8aff;background:linear-gradient(150deg,#2d3a95,#402b7c 70%)}
+.arena .spotlight-card{border-color:#81dafa;box-shadow:0 0 22px #3bbdff80}
+.arena .spotlight-inner h2{background:#bcefff;color:#18315a}
+.arena .signup-ready{background:linear-gradient(150deg,#54e5bb,#16c38e);border-color:#9bffd4}
+.arena .results-screen{background:radial-gradient(ellipse at 50% 5%,#254591,#111d50 65%,#060c27)}
+.arena .results-brand{color:#8de8ff}
+.arena .results-heading h2 span{color:#86dfff}
+.arena .results-podium .podium-card.place-1 .podium-avatar{border-color:#ffd792}
+.arena .results-next{color:#a7dfff}
+@media(max-width:780px){
+ .sky-studio-mark{width:32px;height:32px}
+ .sky-overlay-mark{width:40px;height:40px;border-radius:9px}
+}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
