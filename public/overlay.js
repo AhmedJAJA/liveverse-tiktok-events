@@ -31,10 +31,10 @@ function triggerRoundStartCountdown() {
   }
   overlay.hidden = false;
   const steps = [
-    { val: '3', text: '🔥 استعد للتحدي', delay: 0 },
-    { val: '2', text: '⚡ جهّز إجابتك في الشات', delay: 420 },
-    { val: '1', text: '🎯 السرعة تحسم الصدارة', delay: 840 },
-    { val: 'انطلق! 🔥', text: 'أرسل إجابتك الآن', delay: 1260 }
+    { val: '3', text: 'استعد للتحدي الملكي', delay: 0 },
+    { val: '2', text: 'جهّز إجابتك في الشات', delay: 420 },
+    { val: '1', text: 'السرعة تحسم الصدارة', delay: 840 },
+    { val: 'انطلق!', text: 'أرسل إجابتك الآن', delay: 1260 }
   ];
   for (const step of steps) {
     countdownTimers.push(setTimeout(() => {
@@ -75,7 +75,23 @@ function updateStandings(players) {
     list.append(row);
   });
 }
-const memberColors = ['#a96c87','#6b8d9d','#8e83ad','#9e8a58','#699787','#a87965','#7489b2'];
+const memberColors = ['#D4AF37','#977328','#B8923A','#7D6024','#C6A34B','#8B6C28','#A88534'];
+function createRoyalCrownSvg() {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('class', 'crown-svg-icon');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2.1');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  const p = document.createElementNS(ns, 'path');
+  p.setAttribute('d', 'm2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14');
+  svg.append(p);
+  return svg;
+}
 function paintAvatar(container, player) {
   const key=JSON.stringify([player?.name,player?.avatar]);
   if (container.dataset.person === key) return;
@@ -106,9 +122,11 @@ function paintAvatar(container, player) {
 }
 function renderOptions(items) {
   const list=$('overlayOptions');list.replaceChildren();
+  const letters = ['A', 'B', 'C', 'D'];
   items.slice(0,4).forEach((option,i)=>{
     const card=node('div','choice');card.dataset.option=String(i+1);
-    const badge=node('span','choice-index');badge.append(node('span','',String(i+1)));
+    const badge=node('span','choice-index');
+    badge.append(node('span','',String(i+1)),node('small','choice-letter',letters[i]||String(i+1)));
     const label=node('span','choice-label',option);
     label.classList.toggle('is-long',option.length>22);label.classList.toggle('is-very-long',option.length>48);
     const votes=node('span','choice-mark');
@@ -170,7 +188,7 @@ function triggerConfetti() {
   const stage = $('confettiStage');
   if (!stage) return;
   stage.replaceChildren();
-  const colors = ['#59e8ff', '#368bff', '#9e67f5', '#ffd78c', '#36d391', '#ff5e74'];
+  const colors = ['#D4AF37', '#F4D58D', '#977328', '#F7F3E9', '#E2E8F0', '#B8860B'];
   for (let i = 0; i < 42; i++) {
     const piece = node('i', 'confetti-piece');
     piece.style.setProperty('--cx', `${(i * 2.38) % 100}%`);
@@ -183,13 +201,17 @@ function triggerConfetti() {
 }
 function podiumCard(p, rank) {
   const card=node('div',`podium-card place-${rank}`);
-  if (rank===1) card.append(node('span','podium-crown anim-trophy','👑'));
+  if (rank===1) {
+    const crown=node('span','podium-crown anim-trophy');
+    crown.append(createRoyalCrownSvg());
+    card.append(crown);
+  }
   const avatar=node('div','podium-avatar');
   paintAvatar(avatar,p);
-  const medal=['🥇','🥈','🥉'][rank-1]||String(rank);
+  const rankTitle=['المركز الأول','المركز الثاني','المركز الثالث'][rank-1]||String(rank);
   card.append(avatar,
-    node('strong','podium-name',p.name),node('span','podium-time','⏳ '+formatMs(p.elapsedMs)),
-    node('span','podium-points',`🏆 +${p.points} نقاط`),node('div','podium-base',`${medal} ${rank}`));
+    node('strong','podium-name',p.name),node('span','podium-time',formatMs(p.elapsedMs)),
+    node('span','podium-points',`+${p.points} نقاط`),node('div','podium-base',rankTitle));
   return card;
 }
 function renderResults(status, round) {
@@ -201,25 +223,25 @@ function renderResults(status, round) {
   const key=`${round}:${results.completedAt}`;
   if (stateCache.resultsKey===key) return;
   stateCache.resultsKey=key;
-  $('resultsRoundLabel').textContent=`🎯 نتائج السؤال ${round}`;
-  $('resultsSubtitle').textContent=results.correctCount?'🎉 الترتيب حسب أسرع إجابة صحيحة وصلت إلى السيرفر':'❌ انتهى الوقت! هذه الجولة بدون إجابات صحيحة';
+  $('resultsRoundLabel').textContent=`نتائج السؤال ${round}`;
+  $('resultsSubtitle').textContent=results.correctCount?'الترتيب حسب أسرع إجابة صحيحة وصلت إلى السيرفر':'انتهى الوقت! هذه الجولة بدون إجابات صحيحة';
   $('resultsCorrect').textContent=results.correctAnswer||'—';
-  $('resultsAnswers').textContent=`✅ ${number(results.correctCount)} صحيحة / ${number(results.totalAnswers)} إجابة`;
+  $('resultsAnswers').textContent=`${number(results.correctCount)} صحيحة / ${number(results.totalAnswers)} إجابة`;
   const podium=$('resultsPodium');const list=$('resultsOthers');podium.replaceChildren();list.replaceChildren();
   if(!results.rankings?.length){
-    podium.append(node('div','results-empty anim-cross','❌ لم تُسجّل إجابة صحيحة هذه المرة • 🔥 الجولة القادمة فرصتك!'));
+    podium.append(node('div','results-empty anim-cross','لم تُسجّل إجابة صحيحة هذه المرة • الجولة القادمة فرصتك!'));
   }else{
     triggerConfetti();
     results.rankings.slice(0,3).forEach((p,i)=>podium.append(podiumCard(p,i+1)));
     const others=results.rankings.slice(3,10);
-    if(!others.length){list.append(node('div','standings-empty','بقية المراكز ستظهر هنا عند مشاركة المزيد من المتسابقين 👥'));}
+    if(!others.length){list.append(node('div','standings-empty','بقية المراكز ستظهر هنا عند مشاركة المزيد من المتسابقين'));}
     for(const p of others){
       const row=node('div','result-other-row');
       const nameCell=node('span','result-person');
       const avatar=node('span','result-avatar');
       paintAvatar(avatar,p);
       nameCell.append(avatar,node('strong','result-person-name',p.name));
-      row.append(node('span','',String(p.rank).padStart(2,'0')),nameCell,node('span','result-speed','⚡ '+formatMs(p.elapsedMs)),node('b','',`+${p.points}`));
+      row.append(node('span','',String(p.rank).padStart(2,'0')),nameCell,node('span','result-speed',formatMs(p.elapsedMs)),node('b','',`+${p.points}`));
       list.append(row);
     }
   }
@@ -229,19 +251,19 @@ function renderRegistration(reg) {
   const screen=$('registrationOverlay'),visible=!!reg&&['open','idle'].includes(reg.phase);
   screen.hidden=!visible;
   if(!visible) return;
-  $('signupStateLabel').textContent=reg.phase==='open'?'🔥 التسجيل مفتوح':'⏳ بانتظار فتح التسجيل';
+  $('signupStateLabel').textContent=reg.phase==='open'?'التسجيل مفتوح':'بانتظار فتح التسجيل';
   $('signupEmptyHint').textContent=reg.phase==='open'?'اكتب كلمة الانضمام في شات البث وبيظهر اسمك وصورتك هنا مباشرة':'تبدأ المشاركة بعد فتح التسجيل. استعد للتحدي!';
   $('signupKeyword').textContent=reg.keyword||'انضم';
   $('signupKeyword').classList.toggle('is-long',(reg.keyword||'').length>8);
   $('signupTitle').textContent=window.lastLiveverseState?.status?.title||'تحدي المعلومات';
   $('signupCount').textContent=number(reg.count||0);
-  $('signupReady').textContent=reg.count?'✅ '+number(reg.count)+' متسابقًا جاهزًا':'⏳ بانتظار المشاركين';
+  $('signupReady').textContent=reg.count?number(reg.count)+' متسابقًا جاهزًا':'بانتظار المشاركين';
   const latest=reg.recent?.[0]||null;
   $('signupLatestName').textContent=latest?.name||'بانتظارك';
   $('signupLatestName').title=latest?.name||'';
   $('signupLatestNumber').textContent='#'+number(reg.count||0);
   paintAvatar($('signupLatestAvatar'),latest);
-  $('signupLatestDescription').textContent=latest?'🎉 رقم دخوله '+number(reg.count||0):'اسمك الجاي هنا 🔥';
+  $('signupLatestDescription').textContent=latest?'رقم الانضمام #'+number(reg.count||0):'مكانك محجوز للتحدي الملكي';
   $('signupEmpty').hidden=!!reg.count;
   const vertical=matchMedia('(max-aspect-ratio:4/5)').matches;
   const slots=vertical?30:matchMedia('(max-width:1200px)').matches?60:77;
@@ -294,17 +316,17 @@ function update(data) {
   const phase=['open','idle'].includes(data.registration?.phase)?'registration':s.results?'results':s.active?'active':'waiting';
   const arena=$('arena');arena.dataset.mode=s.mode;arena.dataset.phase=phase;
   arena.querySelector('.arena-body').hidden=phase==='registration'||phase==='results';
-  $('overlayRound').replaceChildren(document.createTextNode(s.mode==='quiz'?'🎯 السؤال ':'🔥 الجولة '),node('b','',data.round||1));
+  $('overlayRound').replaceChildren(document.createTextNode(s.mode==='quiz'?'السؤال ':'الجولة '),node('b','',data.round||1));
   renderProgressDots(data.round||1);
   $('footerRound').textContent=String(data.round||1).padStart(3,'0');
-  $('overlayLiveText').textContent=phase==='registration'?'👥 التسجيل مفتوح':phase==='results'?'🏆 انتهت الجولة':phase==='active'?'🔥 البث المباشر':'⏳ في انتظار البداية';
+  $('overlayLiveText').textContent=phase==='registration'?'التسجيل مفتوح':phase==='results'?'انتهت الجولة':phase==='active'?'البث المباشر':'في انتظار البداية';
   $('modeTag').textContent=mode.en;
   $('questionMode').textContent=mode.short;
   $('questionLabel').textContent=mode.ar;
   $('stageTag').textContent=phase==='active'?'التحدي بدأ':phase==='results'?'اكتملت الجولة':'استعد للتحدي';
   $('overlayTitle').textContent=s.title||'تحدي الجمهور';
-  $('overlayPrompt').textContent=s.mode==='race'?'🔥 سجّل دخولك وابدأ السباق نحو المركز الأول!':s.mode==='wheel'?'👑 ادخل السحب وانتظر لحظة اختيار الفائز!':s.prompt||'استعد للسؤال التالي';
-  $('overlayHint').textContent=s.mode==='quiz'?'🎯 اكتب رقم الإجابة 1 – 4 في الشات':mode.instruction;
+  $('overlayPrompt').textContent=s.mode==='race'?'سجّل دخولك وابدأ السباق نحو المركز الأول!':s.mode==='wheel'?'ادخل السحب وانتظر لحظة اختيار الفائز!':s.prompt||'استعد للسؤال التالي';
+  $('overlayHint').textContent=s.mode==='quiz'?'اكتب رقم الإجابة 1 – 4 في الشات':mode.instruction;
   $('overlayOptions').hidden=s.mode!=='quiz';
   $('overlayRace').hidden=s.mode!=='race';
   $('overlayWheel').hidden=s.mode!=='wheel';
@@ -316,13 +338,22 @@ function update(data) {
     void qCard.offsetWidth;
     qCard.classList.add('question-enter');
   }
-  if(s.mode==='quiz') updateVoteCounts(s.choiceCounts||[],s.choiceVoters||[]);
+  if(s.mode==='quiz') {
+    updateVoteCounts(s.choiceCounts||[],s.choiceVoters||[]);
+    const correctAns = s.results?.correctAnswer || '';
+    $('overlayOptions').querySelectorAll('.choice').forEach(choice => {
+      const labelTxt = choice.querySelector('.choice-label')?.textContent || '';
+      const isRight = !!correctAns && (correctAns.includes(labelTxt) || correctAns.startsWith(choice.dataset.option));
+      choice.classList.toggle('is-correct', !!s.results && isRight);
+      choice.classList.toggle('is-wrong', !!s.results && !isRight);
+    });
+  }
   $('overlayPrompt').classList.toggle('is-long',(s.prompt||'').length>70);
   $('overlayPrompt').classList.toggle('is-very-long',(s.prompt||'').length>125);
   if(questionKey!==stateCache.questionKey)requestAnimationFrame(fitBroadcastText);
   stateCache.questionKey=questionKey;
   if(s.mode==='race') renderRace(data.race||[],s.target);
-  $('overlayWheelCount').textContent='👥 '+number(data.entriesCount||0)+' مشارك';
+  $('overlayWheelCount').textContent=number(data.entriesCount||0)+' مشارك';
   $('wheelEntriesPreview').textContent=(data.entries||[]).slice(0,3).join(' • ')||'أسماء المسجلين في الفعالية';
   $('overlayPlayers').textContent=number(data.registration?.count ?? data.playerCount ?? 0);
   const subCount = s.mode==='wheel'?data.entriesCount||0:s.mode==='race'?(data.race||[]).length:s.submissionCount||0;
@@ -334,7 +365,7 @@ function update(data) {
     box.classList.add('pulse-hit');
   }
   stateCache.lastSubmissionCount = subCount;
-  $('overlayStatus').textContent=s.active?'🔥 الجولة جارية • أرسل إجابتك الآن':s.results?'🏆 اكتملت الجولة • النتائج ظهرت':s.notice||'جاهز لبدء الجولة';
+  $('overlayStatus').textContent=s.active?'الجولة جارية • أرسل إجابتك الآن':s.results?'اكتملت الجولة • النتائج ظهرت':s.notice||'جاهز لبدء الجولة';
   $('footerDetail').textContent=phase==='active'?'إجابتك الأولى فقط هي المعتمدة':phase==='results'?'الصدارة للأسرع في الإجابة الصحيحة':'انتظر انطلاق المنافسة';
   clock={endsAt:s.endsAt??null,duration:Number(s.duration)||30,offset:(Number(data.serverTime)||Date.now())-Date.now(),active:!!s.active&&['quiz','guess'].includes(s.mode)};
   renderClock();

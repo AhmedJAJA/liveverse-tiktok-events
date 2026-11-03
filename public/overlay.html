@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#020b26">
+  <meta name="theme-color" content="#08090C">
   <meta name="description" content="SKY LIVE — مسابقات وأسئلة تفاعلية لجمهور البث المباشر">
   <title>SKY LIVE — شاشة البث</title>
   <link rel="icon" href="/sky-live.webp" type="image/webp">
@@ -17,26 +17,29 @@
     <div class="sky-bgfx arena-sky-bg" aria-hidden="true">
       <svg class="sky-waves-svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
         <defs>
-          <linearGradient id="arenaWaveA" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#1e6bff" stop-opacity="0"/>
-            <stop offset="0.3" stop-color="#3fb6ff"/>
-            <stop offset="0.65" stop-color="#a6ecff"/>
-            <stop offset="1" stop-color="#2a7dff" stop-opacity="0"/>
+          <linearGradient id="arenaGoldLineA" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#977328" stop-opacity="0"/>
+            <stop offset="0.3" stop-color="#D4AF37" stop-opacity="0.7"/>
+            <stop offset="0.5" stop-color="#F4D58D" stop-opacity="0.98"/>
+            <stop offset="0.7" stop-color="#D4AF37" stop-opacity="0.7"/>
+            <stop offset="1" stop-color="#977328" stop-opacity="0"/>
           </linearGradient>
-          <linearGradient id="arenaWaveB" x1="1" y1="0" x2="0" y2="0">
-            <stop offset="0" stop-color="#2a6dff" stop-opacity="0"/>
-            <stop offset="0.45" stop-color="#5fd0ff"/>
-            <stop offset="1" stop-color="#1e5bff" stop-opacity="0"/>
+          <linearGradient id="arenaGoldLineB" x1="1" y1="0" x2="0" y2="0">
+            <stop offset="0" stop-color="#977328" stop-opacity="0"/>
+            <stop offset="0.5" stop-color="#D4AF37" stop-opacity="0.35"/>
+            <stop offset="1" stop-color="#977328" stop-opacity="0"/>
           </linearGradient>
-          <linearGradient id="arenaFillTop" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#3aa8ff" stop-opacity="0.32"/>
-            <stop offset="1" stop-color="#3aa8ff" stop-opacity="0"/>
-          </linearGradient>
+          <radialGradient id="arenaRoyalGlow" cx="0.5" cy="0" r="0.65">
+            <stop offset="0" stop-color="#D4AF37" stop-opacity="0.2"/>
+            <stop offset="0.55" stop-color="#977328" stop-opacity="0.06"/>
+            <stop offset="1" stop-color="#08090C" stop-opacity="0"/>
+          </radialGradient>
         </defs>
-        <g class="sky-wave-top">
-          <path fill="url(#arenaFillTop)" d="M-80 -20H1680V130C1420 40 1180 230 860 120C560 20 300 190 -80 90Z"/>
-          <path fill="none" stroke="url(#arenaWaveA)" stroke-width="4.5" d="M-80 110C260 10 540 230 860 118S1400 20 1680 150"/>
-          <path fill="none" stroke="url(#arenaWaveB)" stroke-width="2.2" d="M-80 175C320 80 580 270 900 160S1400 70 1680 205"/>
+        <rect width="1600" height="1000" fill="url(#arenaRoyalGlow)"/>
+        <g class="sky-wave-top" opacity="0.86">
+          <path fill="none" stroke="url(#arenaGoldLineA)" stroke-width="2.2" d="M-80 104 C320 24, 560 196, 800 96 C1040 -4, 1280 176, 1680 88"/>
+          <path fill="none" stroke="url(#arenaGoldLineB)" stroke-width="1.2" stroke-dasharray="6 10" d="M-80 156 C300 76, 560 236, 820 140 C1080 44, 1320 214, 1680 136"/>
+          <polygon fill="none" stroke="url(#arenaGoldLineB)" stroke-width="1" points="800,30 832,62 800,94 768,62"/>
         </g>
         <g class="sky-dust-dots">
           <circle cx="160" cy="240" r="2.2"/><circle cx="380" cy="180" r="2.5"/><circle cx="640" cy="140" r="2"/>
@@ -48,15 +51,15 @@
     <div class="confetti-stage" id="confettiStage" aria-hidden="true"></div>
     <div class="round-start-countdown" id="roundStartCountdown" hidden aria-hidden="true">
       <div class="countdown-card">
-        <span class="countdown-eyebrow">⚡ استعد للتحدي</span>
+        <span class="countdown-eyebrow">استعد للتحدي الملكي</span>
         <strong class="countdown-number" id="countdownNumber">3</strong>
-        <span class="countdown-label" id="countdownLabel">🔥 الجولة تبدأ الآن</span>
+        <span class="countdown-label" id="countdownLabel">الجولة تبدأ الآن</span>
       </div>
     </div>
     <header class="top-line">
       <div class="brand-lockup"><img class="sky-overlay-mark" src="/sky-live.webp" width="54" height="54" alt="" decoding="async"><strong dir="ltr">SKY LIVE</strong></div>
       <span class="live-pill" id="overlayLive"><i></i><span id="overlayLiveText">في انتظار البداية</span></span>
-      <span class="header-caption"><svg class="ui-icon anim-fire" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg> 🔥 مسابقات البث المباشر</span>
+      <span class="header-caption"><svg class="ui-icon anim-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg> مسابقات البث المباشر</span>
     </header>
     <div class="arena-body">
       <section class="competition-zone" aria-label="السؤال والخيارات">
@@ -71,38 +74,38 @@
         <div class="question-card" id="questionCard"><h1 class="question-main" id="overlayPrompt">ما هي عاصمة المملكة العربية السعودية؟</h1></div>
         <div class="choices-grid" id="overlayOptions" aria-label="الخيارات"></div>
         <div id="overlayRace" class="race-panel" hidden></div>
-        <div id="overlayWheel" class="wheel-panel" hidden><div class="wheel-orbit anim-trophy" aria-hidden="true">👑</div><strong id="overlayWheelCount">0 مشاركين</strong><span id="wheelEntriesPreview">أسماء المسجلين في الفعالية</span></div>
-        <div class="answer-callout"><span id="overlayHint">🎯 اكتب رقم الإجابة 1 – 4 في الشات</span><span class="answer-total" id="answerTotalBox"><svg class="ui-icon anim-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> جاوب <b id="overlaySubmissions">0</b> ⚡</span></div>
+        <div id="overlayWheel" class="wheel-panel" hidden><div class="wheel-orbit anim-trophy" aria-hidden="true"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg></div><strong id="overlayWheelCount">0 مشاركين</strong><span id="wheelEntriesPreview">أسماء المسجلين في الفعالية</span></div>
+        <div class="answer-callout"><span id="overlayHint">اكتب رقم الإجابة 1 – 4 في الشات</span><span class="answer-total" id="answerTotalBox"><svg class="ui-icon anim-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> جاوب <b id="overlaySubmissions">0</b></span></div>
       </section>
     </div>
     <section class="signup-screen" id="registrationOverlay" hidden aria-label="تسجيل المشاركين">
       <div class="signup-layout">
         <header class="signup-bar">
-          <div class="signup-event"><small>🎮 الفعالية القادمة</small><h1 id="signupTitle">تحدي المعلومات</h1></div>
+          <div class="signup-event"><small>الفعالية الملكية القادمة</small><h1 id="signupTitle">تحدي المعلومات</h1></div>
           <div class="signup-command"><span>اكتب بالشات</span><strong id="signupKeyword">انضم</strong></div>
           <span class="signup-live-badge"><i></i> <span id="signupStateLabel">التسجيل مفتوح</span></span>
         </header>
         <div class="signup-board">
           <div class="signup-wall">
-            <div class="signup-wall-heading"><span><svg class="ui-icon-lg anim-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> 👥 المشاركون المسجلون</span><span class="signup-count-pill"><b id="signupCount">0</b> متسابق</span></div>
+            <div class="signup-wall-heading"><span><svg class="ui-icon-lg anim-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> المشاركون المسجلون</span><span class="signup-count-pill"><b id="signupCount">0</b> متسابق</span></div>
             <div class="signup-member-grid" id="signupRecent" aria-label="المتسابقون المسجلون"></div>
-            <div class="signup-empty" id="signupEmpty"><span class="empty-chat icon-badge badge-cyan anim-users" aria-hidden="true"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span><strong>مين أول متسابق؟ 🔥</strong><p id="signupEmptyHint">اكتب كلمة الانضمام في شات البث<br>وبيظهر اسمك وصورتك هنا مباشرة</p></div>
+            <div class="signup-empty" id="signupEmpty"><span class="empty-chat icon-badge badge-gold anim-users" aria-hidden="true"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span><strong>مين أول متسابق؟</strong><p id="signupEmptyHint">اكتب كلمة الانضمام في شات البث<br>وبيظهر اسمك وصورتك هنا مباشرة</p></div>
           </div>
           <aside class="signup-spotlight" aria-label="آخر مشارك انضم" aria-live="polite">
-            <div class="spotlight-inner"><h2>⚡ دخل الحين</h2><div class="spotlight-card"><span class="signup-latest-num" id="signupLatestNumber">#0</span><div class="spotlight-profile"><div class="signup-spotlight-avatar" id="signupLatestAvatar" aria-hidden="true">؟</div><strong id="signupLatestName" dir="auto">بانتظارك</strong></div></div><p id="signupLatestDescription">مكانك محجوز للتحدي 🔥</p></div>
+            <div class="spotlight-inner"><h2>آخر المنضمين</h2><div class="spotlight-card"><span class="signup-latest-num" id="signupLatestNumber">#0</span><div class="spotlight-profile"><div class="signup-spotlight-avatar" id="signupLatestAvatar" aria-hidden="true">؟</div><strong id="signupLatestName" dir="auto">بانتظارك</strong></div></div><p id="signupLatestDescription">مكانك محجوز للتحدي</p></div>
           </aside>
         </div>
         <footer class="signup-footer"><span><i class="connection-dot"></i> الانضمام من تعليقات البث المباشر</span><span class="signup-ready" id="signupReady">بانتظار المشاركين</span></footer>
       </div>
     </section>
     <section class="results-screen" id="roundResultsOverlay" hidden aria-label="نتائج الجولة" aria-live="polite">
-      <header class="results-head"><span class="results-brand" dir="ltr"><svg class="ui-icon-lg anim-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> SKY LIVE 🏆</span><span id="resultsRoundLabel">نتائج الجولة</span></header>
-      <div class="results-heading"><span class="results-eyebrow">⚡ السرعة تصنع الفارق</span><h2>👑 أبطال <span>الجولة</span> 🎉</h2><p id="resultsSubtitle">أسرع الإجابات الصحيحة</p></div>
-      <div class="results-container"><div class="results-podium" id="resultsPodium"></div><div class="results-details"><div class="results-details-head"><strong>🏆 ترتيب المتسابقين</strong><span>أسرع 10 إجابات ⚡</span></div><div id="resultsOthers" class="results-others"></div></div></div>
-      <div class="results-bottom"><div class="results-metric"><span>✅ الإجابة الصحيحة</span><strong id="resultsCorrect">—</strong></div><div class="results-metric"><span>👥 مشاركات الجولة</span><strong id="resultsAnswers">—</strong></div><span class="results-next">🔥 استعد للسؤال الجاي</span></div>
+      <header class="results-head"><span class="results-brand" dir="ltr"><svg class="ui-icon-lg anim-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg> SKY LIVE</span><span id="resultsRoundLabel">نتائج الجولة</span></header>
+      <div class="results-heading"><span class="results-eyebrow">السرعة تصنع الفارق</span><h2>أبطال <span>الجولة</span></h2><p id="resultsSubtitle">أسرع الإجابات الصحيحة</p></div>
+      <div class="results-container"><div class="results-podium" id="resultsPodium"></div><div class="results-details"><div class="results-details-head"><strong>ترتيب المتسابقين</strong><span>أسرع 10 إجابات</span></div><div id="resultsOthers" class="results-others"></div></div></div>
+      <div class="results-bottom"><div class="results-metric"><span>الإجابة الصحيحة</span><strong id="resultsCorrect">—</strong></div><div class="results-metric"><span>مشاركات الجولة</span><strong id="resultsAnswers">—</strong></div><span class="results-next">استعد للسؤال التالي</span></div>
     </section>
-    <div class="winner-banner" id="winnerBanner" hidden role="status"><div class="winner-banner-avatar" id="winnerAvatar" aria-hidden="true">🏆</div><div class="winner-banner-copy"><small>👑 الفائز بالجولة 🎉</small><strong id="winnerName"></strong></div><b class="winner-points-badge"><svg class="ui-icon-lg anim-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg> +5 نقاط 🏆</b></div>
-    <div class="connection-notice" id="connectionNotice" hidden role="status">⏳ انقطع الاتصال، نحاول الرجوع للبث…</div>
+    <div class="winner-banner" id="winnerBanner" hidden role="status"><div class="winner-banner-avatar" id="winnerAvatar" aria-hidden="true">★</div><div class="winner-banner-copy"><small>الفائز بالجولة</small><strong id="winnerName"></strong></div><b class="winner-points-badge"><svg class="ui-icon-lg anim-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg> +5 نقاط</b></div>
+    <div class="connection-notice" id="connectionNotice" hidden role="status">انقطع الاتصال، نحاول الرجوع للبث…</div>
     <div hidden><span id="topProgress"></span><span id="modeTag"></span><span id="questionMode"></span><span id="questionLabel"></span><span id="stageTag"></span><span id="overlayTitle"></span><span id="overlayPlayers"></span><span id="overlayStatus"></span><span id="footerDetail"></span><span id="footerRound"></span><div id="overlayStandings"></div></div>
   </main>
   <script type="module" src="/overlay.js"></script>

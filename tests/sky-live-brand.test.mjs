@@ -36,3 +36,16 @@ test('server offers image with correct MIME, favicon and preserves public routes
   assert.match(server, /'\/studio': 'index\.html'/);
   assert.match(server, /'\/overlay': 'overlay\.html'/);
 });
+test('enforces Royal Black — Obsidian & Gold luxury palette across public pages and theme CSS',()=>{
+  const css=publicFile('sky-live-theme.css');
+  for(const hex of ['#08090C','#101116','#191A20','#D4AF37','#F4D58D','#977328','#F7F3E9']){
+    assert.ok(css.includes(hex),'Missing Royal Black palette color '+hex);
+  }
+  assert.doesNotMatch(css,/#020b26|#051a4d|#0a3585/i);
+  for(const name of files){
+    const html=publicFile(name);
+    assert.match(html,/content="#08090C"/);
+    assert.doesNotMatch(html,/#020b26/i);
+  }
+});
+
