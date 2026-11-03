@@ -114,7 +114,9 @@ function renderRace(race, target) {
 function podiumCard(p, rank) {
   const card=node('div',`podium-card place-${rank}`);
   if (rank===1) card.append(node('span','podium-crown','♛'));
-  card.append(node('div','podium-avatar',rank===1?'★':rank===2?'✦':'◆'),
+  const avatar=node('div','podium-avatar');
+  paintAvatar(avatar,p);
+  card.append(avatar,
     node('strong','podium-name',p.name),node('span','podium-time',formatMs(p.elapsedMs)),
     node('span','podium-points',`+${p.points} نقاط`),node('div','podium-base',rank));
   return card;
@@ -141,7 +143,11 @@ function renderResults(status, round) {
     if(!others.length){list.append(node('div','standings-empty','بقية المراكز ستظهر هنا عند مشاركة المزيد من المتسابقين.'));}
     for(const p of others){
       const row=node('div','result-other-row');
-      row.append(node('span','',String(p.rank).padStart(2,'0')),node('strong','',p.name),node('span','result-speed',formatMs(p.elapsedMs)),node('b','',`+${p.points}`));
+      const nameCell=node('span','result-person');
+      const avatar=node('span','result-avatar');
+      paintAvatar(avatar,p);
+      nameCell.append(avatar,node('strong','result-person-name',p.name));
+      row.append(node('span','',String(p.rank).padStart(2,'0')),nameCell,node('span','result-speed',formatMs(p.elapsedMs)),node('b','',`+${p.points}`));
       list.append(row);
     }
   }
