@@ -1,6 +1,8 @@
-# LIVEVERSE — TikTok LIVE Event Studio
+# SKY LIVE — TikTok LIVE Event Studio
 
-A standalone Arabic interactive livestream events dashboard. Built with Node.js and WebSockets, with an OBS overlay and a **best-effort unofficial** TikTok LIVE chat bridge.
+**SKY LIVE** is the current public brand; repository and hosting slugs retain their earlier names to preserve existing links.
+
+SKY LIVE is an Arabic interactive livestream events website with a public homepage at `/`, a presenter studio at `/studio`, and a read-only broadcast screen at `/overlay`. Built with Node.js and WebSockets, with an OBS overlay and a **best-effort unofficial** TikTok LIVE chat bridge.
 
 **Included in v0.5:**
 - Chat-based registration before games (default `انضم`, configurable) with duplicate prevention, auto-open on first LIVE connection.
