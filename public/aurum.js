@@ -14,16 +14,17 @@
   /* Page wiring: which existing elements receive which effect. */
   const CONFIG = {
     movingBorder: [
-      ['.gold-button,.btn-gold,.button.primary,.play-button,.presenter-start,.start-game,.verify-access', { dur: 3.6, size: 70 }],
+      ['.gold-button,.btn-gold,.button.primary,.play-button,.presenter-start,.start-game,.verify-access,.sh-btn-gold', { dur: 3.6, size: 70 }],
       ['.signup-command', { dur: 5, size: 180, w: 2 }],
-      ['.connect-card,.cta-card,.season-hero,.event-hero,.question-card', { dur: 7, size: 160 }],
+      ['.connect-card,.cta-card,.season-hero,.event-hero,.question-card,.sh-final,.sh-plan.is-annual,.sh-platforms', { dur: 7, size: 160 }],
+      ['.sh-phone', { dur: 6, size: 140, w: 2 }],
       ['.hero-player.rank-one,.winner-stage,.victory-card', { dur: 4.2, size: 120, w: 2 }],
       ['.mode,.signup-member-card,.length-option,.audience-option', { dur: 4, size: 110, when: true }]
     ],
-    spotlight: '.game-tile,.category-card,.hero-player,.mode,.stat,.panel,.how-grid>div,.form-strip,.audience-setting,.advanced-panel,.connect-card,.pass-card,.cta-card,.daily-strip,.tools-strip,.block,.reg-person,.leader-row',
+    spotlight: '.sh-step,.sh-plan,.sh-platform,.sh-champions,.sh-pass,.sh-quick-row,.game-tile,.category-card,.hero-player,.mode,.stat,.panel,.how-grid>div,.form-strip,.audience-setting,.advanced-panel,.connect-card,.pass-card,.cta-card,.daily-strip,.tools-strip,.block,.reg-person,.leader-row',
     reveal: '.landing h1,.landing h2,.event-page .setting-block h2,.event-page .section-row h2,.presenter .section-heading h2,.presenter .block-head h3,.bomb-page h2',
     retext: '#overlayPrompt,#signupLatestName,#winnerName,#signupTitle,#bombHolderName,#bombWinnerName,.event-caption h1,#presenterStartLabel',
-    shimmer: '.season-copy h2 span,#signupKeyword,.results-heading h2 span,.signup-counter b,.winner-banner-copy strong,.event-caption h1,.how-grid span',
+    shimmer: '.sh-gold,.sh-plan.is-annual .sh-price b,.season-copy h2 span,#signupKeyword,.results-heading h2 span,.signup-counter b,.winner-banner-copy strong,.event-caption h1,.how-grid span',
     tooltip: '[data-tooltip],[data-au-tip]',
     beams: broadcast ? '.arena' : 'body'
   };
@@ -348,7 +349,7 @@
     wireTooltips();
     celebrate();
     // Ambient sparkles around celebration moments and the registration spotlight.
-    d.querySelectorAll('.signup-spotlight,.winner-banner,.bomb-victory,.season-hero,.results-heading').forEach((el) => sparkleField(el, broadcast ? .6 : .8));
+    d.querySelectorAll('.signup-spotlight,.winner-banner,.bomb-victory,.season-hero,.results-heading,.sh-final,.sh-hero').forEach((el) => sparkleField(el, broadcast ? .6 : .8));
     mo.observe(body, { childList: true, subtree: true });
     d.documentElement.classList.add('au-ready');
   }

@@ -7,6 +7,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Engine } from './src/engine.mjs';
 import { LiveBridge } from './src/bridge.mjs';
 import { QuestionBank } from './src/question-bank.mjs';
+import { siteConfig } from './src/catalog.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
@@ -76,6 +77,7 @@ const server = http.createServer(async (req, res) => {
   let url; try { url = new URL(req.url, 'http://localhost'); } catch { return json(res, 400, { error: 'Bad URL' }); }
   if (url.pathname === '/health') return json(res, 200, { ok: true, mode: engine.status.mode });
   if (url.pathname === '/api/state' && req.method === 'GET') return json(res, 200, engine.snapshot());
+  if (url.pathname === '/api/site' && req.method === 'GET') return json(res, 200, siteConfig());
   if (url.pathname === '/api/admin/bank' && req.method === 'GET') return isAuthorized(req) ? json(res, 200, questionBank.stats()) : json(res, 401, { error: 'رمز الإدارة غير صحيح' });
   if (url.pathname === '/api/admin/verify' && req.method === 'POST') return json(res, isAuthorized(req) ? 200 : 401, { ok: isAuthorized(req) });
   if (url.pathname.startsWith('/api/admin/') && req.method === 'POST') {
@@ -93,7 +95,7 @@ const server = http.createServer(async (req, res) => {
   const fileMap = { '/': 'landing.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
-  if (!['index.html','landing.html','landing.js','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','aurum.css','aurum.js','overlay.html','app.js','overlay.js','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
+  if (!['index.html','landing.html','landing.js','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','aurum.css','aurum.js','sky-home.css','covers/quiz.svg','covers/bomb.svg','covers/race.svg','covers/glass.svg','covers/guess.svg','covers/wheel.svg','overlay.html','app.js','overlay.js','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
   const filename = path.join(root, relative);
   try { const content = await fs.promises.readFile(filename); res.writeHead(200, { 'Content-Type': mime[path.extname(filename)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(req.method === 'HEAD' ? undefined : content); }
   catch { json(res, 404, { error: 'Not found' }); }
