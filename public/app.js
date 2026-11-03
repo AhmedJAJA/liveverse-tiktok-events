@@ -83,11 +83,85 @@ function setMode(mode) {
   const placeholder={quiz:'تحدي المعلومات',guess:'خمن الكلمة',race:'سباق الجمهور',wheel:'عجلة المشاركين'};
   el('gameTitle').value=placeholder[mode];
 }
+function createAvatarFallbackSvg(initial = '') {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 40 40');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('class', 'avatar-svg-placeholder');
+  const head = document.createElementNS(ns, 'circle');
+  head.setAttribute('cx', '20');
+  head.setAttribute('cy', '14.5');
+  head.setAttribute('r', '6');
+  head.setAttribute('fill', 'none');
+  head.setAttribute('stroke', 'currentColor');
+  head.setAttribute('stroke-width', '2.2');
+  head.setAttribute('stroke-linecap', 'round');
+  const body = document.createElementNS(ns, 'path');
+  body.setAttribute('d', 'M8.5 34c2-5.8 6.2-8.8 11.5-8.8s9.5 3 11.5 8.8');
+  body.setAttribute('fill', 'none');
+  body.setAttribute('stroke', 'currentColor');
+  body.setAttribute('stroke-width', '2.2');
+  body.setAttribute('stroke-linecap', 'round');
+  if (initial && initial !== '؟') {
+    head.setAttribute('opacity', '0.24');
+    body.setAttribute('opacity', '0.24');
+    const txt = document.createElementNS(ns, 'text');
+    txt.setAttribute('x', '20');
+    txt.setAttribute('y', '25');
+    txt.setAttribute('text-anchor', 'middle');
+    txt.setAttribute('fill', 'currentColor');
+    txt.setAttribute('font-size', '16');
+    txt.setAttribute('font-weight', '900');
+    txt.textContent = initial;
+    svg.append(head, body, txt);
+  } else {
+    svg.append(head, body);
+  }
+  return svg;
+}
+function replaceBrokenImageWithSvg(img) {
+  if (!img || img.dataset.fallbackApplied === '1') return;
+  img.dataset.fallbackApplied = '1';
+  const src = img.currentSrc || img.src || '';
+  if (src) console.warn('[Sky Live Media] تعذر تحميل الصورة، تم تفعيل أيقونة SVG البديلة:', src);
+  img.alt = '';
+  img.hidden = true;
+  const box = img.parentElement;
+  if (!box) return;
+  const isAvatar = box.classList.contains('studio-slot-avatar') ||
+    box.classList.contains('reg-person-avatar') ||
+    box.classList.contains('round-rank-avatar') ||
+    box.dataset.initial !== undefined;
+  box.classList.remove('is-loading-avatar', 'has-loaded-avatar', 'img-skeleton');
+  box.classList.add('is-fallback-avatar');
+  if (isAvatar) {
+    const initial = box.dataset.initial || '';
+    box.replaceChildren(createAvatarFallbackSvg(initial));
+    requestAnimationFrame(() => box.classList.add('is-fallback-ready'));
+    return;
+  }
+  const existingCard = box.querySelector('.img-fallback-card');
+  if (existingCard) {
+    existingCard.hidden = false;
+    requestAnimationFrame(() => existingCard.classList.add('is-fallback-ready'));
+    return;
+  }
+  if (!box.querySelector('.brand-mark-fallback')) {
+    const fb = document.createElement('span');
+    fb.className = 'brand-mark-fallback';
+    fb.title = 'الصورة غير متاحة حاليًا';
+    fb.append(createAvatarFallbackSvg(''));
+    box.prepend(fb);
+    requestAnimationFrame(() => fb.classList.add('is-fallback-ready'));
+  }
+}
 function paintMiniAvatar(box, person) {
   const initial = Array.from(person?.name?.trim() || '؟')[0].toUpperCase();
   box.dataset.initial = initial;
-  box.textContent = initial;
-  box.classList.remove('is-loading-avatar', 'has-loaded-avatar', 'is-fallback-avatar');
+  box.classList.remove('is-loading-avatar', 'has-loaded-avatar', 'is-fallback-avatar', 'is-fallback-ready');
+  box.replaceChildren(createAvatarFallbackSvg(initial));
+  requestAnimationFrame(() => box.classList.add('is-fallback-ready'));
   if (person?.avatar && /^https:\/\//.test(person.avatar)) {
     box.classList.add('is-loading-avatar');
     const img = document.createElement('img');
@@ -96,16 +170,17 @@ function paintMiniAvatar(box, person) {
     img.referrerPolicy = 'no-referrer';
     img.className = 'avatar-photo';
     img.addEventListener('load', () => {
-      box.classList.remove('is-loading-avatar');
-      box.classList.add('has-loaded-avatar');
-      img.classList.add('is-loaded');
+      if (img.naturalWidth > 0) {
+        box.classList.remove('is-loading-avatar', 'is-fallback-avatar');
+        box.classList.add('has-loaded-avatar');
+        img.classList.add('is-loaded');
+      } else {
+        replaceBrokenImageWithSvg(img);
+      }
     }, { once: true });
     img.addEventListener('error', () => {
-      console.warn('[Sky Live Media] تعذر تحميل صورة المتسابق، تم تفعيل الواجهة البديلة:', person.avatar);
-      box.classList.remove('is-loading-avatar', 'has-loaded-avatar');
-      box.classList.add('is-fallback-avatar');
       box.setAttribute('title', (person?.name || 'متسابق') + ' • الصورة غير متاحة حاليًا');
-      box.replaceChildren(document.createTextNode(initial));
+      replaceBrokenImageWithSvg(img);
     }, { once: true });
     img.src = person.avatar;
     box.replaceChildren(img);
@@ -433,25 +508,23 @@ async function autoDevAuth() {
   } catch {}
 }
 function guardStudioImages() {
+  window.addEventListener('error', event => {
+    const target = event.target;
+    if (target && target.tagName === 'IMG') {
+      replaceBrokenImageWithSvg(target);
+    }
+  }, true);
+  window.addEventListener('load', event => {
+    const target = event.target;
+    if (target && target.tagName === 'IMG') {
+      if (target.naturalWidth > 0) target.classList.add('is-loaded');
+      else replaceBrokenImageWithSvg(target);
+    }
+  }, true);
   document.querySelectorAll('img').forEach(img => {
-    const onOk = () => img.classList.add('is-loaded');
-    const onFail = () => {
-      console.warn('[Sky Live Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:', img.currentSrc || img.src);
-      img.hidden = true;
-      const parent = img.parentElement;
-      if (parent && !parent.querySelector('.brand-mark-fallback')) {
-        const fb = document.createElement('span');
-        fb.className = 'brand-mark-fallback';
-        fb.title = 'الصورة غير متاحة حاليًا';
-        fb.textContent = 'SL';
-        parent.prepend(fb);
-      }
-    };
     if (img.complete) {
-      if (img.naturalWidth > 0) onOk(); else onFail();
-    } else {
-      img.addEventListener('load', onOk, { once: true });
-      img.addEventListener('error', onFail, { once: true });
+      if (img.naturalWidth > 0) img.classList.add('is-loaded');
+      else replaceBrokenImageWithSvg(img);
     }
   });
 }

@@ -379,11 +379,26 @@ img.is-loaded,.avatar-photo.is-loaded{
   background:linear-gradient(145deg,#3d8bff,#153a8a);
   border:1px solid #9beeff;color:#fff;font:900 14px Arial,sans-serif;
   display:inline-grid;place-items:center;box-shadow:0 0 14px rgba(61,139,255,.45);flex-shrink:0;
+  opacity:0;transform:scale(.92);
+  transition:opacity .26s ease,transform .26s var(--ease-spring);
+}
+.brand-mark-fallback.is-fallback-ready{opacity:1;transform:scale(1)}
+.avatar-svg-placeholder{
+  width:78%;height:78%;display:block;color:#e8f7ff;
+  opacity:0;transform:scale(.88);
+  transition:opacity .26s ease,transform .26s var(--ease-spring);
+}
+.is-fallback-ready .avatar-svg-placeholder,
+.studio-slot-avatar .avatar-svg-placeholder,
+.reg-person-avatar .avatar-svg-placeholder,
+.round-rank-avatar .avatar-svg-placeholder{
+  opacity:1;transform:scale(1);
 }
 .is-fallback-avatar{
   background:linear-gradient(145deg,#1d4fa8,#0d2359)!important;
   border-color:#8ceeff!important;color:#eefaff!important;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 16px rgba(82,204,255,.32)!important;
+  transition:background .25s ease,border-color .25s ease,box-shadow .25s ease;
 }
 
 @media(max-width:850px){.nav-links{background:#07163b;border-color:#58bfff}}

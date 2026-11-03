@@ -371,23 +371,40 @@ function connect() {
   ws.addEventListener('error',()=>ws.close());
 }
 function guardOverlayImages() {
+  const onFail = img => {
+    if (!img || img.dataset.fallbackApplied === '1') return;
+    img.dataset.fallbackApplied = '1';
+    console.warn('[Sky Live Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:', img.currentSrc || img.src);
+    img.alt = '';
+    img.hidden = true;
+    const parent = img.parentElement;
+    if (parent && parent.dataset.initial !== undefined) {
+      parent.classList.remove('is-loading-avatar', 'has-loaded-avatar');
+      parent.classList.add('is-fallback-avatar', 'is-fallback-ready');
+      parent.replaceChildren(document.createTextNode(parent.dataset.initial || '؟'));
+      return;
+    }
+    if (parent && !parent.querySelector('.brand-mark-fallback')) {
+      const fb = node('span', 'brand-mark-fallback is-fallback-ready', 'SL');
+      fb.title = 'الصورة غير متاحة حاليًا';
+      parent.prepend(fb);
+    }
+  };
+  window.addEventListener('error', event => {
+    const target = event.target;
+    if (target && target.tagName === 'IMG') onFail(target);
+  }, true);
+  window.addEventListener('load', event => {
+    const target = event.target;
+    if (target && target.tagName === 'IMG') {
+      if (target.naturalWidth > 0) target.classList.add('is-loaded');
+      else onFail(target);
+    }
+  }, true);
   document.querySelectorAll('img').forEach(img => {
-    const onOk = () => img.classList.add('is-loaded');
-    const onFail = () => {
-      console.warn('[Sky Live Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:', img.currentSrc || img.src);
-      img.hidden = true;
-      const parent = img.parentElement;
-      if (parent && !parent.querySelector('.brand-mark-fallback')) {
-        const fb = node('span', 'brand-mark-fallback', 'SL');
-        fb.title = 'الصورة غير متاحة حاليًا';
-        parent.prepend(fb);
-      }
-    };
     if (img.complete) {
-      if (img.naturalWidth > 0) onOk(); else onFail();
-    } else {
-      img.addEventListener('load', onOk, { once: true });
-      img.addEventListener('error', onFail, { once: true });
+      if (img.naturalWidth > 0) img.classList.add('is-loaded');
+      else onFail(img);
     }
   });
 }

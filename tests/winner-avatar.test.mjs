@@ -90,10 +90,14 @@ test('all pages implement smart image loading, skeleton shimmer and luxury fallb
   assert.match(landingHtml,/الصورة غير متاحة حاليًا/);
   assert.match(landingHtml,/img-fallback-card/);
   assert.match(landingJs,/initSmartImages/);
+  assert.match(appJs,/createAvatarFallbackSvg/);
+  assert.match(appJs,/replaceBrokenImageWithSvg/);
+  assert.match(appJs,/window\.addEventListener\('error'/);
   assert.match(appJs,/is-loading-avatar/);
   assert.match(appJs,/is-fallback-avatar/);
   assert.match(overlayJs,/is-loading-avatar/);
   assert.match(overlayJs,/is-fallback-avatar/);
   assert.match(themeCss,/\.img-skeleton/);
   assert.match(themeCss,/\.img-fallback-card/);
+  assert.match(themeCss,/\.avatar-svg-placeholder/);
 });
