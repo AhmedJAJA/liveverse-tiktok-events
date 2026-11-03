@@ -78,3 +78,30 @@ npm test
 ## Stack
 
 Native Node HTTP server, `ws` WebSocket, optional `tiktok-live-connector`, vanilla HTML/CSS/JS. No build step needed.
+
+## Arabic question bank (v0.2)
+
+The site includes **1,207 Arabic multiple-choice questions** in `data/questions.ar.json`, across nine categories: geography, chemistry/science, arithmetic, football, anime, gaming, technology, history and general knowledge.
+
+1. Open LIVEVERSE and activate your admin code.
+2. Select a subject and difficulty in the question library.
+3. Choose **تحميل سؤال** to prepare the round, or **سؤال عشوائي وابدأ** to save and start instantly.
+4. The first viewer to send the correct option number (1–4) or matching answer earns 5 points.
+
+Questions are unique by text/ID and do not repeat within the current server session. Reset usage history with **إعادة ضبط التكرار**. History and leaderboard currently live in memory; both reset on redeploy/restart.
+
+Every question has a source/reference field. **A topical reference is not a guarantee that each individual question has undergone manual fact-checking.** The bundled questions are original wording based on general facts and reference material, plus mathematically generated problems. Automated tests check schema, duplicates, all arithmetic answers and game-engine integration; editorial review of pop-culture questions can continue.
+
+The correct answer is never present in public `/api/state` or the OBS overlay; selecting a bank question and seeing its answer requires the admin bearer token. However, **the GitHub repository is currently public** and the JSON data itself includes answer keys. For high-stakes contests, a private question dataset in a protected backend is recommended.
+
+### Sources and third-party data
+
+- Periodic table: https://periodic-table.rsc.org/
+- Country and capital reference: https://fam.state.gov/FAM/05FAH01/05FAH011020.html
+- FIFA historic tournaments: https://www.archives.fifa.com/fifa_world_cup
+- Official Dragon Ball site: https://en.dragon-ball-official.com/about/
+- Minecraft guides: https://help.minecraft.net/hc/en-us/sections/27983418545293-Minecraft-Game-Guides
+- MDN web development documentation: https://developer.mozilla.org/en-US/docs/Web
+
+Open Trivia Database was researched but **no third-party trivia question text was imported** into the 1,207-question dataset. Its question content uses CC BY-SA 4.0: https://opentdb.com/api_config.php. The Trivia API has a non-commercial license, so it was not used for this public stream project.
+
