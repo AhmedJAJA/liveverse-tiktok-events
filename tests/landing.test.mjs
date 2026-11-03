@@ -14,7 +14,7 @@ test('homepage serves original marketing page and preserves existing admin studi
   assert.match(studio,/id="settingsDialog"/);
 });
 test('every landing asset is allowed by the server whitelist',()=>{
-  for(const path of ['landing.html','landing.css','landing.js','liveverse-brand.svg']){
+  for(const path of ['landing.html','landing.css','landing.js','sky-live.webp','sky-live-theme.css']){
     assert.ok(server.includes("'"+path+"'"),path);
   }
 });
