@@ -217,7 +217,7 @@
  .arena[data-mode="quiz"]:not([data-phase="results"]) .choice-label{font-size:clamp(14px,3.8vw,24px)}
  .arena[data-mode="quiz"]:not([data-phase="results"]) .choice-mark{flex:0 0 30px;height:27px;font-size:10px}
  .arena[data-mode="quiz"]:not([data-phase="results"]) .answer-callout{font-size:12px}
- ..signup-screen{padding:12px}
+ .signup-screen{padding:12px}
  .signup-bar{height:50px}
  .signup-logo{font-size:18px}
  .signup-live-badge{font-size:11px;padding:8px}
