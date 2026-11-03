@@ -31,7 +31,7 @@
   background:linear-gradient(135deg,rgba(241,213,140,.32),rgba(241,213,140,.06) 45%,rgba(241,213,140,.06) 55%,rgba(241,213,140,.28));
   -webkit-mask:var(--au-ring);-webkit-mask-composite:xor;mask:var(--au-ring);mask-composite:exclude}
 .au-mb-orb{position:absolute;top:0;left:0;width:var(--au-mb-size,110px);height:var(--au-mb-size,110px);border-radius:50%;
-  background:radial-gradient(closest-side,var(--au-gold-1) 0%,rgba(241,213,140,.95) 22%,rgba(212,175,55,.55) 48%,rgba(156,122,34,.15) 70%,transparent 76%);
+  background:radial-gradient(var(--au-mb-color,#F1D58C) 40%,transparent 60%);opacity:.8;
   offset-path:var(--au-mb-path,none);offset-rotate:0deg;offset-anchor:50% 50%;offset-distance:0%;
   animation:au-travel var(--au-mb-dur,4.5s) linear infinite;will-change:offset-distance}
 .au-mb-orb+.au-mb-orb{animation-delay:calc(var(--au-mb-dur,4.5s) / -2);opacity:.55;--au-mb-size:80px}
@@ -46,15 +46,15 @@
 /* ================= Card Spotlight ================= */
 .au-cs-host{isolation:isolate}
 .au-cs{position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;overflow:hidden;opacity:0;transition:opacity .45s var(--ease-out,ease)}
-.au-cs::before{content:"";position:absolute;inset:0;background:radial-gradient(var(--au-cs-size,360px) circle at var(--au-x,50%) var(--au-y,50%),rgba(212,175,55,.18),rgba(156,122,34,.06) 45%,transparent 70%)}
+.au-cs::before{content:"";position:absolute;inset:0;background:radial-gradient(var(--au-cs-size,350px) circle at var(--au-x,50%) var(--au-y,50%),rgba(212,175,55,.18),rgba(156,122,34,.06) 45%,transparent 70%)}
 .au-cs>i{position:absolute;inset:0;
-  background-image:radial-gradient(circle at center,rgba(255,241,194,.85) 0 1px,transparent 1.6px);background-size:14px 14px;
-  -webkit-mask:radial-gradient(calc(var(--au-cs-size,360px) * .62) circle at var(--au-x,50%) var(--au-y,50%),#000 0%,rgba(0,0,0,.35) 45%,transparent 75%);
-          mask:radial-gradient(calc(var(--au-cs-size,360px) * .62) circle at var(--au-x,50%) var(--au-y,50%),#000 0%,rgba(0,0,0,.35) 45%,transparent 75%);
+  background-image:radial-gradient(circle at center,rgba(255,241,194,.9) 0 1.5px,transparent 1.9px);background-size:12px 12px;
+  -webkit-mask:radial-gradient(calc(var(--au-cs-size,350px) * .62) circle at var(--au-x,50%) var(--au-y,50%),#000 0%,rgba(0,0,0,.35) 45%,transparent 75%);
+          mask:radial-gradient(calc(var(--au-cs-size,350px) * .62) circle at var(--au-x,50%) var(--au-y,50%),#000 0%,rgba(0,0,0,.35) 45%,transparent 75%);
   opacity:.55;animation:au-twinkle 2.4s ease-in-out infinite}
-.au-cs>i+i{background-position:7px 7px;background-image:radial-gradient(circle at center,rgba(212,175,55,.9) 0 .9px,transparent 1.4px);animation-delay:-1.2s;opacity:.4}
+.au-cs>i+i{background-position:6px 6px;background-image:radial-gradient(circle at center,rgba(212,175,55,.95) 0 1.5px,transparent 1.9px);animation-delay:-1.2s;opacity:.4}
 .au-cs-edge{position:absolute;inset:-1px;z-index:5;border-radius:inherit;pointer-events:none;padding:1px;opacity:0;transition:opacity .45s var(--ease-out,ease);
-  background:radial-gradient(calc(var(--au-cs-size,360px) * .8) circle at var(--au-x,50%) var(--au-y,50%),rgba(255,241,194,.95),rgba(212,175,55,.35) 30%,transparent 60%);
+  background:radial-gradient(calc(var(--au-cs-size,350px) * .8) circle at var(--au-x,50%) var(--au-y,50%),rgba(255,241,194,.95),rgba(212,175,55,.35) 30%,transparent 60%);
   -webkit-mask:var(--au-ring);-webkit-mask-composite:xor;mask:var(--au-ring);mask-composite:exclude}
 .au-cs-host:is(:hover,:focus-within)>:is(.au-cs,.au-cs-edge){opacity:1}
 
@@ -62,9 +62,8 @@
 .au-beams{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
 .au-beams.is-fixed{position:fixed;z-index:-1}
 .au-beams svg{position:absolute;inset:-10% -5%;width:110%;height:120%;display:block}
-.au-beams .au-beam-base{fill:none;stroke:url(#au-beam-fade);stroke-width:.6;opacity:.45}
-.au-beams .au-beam{fill:none;stroke:url(#au-beam-gold);stroke-width:1.1;stroke-linecap:round;stroke-dasharray:.07 1;stroke-dashoffset:1.07;animation:au-beam var(--d,14s) var(--dl,0s) linear infinite}
-.au-beams .au-beam.is-glow{stroke-width:3.4;opacity:.28;stroke-dasharray:.09 1}
+.au-beams path{fill:none}
+.au-beams .au-beam-base{stroke-opacity:.05}
 .au-beams::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 80% 70% at 50% 40%,transparent 40%,var(--au-beams-fade,rgba(6,6,7,.85)) 100%)}
 
 /* ================= Sparkles ================= */
@@ -88,11 +87,35 @@
 .au-tips [data-tooltip]::after{content:none!important;display:none!important}
 
 /* ================= Text Reveal & Shimmer ================= */
-.au-w{display:inline-block;opacity:0;filter:blur(10px);transform:translateY(.35em);transition:opacity .7s var(--ease-out,ease),filter .7s var(--ease-out,ease),transform .7s var(--ease-out,ease);transition-delay:calc(var(--i,0) * 75ms)}
-.is-revealed .au-w{opacity:1;filter:none;transform:none}
+.au-w{display:inline-block;opacity:0;filter:blur(10px);transition:opacity .5s ease,filter .5s ease;transition-delay:calc(var(--i,0) * 200ms)}
+.is-revealed .au-w{opacity:1;filter:blur(0)}
 .au-retext{animation:au-retext .75s var(--ease-out,ease) both}
 .au-shimmer{background:linear-gradient(110deg,#C9982F 0%,#F1D58C 30%,#FFF8E6 45%,#F1D58C 55%,#B8892A 80%,#E6C463 100%);background-size:250% 100%;
   -webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;animation:au-shimmer 4.5s linear infinite}
+
+/* ================= 3D Card (Aceternity CardContainer/CardItem) ================= */
+.au-3d-scene{perspective:1000px}
+.au-3d{transform-style:preserve-3d;transform:rotateY(var(--au-ry,0deg)) rotateX(var(--au-rx,0deg));transition:transform .2s linear}
+.au-3d .au-3d-item{transform:translateZ(var(--au-z,0px));transition:transform .2s linear}
+.au-3d.is-tilting .au-3d-item{--au-z:50px}
+
+/* ================= Glowing Effect (Aceternity) ================= */
+.au-glow{position:absolute;inset:0;z-index:5;border-radius:inherit;pointer-events:none;--au-spread:40;--au-start:0;--au-active:0;--au-bw:2px}
+.au-glow::after{content:"";position:absolute;inset:calc(-1 * var(--au-bw));border-radius:inherit;border:var(--au-bw) solid transparent;
+  background:radial-gradient(circle,#F1D58C 10%,#F1D58C00 20%),radial-gradient(circle at 40% 40%,#D4AF37 5%,#D4AF3700 15%),radial-gradient(circle at 60% 60%,#FFF6D8 10%,#FFF6D800 20%),radial-gradient(circle at 40% 60%,#9C7A22 10%,#9C7A2200 20%),
+    repeating-conic-gradient(from 236.84deg at 50% 50%,#F1D58C 0%,#D4AF37 5%,#FFF6D8 10%,#9C7A22 15%,#F1D58C 20%);background-attachment:fixed;
+  opacity:var(--au-active);transition:opacity .3s;
+  -webkit-mask-clip:padding-box,border-box;mask-clip:padding-box,border-box;-webkit-mask-composite:source-in;mask-composite:intersect;
+  -webkit-mask-image:linear-gradient(#0000,#0000),conic-gradient(from calc((var(--au-start) - var(--au-spread)) * 1deg),#00000000 0deg,#fff,#00000000 calc(var(--au-spread) * 2deg));
+          mask-image:linear-gradient(#0000,#0000),conic-gradient(from calc((var(--au-start) - var(--au-spread)) * 1deg),#00000000 0deg,#fff,#00000000 calc(var(--au-spread) * 2deg))}
+.au-glow.is-wide{--au-bw:2px}
+
+/* ================= Spotlight (Aceternity hero beam) ================= */
+.au-spot{position:absolute;z-index:0;pointer-events:none;height:169%;width:138%;top:-40%;right:0;opacity:0;transform:translate(72%,-62%) scaleX(-1) scale(.5);
+  animation:au-spotlight 2s .75s ease forwards}
+.au-spot ellipse{fill:#FFF1C2}
+@media (min-width:1024px){.au-spot{width:84%}}
+@keyframes au-spotlight{to{opacity:1;transform:translate(50%,-40%) scaleX(-1) scale(1)}}
 
 /* ================= Cinematic stage ================= */
 .au-stage{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;contain:strict}
@@ -130,7 +153,6 @@ svg[data-au-icon]{transition:filter .3s ease,transform .3s ease;transform-origin
 @keyframes au-i-shake{20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-8deg)}80%{transform:rotate(5deg)}}
 @keyframes au-travel{to{offset-distance:100%}}
 @keyframes au-spin{to{--au-a:360deg}}
-@keyframes au-beam{to{stroke-dashoffset:0}}
 @keyframes au-twinkle{0%,100%{opacity:.25}50%{opacity:.7}}
 @keyframes au-shimmer{from{background-position:125% 0}to{background-position:-125% 0}}
 @keyframes au-retext{0%{opacity:0;filter:blur(12px);transform:translateY(10px) scale(.985)}60%{opacity:1}100%{opacity:1;filter:none;transform:none}}
@@ -138,10 +160,11 @@ svg[data-au-icon]{transition:filter .3s ease,transform .3s ease;transform-origin
 /* ================= Motion & input preferences ================= */
 @media (hover:none){.au-cs,.au-cs-edge{display:none}}
 @media (prefers-reduced-motion:reduce){
-  .au-mb-orb,.au-mb.is-fallback,.au-beams .au-beam,.au-cs>i,.au-shimmer,.au-retext,.au-aurora,.au-grain,svg[data-au-icon]{animation:none!important}
+  .au-mb-orb,.au-mb.is-fallback,.au-cs>i,.au-shimmer,.au-retext,.au-aurora,.au-grain,svg[data-au-icon]{animation:none!important}
   .au-mb-orb{offset-distance:12%}
-  .au-beams .au-beam{stroke-dashoffset:.5}
   .au-w{opacity:1;filter:none;transform:none;transition:none}
+  .au-spot{animation:none;opacity:1;transform:translate(50%,-40%) scaleX(-1) scale(1)}
+  .au-3d,.au-3d .au-3d-item{transition:none}
   .au-tip,.au-tip.is-on{transition:opacity .15s linear}
 }
 /* page-level beams stay a whisper behind content; the broadcast tunes its own */

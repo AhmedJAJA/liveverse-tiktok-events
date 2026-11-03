@@ -243,18 +243,18 @@ body.event-page{background:radial-gradient(ellipse 80% 35% at 70% 22%,rgba(212,1
 .presenter .modes{grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;counter-reset:game}
 .presenter .mode{counter-increment:game;grid-template-columns:minmax(0,1fr);grid-template-rows:7.4rem 1fr auto;align-items:start;justify-items:start;gap:0;padding:0;min-height:16.5rem;border-radius:22px;
   background:linear-gradient(180deg,#19181b 0%,#111113 55%,#0c0c0e 100%) padding-box,linear-gradient(180deg,rgba(241,213,140,.3),rgba(241,213,140,.05) 50%,rgba(241,213,140,.12)) border-box;border:1px solid transparent;
-  box-shadow:0 26px 50px -30px rgba(0,0,0,.95);transition:transform .5s var(--au-spring),box-shadow .4s ease}
+  box-shadow:0 26px 50px -30px rgba(0,0,0,.95);transition:translate .5s var(--au-spring),transform .2s linear,box-shadow .4s ease}
 .presenter .mode::before{content:"";position:absolute;inset:0 0 auto;height:7.4rem;z-index:-1;border-radius:22px 22px 0 0;pointer-events:none;
   background:repeating-conic-gradient(from 200deg at 50% 120%,rgba(241,213,140,.09) 0 2deg,transparent 2deg 11deg),radial-gradient(80% 110% at 50% 100%,rgba(212,175,55,.32),transparent 70%),linear-gradient(180deg,#1f1c15,#121113);
   -webkit-mask:linear-gradient(180deg,#000 60%,transparent);mask:linear-gradient(180deg,#000 60%,transparent)}
 .presenter .mode::after{content:counter(game,decimal-leading-zero);position:absolute;top:.85rem;inset-inline-end:1rem;font:300 2.2rem/1 var(--font-latin);letter-spacing:-.02em;color:transparent;-webkit-text-stroke:1px rgba(241,213,140,.35)}
-.presenter .mode .crest{grid-row:1;align-self:center;justify-self:center;--crest-size:4.4rem;filter:drop-shadow(0 12px 22px rgba(0,0,0,.7)) drop-shadow(0 0 18px rgba(212,175,55,.25));transition:transform .6s var(--au-spring)}
+.presenter .mode .crest{grid-row:1;align-self:center;justify-self:center;--crest-size:4.4rem;filter:drop-shadow(0 12px 22px rgba(0,0,0,.7)) drop-shadow(0 0 18px rgba(212,175,55,.25));transition:translate .6s var(--au-spring),scale .6s var(--au-spring),transform .2s linear}
 .presenter .mode-copy{grid-row:2;padding:.9rem 1.15rem 0;gap:.35rem}
 .presenter .mode-tag-pill{padding:.12rem .6rem;border-radius:999px;background:rgba(212,175,55,.1);border:1px solid rgba(241,213,140,.2);opacity:1}
 .presenter .mode strong{font-size:1.18rem}
 .presenter .mode-cta{grid-row:3;grid-column:1;margin:.8rem 1.15rem 1.05rem;padding:.25rem .75rem;border-radius:999px;border:1px solid var(--line-2);color:var(--text-2)}
-.presenter .mode:hover{transform:translateY(-6px);box-shadow:0 34px 60px -30px rgba(0,0,0,.95),0 0 40px -18px rgba(212,175,55,.5)}
-.presenter .mode:hover .crest{transform:translateY(-4px) scale(1.06)}
+.presenter .mode:hover{translate:0 -6px;box-shadow:0 34px 60px -30px rgba(0,0,0,.95),0 0 40px -18px rgba(212,175,55,.5)}
+.presenter .mode:hover .crest{translate:0 -4px;scale:1.06}
 .presenter .mode.is-selected{background:radial-gradient(90% 60% at 50% 0%,rgba(212,175,55,.26),transparent 70%),linear-gradient(180deg,#221f17 0%,#141310 60%,#0d0c0b 100%) padding-box,var(--metal) border-box;
   box-shadow:0 30px 60px -30px rgba(0,0,0,.95),0 0 50px -14px rgba(212,175,55,.55)}
 .presenter .mode.is-selected::after{color:rgba(212,175,55,.18);-webkit-text-stroke:1px rgba(255,241,194,.7)}

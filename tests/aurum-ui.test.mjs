@@ -18,7 +18,8 @@ test('Aurum rebuilds the six Aceternity effects natively, without remote code', 
   const css = pub('aurum.css'), js = pub('aurum.js');
   for (const f of ['aurum.css', 'aurum.js', 'royal-arena.css', 'royal-luxe.css']) assert.doesNotMatch(pub(f), /@import|https?:\/\/|import\s.+from/, f);
   for (const cls of ['.au-mb', '.au-cs', '.au-beams', '.au-sparkles', '.au-tip', '.au-w', '.au-shimmer', '.au-retext']) assert.ok(css.includes(cls), cls);
-  for (const fn of ['function movingBorder', 'function spotlight', 'function beams', 'function burst', 'function sparkleField', 'function showTip', 'function splitWords']) assert.ok(js.includes(fn), fn);
+  for (const fn of ['function movingBorder', 'function spotlight', 'function beams', 'function burst', 'function sparkleField', 'function showTip', 'function splitWords', 'function card3d', 'function glowing', 'function heroSpot']) assert.ok(js.includes(fn), fn);
+  for (const cls of ['.au-3d', '.au-glow', '.au-spot']) assert.ok(css.includes(cls), cls);
   assert.match(js, /offset-path/);
   assert.match(css, /prefers-reduced-motion:reduce/);
   assert.match(js, /reduce\.matches/);
@@ -46,4 +47,15 @@ test('landing uses the SVG icon set instead of emoji glyphs', () => {
     assert.match(icons, new RegExp('id="' + id + '"'), id);
   }
   assert.match(home, /data-au-tip=/);
+});
+
+test('Aurum follows the original Aceternity parameters', () => {
+  const css = pub('aurum.css'), js = pub('aurum.js');
+  assert.match(js, /x \* \.45/);                       // tooltip: [-100,100]px → [-45°,45°]
+  assert.match(js, /\/ 25\)/);                          // 3D card: offset / 25 degrees
+  assert.match(js, /rand\(10, 20\)/);                   // beams: 10–20s gradient sweeps
+  assert.match(js, /\.7;/);                             // glowing effect: inactive zone .7
+  assert.match(css, /calc\(var\(--i,0\) \* 200ms\)/); // text generate: 0.2s stagger
+  assert.match(css, /radial-gradient\(var\(--au-mb-color,#F1D58C\) 40%,transparent 60%\)/); // moving border orb
+  assert.match(js, /if \(!reduce\.matches\) \{|const animate = !reduce\.matches/);
 });
