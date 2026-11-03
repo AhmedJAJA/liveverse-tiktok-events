@@ -19,6 +19,17 @@ async function api(action, data={}) {
   if (!res.ok) { toast(result.error || 'تعذر تنفيذ الطلب', true); throw new Error(result.error || 'Request failed'); }
   return result;
 }
+async function withLoading(btn, fn) {
+  if (!btn || btn.classList.contains('is-loading')) return;
+  btn.classList.add('is-loading');
+  try { await fn(); } finally { btn.classList.remove('is-loading'); }
+}
+function pulseMetric(node) {
+  if (!node) return;
+  node.classList.remove('metric-pop');
+  void node.offsetWidth;
+  node.classList.add('metric-pop');
+}
 function setMode(mode) {
   currentMode=mode;
   document.querySelectorAll('.mode').forEach(btn=>btn.classList.toggle('is-selected',btn.dataset.mode===mode));
@@ -29,7 +40,7 @@ function setMode(mode) {
   el('targetWrap').hidden=mode!=='race';
   el('durationWrap').hidden=mode!=='quiz'&&mode!=='guess';
   el('drawButton').hidden=mode!=='wheel';
-  el('answerLabel').textContent=mode==='quiz'?'الإجابة الصحيحة':'الكلمة أو الإجابة الصحيحة';
+  el('answerLabel').textContent=mode==='quiz'?'الإجابة الصحيحة ✅':'الكلمة أو الإجابة الصحيحة ✅';
   const answer=el('gameAnswer');
   if (mode==='guess' && answer.tagName==='SELECT') {
     const input=document.createElement('input'); input.id='gameAnswer'; input.maxLength=80; input.placeholder='الإجابة لا تظهر للمشاهدين'; input.required=true; answer.replaceWith(input);
@@ -55,8 +66,10 @@ function paintMiniAvatar(box, person) {
   }
 }
 function populate(snapshot) {
+  const prevPlayers = state?.playerCount;
   state=snapshot;
   el('totalPlayers').textContent=state.playerCount.toLocaleString('ar-SA');
+  if (prevPlayers !== undefined && prevPlayers !== state.playerCount) pulseMetric(el('totalPlayers'));
   paintRoundStatus(state);
   paintRegistration(state.registration);
   paintPresenter(state);
@@ -83,7 +96,11 @@ function paintRegistration(reg) {
   const badge = el('regStateBadge');
   badge.textContent = phase === 'open' ? '🔥 التسجيل مفتوح' : phase === 'closed' ? '✅ التسجيل مغلق' : '⏳ لم يبدأ التسجيل';
   badge.className = 'reg-state ' + (phase === 'open' ? 'open' : phase === 'closed' ? 'closed' : '');
-  el('registrationCount').textContent = Number(reg.count || 0).toLocaleString('ar-SA');
+  const formattedCount = Number(reg.count || 0).toLocaleString('ar-SA');
+  if (el('registrationCount').textContent !== formattedCount) {
+    el('registrationCount').textContent = formattedCount;
+    pulseMetric(el('registrationCount'));
+  }
   el('registrationStatusText').textContent = phase === 'open'
     ? `🔥 التسجيل مفتوح • اكتب «${reg.keyword}» في الشات • يمكنك بدء السؤال لإغلاق التسجيل تلقائيًا`
     : phase === 'closed' ? `✅ تم تسجيل ${reg.count} متسابقًا. جاهزون للجولات التالية. لإضافة آخرين افتح التسجيل مجددًا.`
@@ -96,7 +113,7 @@ function paintRegistration(reg) {
   const list=el('registrationRecent'); list.replaceChildren();
   const entries=reg.recent||[];
   if (!entries.length) {list.append(empty('⏳ بانتظار أول متسابق...'));return;}
-  entries.forEach(x=>{const item=document.createElement('span');item.className='reg-person';const av=document.createElement('span');av.className='reg-person-avatar';paintMiniAvatar(av,x);const nm=document.createElement('span');nm.textContent=x.name;item.append(av,nm);list.append(item);});
+  entries.forEach((x, idx)=>{const item=document.createElement('span');item.className='reg-person';item.style.animationDelay=`${idx*0.04}s`;const av=document.createElement('span');av.className='reg-person-avatar';paintMiniAvatar(av,x);const nm=document.createElement('span');nm.textContent=x.name;item.append(av,nm);list.append(item);});
 }
 const formatSeconds = ms => (Math.max(0, ms) / 1000).toFixed(2) + ' ث';
 let liveClock = { endsAt: null, serverOffset: 0 };
@@ -116,13 +133,19 @@ function paintRoundStatus(data) {
   liveClock = { endsAt: liveTimed ? status.endsAt : null, serverOffset: data.serverTime - Date.now() };
   if (liveTimed) {
     updateRoundClock();
-    el('roundAnswerCount').textContent = '⚡ ' + (status.submissionCount || 0).toLocaleString('ar-SA') + ' إجابة مسجلة';
+    const ansLabel = '⚡ ' + (status.submissionCount || 0).toLocaleString('ar-SA') + ' إجابة مسجلة';
+    if (el('roundAnswerCount').textContent !== ansLabel) {
+      el('roundAnswerCount').textContent = ansLabel;
+      pulseMetric(el('roundAnswerCount'));
+    }
   }
   const results = timedMode ? status.results : null;
   const section = el('roundResults'); section.hidden = !results;
   if (!results) return;
   el('roundResultsSummary').textContent = `✅ ${results.correctCount} إجابة صحيحة من ${results.totalAnswers} مشاركة • ⚡ ترتيب حسب سرعة وصول الإجابة`;
-  el('roundWinnerMark').textContent = results.correctCount ? '🏆' : '❌';
+  const mark = el('roundWinnerMark');
+  mark.textContent = results.correctCount ? '🏆' : '❌';
+  mark.className = results.correctCount ? 'anim-check' : 'anim-cross';
   const list = el('roundResultsList'); list.replaceChildren();
   if (!results.rankings.length) { list.append(empty('❌ لم يسجل أحد إجابة صحيحة في هذه الجولة.')); }
   for (const person of results.rankings) {
@@ -209,8 +232,14 @@ function paintPresenter(data) {
 }
 async function presenterAction(button, action) {
   if(presenterBusy)return;
-  presenterBusy=true;if(state)paintPresenter(state);
-  try{await action();}catch{}finally{presenterBusy=false;if(state)paintPresenter(state);}
+  presenterBusy=true;
+  button?.classList.add('is-loading');
+  if(state)paintPresenter(state);
+  try{await action();}catch{}finally{
+    presenterBusy=false;
+    button?.classList.remove('is-loading');
+    if(state)paintPresenter(state);
+  }
 }
 async function startPresentedRound() {
   if(state?.status.results&&state.status.mode==='quiz'){await drawBankQuestion(true);return;}
@@ -260,21 +289,21 @@ function askConfirm(btn, promptText, action) {
 function wire() {
   el('adminToken').value=authToken;
   if(authToken) el('authLabel').textContent='رمز سابق محفوظ مؤقتًا لهذه الجلسة؛ يمكنك التحقق مجددًا.';
-  el('verifyButton').addEventListener('click',verify);
-  el('openRegistrationButton').addEventListener('click', async()=>{
+  el('verifyButton').addEventListener('click',e=>withLoading(e.currentTarget,verify));
+  el('openRegistrationButton').addEventListener('click', e=>withLoading(e.currentTarget, async()=>{
     try { await api('registration-open',{keyword:el('registrationKeyword').value}); toast('التسجيل مفتوح! اكتبوا كلمة الانضمام في الشات.'); } catch {}
-  });
-  el('closeRegistrationButton').addEventListener('click', async()=>{
+  }));
+  el('closeRegistrationButton').addEventListener('click', e=>withLoading(e.currentTarget, async()=>{
     try { await api('registration-close'); toast('تم إغلاق التسجيل. يمكن بدء الجولة.'); } catch {}
-  });
+  }));
   el('newRegistrationButton').addEventListener('click', e=>{
     askConfirm(e.currentTarget, 'سيُمسح جميع المتسابقين ونقاطهم وتُفتح مرحلة تسجيل جديدة — اضغط مجددًا للتأكيد.', async()=>{
       try { await api('registration-open',{keyword:el('registrationKeyword').value, reset:true}); toast('بدأ تسجيل جديد وتم تصفير نتائج الفعالية السابقة'); } catch {}
     });
   });
 
-  el('loadQuestionButton').addEventListener('click', () => drawBankQuestion(false));
-  el('playQuestionButton').addEventListener('click', () => drawBankQuestion(true));
+  el('loadQuestionButton').addEventListener('click', e => withLoading(e.currentTarget, () => drawBankQuestion(false)));
+  el('playQuestionButton').addEventListener('click', e => withLoading(e.currentTarget, () => drawBankQuestion(true)));
   el('bankResetButton').addEventListener('click', e => {
     askConfirm(e.currentTarget, 'سيُسمح بإعادة استخدام جميع الأسئلة في الجلسة — اضغط مجددًا للتأكيد.', async () => {
       try { const r = await api('bank-reset'); paintBank(r.bank); toast('تم تصفير سجل الأسئلة المستخدمة'); } catch {}
@@ -282,12 +311,12 @@ function wire() {
   });
   document.querySelectorAll('.mode').forEach(btn=>btn.addEventListener('click',()=>setMode(btn.dataset.mode)));
   el('gameForm').addEventListener('submit',async e=>{e.preventDefault();try{await api('configure',configureData());toast('تم حفظ إعدادات الجولة');}catch{}});
-  el('startButton').addEventListener('click',async()=>{try{await api('configure',configureData());await api('start');toast('بدأت الجولة!');}catch{}});
-  el('stopButton').addEventListener('click',async()=>{try{await api('stop');toast('تم إيقاف الجولة');}catch{}});
-  el('drawButton').addEventListener('click',async()=>{try{await api('draw');}catch{}});
-  el('connectButton').addEventListener('click',async()=>{try{toast('محاولة الاتصال بالبث...');await api('connect',{username:el('tiktokUser').value});toast('تم الاتصال بالبث');}catch{}});
-  el('disconnectButton').addEventListener('click',async()=>{try{await api('disconnect');toast('تم فصل البث');}catch{}});
-  el('simulateButton').addEventListener('click',async()=>{try{await api('simulate',{username:el('demoName').value,text:el('demoMessage').value});el('demoMessage').value='';}catch{}});
+  el('startButton').addEventListener('click',e=>withLoading(e.currentTarget,async()=>{try{await api('configure',configureData());await api('start');toast('بدأت الجولة!');}catch{}}));
+  el('stopButton').addEventListener('click',e=>withLoading(e.currentTarget,async()=>{try{await api('stop');toast('تم إيقاف الجولة');}catch{}}));
+  el('drawButton').addEventListener('click',e=>withLoading(e.currentTarget,async()=>{try{await api('draw');}catch{}}));
+  el('connectButton').addEventListener('click',e=>withLoading(e.currentTarget,async()=>{try{toast('محاولة الاتصال بالبث...');await api('connect',{username:el('tiktokUser').value});toast('تم الاتصال بالبث');}catch{}}));
+  el('disconnectButton').addEventListener('click',e=>withLoading(e.currentTarget,async()=>{try{await api('disconnect');toast('تم فصل البث');}catch{}}));
+  el('simulateButton').addEventListener('click',e=>withLoading(e.currentTarget,async()=>{try{await api('simulate',{username:el('demoName').value,text:el('demoMessage').value});el('demoMessage').value='';}catch{}}));
   el('demoMessage').addEventListener('keydown',e=>{if(e.key==='Enter')el('simulateButton').click();});
   el('resetScoresButton').addEventListener('click',e=>{
     askConfirm(e.currentTarget, 'سيتم مسح المتسابقين ونقاطهم — اضغط مجددًا للتأكيد.', async()=>{
@@ -312,4 +341,3 @@ async function autoDevAuth() {
   } catch {}
 }
 wire();wirePresenter();if (authToken) refreshBank().catch(() => {});else autoDevAuth();fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
-

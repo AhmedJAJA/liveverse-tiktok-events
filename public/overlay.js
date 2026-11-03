@@ -7,8 +7,9 @@ const modeInfo = {
   race: { en:'CHAT RACE', short:'RACE', ar:'السباق المباشر', instruction:'المسجلون يتقدمون بكتابة !go' },
   wheel: { en:'LUCKY DRAW', short:'WHEEL', ar:'عجلة المشاركين', instruction:'يدخل المسجلون في الفعالية للسحب مباشرة' }
 };
-const stateCache = { questionKey:null, leaderboardKey:null, raceKey:null, resultsKey:null, lastWinnerAt:null };
+const stateCache = { questionKey:null, leaderboardKey:null, raceKey:null, resultsKey:null, lastWinnerAt:null, lastSubmissionCount:0 };
 let clock = { endsAt: null, duration:30, offset:0, active:false };
+let countdownTimers = [];
 const formatMs = ms => (Math.max(0, Number(ms)||0)/1000).toFixed(2) + ' ث';
 const number = v => new Intl.NumberFormat('en-US').format(Number(v)||0);
 function node(tag, className, value) {
@@ -16,6 +17,37 @@ function node(tag, className, value) {
   if (className) item.className = className;
   if (value !== undefined) item.textContent = String(value);
   return item;
+}
+function triggerRoundStartCountdown() {
+  const overlay = $('roundStartCountdown');
+  const numEl = $('countdownNumber');
+  const labelEl = $('countdownLabel');
+  if (!overlay || !numEl || !labelEl) return;
+  countdownTimers.forEach(clearTimeout);
+  countdownTimers = [];
+  if (matchMedia('(prefers-reduced-motion:reduce)').matches) {
+    overlay.hidden = true;
+    return;
+  }
+  overlay.hidden = false;
+  const steps = [
+    { val: '3', text: '🔥 استعد للتحدي', delay: 0 },
+    { val: '2', text: '⚡ جهّز إجابتك في الشات', delay: 420 },
+    { val: '1', text: '🎯 السرعة تحسم الصدارة', delay: 840 },
+    { val: 'انطلق! 🔥', text: 'أرسل إجابتك الآن', delay: 1260 }
+  ];
+  for (const step of steps) {
+    countdownTimers.push(setTimeout(() => {
+      numEl.textContent = step.val;
+      labelEl.textContent = step.text;
+      numEl.classList.remove('pop');
+      void numEl.offsetWidth;
+      numEl.classList.add('pop');
+    }, step.delay));
+  }
+  countdownTimers.push(setTimeout(() => {
+    overlay.hidden = true;
+  }, 1720));
 }
 function renderClock() {
   const seconds = clock.active && clock.endsAt != null
@@ -74,8 +106,15 @@ function updateVoteCounts(counts, voters = []) {
   const total=counts.reduce((sum,n)=>sum+n,0);
   $('overlayOptions').querySelectorAll('.choice').forEach((choice,i)=>{
     const count=Number(counts[i])||0;
-    choice.querySelector('.choice-count').textContent=number(count);
-    choice.querySelector('.choice-mark').setAttribute('aria-label',number(count)+' إجابة لهذا الخيار');
+    const countEl = choice.querySelector('.choice-count');
+    const formatted = number(count);
+    if (countEl.textContent !== formatted) {
+      countEl.textContent = formatted;
+      choice.classList.remove('choice-voted');
+      void choice.offsetWidth;
+      choice.classList.add('choice-voted');
+    }
+    choice.querySelector('.choice-mark').setAttribute('aria-label',formatted+' إجابة لهذا الخيار');
     choice.querySelector('.choice-vote-bar').style.width=(total?100*count/total:0)+'%';
     const stack=choice.querySelector('.choice-avatars');
     const people=(voters[i]||[]).slice(0,3);const key=JSON.stringify(people);
@@ -117,11 +156,11 @@ function triggerConfetti() {
   if (!stage) return;
   stage.replaceChildren();
   const colors = ['#59e8ff', '#368bff', '#9e67f5', '#ffd78c', '#36d391', '#ff5e74'];
-  for (let i = 0; i < 38; i++) {
+  for (let i = 0; i < 42; i++) {
     const piece = node('i', 'confetti-piece');
-    piece.style.setProperty('--cx', `${(i * 2.63) % 100}%`);
-    piece.style.setProperty('--cdelay', `${(i % 10) * 0.06}s`);
-    piece.style.setProperty('--cdur', `${2.1 + (i % 5) * 0.25}s`);
+    piece.style.setProperty('--cx', `${(i * 2.38) % 100}%`);
+    piece.style.setProperty('--cdelay', `${(i % 10) * 0.055}s`);
+    piece.style.setProperty('--cdur', `${2.1 + (i % 5) * 0.24}s`);
     piece.style.setProperty('--ccolor', colors[i % colors.length]);
     piece.style.setProperty('--crot', `${(i % 2 ? 1 : -1) * (180 + (i * 23) % 180)}deg`);
     stage.append(piece);
@@ -129,7 +168,7 @@ function triggerConfetti() {
 }
 function podiumCard(p, rank) {
   const card=node('div',`podium-card place-${rank}`);
-  if (rank===1) card.append(node('span','podium-crown','👑'));
+  if (rank===1) card.append(node('span','podium-crown anim-trophy','👑'));
   const avatar=node('div','podium-avatar');
   paintAvatar(avatar,p);
   const medal=['🥇','🥈','🥉'][rank-1]||String(rank);
@@ -153,7 +192,7 @@ function renderResults(status, round) {
   $('resultsAnswers').textContent=`✅ ${number(results.correctCount)} صحيحة / ${number(results.totalAnswers)} إجابة`;
   const podium=$('resultsPodium');const list=$('resultsOthers');podium.replaceChildren();list.replaceChildren();
   if(!results.rankings?.length){
-    podium.append(node('div','results-empty','❌ لم تُسجّل إجابة صحيحة هذه المرة • 🔥 الجولة القادمة فرصتك!'));
+    podium.append(node('div','results-empty anim-cross','❌ لم تُسجّل إجابة صحيحة هذه المرة • 🔥 الجولة القادمة فرصتك!'));
   }else{
     triggerConfetti();
     results.rankings.slice(0,3).forEach((p,i)=>podium.append(podiumCard(p,i+1)));
@@ -255,7 +294,13 @@ function update(data) {
   $('overlayRace').hidden=s.mode!=='race';
   $('overlayWheel').hidden=s.mode!=='wheel';
   const questionKey=JSON.stringify([s.mode,s.options,s.prompt,data.round]);
-  if(s.mode==='quiz' && questionKey!==stateCache.questionKey) renderOptions(s.options||[]);
+  if(s.mode==='quiz' && questionKey!==stateCache.questionKey) {
+    renderOptions(s.options||[]);
+    const qCard = $('questionCard');
+    qCard.classList.remove('question-enter');
+    void qCard.offsetWidth;
+    qCard.classList.add('question-enter');
+  }
   if(s.mode==='quiz') updateVoteCounts(s.choiceCounts||[],s.choiceVoters||[]);
   $('overlayPrompt').classList.toggle('is-long',(s.prompt||'').length>70);
   $('overlayPrompt').classList.toggle('is-very-long',(s.prompt||'').length>125);
@@ -265,7 +310,15 @@ function update(data) {
   $('overlayWheelCount').textContent='👥 '+number(data.entriesCount||0)+' مشارك';
   $('wheelEntriesPreview').textContent=(data.entries||[]).slice(0,3).join(' • ')||'أسماء المسجلين في الفعالية';
   $('overlayPlayers').textContent=number(data.registration?.count ?? data.playerCount ?? 0);
-  $('overlaySubmissions').textContent=number(s.mode==='wheel'?data.entriesCount||0:s.mode==='race'?(data.race||[]).length:s.submissionCount||0);
+  const subCount = s.mode==='wheel'?data.entriesCount||0:s.mode==='race'?(data.race||[]).length:s.submissionCount||0;
+  $('overlaySubmissions').textContent=number(subCount);
+  if (subCount > stateCache.lastSubmissionCount) {
+    const box = $('answerTotalBox');
+    box.classList.remove('pulse-hit');
+    void box.offsetWidth;
+    box.classList.add('pulse-hit');
+  }
+  stateCache.lastSubmissionCount = subCount;
   $('overlayStatus').textContent=s.active?'🔥 الجولة جارية • أرسل إجابتك الآن':s.results?'🏆 اكتملت الجولة • النتائج ظهرت':s.notice||'جاهز لبدء الجولة';
   $('footerDetail').textContent=phase==='active'?'إجابتك الأولى فقط هي المعتمدة':phase==='results'?'الصدارة للأسرع في الإجابة الصحيحة':'انتظر انطلاق المنافسة';
   clock={endsAt:s.endsAt??null,duration:Number(s.duration)||30,offset:(Number(data.serverTime)||Date.now())-Date.now(),active:!!s.active&&['quiz','guess'].includes(s.mode)};
@@ -276,7 +329,12 @@ function update(data) {
   // Signup takes priority over a stale results screen from the previous round.
   if(phase==='registration') $('roundResultsOverlay').hidden=true;
   renderRegistration(data.registration);
-  if(phase==='active'&&update.previousPhase!==phase)requestAnimationFrame(fitBroadcastText);
+  if(phase==='active'&&update.previousPhase&&update.previousPhase!==phase){
+    triggerRoundStartCountdown();
+    requestAnimationFrame(fitBroadcastText);
+  } else if (phase !== 'active') {
+    $('roundStartCountdown').hidden = true;
+  }
   update.previousPhase=phase;
   const banner=$('winnerBanner');
   if(s.lastEvent?.winner && !s.results){
@@ -299,4 +357,3 @@ function connect() {
 }
 fetch('/api/state').then(res=>{if(!res.ok)throw new Error('API not available');return res.json();}).then(update).catch(()=>{$('overlayStatus').textContent='جارٍ الاتصال بالمنصة...';});
 connect();
-

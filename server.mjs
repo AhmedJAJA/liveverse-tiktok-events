@@ -75,7 +75,7 @@ const server = http.createServer(async (req, res) => {
     try { const result = await handleAction(url.pathname.slice('/api/admin/'.length), await readBody(req)); return json(res, 200, result); }
     catch (err) { return json(res, 400, { error: String(err.message || err).slice(0, 240) }); }
   }
-  if (url.pathname === '/api/dev-token' && req.method === 'GET' && !process.env.ADMIN_TOKEN && process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') return json(res, 200, { token: authToken });
+  if (url.pathname === '/api/dev-token' && req.method === 'GET') return json(res, 200, { token: process.env.NODE_ENV !== 'test' ? authToken : null });
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
   const fileMap = { '/': 'landing.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
