@@ -21,7 +21,7 @@ function renderClock() {
     ? Math.max(0, Math.ceil((clock.endsAt - (Date.now() + clock.offset)) / 1000))
     : clock.duration;
   const pct = clock.active && clock.endsAt != null ? Math.max(0, Math.min(1, (clock.endsAt - (Date.now() + clock.offset))/(clock.duration*1000))) : 1;
-  const label = `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+  const label = $('arena').dataset.mode === 'quiz' ? String(seconds) : `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
   $('overlaySeconds').textContent = label;
   $('timerFace').style.setProperty('--timer-angle', `${Math.round(pct*360)}deg`);
   $('topProgress').style.width = (clock.active ? Math.round(pct*100) : 0) + '%';
@@ -43,11 +43,33 @@ function updateStandings(players) {
   });
 }
 function renderOptions(items) {
-  const list=$('overlayOptions');list.replaceChildren();
+  const list=$('overlayOptions'); list.replaceChildren();
   items.slice(0,4).forEach((option,i)=>{
     const card=node('div','choice');
-    card.append(node('span','choice-index',String.fromCharCode(65+i)),node('span','choice-label',option),node('span','choice-mark','↗'));
+    card.dataset.option=String(i+1);
+    const badge=node('span','choice-index');badge.append(node('span','',String(i+1)));
+    const votes=node('span','choice-mark','◉ 0');votes.setAttribute('aria-label','عدد إجابات هذا الخيار');
+    card.append(badge,node('span','choice-label',option),votes);
     list.append(card);
+  });
+}
+function updateVoteCounts(counts) {
+  $('overlayOptions').querySelectorAll('.choice').forEach((choice,i)=>{
+    const mark=choice.querySelector('.choice-mark');
+    if (mark) mark.textContent='◉ '+number(counts[i]||0);
+  });
+}
+function renderProgressDots(round) {
+  const dots=$('quizProgressDots');
+  if (!dots) return;
+  const selected=((Math.max(1,round)-1)%10);
+  if(dots.children.length!==10) {
+    dots.replaceChildren();
+    for(let i=0;i<10;i++)dots.append(node('span',''));
+  }
+  [...dots.children].forEach((item,i)=>{
+    item.classList.toggle('is-current',i===selected);
+    item.classList.toggle('is-done',i<selected);
   });
 }
 function renderRace(race, target) {
@@ -100,27 +122,48 @@ function renderResults(status, round) {
   screen.classList.remove('appear');void screen.offsetWidth;screen.classList.add('appear');
 }
 function renderRegistration(reg) {
-  const visible = !!reg && reg.phase === 'open';
-  const screen = $('registrationOverlay');
-  screen.hidden = !visible;
-  if (!visible) return;
-  $('signupKeyword').textContent = reg.keyword || 'انضم';
-  $('signupCount').textContent = number(reg.count || 0);
-  const recent = $('signupRecent');
-  const key = JSON.stringify(reg.recent || []);
-  if (screen.dataset.lastRegistrants !== key) {
-    screen.dataset.lastRegistrants = key;
-    recent.replaceChildren();
-    if (!reg.recent?.length) recent.append(node('span', 'signup-empty', 'كن أول المسجلين!'));
-    else for (const item of reg.recent) recent.append(node('span', 'signup-member', '✓ ' + item.name));
+  const screen=$('registrationOverlay'),visible=!!reg&&reg.phase==='open';
+  screen.hidden=!visible;
+  if(!visible) return;
+  $('signupKeyword').textContent=reg.keyword||'انضم';
+  $('signupCount').textContent=number(reg.count||0);
+  $('signupReady').textContent='جاهزون للبدء ('+number(reg.count||0)+')';
+  const latest=reg.recent?.[0]||null;
+  $('signupLatestName').textContent=latest?.name||'بانتظار أول متسابق';
+  $('signupLatestNumber').textContent='#'+(reg.count||0);
+  $('signupLatestAvatar').textContent=latest?.name?.trim()?.charAt(0)?.toUpperCase()||'✦';
+  $('signupLatestDescription').textContent=latest?'المشارك رقم '+number(reg.count||0):'اكتب كلمة الانضمام لتظهر هنا';
+  const small=matchMedia('(max-width:540px)').matches;
+  const vertical=matchMedia('(max-aspect-ratio:4/5)').matches;
+  const slots=small?30:vertical?48:66;
+  const members=Array.isArray(reg.participants)?reg.participants.slice(-slots):[];
+  const key=JSON.stringify([reg.session,reg.count,members,slots]);
+  if (screen.dataset.lastRegistrants===key)return;
+  screen.dataset.lastRegistrants=key;
+  const wall=$('signupRecent');wall.replaceChildren();
+  const latestNumber=members.at(-1)?.number;
+  for(const player of members) {
+    const card=node('div','signup-member-card');
+    if(player.number===latestNumber) card.classList.add('is-latest');
+    card.title=player.name;
+    card.append(node('span','member-avatar',player.name.trim().charAt(0).toUpperCase()||'✦'),node('span','member-name',player.name));
+    wall.append(card);
+  }
+  for(let i=members.length;i<slots;i++) {
+    const card=node('div','signup-member-card is-empty');
+    card.setAttribute('aria-hidden','true');card.append(node('span','member-avatar','✧'),node('span','member-name','بانتظار مشارك'));
+    wall.append(card);
   }
 }
+window.addEventListener('resize',()=>{if(window.lastLiveverseState)renderRegistration(window.lastLiveverseState.registration);});
 function update(data) {
   if (!data || !data.status) return;
+  window.lastLiveverseState=data;
   const s=data.status, mode=modeInfo[s.mode]||modeInfo.quiz;
   const phase=data.registration?.phase==='open'?'registration':s.results?'results':s.active?'active':'waiting';
   const arena=$('arena');arena.dataset.mode=s.mode;arena.dataset.phase=phase;
-  $('overlayRound').textContent=`ROUND ${String(data.round||1).padStart(2,'0')}`;
+  $('overlayRound').textContent=s.mode==='quiz'?'السؤال '+(data.round||1):`ROUND ${String(data.round||1).padStart(2,'0')}`;
+  renderProgressDots(data.round||1);
   $('footerRound').textContent=String(data.round||1).padStart(3,'0');
   $('overlayLiveText').textContent=phase==='registration'?'JOIN NOW':phase==='results'?'FINISHED':phase==='active'?'LIVE NOW':'STANDBY';
   $('modeTag').textContent=mode.en;
@@ -129,12 +172,13 @@ function update(data) {
   $('stageTag').textContent=phase==='active'?'التحدي بدأ':phase==='results'?'اكتملت الجولة':'استعد للتحدي';
   $('overlayTitle').textContent=s.title||'تحدي الجمهور';
   $('overlayPrompt').textContent=s.mode==='race'?'سجّل دخولك وابدأ السباق نحو المركز الأول!':s.mode==='wheel'?'ادخل السحب وأنتظر لحظة اختيار الفائز!':s.prompt||'استعد للسؤال التالي';
-  $('overlayHint').textContent=mode.instruction;
+  $('overlayHint').textContent=s.mode==='quiz'?'اكتب رقم الإجابة من 1 إلى 4 في الشات • إجابة واحدة فقط':mode.instruction;
   $('overlayOptions').hidden=s.mode!=='quiz';
   $('overlayRace').hidden=s.mode!=='race';
   $('overlayWheel').hidden=s.mode!=='wheel';
   const questionKey=JSON.stringify([s.mode,s.options,s.prompt,data.round]);
   if(s.mode==='quiz' && questionKey!==stateCache.questionKey) renderOptions(s.options||[]);
+  if(s.mode==='quiz') updateVoteCounts(s.choiceCounts||[]);
   stateCache.questionKey=questionKey;
   if(s.mode==='race') renderRace(data.race||[],s.target);
   $('overlayWheelCount').textContent=number(data.entriesCount||0)+' مشارك';
