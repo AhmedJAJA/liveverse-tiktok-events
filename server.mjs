@@ -10,7 +10,7 @@ import { QuestionBank } from './src/question-bank.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
-if (!process.env.ADMIN_TOKEN) console.log('\n[LOCAL ADMIN TOKEN] ' + authToken + '\nSet ADMIN_TOKEN in hosting environment before publishing.');
+if (!process.env.ADMIN_TOKEN) { if (process.env.NODE_ENV === 'production') console.warn('ADMIN_TOKEN is unset; configure it in the hosting environment.'); else console.log('\n[LOCAL ADMIN TOKEN] ' + authToken + '\nSet ADMIN_TOKEN in hosting environment before publishing.'); }
 const safeToken = Buffer.from(authToken, 'utf8');
 const matchesToken = (raw) => { const incoming = Buffer.from(String(raw||''), 'utf8'); return incoming.length === safeToken.length && timingSafeEqual(incoming, safeToken); };
 const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff' };
@@ -75,7 +75,12 @@ const server = http.createServer(async (req, res) => {
     try { const result = await handleAction(url.pathname.slice('/api/admin/'.length), await readBody(req)); return json(res, 200, result); }
     catch (err) { return json(res, 400, { error: String(err.message || err).slice(0, 240) }); }
   }
-  if (url.pathname === '/api/dev-token' && req.method === 'GET') return json(res, 200, { token: process.env.NODE_ENV !== 'test' ? authToken : null });
+  if (url.pathname === '/api/dev-token' && req.method === 'GET') {
+    // Never expose administrator credentials on a deployed or remotely reachable server.
+    const loopback = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+    if (process.env.NODE_ENV === 'development' && loopback) return json(res, 200, { token: authToken });
+    return json(res, 404, { error: 'Not found' });
+  }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
   const fileMap = { '/': 'landing.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);

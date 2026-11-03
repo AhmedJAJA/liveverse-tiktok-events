@@ -25,6 +25,8 @@ test('HTTP host flow, read-only viewer, fonts and live answer summaries work tog
       assert.ok((await response.arrayBuffer()).byteLength>100);
     }
     assert.equal((await fetch(base+'/.env.local')).status,404);
+    // A production or test server must never allow anonymous token discovery.
+    assert.equal((await fetch(base+'/api/dev-token')).status,404);
     assert.equal((await fetch(base+'/api/admin/start',{method:'POST'})).status,401);
     await post('registration-open',{keyword:'انضم'});
     await post('simulate',{username:'أحمد',text:'انضم'});

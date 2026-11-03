@@ -67,7 +67,7 @@ export class Engine {
   }
   emit() { this.notify(this.snapshot()); }
   snapshot() {
-    const players = [...this.players.values()].sort((a, b) => b.score - a.score || (a.correctRounds && b.correctRounds ? a.totalResponseMs / a.correctRounds - b.totalResponseMs / b.correctRounds : 0) || a.firstSeen - b.firstSeen).slice(0, 20).map(({ id, name, score, correctRounds = 0, totalResponseMs = 0 }) => ({ id, name, score, correctRounds, avgMs: correctRounds ? Math.round(totalResponseMs / correctRounds) : null }));
+    const players = [...this.players.values()].sort((a, b) => b.score - a.score || (a.correctRounds && b.correctRounds ? a.totalResponseMs / a.correctRounds - b.totalResponseMs / b.correctRounds : 0) || a.firstSeen - b.firstSeen).slice(0, 20).map(({ id, name, score, avatar, correctRounds = 0, totalResponseMs = 0 }) => ({ id, name, score, ...(avatar ? { avatar } : {}), correctRounds, avgMs: correctRounds ? Math.round(totalResponseMs / correctRounds) : null }));
     const race = [...this.raceProgress.entries()].map(([id, progress]) => ({ id, name: this.players.get(id)?.name || id, progress }))
       .sort((a,b) => b.progress - a.progress).slice(0, 15);
     return {

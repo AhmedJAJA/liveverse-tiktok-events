@@ -9,6 +9,7 @@ test('TikTok profile photos survive registration, later messages and public card
   engine.receiveChat({id:'private-id',username:'نور',text:'انضم',avatar});
   assert.equal(engine.snapshot().registration.recent[0].avatar,avatar);
   assert.deepEqual(engine.snapshot().registration.participants,[{name:'نور',number:1,avatar}]);
+  assert.equal(engine.snapshot().leaderboard[0].avatar, avatar);
   engine.start();time+=500;
   engine.receiveChat({id:'private-id',username:'نور',text:'2'});
   const voter=engine.snapshot().status.choiceVoters[1][0];
