@@ -38,3 +38,16 @@ test('server offers images, icons and fonts with correct MIME and preserves publ
   assert.match(server, /'\/studio': 'index\.html'/);
   assert.match(server, /'\/overlay': 'overlay\.html'/);
 });
+test('enforces Royal Black — Obsidian & Gold palette across public pages and the core theme',()=>{
+  const css=publicFile('royal-core.css');
+  for(const hex of ['#08090B','#121316','#202126','#D4AF37','#F1D58C','#F6F1E7']){
+    assert.ok(css.includes(hex),'Missing Royal Black palette color '+hex);
+  }
+  for(const sheet of ['royal-core.css','royal-studio.css','royal-broadcast.css','royal-landing.css'])
+    assert.doesNotMatch(publicFile(sheet),/#020b26|#051a4d|#0a3585/i);
+  for(const name of files){
+    const html=publicFile(name);
+    assert.match(html,/name="theme-color" content="#08090B"/);
+    assert.doesNotMatch(html,/#020b26/i);
+  }
+});
