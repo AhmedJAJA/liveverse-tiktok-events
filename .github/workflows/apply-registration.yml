@@ -1,0 +1,42 @@
+name: Apply LIVEVERSE registration release
+on:
+  push:
+    branches: [main]
+    paths:
+      - release/signup/source.b64
+      - .github/workflows/apply-registration.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: liveverse-registration-release
+  cancel-in-progress: false
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify release and update source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f release/signup/source.b64 ]; then
+            echo "Registration release already imported."
+            exit 0
+          fi
+          base64 --decode release/signup/source.b64 > /tmp/liveverse-v05.tar.xz
+          echo "63e4312dfef66aa5d026e91cd455474f81fbf24846ead5c08ae990dd72e7001d  /tmp/liveverse-v05.tar.xz" | sha256sum -c -
+          tar -xJf /tmp/liveverse-v05.tar.xz -C .
+          npm run check
+          npm test
+          rm -rf release/signup
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: chat signup lobby and registered-only LIVE challenges"
+          git push
