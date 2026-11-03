@@ -3,6 +3,32 @@ let state;
 let authToken = sessionStorage.getItem('liveverse_admin') || '';
 let currentMode = 'quiz';
 let toastTimeout;
+let audioUnlocked = false;
+window.addEventListener('pointerdown', () => { audioUnlocked = true; }, { once: true, passive: true });
+function playWinSound() {
+  if (!audioUnlocked || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const start = ctx.currentTime + idx * 0.09;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.08, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.3);
+    });
+    setTimeout(() => ctx.close().catch(() => {}), 1500);
+  } catch {}
+}
 const instructions = {
   quiz: ['إجابة واحدة لكل مشاهد • ترتيب الأسرع بعد انتهاء الوقت', 'أول اختيار صحيح أو خاطئ يُعتمد ولا يمكن تغييره. ترتيب الفائزين حسب سرعة الإجابة الصحيحة.'],
   guess: ['محاولة واحدة • ترتيب الإجابات الصحيحة حسب السرعة', 'أول تخمين فقط لكل مشاهد؛ لا يمكن تعديله حتى لو كان خاطئًا.'],
@@ -32,7 +58,12 @@ function pulseMetric(node) {
 }
 function setMode(mode) {
   currentMode=mode;
-  document.querySelectorAll('.mode').forEach(btn=>btn.classList.toggle('is-selected',btn.dataset.mode===mode));
+  document.querySelectorAll('.mode').forEach(btn=>{
+    const selected = btn.dataset.mode===mode;
+    btn.classList.toggle('is-selected',selected);
+    const cta = btn.querySelector('.mode-cta');
+    if (cta) cta.textContent = selected ? '✓ الفعالية المحددة' : 'العب الآن ←';
+  });
   el('modeHint').textContent=instructions[mode][0]; el('instruction').textContent=instructions[mode][1];
   el('questionWrap').hidden=mode==='race'||mode==='wheel';
   el('optionsWrap').hidden=mode!=='quiz';
@@ -65,6 +96,49 @@ function paintMiniAvatar(box, person) {
     box.replaceChildren(img);
   }
 }
+function renderStudioChampions(top, list) {
+  top.replaceChildren();
+  const podiumWrap = document.createElement('div');
+  podiumWrap.className = 'studio-podium-mini';
+  const order = [1, 0, 2];
+  for (const idx of order) {
+    const player = list[idx];
+    const slot = document.createElement('div');
+    slot.className = 'studio-podium-slot place-' + (idx + 1);
+    const rankBadge = document.createElement('span');
+    rankBadge.className = 'studio-slot-rank';
+    rankBadge.textContent = idx === 0 ? '👑 ١' : idx === 1 ? '🥈 ٢' : '🥉 ٣';
+    const av = document.createElement('div');
+    av.className = 'studio-slot-avatar';
+    if (player) paintMiniAvatar(av, player);
+    else av.textContent = '؟';
+    const nm = document.createElement('strong');
+    nm.textContent = player ? player.name : (idx === 0 ? 'مكانك فاضي' : '—');
+    const sc = document.createElement('small');
+    sc.textContent = player ? (player.score + ' نقطة') : '— نقطة';
+    slot.append(rankBadge, av, nm, sc);
+    podiumWrap.append(slot);
+  }
+  top.append(podiumWrap);
+  if (!list.length) return;
+  list.slice(0, 10).forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'leader-row';
+    const rank = document.createElement('span');
+    rank.className = 'rank ' + (i < 3 ? 'top-' + i : '');
+    rank.textContent = ['🥇', '🥈', '🥉'][i] || String(i + 1).padStart(2, '0');
+    const av = document.createElement('span');
+    av.className = 'reg-person-avatar';
+    paintMiniAvatar(av, p);
+    const name = document.createElement('strong');
+    name.textContent = (i === 0 ? '👑 ' : '') + p.name;
+    const score = document.createElement('span');
+    score.className = 'score';
+    score.textContent = p.score + ' نقطة';
+    row.append(rank, av, name, score);
+    top.append(row);
+  });
+}
 function populate(snapshot) {
   const prevPlayers = state?.playerCount;
   state=snapshot;
@@ -82,13 +156,16 @@ function populate(snapshot) {
   el('liveStatus').textContent=online?'✅ متصل':live==='connecting'?'⏳ جارٍ الاتصال':'غير متصل';
   el('liveSubtitle').textContent=state.connection.username ? '@'+state.connection.username : 'TikTok LIVE';
   el('connectionDetail').textContent=state.connection.detail||'لا يوجد اتصال حاليًا';
-  const top=el('leaderboard');top.replaceChildren();
-  if (!state.leaderboard.length) { top.append(empty('لم يحصل أحد على نقاط بعد 🏆')); }
-  else state.leaderboard.slice(0,10).forEach((p,i)=>{const row=document.createElement('div');row.className='leader-row';const rank=document.createElement('span');rank.className='rank '+(i<3?'top-'+i:'');rank.textContent=['🥇','🥈','🥉'][i]||String(i+1).padStart(2,'0');const name=document.createElement('strong');name.textContent=(i===0?'👑 ':'')+p.name;const score=document.createElement('span');score.className='score';score.textContent=p.score+' نقطة';row.append(rank,name,score);top.append(row);});
+  const top=el('leaderboard');
+  renderStudioChampions(top, state.leaderboard || []);
   const feed=el('chatFeed');feed.replaceChildren();
   if (!state.recent.length) feed.append(empty('التعليقات ستظهر هنا عند الاتصال أو المحاكاة.'));
   else state.recent.slice(0,12).forEach(c=>{const row=document.createElement('div');row.className='feed-row';const icon=document.createElement('span');icon.className='chat-icon';icon.textContent='💬';const user=document.createElement('strong');user.textContent=c.name;const text=document.createElement('span');text.textContent=c.message;const time=document.createElement('small');time.textContent=new Date(c.at).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});row.append(icon,user,text,time);feed.append(row);});
-  if(state.status.lastEvent?.winner && state.status.lastEvent.at!==populate.lastWinner) { populate.lastWinner=state.status.lastEvent.at;toast('🏆 🎉 '+state.status.lastEvent.winner.name+' تصدّر الجولة!'); }
+  if(state.status.lastEvent?.winner && state.status.lastEvent.at!==populate.lastWinner) {
+    populate.lastWinner=state.status.lastEvent.at;
+    playWinSound();
+    toast('🏆 🎉 '+state.status.lastEvent.winner.name+' تصدّر الجولة!');
+  }
 }
 function paintRegistration(reg) {
   if (!reg) return;
@@ -340,4 +417,4 @@ async function autoDevAuth() {
     }
   } catch {}
 }
-wire();wirePresenter();if (authToken) refreshBank().catch(() => {});else autoDevAuth();fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
+wire();wirePresenter();setMode('quiz');if (authToken) refreshBank().catch(() => {});else autoDevAuth();fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
