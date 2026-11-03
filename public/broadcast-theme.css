@@ -96,7 +96,7 @@
 }
 .arena[data-mode="quiz"]:not([data-phase="results"]) .choice:nth-child(1) .choice-index{clip-path:polygon(50% 4%,97% 96%,3% 96%)}
 .arena[data-mode="quiz"]:not([data-phase="results"]) .choice:nth-child(2) .choice-index{transform:rotate(45deg);border-radius:4px}
-.arena[data-mode="quiz"]:not([data-phase="results"]) .choice:nth-child(2) .choice-index span{transform:rotate(-45deg)}
+.arena[data-mode="quiz"]:not([data-phase="results"]) .choice:nth-child(2) .choice-index span{display:grid;place-items:center;transform:rotate(-45deg)}
 .arena[data-mode="quiz"]:not([data-phase="results"]) .choice:nth-child(3) .choice-index{border-radius:50%}
 .arena[data-mode="quiz"]:not([data-phase="results"]) .choice:nth-child(4) .choice-index{border-radius:15%}
 .arena[data-mode="quiz"]:not([data-phase="results"]) .choice-label{
@@ -119,7 +119,7 @@
 .arena[data-mode="quiz"]:not([data-phase="results"]) .footer-center{color:#ffdb91}
 .arena[data-mode="quiz"]:not([data-phase="results"]) .footer-center .footer-diamond{color:#ffda85}
 .arena[data-mode="quiz"]:not([data-phase="results"]) .footer-serial{color:#aebce2}
-/* Registration screen: 80+ actual viewer slots and a dedicated latest-join spotlight. */
+/* Registration screen: actual viewer slots and a dedicated latest-join spotlight. */
 .signup-screen{
  padding:clamp(10px,1.3vh,18px) clamp(14px,2.7vw,50px);
  place-items:stretch;display:block;text-align:right;
