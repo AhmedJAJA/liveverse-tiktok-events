@@ -219,13 +219,13 @@ export class Engine {
         const player = this.players.get(entry.id);
         const points = QUIZ_POINTS[Math.min(index, QUIZ_POINTS.length - 1)];
         if (player) { this.addScore(player, points); player.correctRounds++; player.totalResponseMs += entry.elapsedMs; }
-        return { rank: index + 1, id: entry.id, name: player?.name ?? entry.name, elapsedMs: entry.elapsedMs, points, totalScore: player?.score ?? points };
+        return { rank: index + 1, id: entry.id, name: player?.name ?? entry.name, ...(player?.avatar ? { avatar: player.avatar } : {}), elapsedMs: entry.elapsedMs, points, totalScore: player?.score ?? points };
       });
     const winner = ranking[0] || null;
     const answerText = this.status.mode === 'quiz' ? this.status.options[Number(this.status.answer)-1] : this.status.answer;
     this.status.active = false;
     this.status.endsAt = null;
-    this.status.winner = winner ? { id: winner.id, name: winner.name, score: winner.points } : null;
+    this.status.winner = winner ? { id: winner.id, name: winner.name, score: winner.points, ...(winner.avatar ? { avatar: winner.avatar } : {}) } : null;
     this.status.results = { round: this.round, completedAt: this.now(), reason, totalAnswers: this.firstAnswers.size,
       correctCount: ranking.length, correctAnswer: answerText, rankings: ranking.slice(0, 20) };
     this.status.notice = winner ? `🏆 الأول في السرعة: ${winner.name}` : 'انتهت الجولة، لا توجد إجابات صحيحة';
