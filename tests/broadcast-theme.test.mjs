@@ -37,7 +37,7 @@ test('live choice counters count first answer only and keep answer secret',()=>{
 });
 test('broadcast theme and overlay source contain required registration layout hooks',()=>{
   const html=fs.readFileSync(new URL('../public/overlay.html',import.meta.url),'utf8');
-  const css=fs.readFileSync(new URL('../public/broadcast-theme.css',import.meta.url),'utf8');
+  const css=fs.readFileSync(new URL('../public/royal-broadcast.css',import.meta.url),'utf8');
   const js=fs.readFileSync(new URL('../public/overlay.js',import.meta.url),'utf8');
   for(const id of ['signupRecent','signupLatestName','signupLatestNumber','signupLatestAvatar','signupReady','quizProgressDots']) assert.ok(html.includes('id="'+id+'"'),id);
   assert.match(css,/signup-member-grid/);

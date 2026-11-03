@@ -4,12 +4,13 @@ import fs from 'node:fs';
 const read = name => fs.readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 const html = read('public/overlay.html');
 const script = read('public/overlay.js');
-const style = read('public/overlay.css');
+const style = read('public/royal-broadcast.css');
 const server = read('server.mjs');
 
 test('viewer overlay has accessible Arabic RTL document and independent stylesheet', () => {
   assert.match(html, /lang="ar" dir="rtl"/);
-  assert.match(html, /href="\/overlay\.css"/);
+  assert.match(html, /href="\/royal-core\.css"/);
+  assert.match(html, /href="\/royal-broadcast\.css"/);
   assert.doesNotMatch(html, /href="\/styles\.css"/);
 });
 test('every overlay controller ID exists in HTML', () => {
@@ -37,7 +38,7 @@ test('styles cover 16:9 and 9:16 layouts and motion preferences', () => {
   assert.match(style, /prefers-reduced-motion/);
 });
 test('new stylesheet is served by strict static whitelist', () => {
-  assert.match(server, /'overlay\.css'/);
+  assert.match(server, /'royal-broadcast\.css'/);
 });
 test('overlay is read-only and never contains host token or answer before results', () => {
   assert.doesNotMatch(script, /ADMIN_TOKEN|\/api\/admin\/|status\.answer\b/);
