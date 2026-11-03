@@ -95,3 +95,16 @@ body{background:#080a18;color:#f8f9ff}
 @media(max-width:750px){.wrap{width:min(100% - 30px,1350px)}.hero{min-height:unset}.hero-layout{padding:65px 0 30px}.hero h1{font-size:clamp(44px,10vw,69px)}.sky-hero-art{min-height:430px}.sky-hero-cover{width:min(295px,70%)}.sky-art-widget{padding:8px 10px}.sky-art-widget b{font-size:13px}.sky-art-widget small{font-size:10px}.sky-art-widget>span{width:31px;height:31px;font-size:18px}.sky-widget-rank{bottom:11%}.sky-widget-join{top:13%;right:-1%}.sky-art-caption{bottom:1%}.pricing-grid{grid-template-columns:1fr}.pricing-section{padding:60px 0}}
 @media(max-width:420px){.sky-hero-art{min-height:340px}.sky-hero-cover{width:min(240px,66%);padding:6px;border-radius:23px}.sky-hero-cover img{border-radius:18px}.sky-hero-cover figcaption{font-size:14px}.sky-art-widget{transform:none;gap:5px;padding:7px}.sky-art-widget>span{width:24px;height:24px;font-size:14px}.sky-art-widget small{display:none}.sky-widget-rank{left:0;bottom:7%}.sky-widget-join{right:0;top:13%}.sky-art-caption{font-size:12px;right:15%}.price-plan{padding:22px}}
 @media(prefers-reduced-motion:reduce){.sky-hero-cover{animation:none!important}}
+
+/* Roadmap cards and unsupported-platform transparency. */
+.platform-items{flex-wrap:wrap}
+.platform-item{flex:1 1 235px}
+.platform-coming{opacity:.8;border-style:dashed!important}
+.platform-coming .beta-status{color:#d7d7ef!important;background:#41436863!important;border-color:#7a8aae73!important}
+.upcoming-tile{opacity:.84;filter:saturate(.73)}
+.upcoming-tile:hover{transform:none;border-color:#7086b869;box-shadow:0 12px 35px #01031284}
+.upcoming-tile .game-art{background:radial-gradient(circle,#2b4278,#121937 75%);position:relative}
+.upcoming-tile .art-big{font-size:clamp(75px,8vw,130px);filter:grayscale(.35);opacity:.77}
+.soon-overlay{position:absolute;z-index:2;top:18px;left:18px;background:#172551e6;border:1px solid #95aadd6b;border-radius:99px;padding:6px 13px;color:#ccd9f8;font-weight:850;font-size:13px}
+.upcoming-tile .tile-icon{color:#b4bbe1}
+@media(max-width:780px){.platform-items{flex-direction:column}.platform-item{flex:1 1 auto;width:100%}}
