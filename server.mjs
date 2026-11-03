@@ -6,6 +6,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Engine } from './src/engine.mjs';
 import { LiveBridge } from './src/bridge.mjs';
+import { QuestionBank } from './src/question-bank.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'public');
 const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
@@ -17,6 +18,7 @@ const clients = new Set();
 function send(ws, value) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(value)); }
 const engine = new Engine({ notify(state) { const packet = { type: 'state', data: state }; for (const ws of clients) send(ws, packet); } });
 const bridge = new LiveBridge(engine);
+const questionBank = new QuestionBank();
 const PORT = Number(process.env.PORT) || 3000;
 function json(res, status, value) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(value)); }
 async function readBody(req) {
@@ -35,6 +37,14 @@ function isAuthorized(req) { return matchesToken((req.headers.authorization || '
 async function handleAction(action, body) {
   switch (action) {
     case 'configure': engine.configure(body); return { ok: true };
+    case 'bank-next': {
+      if (engine.status.active) throw new Error('أوقف الجولة الحالية قبل اختيار سؤال جديد');
+      const q = questionBank.draw(body);
+      engine.configure({ mode: 'quiz', title: 'تحدي ' + (questionBank.stats().categories[q.category]?.title || 'المعلومات'), prompt: q.question, options: q.options, answer: q.answer });
+      if (body.start === true) engine.start();
+      return { ok: true, question: q, bank: questionBank.stats() };
+    }
+    case 'bank-reset': return { ok: true, bank: questionBank.reset() };
     case 'start': engine.start(); return { ok: true };
     case 'stop': engine.stop(); return { ok: true };
     case 'reset': engine.resetScores(); return { ok: true };
@@ -55,6 +65,7 @@ const server = http.createServer(async (req, res) => {
   let url; try { url = new URL(req.url, 'http://localhost'); } catch { return json(res, 400, { error: 'Bad URL' }); }
   if (url.pathname === '/health') return json(res, 200, { ok: true, mode: engine.status.mode });
   if (url.pathname === '/api/state' && req.method === 'GET') return json(res, 200, engine.snapshot());
+  if (url.pathname === '/api/admin/bank' && req.method === 'GET') return isAuthorized(req) ? json(res, 200, questionBank.stats()) : json(res, 401, { error: 'رمز الإدارة غير صحيح' });
   if (url.pathname === '/api/admin/verify' && req.method === 'POST') return json(res, isAuthorized(req) ? 200 : 401, { ok: isAuthorized(req) });
   if (url.pathname.startsWith('/api/admin/') && req.method === 'POST') {
     if (!isAuthorized(req)) return json(res, 401, { error: 'رمز الإدارة غير صحيح' });
