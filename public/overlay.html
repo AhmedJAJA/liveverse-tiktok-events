@@ -8,6 +8,7 @@
   <title>LIVEVERSE ARENA — شاشة المشاهدين</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/overlay.css">
+  <link rel="stylesheet" href="/broadcast-theme.css">
 </head>
 <body>
   <main class="arena" id="arena" data-mode="quiz" data-phase="waiting">
@@ -32,6 +33,7 @@
         <div class="zone-intro">
           <div class="section-tag"><span class="tag-mark">◆</span><span id="modeTag">LIVE QUIZ</span><span class="tag-separator"></span><span id="stageTag">استعد للتحدي</span></div>
           <h1 id="overlayTitle">تحدي المعلومات</h1>
+          <div class="quiz-progress-dots" id="quizProgressDots" aria-label="تقدم المسابقة"></div>
         </div>
         <div class="question-card" id="questionCard">
           <div class="question-topline"><span><i class="tiny-square"></i> <span id="questionLabel">السؤال الحالي</span></span><span class="question-side">LIVEVERSE / <b id="questionMode">QUIZ</b></span></div>
@@ -74,18 +76,30 @@
       <div class="footer-serial" dir="ltr">LV / <span id="footerRound">001</span> <i></i> ARENA EDITION</div>
     </footer>
 
-    <section class="signup-screen" id="registrationOverlay" hidden aria-label="التسجيل في فعالية البث" aria-live="polite">
-      <div class="signup-ambient" aria-hidden="true"></div><div class="signup-grid" aria-hidden="true"></div>
-      <div class="signup-content">
-        <div class="signup-top"><span class="signup-live-dot"></span><span>LIVEVERSE // PLAYER REGISTRATION</span></div>
-        <div class="signup-kicker">✦ دخول المنافسة ✦</div>
-        <h2>مكانك بين <em>الأبطال</em> يبدأ الآن</h2>
-        <p class="signup-subtitle">اكتب الكلمة التالية في تعليقات بث TikTok لتسجيل اسمك في الفعالية</p>
-        <div class="signup-word-wrap"><span>اكتب في الشات</span><strong id="signupKeyword">انضم</strong><small>ENTER TO PLAY / JOIN THE CHALLENGE</small></div>
-        <div class="signup-count-block"><span class="signup-count-pulse"></span><strong id="signupCount">0</strong><span>متسابق انضم حتى الآن</span></div>
-        <div class="signup-recent-title">آخر المنضمين <span>NEW CHALLENGERS</span></div>
-        <div class="signup-recent" id="signupRecent"><span>كن أول المشاركين!</span></div>
-        <div class="signup-bottom">حساب واحد = تسجيل واحد • ستبدأ الأسئلة بعد إغلاق التسجيل</div>
+    <section class="signup-screen" id="registrationOverlay" hidden aria-label="شاشة التسجيل في مسابقة البث" aria-live="polite">
+      <div class="signup-layout">
+        <header class="signup-bar">
+          <div class="signup-logo" dir="ltr">LIVEVERSE<small>LIVE CHALLENGE / GAME SHOW</small></div>
+          <span class="signup-live-badge">● التسجيل مفتوح الآن</span>
+        </header>
+        <div class="signup-command"><span class="signup-step">١</span><span>اكتب</span><strong id="signupKeyword">انضم</strong><span>بالشات</span></div>
+        <div class="signup-board">
+          <div class="signup-wall">
+            <div class="signup-wall-heading"><strong>المشاركون في الفعالية</strong><span>المسجلون: <b id="signupCount">0</b></span></div>
+            <div class="signup-member-grid" id="signupRecent" aria-label="أسماء المشاركين المسجلين"></div>
+          </div>
+          <aside class="signup-spotlight" aria-label="آخر مشارك انضم">
+            <h3>دخل التحدي!</h3>
+            <span class="signup-latest-num" id="signupLatestNumber">#0</span>
+            <div class="signup-spotlight-avatar" id="signupLatestAvatar" aria-hidden="true">✦</div>
+            <strong id="signupLatestName">بانتظار أول متسابق</strong>
+            <p id="signupLatestDescription">اكتب كلمة الانضمام لتظهر هنا</p>
+          </aside>
+        </div>
+        <footer class="signup-footer">
+          <span>حساب واحد = تسجيل واحد • التسجيل بكلمة في تعليقات البث</span>
+          <div class="signup-ready" id="signupReady">جاهزون للبدء (0)</div>
+        </footer>
       </div>
     </section>
     <section class="results-screen" id="roundResultsOverlay" hidden aria-label="لوحة نتائج الجولة" aria-live="polite">
