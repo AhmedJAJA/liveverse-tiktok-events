@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
+import { BombGame, parsePassCommand } from './bomb.mjs';
 
-export const MODES = ['quiz', 'guess', 'race', 'wheel', 'glass'];
+export const MODES = ['quiz', 'guess', 'race', 'wheel', 'glass', 'bomb'];
 const MAX_MESSAGE = 160;
 const MAX_PLAYERS = 1500;
 const MAX_ENTRIES = 500;
@@ -55,6 +56,8 @@ export class Engine {
     this.answerSequence = 0;
     this.status = { mode: 'quiz', active: false, title: 'تحدي المعلومات', prompt: 'ما هي عاصمة المملكة العربية السعودية؟', options: ['الرياض', 'جدة', 'الدمام', 'مكة'], answer: '1', winner: null, notice: 'جاهز للفعالية!', target: 12, duration: 30, startedAt: null, endsAt: null, submissionCount: 0, results: null, lastEvent: null, glassStep: 0, glassSteps: 10, glassRemaining: 0 };
     this.connection = { state: 'disconnected', username: '', detail: 'لم يتم الربط' };
+    this.bomb = new BombGame({ now: () => this.now(), random: n => this.random(n) });
+    this.demoSerial = 0;
   }
   setConnection(state, username = '', detail = '') {
     const previousState = this.connection.state;
@@ -78,6 +81,7 @@ export class Engine {
       race,
       entries: [...this.wheelEntries.values()].map(({ name }) => name).slice(0, 60),
       entriesCount: this.wheelEntries.size,
+      bomb: this.bomb.snapshot(),
       glass: { step: this.glass.step, steps: this.glass.steps, remaining: this.glass.survivors.size, duration: this.glass.stepDuration, voted: this.glass.choices.size, choiceCounts: [1, 2].map(n => [...this.glass.choices.values()].filter(x => x === n).length) },
       recent: this.recent,
       round: this.round,
@@ -202,8 +206,9 @@ export class Engine {
     this.status.winner = winner;
     this.status.lastEvent = { text: this.status.notice, at: this.now(), winner };
   }
-  configure({ mode, title, prompt, options, answer, target, duration, glassSteps, glassStepDuration } = {}) {
+  configure({ mode, title, prompt, options, answer, target, duration, glassSteps, glassStepDuration, bombSeconds } = {}) {
     if (this.status.active) throw new Error('أنه الجولة الحالية قبل تغيير إعداداتها');
+    if (bombSeconds !== undefined) this.bomb.configure({ seconds: bombSeconds });
     if (mode !== undefined && !MODES.includes(mode)) throw new Error('نمط غير معروف');
     if (title !== undefined) this.status.title = safeLine(title, 80);
     if (mode !== undefined) this.status.mode = mode;
@@ -252,6 +257,11 @@ export class Engine {
     if (!this.players.size) throw new Error('لا يوجد متسابقون مسجلون، انتظر انضمام لاعب واحد على الأقل');
     if (this.status.mode === 'quiz' && (!this.status.options.some(Boolean) || !['1','2','3','4'].includes(this.status.answer))) throw new Error('حدد الإجابة الصحيحة من 1 إلى 4');
     if (this.status.mode === 'guess' && !normalizeAnswer(this.status.answer)) throw new Error('اكتب الإجابة الصحيحة');
+    if (this.status.mode === 'bomb') {
+      if (this.players.size < 2) throw new Error('القنبلة المؤقتة تحتاج لاعبَين مسجلَين على الأقل');
+      // Fixed roster: the match keeps exactly the players registered at kick-off.
+      this.bomb.start([...this.players.values()].slice(0, this.registration.maxPlayers));
+    }
     if (this.registration.phase === 'open') this.closeRegistration();
     this.round++;
     this.status.active = true;
@@ -272,7 +282,7 @@ export class Engine {
     }
     this.status.winner = null;
     this.status.lastEvent = null;
-    this.status.notice = 'بدأت الجولة! شارك الآن';
+    this.status.notice = this.status.mode === 'bomb' ? 'القنبلة مع اللاعب #' + this.bomb.snapshot().holder.number + ' — مرّرها قبل الانفجار!' : 'بدأت الجولة! شارك الآن';
     this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear();
     if (this.status.mode === 'race') for (const id of this.players.keys()) this.raceProgress.set(id, 0);
     if (this.status.mode === 'wheel') for (const player of this.players.values()) {
@@ -283,15 +293,89 @@ export class Engine {
     this.emit();
   }
   stop() {
+    if (this.status.active && this.status.mode === 'bomb') { this.bomb.end('manual'); this.finishBomb(); return; }
     if (this.status.active && this.status.mode === 'glass') { this.endGlassGame('manual'); return; }
     if (this.status.active && ['quiz', 'guess'].includes(this.status.mode)) return this.finishTimedRound('manual');
     this.status.active = false; this.status.notice = 'الجولة متوقفة'; this.emit();
   }
   tick() {
+    if (this.status.active && this.status.mode === 'bomb') {
+      const changed = this.bomb.tick();
+      if (this.bomb.phase === 'finished') { this.finishBomb(); return true; }
+      if (changed) { this.bombNotice(); this.emit(); }
+      return changed;
+    }
     if (this.status.active && this.status.endsAt !== null && this.now() >= this.status.endsAt) {
       if (this.status.mode === 'glass') this.finishGlassStep(); else this.finishTimedRound('timer'); return true;
     }
     return false;
+  }
+  bombNotice() {
+    const b = this.bomb.snapshot();
+    this.status.notice = b.phase === 'exploded' ? 'انفجرت القنبلة! تم إقصاء اللاعب #' + b.explosion.player.number
+      : b.phase === 'paused' ? 'المباراة موقوفة مؤقتًا'
+      : b.holder ? 'القنبلة مع اللاعب #' + b.holder.number + ' — مرّرها قبل الانفجار!' : this.status.notice;
+  }
+  /** Close a finished bomb match exactly once: award the survivor and release the round. */
+  finishBomb() {
+    if (this.status.mode !== 'bomb' || !this.status.active || this.bomb.phase !== 'finished') return false;
+    const b = this.bomb.snapshot();
+    this.status.active = false;
+    this.status.endsAt = null;
+    const winner = b.winner ? this.bomb.winner : null;
+    if (winner && this.players.has(winner)) this.addScore(this.players.get(winner), 10);
+    this.status.winner = b.winner ? { name: b.winner.name, number: b.winner.number, score: 10, ...(b.winner.avatar ? { avatar: b.winner.avatar } : {}) } : null;
+    this.status.notice = b.winner ? 'الناجي الأخير: ' + b.winner.name + ' (#' + b.winner.number + ')' : 'تم إنهاء مباراة القنبلة يدويًا';
+    this.status.lastEvent = { text: this.status.notice, at: this.now(), winner: this.status.winner };
+    this.emit();
+    return true;
+  }
+  /** After any bomb operation: finish the match if it ended, otherwise publish the new state. */
+  syncBomb() {
+    if (this.bomb.phase === 'finished') return this.finishBomb() || (this.emit(), true);
+    this.bombNotice(); this.emit(); return true;
+  }
+  requireBombMatch() {
+    if (this.status.mode !== 'bomb' || !this.status.active) throw new Error('لا توجد مباراة قنبلة جارية');
+  }
+  bombPause() { this.requireBombMatch(); this.bomb.pause(); return this.syncBomb(); }
+  bombResume() { this.requireBombMatch(); this.bomb.resume(); return this.syncBomb(); }
+  /** Host/test control: pass on behalf of the current holder. Same rules as a chat pass. */
+  bombPass({ target, turn, match } = {}) {
+    this.requireBombMatch();
+    const guard = {};
+    if (turn !== undefined) guard.expectedTurn = Number(turn);
+    if (match !== undefined) guard.expectedMatch = Number(match);
+    const result = this.bomb.pass(this.bomb.holder, target, guard);
+    this.syncBomb();
+    if (!result.ok) throw new Error({ 'not-armed': 'لا يمكن التمرير الآن', 'stale-turn': 'انتهت هذه الدورة بالفعل', expired: 'انتهى الوقت — انفجرت القنبلة', 'unknown-target': 'رقم اللاعب غير موجود', self: 'لا يمكن تمرير القنبلة إلى نفس الحامل', eliminated: 'هذا اللاعب مُقصى', 'not-holder': 'لا يحمل القنبلة' }[result.reason] || 'تمرير غير صالح');
+    return result;
+  }
+  bombRestart() {
+    if (this.status.mode !== 'bomb') throw new Error('اختر لعبة القنبلة المؤقتة أولًا');
+    if (this.status.active) { this.bomb.end('restart'); this.status.active = false; }
+    this.start();
+    return true;
+  }
+  bombSettings({ seconds, sound, autoBots } = {}) {
+    if (seconds !== undefined && this.status.active && this.status.mode === 'bomb') throw new Error('لا يمكن تغيير مدة القنبلة أثناء المباراة');
+    this.bomb.configure({ seconds, sound, autoBots });
+    this.emit();
+    return { seconds: this.bomb.seconds, sound: this.bomb.sound, autoBots: this.bomb.autoBots };
+  }
+  /** Test mode: register demo contestants without a live broadcast. */
+  addDemoPlayers({ count = 6 } = {}) {
+    const n = Number(count);
+    if (!Number.isInteger(n) || n < 1 || n > 100) throw new Error('عدد اللاعبين التجريبيين من 1 إلى 100');
+    if (this.status.active) throw new Error('أنهِ الجولة قبل إضافة لاعبين تجريبيين');
+    if (this.registration.phase !== 'open') this.openRegistration({});
+    const names = ['نورة','فهد','ريم','سلطان','لمى','ماجد','هيا','تركي','جود','بدر','دانة','يزيد','شهد','راكان','غادة','عبدالله'];
+    let added = 0;
+    for (let i = 0; i < n; i++) {
+      const serial = ++this.demoSerial;
+      if (this.register('demo:bot-' + serial, names[(serial - 1) % names.length] + ' ' + serial, '', { isFollower: true, isSubscriber: true })) added++;
+    }
+    return added;
   }
   finishGlassStep() {
     if (!this.status.active || this.status.mode !== 'glass') return false;
@@ -367,6 +451,7 @@ export class Engine {
 
   resetScores() {
     if (this.status.active) throw new Error('أنه الجولة قبل تصفير النقاط');
+    this.bomb.reset();
     this.players.clear(); this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear(); this.recent = [];
     this.glass.survivors.clear(); this.glass.choices.clear(); this.glass.choiceTimes.clear(); this.glass.step=0;
     this.registrationRecent = [];
@@ -415,6 +500,13 @@ export class Engine {
     } else if (this.status.mode === 'guess') {
       if (!input || message.trim().startsWith('!')) return;
       this.recordAnswer(player, input === normalizeAnswer(this.status.answer), timestamp);
+    } else if (this.status.mode === 'bomb') {
+      // Only the real holder (stable TikTok id) can pass; names are never trusted.
+      const target = parsePassCommand(message);
+      if (target === null) return;
+      const result = this.bomb.pass(player.id, target);
+      if (result.ok) this.bombNotice();
+      if (this.bomb.phase === 'finished') this.finishBomb();
     } else if (this.status.mode === 'glass') {
       if (!this.glass.survivors.has(player.id) || this.glass.choices.has(player.id)) return;
       const choice = message.trim().normalize('NFKC')

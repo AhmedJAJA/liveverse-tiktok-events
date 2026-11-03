@@ -71,3 +71,10 @@ test('original own branding used, no impersonation or external third-party sourc
   assert.match(overlay,/SKY LIVE/);
   for(const content of [core,studio,broadcast,landingCss]) assert.doesNotMatch(content,/@import|https?:\/\//);
 });
+test('every element id is unique on each page (duplicate ids break getElementById lookups)',()=>{
+  for(const [name,html] of [['index.html',home],['overlay.html',overlay],['landing.html',landing]]){
+    const ids=[...html.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
+    const dupes=ids.filter((id,i)=>ids.indexOf(id)!==i);
+    assert.deepEqual(dupes,[],name);
+  }
+});

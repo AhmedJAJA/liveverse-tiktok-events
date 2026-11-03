@@ -40,6 +40,13 @@ async function handleAction(action, body) {
     case 'registration-open': engine.openRegistration(body); return { ok: true };
     case 'registration-settings': return { ok: true, registration: engine.updateRegistration(body) };
     case 'registration-close': engine.closeRegistration(); return { ok: true };
+    case 'bomb-pause': engine.bombPause(); return { ok: true };
+    case 'bomb-resume': engine.bombResume(); return { ok: true };
+    case 'bomb-pass': engine.bombPass(body); return { ok: true };
+    case 'bomb-restart': engine.bombRestart(); return { ok: true };
+    case 'bomb-end': engine.requireBombMatch(); engine.stop(); return { ok: true };
+    case 'bomb-settings': return { ok: true, bomb: engine.bombSettings(body) };
+    case 'bomb-demo': return { ok: true, added: engine.addDemoPlayers(body) };
     case 'bank-next': {
       if (engine.status.active) throw new Error('أوقف الجولة الحالية قبل اختيار سؤال جديد');
       if (body.start && !engine.players.size) throw new Error('افتح التسجيل أولًا وانتظر المشاركين');
@@ -83,10 +90,10 @@ const server = http.createServer(async (req, res) => {
     return json(res, 404, { error: 'Not found' });
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
-  const fileMap = { '/': 'landing.html', '/event': 'event.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
+  const fileMap = { '/': 'landing.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
-  if (!['index.html','landing.html','landing.js','event.html','event.js','event.css','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','overlay.html','app.js','overlay.js','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
+  if (!['index.html','landing.html','landing.js','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','overlay.html','app.js','overlay.js','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
   const filename = path.join(root, relative);
   try { const content = await fs.promises.readFile(filename); res.writeHead(200, { 'Content-Type': mime[path.extname(filename)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(req.method === 'HEAD' ? undefined : content); }
   catch { json(res, 404, { error: 'Not found' }); }
@@ -107,7 +114,8 @@ wss.on('connection', ws => {
   ws.on('close', () => clients.delete(ws));
   send(ws, { type: 'state', data: engine.snapshot() });
 });
-const roundClock = setInterval(() => engine.tick(), 250);
+// 100 ms resolution: bomb deadlines are authoritative on the server, viewers only render them.
+const roundClock = setInterval(() => engine.tick(), 100);
 roundClock.unref?.();
 const heartbeat = setInterval(() => { for (const ws of clients) { if (!ws.isAlive) { ws.terminate(); continue; } ws.isAlive = false; ws.ping(); } }, 30000);
 heartbeat.unref?.();

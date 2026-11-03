@@ -115,6 +115,85 @@
       </div>
     </section>
 
+    <!-- ================= TIME BOMB ================= -->
+    <section class="bomb-stage" id="bombStage" hidden aria-label="لعبة القنبلة المؤقتة" data-heat="calm">
+      <header class="bomb-head">
+        <div class="bomb-title"><small class="caps">Time Bomb</small><h1>القنبلة المؤقتة</h1></div>
+        <div class="bomb-stats">
+          <span class="bomb-stat"><b id="bombAlive" class="num">0</b><small>لاعب متبقٍ</small></span>
+          <span class="bomb-stat is-out"><b id="bombOut" class="num">0</b><small>مُقصى</small></span>
+          <span class="bomb-stat"><b id="bombTurn" class="num">1</b><small>الدورة</small></span>
+        </div>
+      </header>
+      <div class="bomb-core">
+        <div class="bomb-holder" id="bombHolder" aria-live="polite">
+          <span class="holder-label">القنبلة الآن مع</span>
+          <div class="holder-ring"><i class="holder-pulse" aria-hidden="true"></i><div class="bomb-holder-avatar" id="bombHolderAvatar" aria-hidden="true">؟</div><span class="holder-num num" id="bombHolderNumber">#0</span></div>
+          <strong id="bombHolderName" dir="auto">—</strong>
+          <span class="holder-hint">مرّرها بكتابة <b><bdi dir="rtl">!مرر 12</bdi></b> أو <b><bdi dir="ltr">!bomb 12</bdi></b></span>
+        </div>
+        <div class="bomb-device" id="bombDevice" aria-hidden="true">
+          <i class="bomb-glow"></i>
+          <svg class="bomb-svg" viewBox="0 0 400 420">
+            <defs>
+              <radialGradient id="bombBody" cx="38%" cy="32%" r="72%"><stop offset="0" stop-color="#5a5b62"/><stop offset=".28" stop-color="#26272c"/><stop offset=".7" stop-color="#101114"/><stop offset="1" stop-color="#050506"/></radialGradient>
+              <radialGradient id="bombRim" cx="50%" cy="60%" r="60%"><stop offset=".78" stop-color="#ff5a1f" stop-opacity="0"/><stop offset="1" stop-color="#ff5a1f" stop-opacity=".55"/></radialGradient>
+              <linearGradient id="bombCap" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3a3b41"/><stop offset=".45" stop-color="#9a9ba3"/><stop offset=".6" stop-color="#5b5c63"/><stop offset="1" stop-color="#1c1d21"/></linearGradient>
+              <linearGradient id="bombFuse" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#6b4a2a"/><stop offset="1" stop-color="#b98a52"/></linearGradient>
+              <radialGradient id="bombSparkGlow"><stop offset="0" stop-color="#fff7d6"/><stop offset=".35" stop-color="#ffb347"/><stop offset=".7" stop-color="#ff5a1f" stop-opacity=".6"/><stop offset="1" stop-color="#ff2d1f" stop-opacity="0"/></radialGradient>
+            </defs>
+            <ellipse cx="190" cy="400" rx="120" ry="14" fill="#000" opacity=".55"/>
+            <path class="bomb-fuse-base" d="M232 112 C 252 70, 300 78, 312 48 S 340 12, 362 22" fill="none" stroke="#2a1d12" stroke-width="9" stroke-linecap="round"/>
+            <path class="bomb-fuse" id="bombFusePath" d="M232 112 C 252 70, 300 78, 312 48 S 340 12, 362 22" pathLength="100" fill="none" stroke="url(#bombFuse)" stroke-width="7" stroke-linecap="round" stroke-dasharray="100 100"/>
+            <g class="bomb-spark" id="bombSpark"><circle r="26" fill="url(#bombSparkGlow)"/><g class="spark-rays" stroke="#ffd27a" stroke-width="2.4" stroke-linecap="round"><path d="M0 -20v-12"/><path d="M14 -14l8 -8"/><path d="M20 0h12"/><path d="M14 14l8 8"/><path d="M-14 -14l-8 -8"/><path d="M-20 0h-12"/></g><circle r="6" fill="#fffbe8"/></g>
+            <g class="bomb-body">
+              <circle cx="190" cy="250" r="140" fill="url(#bombBody)"/>
+              <circle cx="190" cy="250" r="140" fill="url(#bombRim)"/>
+              <path d="M98 196 a120 120 0 0 1 70 -70" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="10" stroke-linecap="round"/>
+              <ellipse cx="140" cy="168" rx="26" ry="14" fill="#fff" opacity=".18" transform="rotate(-38 140 168)"/>
+              <rect x="190" y="98" width="62" height="40" rx="6" fill="url(#bombCap)" transform="rotate(32 221 118)"/>
+              <rect x="196" y="92" width="50" height="10" rx="3" fill="#c7c8ce" opacity=".5" transform="rotate(32 221 118)"/>
+              <rect x="118" y="278" width="144" height="54" rx="10" fill="#0a0a0b" stroke="#3a1a14" stroke-width="2"/>
+              <circle class="bomb-led" cx="138" cy="305" r="6" fill="#ff3b2f"/>
+              <path d="M158 292h88M158 318h60" stroke="#ff3b2f" stroke-opacity=".25" stroke-width="4" stroke-linecap="round"/>
+            </g>
+          </svg>
+          <div class="bomb-timer" id="bombTimer" role="timer" aria-label="الثواني المتبقية قبل الانفجار"><strong id="bombSeconds" class="num">15</strong><small>ثانية</small></div>
+          <span class="bomb-paused" id="bombPaused" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-stop"/></svg>متوقفة مؤقتًا</span>
+        </div>
+        <aside class="bomb-log" aria-label="آخر التمريرات">
+          <h2><svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg>آخر التمريرات</h2>
+          <ol id="bombPasses"></ol>
+          <p class="bomb-log-empty" id="bombPassesEmpty">لم تُمرَّر القنبلة بعد في هذه الدورة</p>
+        </aside>
+      </div>
+      <footer class="bomb-roster-wrap">
+        <div class="bomb-roster-head"><span><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg>اللاعبون المتبقون</span><span class="bomb-out-label">المُقصَون <span id="bombOutStrip" class="bomb-out-strip"></span></span></div>
+        <div class="bomb-roster" id="bombRoster"></div>
+      </footer>
+      <div class="bomb-flight-layer" id="bombFlight" aria-hidden="true"></div>
+    </section>
+    <div class="bomb-blast" id="bombBlast" hidden role="status">
+      <i class="blast-flash"></i><i class="blast-ring r1"></i><i class="blast-ring r2"></i><i class="blast-ring r3"></i><div class="blast-debris" id="bombDebris"></div><i class="blast-smoke"></i>
+      <div class="blast-card">
+        <span class="blast-eyebrow caps">Eliminated</span>
+        <div class="blast-avatar-wrap"><div class="bomb-victim-avatar" id="bombVictimAvatar" aria-hidden="true">؟</div><i class="blast-crack"></i></div>
+        <strong class="blast-title">تم إقصاء اللاعب!</strong>
+        <span class="blast-name"><b id="bombVictimName" dir="auto">—</b> <span id="bombVictimNumber" class="num">#0</span></span>
+        <span class="blast-next" id="bombNextIn">الدورة التالية تبدأ بعد لحظات</span>
+      </div>
+    </div>
+    <div class="bomb-victory" id="bombVictory" hidden role="status">
+      <i class="victory-rays"></i><div class="victory-embers" id="bombEmbers"></div>
+      <div class="victory-card">
+        <span class="victory-eyebrow">الناجي الأخير <span class="caps">— Winner</span></span>
+        <div class="victory-crest"><svg class="victory-crown" aria-hidden="true"><use href="/icons.svg#i-crown"/></svg><div class="bomb-winner-avatar" id="bombWinnerAvatar" aria-hidden="true">؟</div></div>
+        <strong id="bombWinnerName" dir="auto">—</strong>
+        <span class="victory-number num" id="bombWinnerNumber">#0</span>
+        <span class="victory-stats" id="bombWinnerStats">نجا من بين المتسابقين</span>
+      </div>
+      <div class="victory-card is-ended" id="bombEndedCard" hidden><span class="victory-eyebrow">انتهت المباراة</span><strong>أوقف المشرف مباراة القنبلة</strong></div>
+    </div>
     <div class="winner-banner" id="winnerBanner" hidden role="status">
       <i class="winner-rays" aria-hidden="true"></i>
       <div class="winner-stage">

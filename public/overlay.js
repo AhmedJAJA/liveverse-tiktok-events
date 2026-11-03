@@ -6,6 +6,7 @@ const modeInfo = {
   guess: { en:'GUESS IT', short:'GUESS', ar:'خمن الإجابة', instruction:'اكتب تخمينك في التعليقات • محاولة واحدة فقط' },
   race: { en:'CHAT RACE', short:'RACE', ar:'السباق المباشر', instruction:'المسجلون يتقدمون بكتابة !go أو انطلق' },
   wheel: { en:'LUCKY DRAW', short:'WHEEL', ar:'عجلة المشاركين', instruction:'كل المسجلين في الفعالية داخل السحب تلقائيًا' },
+  bomb: { en:'TIME BOMB', short:'BOMB', ar:'القنبلة المؤقتة', instruction:'حامل القنبلة يكتب !مرر ثم رقم اللاعب قبل الانفجار' },
   glass: { en:'GLASS BRIDGE', short:'GLASS', ar:'الجسر الزجاجي', instruction:'اكتب 1 أو 2 لاختيار اللوح الآمن — محاولة واحدة لكل خطوة' }
 };
 const stateCache = { questionKey:null, leaderboardKey:null, raceKey:null, resultsKey:null, lastWinnerAt:null, lastSubmissionCount:0 };
@@ -327,13 +328,205 @@ function fitBroadcastText() {
 }
 window.addEventListener('resize',()=>{if(window.lastLiveverseState)renderRegistration(window.lastLiveverseState.registration);requestAnimationFrame(fitBroadcastText);});
 document.fonts?.ready.then(fitBroadcastText);
+/* ===================== TIME BOMB (render only — the server decides everything) ===================== */
+const bombView={initialized:false,matchId:null,holderKey:null,holder:null,explosionKey:null,endKey:null,data:null,offset:0,second:null,frame:null,blastTimer:null,victoryTimer:null};
+const bombSound={ctx:null,unlock(){try{if(!this.ctx){const C=window.AudioContext||window.webkitAudioContext;if(C)this.ctx=new C();}this.ctx?.resume?.();}catch{}}};
+['pointerdown','keydown'].forEach(type=>window.addEventListener(type,()=>bombSound.unlock(),{passive:true}));
+function bombAudio(){ if(!bombView.data?.sound||reducedMotion())return null; bombSound.unlock(); const ctx=bombSound.ctx; return ctx&&ctx.state==='running'?ctx:null; }
+function bombTone(freq,dur,type='square',gain=.05,delay=0){
+  const ctx=bombAudio();if(!ctx)return;
+  const t=ctx.currentTime+delay,o=ctx.createOscillator(),g=ctx.createGain();
+  o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+dur+.02);
+}
+function bombNoise(dur,from,to,gain=.4){
+  const ctx=bombAudio();if(!ctx)return;
+  const len=Math.floor(ctx.sampleRate*dur),buf=ctx.createBuffer(1,len,ctx.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
+  const src=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain(),t=ctx.currentTime;
+  src.buffer=buf;f.type='lowpass';f.frequency.setValueAtTime(from,t);f.frequency.exponentialRampToValueAtTime(to,t+dur);g.gain.value=gain;
+  src.connect(f).connect(g).connect(ctx.destination);src.start(t);
+}
+const bombSfx={
+  tick(sec){ if(sec<=5){bombTone(1500,.05,'square',.06);bombTone(1150,.05,'square',.045,.5);} else bombTone(1100,.035,'square',.04); },
+  pass(){ bombNoise(.32,4000,500,.22); bombTone(620,.12,'triangle',.05); },
+  boom(){ bombNoise(1.6,1800,60,.9); bombTone(55,.9,'sine',.5); },
+  win(){ [523.25,659.25,783.99,1046.5,1318.5].forEach((f,i)=>bombTone(f,.45,'triangle',.07,i*.12)); }
+};
+function bombPerson(container,person){ paintAvatar(container,person||null); }
+function bombChip(player){
+  const chip=node('div','bomb-chip');chip.dataset.number=String(player.number);
+  const av=node('span','bomb-chip-avatar');bombPerson(av,player);
+  chip.append(av,node('bdi','bomb-chip-name',player.name),node('span','bomb-chip-num num','#'+player.number));
+  return chip;
+}
+function renderBombRoster(b){
+  const roster=$('bombRoster');
+  const holderNo=b.holder?.number??null;
+  // Slots match the fixed canvas grid: landscape 9×2 (or 27×2 compact), portrait 4×4 (or 10×5 compact).
+  const portrait=matchMedia('(max-aspect-ratio:4/5)').matches;
+  const normalSlots=portrait?16:18,compactSlots=portrait?50:54;
+  const compact=b.alive.length>normalSlots,cap=compact?compactSlots:normalSlots;
+  const limit=b.alive.length>cap?cap-1:cap;
+  roster.classList.toggle('is-compact',compact);
+  let list=b.alive.slice(0,limit);
+  if(holderNo!==null&&!list.some(p=>p.number===holderNo)){const h=b.alive.find(p=>p.number===holderNo);if(h)list=[h,...list.slice(0,limit-1)];}
+  const key=JSON.stringify([compact,list.map(p=>[p.number,p.name,p.avatar]),holderNo,b.alive.length]);
+  if(roster.dataset.key===key)return;
+  roster.dataset.key=key;
+  const existing=new Map([...roster.children].filter(c=>c.dataset.number).map(c=>[c.dataset.number,c]));
+  const next=[];
+  for(const p of list){const chip=existing.get(String(p.number))||bombChip(p);chip.classList.toggle('is-holder',p.number===holderNo);next.push(chip);}
+  if(b.alive.length>list.length)next.push(node('div','bomb-chip is-more num','+'+(b.alive.length-list.length)));
+  roster.replaceChildren(...next);
+  const out=$('bombOutStrip');out.replaceChildren();
+  for(const p of b.eliminated.slice(-10).reverse()){const av=node('span','bomb-out-avatar');av.title=p.name+' #'+p.number;bombPerson(av,p);out.append(av);}
+}
+function renderBombLog(b){
+  const list=$('bombPasses');
+  const passes=b.passes.slice(0,6);
+  const key=JSON.stringify(passes.map(p=>[p.turn,p.from?.number,p.to?.number,p.at]));
+  if(list.dataset.key===key)return;
+  const firstRender=!list.dataset.key;list.dataset.key=key;
+  list.replaceChildren();
+  passes.forEach((p,i)=>{
+    const li=node('li','bomb-pass'+(p.turn===b.turn?'':' is-old'));
+    if(i===0&&!firstRender)li.classList.add('is-new');
+    const route=node('span','pass-route');
+    route.append(node('b','num','#'+p.from.number),icon('i-arrow','i i-sm'),node('b','num','#'+p.to.number));
+    const names=node('span','pass-names',p.from.name+' ← '+p.to.name);
+    li.append(route,names,node('span','pass-time num',(p.remainingMs/1000).toFixed(1)+' ث'));
+    list.append(li);
+  });
+  $('bombPassesEmpty').hidden=passes.some(p=>p.turn===b.turn);
+}
+function animateBombFlight(fromNo,toNo){
+  if(reducedMotion())return;
+  const stage=$('bombStage'),layer=$('bombFlight');
+  const box=stage.getBoundingClientRect();
+  const find=n=>$('bombRoster').querySelector(`[data-number="${n}"]`);
+  const from=find(fromNo)||$('bombHolder'),to=$('bombHolder');
+  const a=from.getBoundingClientRect(),c=to.querySelector('.holder-ring').getBoundingClientRect();
+  const start={x:a.left+a.width/2-box.left,y:a.top+a.height/2-box.top},end={x:c.left+c.width/2-box.left,y:c.top+c.height/2-box.top};
+  const flyer=node('span','bomb-flyer');flyer.append(icon('i-bomb','i'));layer.append(flyer);
+  const lift=Math.min(start.y,end.y)-box.height*.18;
+  flyer.animate([
+    {transform:`translate(${start.x}px,${start.y}px) scale(.6) rotate(0deg)`,opacity:0},
+    {transform:`translate(${(start.x+end.x)/2}px,${lift}px) scale(1.25) rotate(220deg)`,opacity:1,offset:.5},
+    {transform:`translate(${end.x}px,${end.y}px) scale(.8) rotate(420deg)`,opacity:.2}
+  ],{duration:700,easing:'cubic-bezier(.3,.1,.3,1)'}).finished.then(()=>flyer.remove(),()=>flyer.remove());
+  const toChip=find(toNo);
+  if(toChip)restartAnimation(toChip,'is-receiving');
+}
+function bombDebris(){
+  const holder=$('bombDebris');if(holder.childElementCount)return;
+  for(let i=0;i<28;i++){const d=node('i','debris');const angle=i/28*Math.PI*2;d.style.setProperty('--dx',Math.cos(angle)*(260+(i%5)*70)+'px');d.style.setProperty('--dy',Math.sin(angle)*(200+(i%4)*60)+'px');d.style.setProperty('--dr',(i%2?1:-1)*(180+i*23)+'deg');d.style.setProperty('--ds',(.6+(i%4)*.25).toFixed(2));holder.append(d);}
+  const embers=$('bombEmbers');
+  for(let i=0;i<34;i++){const e=node('i','ember');e.style.setProperty('--ex',((i*29)%100)+'%');e.style.setProperty('--ed',((i%9)*.35).toFixed(2)+'s');e.style.setProperty('--et',(3.2+(i%5)*.6).toFixed(2)+'s');e.style.setProperty('--es',(.6+(i%3)*.35).toFixed(2));embers.append(e);}
+}
+function showBombBlast(b){
+  bombDebris();
+  const blast=$('bombBlast'),p=b.explosion.player;
+  bombPerson($('bombVictimAvatar'),p);
+  $('bombVictimName').textContent=p.name;
+  $('bombVictimNumber').textContent='#'+p.number;
+  $('bombNextIn').textContent=b.phase==='finished'?'بقي لاعب واحد فقط…':'الدورة التالية تبدأ بعد لحظات';
+  blast.hidden=false;restartAnimation(blast,'is-on');
+  if(!reducedMotion()){$('arena').classList.remove('is-shaking');void $('arena').offsetWidth;$('arena').classList.add('is-shaking');}
+  bombSfx.boom();
+  clearTimeout(bombView.blastTimer);
+  const hold=b.phase==='exploded'&&b.nextTurnAt?Math.max(1200,b.nextTurnAt-(Date.now()+bombView.offset)-250):2400;
+  bombView.blastTimer=setTimeout(()=>{blast.hidden=true;$('arena').classList.remove('is-shaking');},hold);
+}
+function showBombVictory(b,delay){
+  clearTimeout(bombView.victoryTimer);
+  bombView.victoryTimer=setTimeout(()=>{
+    const v=$('bombVictory'),won=!!b.winner;
+    v.querySelector('.victory-card:not(.is-ended)').hidden=!won;$('bombEndedCard').hidden=won;
+    if(won){
+      bombDebris();
+      bombPerson($('bombWinnerAvatar'),b.winner);
+      $('bombWinnerName').textContent=b.winner.name;
+      $('bombWinnerNumber').textContent='#'+b.winner.number;
+      $('bombWinnerStats').textContent='نجا من بين '+number(b.total)+' لاعبًا بعد '+number(b.eliminated.length)+' انفجارات';
+      bombSfx.win();
+    }
+    $('bombBlast').hidden=true;v.hidden=false;restartAnimation(v,'is-on');
+  },delay);
+}
+function bombFrame(){
+  bombView.frame=null;
+  const b=bombView.data;
+  if(!b||$('bombStage').hidden)return;
+  const remaining=b.phase==='armed'&&b.endsAt?Math.max(0,b.endsAt-(Date.now()+bombView.offset)):b.phase==='paused'?b.remainingMs:b.phase==='idle'?b.seconds*1000:0;
+  const total=b.seconds*1000||15000;
+  const pct=Math.max(0,Math.min(1,remaining/total));
+  const sec=Math.ceil(remaining/1000);
+  if(sec!==bombView.second){
+    const prev=bombView.second;bombView.second=sec;
+    $('bombSeconds').textContent=String(sec);
+    if(b.phase==='armed'&&prev!==null&&sec<prev&&sec>0)bombSfx.tick(sec);
+    if(b.phase==='armed')restartAnimation($('bombSeconds'),'tick');
+  }
+  const stage=$('bombStage');
+  stage.dataset.heat=b.phase!=='armed'?'calm':sec<=2?'critical':sec<=5?'hot':sec<=10?'warm':'calm';
+  const fuse=$('bombFusePath');
+  fuse.setAttribute('stroke-dasharray',(pct*100).toFixed(2)+' 100');
+  const len=fuse.getTotalLength(),pt=fuse.getPointAtLength(len*pct);
+  $('bombSpark').setAttribute('transform',`translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+  $('bombSpark').style.opacity=b.phase==='armed'||b.phase==='paused'?'1':'0';
+  if(b.phase==='armed')bombView.frame=requestAnimationFrame(bombFrame);
+}
+function renderBomb(b,serverTime){
+  bombView.offset=(Number(serverTime)||Date.now())-Date.now();
+  const prev=bombView.data;bombView.data=b;
+  const first=!bombView.initialized;bombView.initialized=true;
+  if(bombView.matchId!==b.matchId){bombView.matchId=b.matchId;bombView.holderKey=null;$('bombRoster').dataset.key='';$('bombPasses').dataset.key='';}
+  $('bombAlive').textContent=number(b.alive.length);
+  $('bombOut').textContent=number(b.eliminated.length);
+  $('bombTurn').textContent=number(Math.max(1,b.turn));
+  $('bombPaused').hidden=b.phase!=='paused';
+  $('bombStage').dataset.phase=b.phase;
+  // holder + pass animation
+  const holderKey=b.holder?b.matchId+':'+b.turn+':'+b.holder.number:null;
+  if(holderKey&&holderKey!==bombView.holderKey){
+    const samePrevTurn=prev&&prev.matchId===b.matchId&&prev.turn===b.turn&&prev.holder;
+    bombPerson($('bombHolderAvatar'),b.holder);
+    $('bombHolderName').textContent=b.holder.name;
+    $('bombHolderNumber').textContent='#'+b.holder.number;
+    restartAnimation($('bombHolder'),samePrevTurn?'holder-swap':'holder-enter');
+    renderBombRoster(b);
+    if(samePrevTurn&&!first){animateBombFlight(prev.holder.number,b.holder.number);bombSfx.pass();}
+  }
+  bombView.holderKey=holderKey||bombView.holderKey;
+  $('bombHolder').classList.toggle('is-empty',!b.holder);
+  renderBombRoster(b);
+  renderBombLog(b);
+  // explosion → elimination → (next turn | winner)
+  const expKey=b.explosion?b.matchId+':'+b.explosion.turn:null;
+  if(expKey&&expKey!==bombView.explosionKey){
+    bombView.explosionKey=expKey;
+    if(!(first&&b.phase!=='exploded'))showBombBlast(b);
+  }
+  if(['armed','paused'].includes(b.phase)){clearTimeout(bombView.victoryTimer);$('bombVictory').hidden=true;if(b.phase==='armed'){clearTimeout(bombView.blastTimer);$('bombBlast').hidden=true;}}
+  const endKey=b.phase==='finished'?b.matchId+':'+(b.winner?.number??'manual'):null;
+  if(endKey&&endKey!==bombView.endKey){bombView.endKey=endKey;showBombVictory(b,first?0:b.winner?2200:300);}
+  if(!endKey)bombView.endKey=null;
+  if(!bombView.frame)bombView.frame=requestAnimationFrame(bombFrame);
+}
+function hideBomb(){
+  $('bombStage').hidden=true;$('bombBlast').hidden=true;$('bombVictory').hidden=true;
+  clearTimeout(bombView.blastTimer);clearTimeout(bombView.victoryTimer);
+}
 function update(data) {
   if (!data || !data.status) return;
   window.lastLiveverseState=data;
   const s=data.status, mode=modeInfo[s.mode]||modeInfo.quiz;
   const phase=['open','idle'].includes(data.registration?.phase)?'registration':s.results?'results':s.active?'active':'waiting';
   const arena=$('arena');arena.dataset.mode=s.mode;arena.dataset.phase=phase;
-  arena.querySelector('.arena-body').hidden=phase==='registration'||phase==='results';
+  const bombMode=s.mode==='bomb';
+  arena.querySelector('.arena-body').hidden=phase==='registration'||phase==='results'||bombMode;
+  if(bombMode&&phase!=='registration'&&data.bomb){$('bombStage').hidden=false;renderBomb(data.bomb,data.serverTime);}else hideBomb();
   $('overlayRound').replaceChildren(document.createTextNode(s.mode==='quiz'?'السؤال ':'الجولة '),node('b','num',String(data.round||1).padStart(2,'0')));
   renderProgressDots(data.round||1);
   $('footerRound').textContent=String(data.round||1).padStart(3,'0');
@@ -380,7 +573,7 @@ function update(data) {
   // Signup takes priority over a stale results screen from the previous round.
   if(phase==='registration') $('roundResultsOverlay').hidden=true;
   renderRegistration(data.registration);
-  if(phase==='active'&&update.previousPhase&&update.previousPhase!==phase){
+  if(phase==='active'&&update.previousPhase&&update.previousPhase!==phase&&!bombMode){
     triggerRoundStartCountdown(s.mode);
     requestAnimationFrame(fitBroadcastText);
   } else if (phase !== 'active') {
@@ -388,7 +581,7 @@ function update(data) {
   }
   update.previousPhase=phase;
   const banner=$('winnerBanner');
-  if(s.lastEvent?.winner && !s.results){
+  if(s.lastEvent?.winner && !s.results && !bombMode){
     if(stateCache.lastWinnerAt!==s.lastEvent.at){
       stateCache.lastWinnerAt=s.lastEvent.at;
       $('winnerName').textContent=s.lastEvent.winner.name;
