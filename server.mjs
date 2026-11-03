@@ -13,7 +13,7 @@ const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
 if (!process.env.ADMIN_TOKEN) console.log('\n[LOCAL ADMIN TOKEN] ' + authToken + '\nSet ADMIN_TOKEN in hosting environment before publishing.');
 const safeToken = Buffer.from(authToken, 'utf8');
 const matchesToken = (raw) => { const incoming = Buffer.from(String(raw||''), 'utf8'); return incoming.length === safeToken.length && timingSafeEqual(incoming, safeToken); };
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 const clients = new Set();
 function send(ws, value) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(value)); }
 const engine = new Engine({ notify(state) { const packet = { type: 'state', data: state }; for (const ws of clients) send(ws, packet); } });
@@ -79,7 +79,7 @@ const server = http.createServer(async (req, res) => {
   const fileMap = { '/': 'landing.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
-  if (!['index.html','landing.html','landing.css','landing.js','liveverse-brand.svg','sky-live.webp','sky-live-theme.css','overlay.html','app.js','overlay.js','styles.css','overlay.css','broadcast-theme.css','presenter.css','liveverse-show.css','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
+  if (!['index.html','landing.html','landing.css','sky-landing.css','landing.js','liveverse-brand.svg','sky-live-brand.svg','sky-live-cover.webp','sky-live.webp','sky-live-theme.css','overlay.html','app.js','overlay.js','styles.css','overlay.css','broadcast-theme.css','presenter.css','liveverse-show.css','favicon.svg','fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/OFL.txt'].includes(relative)) return json(res, 404, { error: 'Not found' });
   const filename = path.join(root, relative);
   try { const content = await fs.promises.readFile(filename); res.writeHead(200, { 'Content-Type': mime[path.extname(filename)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(req.method === 'HEAD' ? undefined : content); }
   catch { json(res, 404, { error: 'Not found' }); }
