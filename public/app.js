@@ -61,8 +61,9 @@ function setMode(mode) {
   document.querySelectorAll('.mode').forEach(btn=>{
     const selected = btn.dataset.mode===mode;
     btn.classList.toggle('is-selected',selected);
+    btn.setAttribute('aria-pressed',String(selected));
     const cta = btn.querySelector('.mode-cta');
-    if (cta) cta.textContent = selected ? '✓ الفعالية المحددة' : 'العب الآن ←';
+    if (cta) cta.textContent = selected ? 'الفعالية المحددة' : 'العب الآن ←';
   });
   el('modeHint').textContent=instructions[mode][0]; el('instruction').textContent=instructions[mode][1];
   el('questionWrap').hidden=mode==='race'||mode==='wheel';
@@ -71,7 +72,7 @@ function setMode(mode) {
   el('targetWrap').hidden=mode!=='race';
   el('durationWrap').hidden=mode!=='quiz'&&mode!=='guess';
   el('drawButton').hidden=mode!=='wheel';
-  el('answerLabel').textContent=mode==='quiz'?'الإجابة الصحيحة ✅':'الكلمة أو الإجابة الصحيحة ✅';
+  el('answerLabel').textContent=mode==='quiz'?'الإجابة الصحيحة':'الكلمة أو الإجابة الصحيحة';
   const answer=el('gameAnswer');
   if (mode==='guess' && answer.tagName==='SELECT') {
     const input=document.createElement('input'); input.id='gameAnswer'; input.maxLength=80; input.placeholder='الإجابة لا تظهر للمشاهدين'; input.required=true; answer.replaceWith(input);
@@ -197,7 +198,7 @@ function renderStudioChampions(top, list) {
     slot.className = 'studio-podium-slot place-' + (idx + 1);
     const rankBadge = document.createElement('span');
     rankBadge.className = 'studio-slot-rank';
-    rankBadge.textContent = idx === 0 ? '👑 ١' : idx === 1 ? '🥈 ٢' : '🥉 ٣';
+    rankBadge.textContent = String(idx + 1);
     const av = document.createElement('div');
     av.className = 'studio-slot-avatar';
     if (player) paintMiniAvatar(av, player);
@@ -216,12 +217,12 @@ function renderStudioChampions(top, list) {
     row.className = 'leader-row';
     const rank = document.createElement('span');
     rank.className = 'rank ' + (i < 3 ? 'top-' + i : '');
-    rank.textContent = ['🥇', '🥈', '🥉'][i] || String(i + 1).padStart(2, '0');
+    rank.textContent = String(i + 1).padStart(2, '0');
     const av = document.createElement('span');
     av.className = 'reg-person-avatar';
     paintMiniAvatar(av, p);
     const name = document.createElement('strong');
-    name.textContent = (i === 0 ? '👑 ' : '') + p.name;
+    name.textContent = p.name;
     const score = document.createElement('span');
     score.className = 'score';
     score.textContent = p.score + ' نقطة';
@@ -232,54 +233,54 @@ function renderStudioChampions(top, list) {
 function populate(snapshot) {
   const prevPlayers = state?.playerCount;
   state=snapshot;
-  el('totalPlayers').textContent=state.playerCount.toLocaleString('ar-SA');
+  el('totalPlayers').textContent=state.playerCount.toLocaleString('en-US');
   if (prevPlayers !== undefined && prevPlayers !== state.playerCount) pulseMetric(el('totalPlayers'));
   paintRoundStatus(state);
   paintRegistration(state.registration);
   paintPresenter(state);
   el('roundNumber').textContent=String(state.round).padStart(2,'0');
-  el('statusText').textContent=state.registration?.phase==='open'?'🔥 التسجيل مفتوح':state.status.active?'⚡ جولة جارية':'⏳ في الانتظار';
+  el('statusText').textContent=state.registration?.phase==='open'?'التسجيل مفتوح':state.status.active?'جولة جارية':'في الانتظار';
   const live=state.connection.state;
   const online=live==='connected';
   const badge=el('networkBadge');badge.classList.toggle('online',online);
   badge.innerHTML=''; const dot=document.createElement('span');dot.className='status-dot';badge.append(dot,document.createTextNode(online?'متصل بالبث':live==='connecting'?'جارٍ الاتصال':live==='error'?'فشل الاتصال':'وضع المعاينة'));
-  el('liveStatus').textContent=online?'✅ متصل':live==='connecting'?'⏳ جارٍ الاتصال':'غير متصل';
+  el('liveStatus').textContent=online?'متصل':live==='connecting'?'جارٍ الاتصال':'غير متصل';
   el('liveSubtitle').textContent=state.connection.username ? '@'+state.connection.username : 'TikTok LIVE';
   el('connectionDetail').textContent=state.connection.detail||'لا يوجد اتصال حاليًا';
   const top=el('leaderboard');
   renderStudioChampions(top, state.leaderboard || []);
   const feed=el('chatFeed');feed.replaceChildren();
   if (!state.recent.length) feed.append(empty('التعليقات ستظهر هنا عند الاتصال أو المحاكاة.'));
-  else state.recent.slice(0,12).forEach(c=>{const row=document.createElement('div');row.className='feed-row';const icon=document.createElement('span');icon.className='chat-icon';icon.textContent='💬';const user=document.createElement('strong');user.textContent=c.name;const text=document.createElement('span');text.textContent=c.message;const time=document.createElement('small');time.textContent=new Date(c.at).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});row.append(icon,user,text,time);feed.append(row);});
+  else state.recent.slice(0,12).forEach(c=>{const row=document.createElement('div');row.className='feed-row';const icon=document.createElement('span');icon.className='chat-icon';icon.textContent='';const user=document.createElement('strong');user.textContent=c.name;const text=document.createElement('span');text.textContent=c.message;const time=document.createElement('small');time.textContent=new Date(c.at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});row.append(icon,user,text,time);feed.append(row);});
   if(state.status.lastEvent?.winner && state.status.lastEvent.at!==populate.lastWinner) {
     populate.lastWinner=state.status.lastEvent.at;
     playWinSound();
-    toast('🏆 🎉 '+state.status.lastEvent.winner.name+' تصدّر الجولة!');
+    toast(state.status.lastEvent.winner.name+' تصدّر الجولة!');
   }
 }
 function paintRegistration(reg) {
   if (!reg) return;
   const phase = reg.phase;
   const badge = el('regStateBadge');
-  badge.textContent = phase === 'open' ? '🔥 التسجيل مفتوح' : phase === 'closed' ? '✅ التسجيل مغلق' : '⏳ لم يبدأ التسجيل';
+  badge.textContent = phase === 'open' ? 'التسجيل مفتوح' : phase === 'closed' ? 'التسجيل مغلق' : 'لم يبدأ التسجيل';
   badge.className = 'reg-state ' + (phase === 'open' ? 'open' : phase === 'closed' ? 'closed' : '');
-  const formattedCount = Number(reg.count || 0).toLocaleString('ar-SA');
+  const formattedCount = Number(reg.count || 0).toLocaleString('en-US');
   if (el('registrationCount').textContent !== formattedCount) {
     el('registrationCount').textContent = formattedCount;
     pulseMetric(el('registrationCount'));
   }
   el('registrationStatusText').textContent = phase === 'open'
-    ? `🔥 التسجيل مفتوح • اكتب «${reg.keyword}» في الشات • يمكنك بدء السؤال لإغلاق التسجيل تلقائيًا`
-    : phase === 'closed' ? `✅ تم تسجيل ${reg.count} متسابقًا. جاهزون للجولات التالية. لإضافة آخرين افتح التسجيل مجددًا.`
+    ? `التسجيل مفتوح • اكتب «${reg.keyword}» في الشات • يمكنك بدء السؤال لإغلاق التسجيل تلقائيًا`
+    : phase === 'closed' ? `تم تسجيل ${reg.count} متسابقًا. جاهزون للجولات التالية. لإضافة آخرين افتح التسجيل مجددًا.`
     : 'ابدأ بث TikTok واتصل به ليظهر التسجيل تلقائيًا، أو افتحه يدويًا للتجربة.';
   if (document.activeElement !== el('registrationKeyword')) el('registrationKeyword').value = reg.keyword || 'انضم';
   el('closeRegistrationButton').disabled = phase !== 'open';
-  el('openRegistrationButton').textContent = phase === 'open' ? '🔥 التسجيل مفتوح الآن' : phase === 'closed' ? '👥 إعادة فتح التسجيل' : '🔥 فتح التسجيل للمشاهدين';
+  el('openRegistrationButton').textContent = phase === 'open' ? 'التسجيل مفتوح الآن' : phase === 'closed' ? 'إعادة فتح التسجيل' : 'فتح التسجيل للمشاهدين';
   el('openRegistrationButton').disabled = phase === 'open' || !!state?.status.active;
   el('newRegistrationButton').disabled = !!state?.status.active;
   const list=el('registrationRecent'); list.replaceChildren();
   const entries=reg.recent||[];
-  if (!entries.length) {list.append(empty('⏳ بانتظار أول متسابق...'));return;}
+  if (!entries.length) {list.append(empty('بانتظار أول متسابق...'));return;}
   entries.forEach((x, idx)=>{const item=document.createElement('span');item.className='reg-person';item.style.animationDelay=`${idx*0.04}s`;const av=document.createElement('span');av.className='reg-person-avatar';paintMiniAvatar(av,x);const nm=document.createElement('span');nm.textContent=x.name;item.append(av,nm);list.append(item);});
 }
 const formatSeconds = ms => (Math.max(0, ms) / 1000).toFixed(2) + ' ث';
@@ -300,7 +301,7 @@ function paintRoundStatus(data) {
   liveClock = { endsAt: liveTimed ? status.endsAt : null, serverOffset: data.serverTime - Date.now() };
   if (liveTimed) {
     updateRoundClock();
-    const ansLabel = '⚡ ' + (status.submissionCount || 0).toLocaleString('ar-SA') + ' إجابة مسجلة';
+    const ansLabel = '' + (status.submissionCount || 0).toLocaleString('en-US') + ' إجابة مسجلة';
     if (el('roundAnswerCount').textContent !== ansLabel) {
       el('roundAnswerCount').textContent = ansLabel;
       pulseMetric(el('roundAnswerCount'));
@@ -309,24 +310,24 @@ function paintRoundStatus(data) {
   const results = timedMode ? status.results : null;
   const section = el('roundResults'); section.hidden = !results;
   if (!results) return;
-  el('roundResultsSummary').textContent = `✅ ${results.correctCount} إجابة صحيحة من ${results.totalAnswers} مشاركة • ⚡ ترتيب حسب سرعة وصول الإجابة`;
+  el('roundResultsSummary').textContent = `${results.correctCount} إجابة صحيحة من ${results.totalAnswers} مشاركة • ترتيب حسب سرعة وصول الإجابة`;
   const mark = el('roundWinnerMark');
-  mark.textContent = results.correctCount ? '🏆' : '❌';
+  mark.textContent = results.correctCount ? 'تم الحسم' : 'بدون فائز';
   mark.className = results.correctCount ? 'anim-check' : 'anim-cross';
   const list = el('roundResultsList'); list.replaceChildren();
-  if (!results.rankings.length) { list.append(empty('❌ لم يسجل أحد إجابة صحيحة في هذه الجولة.')); }
+  if (!results.rankings.length) { list.append(empty('لم يسجل أحد إجابة صحيحة في هذه الجولة.')); }
   for (const person of results.rankings) {
     const item = document.createElement('div'); item.className = 'round-rank-row';
-    const rank = document.createElement('span'); rank.className='round-rank-number'; rank.textContent = ['🥇','🥈','🥉'][person.rank - 1] || '#' + person.rank;
+    const rank = document.createElement('span'); rank.className='round-rank-number'; rank.textContent = String(person.rank).padStart(2, '0');
     const userCell = document.createElement('span'); userCell.className = 'round-rank-user';
     const av = document.createElement('span'); av.className = 'round-rank-avatar'; paintMiniAvatar(av, person);
-    const username = document.createElement('strong'); username.textContent = (person.rank === 1 ? '👑 ' : '') + person.name;
+    const username = document.createElement('strong'); username.textContent = person.name;
     userCell.append(av, username);
-    const time = document.createElement('span'); time.textContent = '⏳ ' + formatSeconds(person.elapsedMs);
-    const pts = document.createElement('b'); pts.textContent = '🏆 +' + person.points + ' نقاط';
+    const time = document.createElement('span'); time.textContent = formatSeconds(person.elapsedMs);
+    const pts = document.createElement('b'); pts.textContent = '+' + person.points + ' نقاط';
     item.append(rank, userCell, time, pts); list.append(item);
   }
-  el('roundResultsAnswer').textContent = '✅ الإجابة الصحيحة: ' + results.correctAnswer;
+  el('roundResultsAnswer').textContent = 'الإجابة الصحيحة: ' + results.correctAnswer;
 }
 setInterval(updateRoundClock, 200);
 function empty(text) { const div=document.createElement('div');div.className='empty';div.textContent=text;return div; }
@@ -337,11 +338,11 @@ function socket() {
   ws.addEventListener('close',()=>setTimeout(socket,2500));
   ws.addEventListener('error',()=>ws.close());
 }
-async function verify() {authToken=el('adminToken').value.trim(); try {await api('verify');sessionStorage.setItem('liveverse_admin',authToken);el('authLabel').textContent='✓ صلاحية الإدارة مفعّلة في هذه الجلسة';el('authLabel').classList.add('valid');toast('تم تفعيل الإدارة');await refreshBank();}catch{authToken='';sessionStorage.removeItem('liveverse_admin');}}
+async function verify() {authToken=el('adminToken').value.trim(); try {await api('verify');sessionStorage.setItem('liveverse_admin',authToken);el('authLabel').textContent='صلاحية الإدارة مفعّلة في هذه الجلسة';el('authLabel').classList.add('valid');toast('تم تفعيل الإدارة');await refreshBank();}catch{authToken='';sessionStorage.removeItem('liveverse_admin');}}
 function paintBank(summary) {
   if (!summary || !Number.isInteger(summary.total)) return;
-  el('bankCount').textContent = summary.total.toLocaleString('ar-SA') + ' سؤال';
-  el('bankRemaining').textContent = 'المتبقي: ' + summary.remaining.toLocaleString('ar-SA') + ' | المستخدمة: ' + summary.used.toLocaleString('ar-SA');
+  el('bankCount').textContent = summary.total.toLocaleString('en-US') + ' سؤال';
+  el('bankRemaining').textContent = 'المتبقي: ' + summary.remaining.toLocaleString('en-US') + ' | المستخدمة: ' + summary.used.toLocaleString('en-US');
 }
 async function refreshBank() {
   if (!authToken) return;
@@ -387,7 +388,7 @@ function paintPresenter(data) {
   const count=data.registration?.count||0;
   document.body.dataset.phase=open?'registration':active?'active':data.status.results?'results':'waiting';
   el('presenterKeyword').textContent=active&&data.status.mode==='quiz'?'1–4':data.registration?.keyword||'انضم';
-  el('presenterAudienceCount').textContent=count.toLocaleString('ar-SA');
+  el('presenterAudienceCount').textContent=count.toLocaleString('en-US');
   el('presenterQuestionNumber').textContent=String(data.round||0).padStart(2,'0');
   el('presenterRegistrationLabel').textContent=open?'إغلاق التسجيل':'فتح التسجيل';
   el('presenterRegistration').disabled=active||presenterBusy;
@@ -501,7 +502,7 @@ async function autoDevAuth() {
       authToken = token;
       el('adminToken').value = token;
       sessionStorage.setItem('liveverse_admin', token);
-      el('authLabel').textContent = '✓ صلاحية الإدارة مفعّلة تلقائيًا لبيئة التطوير';
+      el('authLabel').textContent = 'صلاحية الإدارة مفعّلة تلقائيًا لبيئة التطوير';
       el('authLabel').classList.add('valid');
       await refreshBank();
     }

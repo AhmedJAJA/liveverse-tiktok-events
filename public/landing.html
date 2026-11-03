@@ -3,62 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#020b26">
+<meta name="theme-color" content="#08090B">
 <meta name="description" content="SKY LIVE منصة مسابقات تفاعلية مباشرة مع جمهور TikTok LIVE — تسجيل المشاهدين من التعليقات وأسئلة وتحديات ولوحات متصدرين.">
 <meta property="og:title" content="SKY LIVE — بثك صار لعبة">
 <meta property="og:description" content="حوّل تعليقات بثك إلى مسابقات تفاعلية لحظية.">
 <meta property="og:image" content="https://liveverse-tiktok-events.onrender.com/sky-live.webp">
 <title>SKY LIVE | بثك صار لعبة</title>
-<link rel="icon" type="image/webp" href="/sky-live.webp">
-<link rel="stylesheet" href="/landing.css">
-<link rel="stylesheet" href="/sky-landing.css">
-<link rel="stylesheet" href="/sky-live-theme.css">
+<link rel="icon" type="image/svg+xml" href="/sky-live-mark.svg">
+<link rel="stylesheet" href="/royal-core.css">
+<link rel="stylesheet" href="/royal-landing.css">
 </head>
-<body>
-<div class="sky-bgfx" aria-hidden="true">
-  <svg class="sky-waves-svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      <linearGradient id="skyWaveA" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0" stop-color="#1e6bff" stop-opacity="0"/>
-        <stop offset="0.3" stop-color="#3fb6ff"/>
-        <stop offset="0.65" stop-color="#a6ecff"/>
-        <stop offset="1" stop-color="#2a7dff" stop-opacity="0"/>
-      </linearGradient>
-      <linearGradient id="skyWaveB" x1="1" y1="0" x2="0" y2="0">
-        <stop offset="0" stop-color="#2a6dff" stop-opacity="0"/>
-        <stop offset="0.45" stop-color="#5fd0ff"/>
-        <stop offset="1" stop-color="#1e5bff" stop-opacity="0"/>
-      </linearGradient>
-      <linearGradient id="skyFillTop" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#3aa8ff" stop-opacity="0.32"/>
-        <stop offset="1" stop-color="#3aa8ff" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
-    <g class="sky-wave-top">
-      <path fill="url(#skyFillTop)" d="M-80 -20H1680V130C1420 40 1180 230 860 120C560 20 300 190 -80 90Z"/>
-      <path fill="none" stroke="url(#skyWaveA)" stroke-width="4.5" d="M-80 110C260 10 540 230 860 118S1400 20 1680 150"/>
-      <path fill="none" stroke="url(#skyWaveB)" stroke-width="2.2" d="M-80 175C320 80 580 270 900 160S1400 70 1680 205"/>
-    </g>
-    <g class="sky-dust-dots">
-      <circle cx="140" cy="280" r="2.2"/><circle cx="340" cy="190" r="2.5"/><circle cx="620" cy="150" r="2"/>
-      <circle cx="840" cy="290" r="2.3"/><circle cx="1060" cy="180" r="2.1"/><circle cx="1340" cy="240" r="1.9"/>
-      <circle cx="240" cy="680" r="1.8"/><circle cx="760" cy="720" r="2.1"/><circle cx="1280" cy="660" r="2.2"/>
-    </g>
-  </svg>
-</div>
+<body class="landing">
+<div class="page-light" aria-hidden="true"><i class="fan"></i><i class="beam"></i></div>
 
 <header class="site-header" id="top">
-  <div class="nav-inner">
-    <a href="/" class="logo" aria-label="SKY LIVE الصفحة الرئيسية"><img src="/sky-live.webp" width="44" height="44" alt="" decoding="async"><span>SKY<span class="blue"> LIVE</span></span></a>
+  <div class="nav-inner wrap">
+    <a href="/" class="logo" aria-label="SKY LIVE الصفحة الرئيسية"><img src="/sky-live-mark.svg" width="42" height="42" alt="" decoding="async"><span class="logo-words"><b dir="ltr">SKY LIVE</b><small class="caps">Royal Edition</small></span></a>
     <nav class="nav-links" id="navLinks" aria-label="روابط الموقع">
       <a href="#how">كيف يعمل</a>
       <a href="#games">الألعاب</a>
       <a href="#platforms">المنصات</a>
       <a href="#pricing">الأسعار</a>
+      <a href="/studio" class="nav-mobile-cta btn btn-gold">ابدأ الآن</a>
     </nav>
     <div class="nav-actions">
-      <a href="/studio" class="btn btn-ghost"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> دخول الاستوديو</a>
-      <a href="/studio" class="btn btn-gold nav-main-btn"><svg class="ui-icon anim-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> 🎮 ابدأ الآن</a>
+      <a href="/studio" class="btn btn-line nav-studio"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg>دخول الاستوديو</a>
+      <a href="/studio" class="btn btn-gold nav-main-btn">ابدأ الآن<svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></a>
       <button class="menu-toggle" id="menuToggle" type="button" aria-label="فتح القائمة" aria-controls="navLinks" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
   </div>
@@ -66,128 +36,108 @@
 
 <main>
 <section class="hero" aria-labelledby="heroTitle">
-  <div class="hero-beam" aria-hidden="true"></div>
   <div class="wrap hero-layout">
     <div class="hero-copy">
-      <span class="eyebrow"><span class="live-dot"></span> 🔥 يشتغل مع بثّك المباشر في TikTok LIVE</span>
-      <h1 id="heroTitle">بثّك صار <em>لعبة</em><br>ومتابعوك هم<br><span class="underlined">اللاعبون.</span></h1>
-      <p class="hero-description">يكتبون كلمة <strong>«انضم»</strong> في الشات فيدخلون اللعبة وتظهر صورهم وأسماؤهم مباشرة على الشاشة — بلا تطبيق إضافي وبلا تسجيل معقّد.</p>
+      <span class="eyebrow"><span class="live-dot on"></span>يشتغل مع بثّك المباشر في TikTok LIVE</span>
+      <h1 id="heroTitle">بثّك صار <em class="gold-text">لعبة</em>،<br>ومتابعوك هم <span class="underlined">اللاعبون</span>.</h1>
+      <p class="hero-description">يكتبون كلمة <strong>«انضم»</strong> في الشات فيدخلون اللعبة، وتظهر صورهم وأسماؤهم مباشرة على الشاشة — بلا تطبيق إضافي وبلا تسجيل معقّد.</p>
       <div class="hero-buttons">
-        <a href="/studio" class="btn btn-gold btn-big">🎮 افتح استوديو الألعاب <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg></a>
-        <a href="#games" class="btn btn-ghost btn-big"><svg class="ui-icon anim-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> شوف الألعاب</a>
+        <a href="/studio" class="btn btn-gold btn-big">افتح استوديو الألعاب<svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></a>
+        <a href="#games" class="btn btn-line btn-big"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-games"/></svg>شوف الألعاب</a>
       </div>
-      <div class="hero-metrics">
-        <div><strong>٤</strong><span>🎮 أطوار تفاعلية</span></div>
-        <div><strong>+١٢٠٠</strong><span>🎯 سؤال عربي</span></div>
-        <div><strong>مباشر</strong><span>⚡ من شات البث فوراً</span></div>
-      </div>
+      <dl class="hero-metrics">
+        <div><dt>أطوار تفاعلية</dt><dd class="num">4</dd></div>
+        <div><dt>سؤال عربي</dt><dd class="num">+1200</dd></div>
+        <div><dt>من شات البث فورًا</dt><dd>مباشر</dd></div>
+      </dl>
     </div>
-    <div class="hero-art sky-hero-art" aria-label="الهوية البصرية المعتمدة لـ Sky Live">
-      <div class="hero-halo halo-a"></div><div class="hero-halo halo-b"></div>
-      <div class="sky-art-orbit" aria-hidden="true"></div>
-      <figure class="sky-hero-cover media-frame" data-media-frame>
-        <div class="hero-stage-card">
-          <div class="hero-stage-topbar">
-            <span class="stage-live-pill"><i class="stage-live-dot"></i> بث تفاعلي مباشر</span>
-            <span class="stage-round-pill">🎯 الجولة ٠١</span>
-          </div>
-          <div class="hero-medallion-wrap">
-            <div class="medallion-ring" aria-hidden="true"></div>
-            <div class="medallion-frame img-skeleton">
-              <img src="/sky-live.webp" width="140" height="140" alt="شعار Sky Live" fetchpriority="high" decoding="async" data-smart-img>
-              <div class="img-fallback-card" hidden aria-hidden="true">
-                <svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-                <span>الصورة غير متاحة حاليًا</span>
-              </div>
-            </div>
-          </div>
-          <div class="hero-stage-preview" aria-hidden="true">
-            <div class="stage-preview-q">أسرع إجابة صحيحة في الشات تتصدر المنصة ⚡</div>
-            <div class="stage-preview-opts">
-              <span class="sp-opt sp-1"><b>١</b> الخيار الأول</span>
-              <span class="sp-opt sp-2"><b>٢</b> الخيار الثاني</span>
-              <span class="sp-opt sp-3"><b>٣</b> الخيار الثالث</span>
-              <span class="sp-opt sp-4"><b>٤</b> الخيار الرابع</span>
-            </div>
-          </div>
+
+    <div class="hero-art" aria-label="معاينة شاشة البث في SKY LIVE">
+      <div class="device">
+        <div class="device-top">
+          <span class="device-brand"><img src="/sky-live-mark.svg" width="22" height="22" alt=""><b dir="ltr">SKY LIVE</b></span>
+          <span class="device-live"><i class="live-dot on"></i>على الهواء</span>
+          <span class="device-timer" aria-hidden="true"><b class="num">12</b></span>
         </div>
-        <figcaption>SKY LIVE <span>STREAM • PLAY • WIN</span></figcaption>
-      </figure>
-      <div class="sky-art-widget sky-widget-join"><span class="icon-badge badge-cyan anim-users" aria-hidden="true"><svg class="ui-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><div><b>اكتب «انضم» 👥</b><small>وأنت داخل الجولة فوراً</small></div></div>
-      <div class="sky-art-widget sky-widget-rank"><span class="icon-badge badge-gold anim-trophy" aria-hidden="true"><svg class="ui-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span><div><b>أبطال الليلة 🏆</b><small>👑 تتويج الأسرع بالصورة والاسم</small></div></div>
-      <div class="sky-art-caption">✨ عالمك. بثك. جمهورك.</div>
+        <div class="device-q"><span class="device-crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-question"/></svg></span>ما هي أكبر صحراء رملية متصلة في العالم؟</div>
+        <ol class="device-choices" aria-hidden="true">
+          <li class="c1"><span class="gem"><svg><use href="/icons.svg#g-1"/></svg><b>1</b></span><span>الربع الخالي</span><i class="votes"><em>A</em><em>N</em><em>R</em></i><s></s></li>
+          <li class="c2"><span class="gem"><svg><use href="/icons.svg#g-2"/></svg><b>2</b></span><span>صحراء ثار</span><i class="votes"><em>F</em></i><s></s></li>
+          <li class="c3"><span class="gem"><svg><use href="/icons.svg#g-3"/></svg><b>3</b></span><span>صحراء جوبي</span><i class="votes"><em>L</em><em>H</em></i><s></s></li>
+          <li class="c4"><span class="gem"><svg><use href="/icons.svg#g-4"/></svg><b>4</b></span><span>كالاهاري</span><i class="votes"></i><s></s></li>
+        </ol>
+      </div>
+      <div class="float-card float-join" aria-hidden="true">
+        <span class="stack"><em>ن</em><em>ف</em><em>ر</em></span>
+        <span><b>انضم 3 متسابقين</b><small>كتبوا «انضم» في الشات</small></span>
+      </div>
+      <div class="float-card float-win" aria-hidden="true">
+        <span class="crest crest-sm is-solid"><svg class="i"><use href="/icons.svg#i-crown"/></svg></span>
+        <span><b>نورة تتصدّر</b><small class="num">+10 · 2.21s</small></span>
+      </div>
     </div>
   </div>
+  <div class="marquee" aria-hidden="true"><div class="marquee-track">
+    <span>تحدي المعلومات</span><i></i><span>خمّن الكلمة</span><i></i><span>سباق الجمهور</span><i></i><span>عجلة الأسماء</span><i></i><span>لوحة الأبطال</span><i></i><span>شاشة OBS</span><i></i>
+    <span>تحدي المعلومات</span><i></i><span>خمّن الكلمة</span><i></i><span>سباق الجمهور</span><i></i><span>عجلة الأسماء</span><i></i><span>لوحة الأبطال</span><i></i><span>شاشة OBS</span><i></i>
+  </div></div>
 </section>
 
 <section class="platforms-section" id="platforms" aria-labelledby="platformsTitle">
  <div class="wrap platform-box">
-   <div class="platform-heading"><span class="small-overline">⚡ المنصات المدعومة</span><h2 id="platformsTitle">اربط بثّك وافتح شاشة المسرح</h2><p>اكتب اسم حسابك واتصل بالبث، وأضف شاشة المشاهدين كمصدر متصفح (Browser Source) داخل OBS أو استوديو البث.</p></div>
+   <div class="platform-heading"><span class="eyebrow">المنصات المدعومة</span><h2 id="platformsTitle">اربط بثّك وافتح شاشة المسرح</h2><p>اكتب اسم حسابك واتصل بالبث، وأضف شاشة المشاهدين كمصدر متصفح (Browser Source) داخل OBS أو استوديو البث.</p></div>
    <div class="platform-items">
-     <div class="platform-item"><span class="platform-ico tiktok icon-badge badge-rose anim-fire"><svg class="ui-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg></span><div><strong>TikTok LIVE</strong><small>الشات · صور المتسابقين · الانضمام الفوري</small></div><span class="beta-status">ربط تجريبي</span></div>
-     <div class="platform-item"><span class="platform-ico obs icon-badge badge-cyan anim-gear"><svg class="ui-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg></span><div><strong>OBS Studio &amp; 1080p/9:16</strong><small>مصدر متصفح متجاوب للبث الأفقي والعمودي</small></div><span class="supported-status">✓ مدعوم</span></div>
+     <div class="platform-item"><span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-live"/></svg></span><div><strong>TikTok LIVE</strong><small>الشات · صور المتسابقين · الانضمام الفوري</small></div><span class="beta-status">ربط تجريبي</span></div>
+     <div class="platform-item"><span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-screen"/></svg></span><div><strong dir="ltr">OBS Studio · 16:9 / 9:16</strong><small>مصدر متصفح متجاوب للبث الأفقي والعمودي</small></div><span class="supported-status"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-check"/></svg>مدعوم</span></div>
    </div>
  </div>
 </section>
 
 <section class="how-section wrap" id="how" aria-labelledby="howTitle">
- <div class="section-heading"><span class="small-overline">🔥 ثلاث خطوات وأنت على الهواء</span><h2 id="howTitle">ما يحتاج متابعك يسوّي شيء <em>غير إنه يكتب</em></h2><p>دخول مباشر من شات البث بدون روابط خارجية أو حسابات إضافية.</p></div>
- <div class="steps">
-   <article class="step"><span class="step-number">١</span><span class="step-symbol icon-badge badge-cyan anim-bolt"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg></span><h3>اربط بثّك ⚡</h3><p>افتح الاستوديو، اكتب اسم حسابك في TikTok LIVE واضغط اتصال، أو استخدم محاكي التجربة الفوري.</p></article>
-   <article class="step"><span class="step-number">٢</span><span class="step-symbol icon-badge badge-violet anim-users"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg></span><h3>اختر اللعبة وافتح التسجيل 👥</h3><p>حدّد كلمة الانضمام مثل «انضم»، وستظهر صور المشاهدين وأسماؤهم فورًا في لوحة المسرح.</p></article>
-   <article class="step"><span class="step-number">٣</span><span class="step-symbol icon-badge badge-gold anim-trophy"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span><h3>يلعبون وتُتوّج الأبطال 🏆</h3><p>عدّ تنازلي حماسي، فرز تلقائي لأسرع الإجابات الصحيحة، ومنصة تتويج ذهبية للفائزين.</p></article>
- </div>
+ <div class="section-heading"><span class="eyebrow">ثلاث خطوات وأنت على الهواء</span><h2 id="howTitle">ما يحتاج متابعك يسوّي شيء <em class="gold-text">غير إنه يكتب</em></h2><p>دخول مباشر من شات البث بدون روابط خارجية أو حسابات إضافية.</p></div>
+ <ol class="steps">
+   <li class="step"><span class="step-number num">01</span><span class="crest crest-lg" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-plug"/></svg></span><h3>اربط بثّك</h3><p>افتح الاستوديو، اكتب اسم حسابك في TikTok LIVE واضغط اتصال، أو جرّب فورًا بمحاكي التعليقات.</p></li>
+   <li class="step"><span class="step-number num">02</span><span class="crest crest-lg" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-user-plus"/></svg></span><h3>افتح التسجيل</h3><p>حدّد كلمة الانضمام مثل «انضم»، فتظهر صور المشاهدين وأسماؤهم فورًا على شاشة المسرح.</p></li>
+   <li class="step"><span class="step-number num">03</span><span class="crest crest-lg" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-trophy"/></svg></span><h3>توّج الأبطال</h3><p>عدّ تنازلي، فرز تلقائي لأسرع الإجابات الصحيحة، ومنصة تتويج ذهبية للفائزين.</p></li>
+ </ol>
 </section>
 
 <section class="games-section" id="games" aria-labelledby="gamesTitle">
- <div class="wrap"><div class="section-heading"><span class="small-overline">🎮 معرض الألعاب التفاعلية</span><h2 id="gamesTitle">ألعاب مصمّمة لرفع <em>تفاعل البث</em></h2><p>كل فعالية مصممة بواجهة مسرحية واضحة، أيقونات متحركة، وحسم فوري للنتائج من الشات.</p></div>
+ <div class="wrap"><div class="section-heading"><span class="eyebrow">معرض الألعاب</span><h2 id="gamesTitle">ألعاب مصمّمة لرفع <em class="gold-text">تفاعل البث</em></h2><p>كل فعالية بواجهة مسرحية واضحة، وحسم فوري للنتائج من الشات.</p></div>
  <div class="games-grid">
   <article class="game-tile quiz-tile">
-    <div class="game-art">
-      <div class="art-orbit"></div>
-      <span class="gc-category-pill">ذكاء وسرعة</span>
-      <span class="art-big icon-badge badge-violet anim-target"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
-      <span class="art-chip">١</span><span class="art-chip">٢</span><span class="art-chip">٣</span>
+    <div class="game-art" aria-hidden="true">
+      <div class="art-q">؟</div>
+      <div class="art-opts"><i class="o1"></i><i class="o2"></i><i class="o3"></i><i class="o4"></i></div>
     </div>
     <div class="tile-info">
-      <div class="tile-head"><span class="tile-icon">🎯</span><h3>تحدي المعلومات</h3><span class="game-tag">QUIZ</span></div>
-      <p>سؤال وأربع خيارات — اكتب رقم الإجابة ١ إلى ٤ قبل انتهاء المؤقت، والأسرع يتصدر المنصة.</p>
-      <div class="tile-actions"><a href="/studio" class="gc-play-btn">العب الآن 🎮</a><span class="gc-help-badge" title="٤ خيارات ومؤقت تنازلي">؟</span></div>
+      <div class="tile-head"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-target"/></svg></span><h3>تحدي المعلومات</h3><span class="game-tag caps">Quiz</span></div>
+      <p>سؤال وأربع خيارات — اكتب رقم الإجابة من 1 إلى 4 قبل انتهاء المؤقت، والأسرع يتصدر المنصة.</p>
+      <a href="/studio" class="tile-link">العب الآن<svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></a>
     </div>
   </article>
   <article class="game-tile guess-tile">
-    <div class="game-art">
-      <span class="gc-category-pill">سرعة وبديهة</span>
-      <span class="art-big icon-badge badge-cyan anim-bolt"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-      <span class="glowing-word">خمّن!</span>
-    </div>
+    <div class="game-art" aria-hidden="true"><span class="glowing-word">خمّن!</span></div>
     <div class="tile-info">
-      <div class="tile-head"><span class="tile-icon">⚡</span><h3>خمّن الكلمة</h3><span class="game-tag">GUESS</span></div>
-      <p>تلميح أو سؤال مفتوح على الشاشة — أول من يكتب الكلمة الصحيحة في الشات يخطف الصدارة.</p>
-      <div class="tile-actions"><a href="/studio" class="gc-play-btn">العب الآن 🎮</a><span class="gc-help-badge" title="محاولة واحدة لكل متسابق">؟</span></div>
+      <div class="tile-head"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-bolt"/></svg></span><h3>خمّن الكلمة</h3><span class="game-tag caps">Guess</span></div>
+      <p>تلميح على الشاشة — أول من يكتب الكلمة الصحيحة في الشات يخطف الصدارة.</p>
+      <a href="/studio" class="tile-link">العب الآن<svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></a>
     </div>
   </article>
   <article class="game-tile race-tile">
-    <div class="game-art">
-      <span class="gc-category-pill">حماس جماعي</span>
-      <span class="art-big icon-badge badge-amber anim-fire"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg></span>
-      <div class="race-lanes"><i></i><i></i><i></i></div>
-    </div>
+    <div class="game-art" aria-hidden="true"><div class="race-lanes"><i></i><i></i><i></i></div></div>
     <div class="tile-info">
-      <div class="tile-head"><span class="tile-icon">🔥</span><h3>سباق الجمهور</h3><span class="game-tag">RACE</span></div>
-      <p>مضمار سباق مباشر للمسجلين — اكتب أمر التقدم في الشات لتندفع نحو خط النهاية قبل الجميع.</p>
-      <div class="tile-actions"><a href="/studio" class="gc-play-btn">العب الآن 🎮</a><span class="gc-help-badge" title="يتقدم المتسابقون بكتابة !go">؟</span></div>
+      <div class="tile-head"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-flag"/></svg></span><h3>سباق الجمهور</h3><span class="game-tag caps">Race</span></div>
+      <p>مضمار مباشر للمسجلين — اكتب أمر التقدم في الشات لتصل خط النهاية قبل الجميع.</p>
+      <a href="/studio" class="tile-link">العب الآن<svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></a>
     </div>
   </article>
   <article class="game-tile wheel-tile">
-    <div class="game-art">
-      <span class="gc-category-pill">حظ وسحب</span>
-      <div class="wheel-art icon-badge badge-gold anim-trophy"><svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg></div>
-    </div>
+    <div class="game-art" aria-hidden="true"><div class="wheel-art"><span class="crest crest-sm is-solid"><svg class="i"><use href="/icons.svg#i-crown"/></svg></span></div></div>
     <div class="tile-info">
-      <div class="tile-head"><span class="tile-icon">👑</span><h3>عجلة الأسماء</h3><span class="game-tag">WHEEL</span></div>
-      <p>جميع المسجلين في الفعالية يدخلون السحب تلقائيًا، وبضغطة واحدة تختار العجلة الفائز المحظوظ.</p>
-      <div class="tile-actions"><a href="/studio" class="gc-play-btn">العب الآن 🎮</a><span class="gc-help-badge" title="قرعة عشوائية عادلة بين المسجلين">؟</span></div>
+      <div class="tile-head"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-wheel"/></svg></span><h3>عجلة الأسماء</h3><span class="game-tag caps">Wheel</span></div>
+      <p>كل المسجلين يدخلون السحب تلقائيًا، وبضغطة واحدة تختار العجلة الفائز.</p>
+      <a href="/studio" class="tile-link">العب الآن<svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></a>
     </div>
   </article>
  </div>
@@ -195,33 +145,32 @@
 </section>
 
 <section class="pricing-section wrap" id="pricing" aria-labelledby="pricingTitle">
-  <div class="section-heading"><span class="small-overline">✨ بداية فورية</span><h2 id="pricingTitle">جرّب Sky Live <em>بدون تعقيد</em></h2><p>يمكنك تجربة الفعاليات والمحاكاة من الاستوديو مباشرة. لا يوجد نظام دفع أو اشتراكات مفعّل في هذه النسخة.</p></div>
+  <div class="section-heading"><span class="eyebrow">بداية فورية</span><h2 id="pricingTitle">جرّب SKY LIVE <em class="gold-text">بدون تعقيد</em></h2><p>يمكنك تجربة الفعاليات والمحاكاة من الاستوديو مباشرة. لا يوجد نظام دفع أو اشتراكات مفعّل في هذه النسخة.</p></div>
   <div class="pricing-grid">
-    <article class="price-plan featured"><div class="plan-top"><span class="plan-icon icon-badge badge-cyan anim-check"><svg class="ui-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="plan-status">متاح الآن</span></div><h3>النسخة التجريبية 🎮</h3><p>اختبر جميع الفعاليات قبل بدء البث الحقيقي.</p><div class="plan-cost">مجانية <small>حاليًا</small></div><ul><li>أسئلة وتخمين وسباق وعجلة</li><li>تسجيل المشاهدين من التعليقات مع الصور 👥</li><li>منصة تتويج ونتائج وشاشة OBS 🏆</li><li>بنك أسئلة عربي (+١٢٠٠ سؤال 🎯)</li></ul><a href="/studio" class="btn btn-gold btn-big">🎮 افتح الاستوديو الآن</a></article>
-    <article class="price-plan future"><div class="plan-top"><span class="plan-icon icon-badge badge-violet anim-bolt"><svg class="ui-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><span class="plan-status future-badge">غير متاحة بعد</span></div><h3>خيارات مستقبلية ⚡</h3><p>نخطط لإضافة المزيد من الألعاب الجماعية وخيارات التخصيص.</p><div class="future-tag">قريبًا</div><p class="plan-honesty">لا توجد باقات مدفوعة للشراء حاليًا. سنوضح التفاصيل عند توفير أي خطط جديدة.</p></article>
+    <article class="price-plan featured"><div class="plan-top"><span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-diamond"/></svg></span><span class="plan-status">متاح الآن</span></div><h3>النسخة التجريبية</h3><p>اختبر جميع الفعاليات قبل بدء البث الحقيقي.</p><div class="plan-cost">مجانية <small>حاليًا</small></div><ul><li>أسئلة وتخمين وسباق وعجلة</li><li>تسجيل المشاهدين من التعليقات مع الصور</li><li>منصة تتويج ونتائج وشاشة OBS</li><li>بنك أسئلة عربي (+1200 سؤال)</li></ul><a href="/studio" class="btn btn-gold btn-big">افتح الاستوديو الآن</a></article>
+    <article class="price-plan future"><div class="plan-top"><span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-sparkle"/></svg></span><span class="plan-status future-badge">غير متاحة بعد</span></div><h3>خيارات مستقبلية</h3><p>نخطط لإضافة المزيد من الألعاب الجماعية وخيارات التخصيص.</p><div class="future-tag">قريبًا</div><p class="plan-honesty">لا توجد باقات مدفوعة للشراء حاليًا. سنوضح التفاصيل عند توفير أي خطط جديدة.</p></article>
   </div>
 </section>
 
 <section class="cta-section wrap" id="start" aria-labelledby="ctaTitle">
   <div class="cta-card">
-    <div class="cta-pattern" aria-hidden="true"></div>
-    <div class="cta-copy"><span class="small-overline">🔥 بثّك الجاي خلّه غير</span><h2 id="ctaTitle">خلّ جمهورك يلعب معك الآن! 🎉</h2><p>افتح الاستوديو، جرّب محاكي التعليقات مجانًا، وجهّز فعالية بثك القادمة خلال ثوانٍ.</p><div class="cta-actions"><a class="btn btn-gold btn-big" href="/studio">🎮 دخول استوديو SKY LIVE <svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg></a><a class="btn btn-ghost btn-big" href="/overlay" target="_blank" rel="noopener"><svg class="ui-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> شاشة المشاهدين</a></div><small>الاتصال بـ TikTok يعتمد على مكتبة غير رسمية وقد يتأثر بتغييرات المنصة.</small></div>
-    <div class="cta-emblem-showcase media-frame" data-media-frame>
-      <div class="cta-emblem-ring" aria-hidden="true"></div>
+    <div class="cta-copy"><span class="eyebrow">بثّك الجاي خلّه غير</span><h2 id="ctaTitle">خلّ جمهورك يلعب معك الآن</h2><p>افتح الاستوديو، جرّب محاكي التعليقات مجانًا، وجهّز فعالية بثك القادمة خلال ثوانٍ.</p><div class="cta-actions"><a class="btn btn-gold btn-big" href="/studio">دخول استوديو SKY LIVE<svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></a><a class="btn btn-line btn-big" href="/overlay" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg>شاشة المشاهدين</a></div><small>الاتصال بـ TikTok يعتمد على مكتبة غير رسمية وقد يتأثر بتغييرات المنصة.</small></div>
+    <div class="cta-emblem-showcase" data-media-frame>
+      <i class="cta-rays" aria-hidden="true"></i>
       <div class="cta-emblem-frame img-skeleton">
-        <img class="cta-emblem" src="/sky-live.webp" alt="شعار SKY LIVE" width="160" height="160" loading="lazy" decoding="async" data-smart-img>
+        <img class="cta-emblem" src="/sky-live.webp" alt="شعار SKY LIVE" width="220" height="220" loading="lazy" decoding="async" data-smart-img>
         <div class="img-fallback-card" hidden aria-hidden="true">
-          <svg class="ui-icon-xl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+          <svg aria-hidden="true"><use href="/icons.svg#i-crown"/></svg>
           <span>الصورة غير متاحة حاليًا</span>
         </div>
       </div>
-      <span class="cta-emblem-badge">🏆 جاهز للبث المباشر</span>
+      <span class="cta-emblem-badge">جاهز للبث المباشر</span>
     </div>
   </div>
 </section>
 </main>
 
-<footer class="site-footer"><div class="wrap footer-inner"><a class="footer-logo" href="/"><img src="/sky-live.webp" width="38" height="38" alt="" decoding="async"><strong>SKY LIVE</strong></a><span>© 2026 SKY LIVE • منصة مستقلة غير تابعة لـ TikTok</span><a href="/studio">استوديو التحكم ↗</a></div></footer>
+<footer class="site-footer"><div class="wrap footer-inner"><a class="footer-logo" href="/"><img src="/sky-live-mark.svg" width="32" height="32" alt="" decoding="async"><strong dir="ltr">SKY LIVE</strong></a><span>© 2026 SKY LIVE • منصة مستقلة غير تابعة لـ TikTok</span><a href="/studio">استوديو التحكم ↗</a></div></footer>
 <script defer src="/landing.js"></script>
 </body>
 </html>

@@ -55,14 +55,15 @@ test('does not publish untrusted avatar URLs on the winner board',()=>{
 
 test('results podium and winner banner use the shared image-or-initial fallback renderer',()=>{
   const js=fs.readFileSync(new URL('../public/overlay.js',import.meta.url),'utf8');
-  const css=fs.readFileSync(new URL('../public/overlay.css',import.meta.url),'utf8');
+  const css=fs.readFileSync(new URL('../public/royal-core.css',import.meta.url),'utf8');
   const html=fs.readFileSync(new URL('../public/overlay.html',import.meta.url),'utf8');
   assert.match(js,/function podiumCard\(/);
   assert.match(js,/paintAvatar\(avatar,p\)/);
   assert.match(js,/paintAvatar\(\$\('winnerAvatar'\),s\.lastEvent\.winner\)/);
   assert.match(html,/id="winnerAvatar"/);
-  assert.match(css,/\.podium-avatar img/);
-  assert.match(css,/\.result-avatar img/);
+  // Avatar photos are styled once, in the shared core, for every avatar surface.
+  assert.match(css,/:is\([^)]*\.podium-avatar[^)]*\) img/);
+  assert.match(css,/:is\([^)]*\.result-avatar[^)]*\) img/);
 });
 
 test('winning wheel or race preserves the contestant avatar in winner announcement',()=>{
@@ -77,7 +78,7 @@ test('winning wheel or race preserves the contestant avatar in winner announceme
 });
 
 test('all pages implement smart image loading, skeleton shimmer and luxury fallback UI without raw Image unavailable text',()=>{
-  const files=['landing.html','landing.js','index.html','app.js','overlay.html','overlay.js','sky-live-theme.css'];
+  const files=['landing.html','landing.js','index.html','app.js','overlay.html','overlay.js','royal-core.css'];
   for(const f of files){
     const content=fs.readFileSync(new URL('../public/'+f,import.meta.url),'utf8');
     assert.doesNotMatch(content,/Image unavailable\./i);
@@ -86,7 +87,7 @@ test('all pages implement smart image loading, skeleton shimmer and luxury fallb
   const landingJs=fs.readFileSync(new URL('../public/landing.js',import.meta.url),'utf8');
   const appJs=fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
   const overlayJs=fs.readFileSync(new URL('../public/overlay.js',import.meta.url),'utf8');
-  const themeCss=fs.readFileSync(new URL('../public/sky-live-theme.css',import.meta.url),'utf8');
+  const themeCss=fs.readFileSync(new URL('../public/royal-core.css',import.meta.url),'utf8');
   assert.match(landingHtml,/الصورة غير متاحة حاليًا/);
   assert.match(landingHtml,/img-fallback-card/);
   assert.match(landingJs,/initSmartImages/);

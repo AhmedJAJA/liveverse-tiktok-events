@@ -1,3 +1,8 @@
+Fonts in this folder:
+- Tajawal (tajawal-*.woff2) — Copyright Boutros Fonts / the Tajawal authors.
+- Inter Display (inter-display-*.woff, Latin subset) — Copyright 2016-2023 The Inter Project Authors (https://github.com/rsms/inter).
+Both are licensed under the SIL Open Font License, Version 1.1, reproduced below.
+
 Google Inc.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

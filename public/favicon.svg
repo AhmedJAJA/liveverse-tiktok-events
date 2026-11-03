@@ -1,1 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="18" fill="#11121d"/><path d="M14 17h9v30h17v-8H23V17z" fill="#fff"/><path d="M31 17l10 30h7L58 17h-9l-5 20-5-20z" fill="#ad8cff"/><circle cx="49" cy="12" r="5" fill="#ff497f"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SKY LIVE">
+<defs>
+ <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+  <stop offset="0" stop-color="#FBEBB8"/><stop offset=".28" stop-color="#E7C66A"/><stop offset=".5" stop-color="#B8892A"/><stop offset=".72" stop-color="#F1D58C"/><stop offset="1" stop-color="#8E6A1F"/>
+ </linearGradient>
+ <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#FFF3CC"/><stop offset=".45" stop-color="#E3BE5A"/><stop offset=".55" stop-color="#B98A28"/><stop offset="1" stop-color="#F1D58C"/>
+ </linearGradient>
+ <radialGradient id="bg" cx=".5" cy=".32" r=".75">
+  <stop offset="0" stop-color="#2A2620"/><stop offset=".55" stop-color="#121316"/><stop offset="1" stop-color="#08090B"/>
+ </radialGradient>
+ <radialGradient id="glow" cx=".5" cy=".42" r=".4"><stop offset="0" stop-color="#D4AF37" stop-opacity=".32"/><stop offset="1" stop-color="#D4AF37" stop-opacity="0"/></radialGradient>
+</defs>
+<path d="M162 18h188l144 144v188L350 494H162L18 350V162Z" fill="url(#bg)"/>
+<path d="M162 18h188l144 144v188L350 494H162L18 350V162Z" fill="none" stroke="url(#g)" stroke-width="14" stroke-linejoin="round"/>
+<path d="M172 46h168l126 126v168L340 466H172L46 340V172Z" fill="none" stroke="#F1D58C" stroke-opacity=".45" stroke-width="3"/>
+<circle cx="256" cy="230" r="170" fill="url(#glow)"/>
+<!-- crown -->
+<path d="M150 292 132 170l66 54 58-92 58 92 66-54-18 122Z" fill="url(#gv)"/>
+<path d="M150 292 132 170l66 54 58-92 58 92 66-54-18 122Z" fill="none" stroke="#FFF3CC" stroke-opacity=".55" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="132" cy="166" r="13" fill="url(#gv)"/><circle cx="256" cy="126" r="15" fill="url(#gv)"/><circle cx="380" cy="166" r="13" fill="url(#gv)"/>
+<path d="M256 214l20 28-20 28-20-28Z" fill="#08090B"/>
+<path d="M256 222l14 20-14 20-14-20Z" fill="#F6F1E7"/>
+<rect x="146" y="304" width="220" height="18" rx="4" fill="url(#gv)"/>
+<!-- live signal -->
+<circle cx="256" cy="392" r="13" fill="#F6F1E7"/>
+<path d="M222 362a42 42 0 0 0 0 60M290 362a42 42 0 0 1 0 60" fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round"/>
+<path d="M196 340a74 74 0 0 0 0 104M316 340a74 74 0 0 1 0 104" fill="none" stroke="url(#g)" stroke-width="10" stroke-linecap="round" opacity=".7"/>
+</svg>

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read=(path)=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
-const landing=read('public/landing.html'), css=read('public/landing.css'), js=read('public/landing.js'),server=read('server.mjs'),studio=read('public/index.html');
+const landing=read('public/landing.html'), css=read('public/royal-landing.css'), js=read('public/landing.js'),server=read('server.mjs'),studio=read('public/index.html');
 
 test('homepage serves original marketing page and preserves existing admin studio',()=>{
   assert.match(server, /'\/': 'landing\.html'/);
@@ -14,7 +14,7 @@ test('homepage serves original marketing page and preserves existing admin studi
   assert.match(studio,/id="settingsDialog"/);
 });
 test('every landing asset is allowed by the server whitelist',()=>{
-  for(const path of ['landing.html','landing.css','sky-landing.css','landing.js','sky-live.webp','sky-live-theme.css']){
+  for(const path of ['landing.html','royal-core.css','royal-landing.css','landing.js','sky-live.webp','sky-live-mark.svg','icons.svg']){
     assert.ok(server.includes("'"+path+"'"),path);
   }
 });
@@ -31,8 +31,8 @@ test('landing menu operates with accessibility feedback',()=>{
 });
 test('landing respects reduced motion and responsive displays',()=>{
   assert.match(css, /prefers-reduced-motion:reduce/);
-  assert.match(css, /@media\(max-width:560px\)/);
-  assert.match(css, /@media\(max-width:850px\)/);
+  assert.match(css, /@media ?\(max-width:560px\)/);
+  assert.match(css, /@media ?\(max-width:850px\)/);
 });
 test('design avoids claiming to provide unsupported social platform APIs',()=>{
   assert.doesNotMatch(landing,/Kick\.com|دعم كيك|خمسون لعبة|٥٥ لعبة/);

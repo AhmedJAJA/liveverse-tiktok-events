@@ -14,11 +14,22 @@ SKY LIVE is an Arabic interactive livestream events website with a public homepa
 - Automatic WebSocket updates, reconnect attempts and basic tests.
 - RTL / mobile-friendly dashboard with English technical labels.
 
+## v0.7 — Royal Black redesign
+
+SKY LIVE moves from the blue interface to a **Royal Black & Gold** identity across the landing page, presenter studio and broadcast screen.
+
+- **Design system:** `public/royal-core.css` holds every token (obsidian/carbon/graphite surfaces, metallic gold, champagne, ivory), typography, buttons, fields, avatars and motion. Each surface adds one stylesheet: `royal-landing.css`, `royal-studio.css`, `royal-broadcast.css`. The eight previous layered stylesheets were removed.
+- **Icons:** a single SVG sprite, `public/icons.svg` (24px grid, duotone), used through `<use href="/icons.svg#i-…">`. Octagonal gold "crest" containers replace emoji as interface icons. Each quiz answer has its own jewel shape so viewers can tell them apart at a glance.
+- **Brand:** new crown-and-live-signal emblem (`sky-live-mark.svg`, also exported to `sky-live.webp`).
+- **Broadcast:** a fixed 1920×1080 / 1080×1920 composition scaled by one unit, so OBS, the studio preview and phones show the same layout. Redesigned registration (invitation plaque, latest-entrant spotlight, participant wall, ghost-seat empty state), question plates, timer ring, 3-2-1 countdown, podium results and a staged winner reveal with gold particles.
+- **Typography:** self-hosted Tajawal for Arabic and a Latin subset of Inter Display for numerals and wordmarks (both OFL, see `public/fonts/OFL.txt`).
+- Reduced-motion support throughout; the demo simulator accepts an optional TikTok-CDN `avatar` URL (same allowlist as live data) for testing profile photos.
+
 ## v0.6 — Arabic broadcast redesign
 
 - The home page opens directly to the broadcast stage. The top toolbar opens/closes registration, starts the next question, ends a round, opens settings, and toggles fullscreen.
 - **الإعدادات** contains the existing connection, question library, game setup, demo comments and leaderboard. The public `/overlay` remains read-only and contains no administrative controls or credentials.
-- Registration uses a dense participant wall and a highlighted latest entrant. Desktop displays up to 77 recent registrations; smaller landscape views show 60 and portrait views show 30. Counts always include everyone registered. Empty slots never create fake contestants.
+- Registration uses a dense participant wall and a highlighted latest entrant. The broadcast wall shows the 48 most recent registrations in landscape and 30 in portrait (newest first). Counts always include everyone registered. Empty slots never create fake contestants.
 - Questions use a large white panel, four colored numbered shapes, live answer counts and small profile-photo stacks. Profile photos are accepted only from supported HTTPS TikTok CDNs, with initials if unavailable. Only the first valid answer counts; the correct answer stays private until results.
 - Self-hosted Tajawal fonts, responsive 16:9 and 9:16 layouts, text fitting for long Arabic questions, and reduced-motion support. Font licensing is included under `public/fonts/OFL.txt`.
 - Registration and results use simulated events in automated tests. A real TikTok LIVE session is still needed to validate the external chat connection.
