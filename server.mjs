@@ -79,7 +79,7 @@ const server = http.createServer(async (req, res) => {
   const fileMap = { '/': 'index.html', '/overlay': 'overlay.html', '/favicon.ico': 'favicon.svg' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
-  if (!['index.html','overlay.html','app.js','overlay.js','styles.css','overlay.css','favicon.svg'].includes(relative)) return json(res, 404, { error: 'Not found' });
+  if (!['index.html','overlay.html','app.js','overlay.js','styles.css','overlay.css','broadcast-theme.css','favicon.svg'].includes(relative)) return json(res, 404, { error: 'Not found' });
   const filename = path.join(root, relative);
   try { const content = await fs.promises.readFile(filename); res.writeHead(200, { 'Content-Type': mime[path.extname(filename)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(req.method === 'HEAD' ? undefined : content); }
   catch { json(res, 404, { error: 'Not found' }); }
