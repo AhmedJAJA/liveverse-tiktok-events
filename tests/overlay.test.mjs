@@ -43,3 +43,18 @@ test('overlay is read-only and never contains host token or answer before result
   assert.doesNotMatch(script, /ADMIN_TOKEN|\/api\/admin\/|status\.answer\b/);
   assert.ok(script.includes('results.correctAnswer'));
 });
+test('TikTok registration overlay has join keyword and player preview', () => {
+  for (const id of ['registrationOverlay','signupKeyword','signupCount','signupRecent']) assert.ok(html.includes(`id="${id}"`));
+  assert.match(script, /renderRegistration\(data\.registration\)/);
+  assert.match(style, /signup-screen/);
+});
+test('registration overlays question and older results during signup', () => {
+  assert.match(script, /phase==='registration'/);
+  assert.match(script, /roundResultsOverlay/);
+  assert.match(script, /phase===\x27registration\x27\) \$\(\x27roundResultsOverlay\x27\)\.hidden=true/);
+});
+test('host controller requires registration actions to be authorized', () => {
+  assert.match(server, /case 'registration-open'/);
+  assert.match(server, /case 'registration-close'/);
+  assert.match(server, /if \(!isAuthorized\(req\)\) return json\(res, 401/);
+});

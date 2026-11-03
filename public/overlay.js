@@ -3,8 +3,8 @@ const $ = id => document.getElementById(id);
 const modeInfo = {
   quiz: { en:'LIVE QUIZ', short:'QUIZ', ar:'السؤال الحالي', instruction:'اكتب حرف أو رقم الإجابة في الشات • محاولة واحدة فقط' },
   guess: { en:'GUESS IT', short:'GUESS', ar:'خمن الإجابة', instruction:'اكتب التخمين في التعليقات • محاولة واحدة فقط' },
-  race: { en:'CHAT RACE', short:'RACE', ar:'السباق المباشر', instruction:'اكتب !join للانضمام ثم !go للتقدم' },
-  wheel: { en:'LUCKY DRAW', short:'WHEEL', ar:'عجلة المشاركين', instruction:'اكتب !join أو !انضم للدخول في السحب' }
+  race: { en:'CHAT RACE', short:'RACE', ar:'السباق المباشر', instruction:'المسجلون يتقدمون بكتابة !go' },
+  wheel: { en:'LUCKY DRAW', short:'WHEEL', ar:'عجلة المشاركين', instruction:'يدخل المسجلون في الفعالية للسحب مباشرة' }
 };
 const stateCache = { questionKey:null, leaderboardKey:null, raceKey:null, resultsKey:null, lastWinnerAt:null };
 let clock = { endsAt: null, duration:30, offset:0, active:false };
@@ -55,7 +55,7 @@ function renderRace(race, target) {
   if (key===stateCache.raceKey) return;
   stateCache.raceKey=key;
   const panel=$('overlayRace');panel.replaceChildren();
-  if (!race.length){panel.append(node('div','racer-empty','لا يوجد متسابقون بعد • اكتب !join لتبدأ المنافسة'));return;}
+  if (!race.length){panel.append(node('div','racer-empty','بانتظار المتسابقين المسجلين'));return;}
   race.slice(0,7).forEach(p=>{
     const row=node('div','racer');
     const track=node('div','race-track');const fill=node('div','race-fill');
@@ -99,14 +99,30 @@ function renderResults(status, round) {
   }
   screen.classList.remove('appear');void screen.offsetWidth;screen.classList.add('appear');
 }
+function renderRegistration(reg) {
+  const visible = !!reg && reg.phase === 'open';
+  const screen = $('registrationOverlay');
+  screen.hidden = !visible;
+  if (!visible) return;
+  $('signupKeyword').textContent = reg.keyword || 'انضم';
+  $('signupCount').textContent = number(reg.count || 0);
+  const recent = $('signupRecent');
+  const key = JSON.stringify(reg.recent || []);
+  if (screen.dataset.lastRegistrants !== key) {
+    screen.dataset.lastRegistrants = key;
+    recent.replaceChildren();
+    if (!reg.recent?.length) recent.append(node('span', 'signup-empty', 'كن أول المسجلين!'));
+    else for (const item of reg.recent) recent.append(node('span', 'signup-member', '✓ ' + item.name));
+  }
+}
 function update(data) {
   if (!data || !data.status) return;
   const s=data.status, mode=modeInfo[s.mode]||modeInfo.quiz;
-  const phase=s.results?'results':s.active?'active':'waiting';
+  const phase=data.registration?.phase==='open'?'registration':s.results?'results':s.active?'active':'waiting';
   const arena=$('arena');arena.dataset.mode=s.mode;arena.dataset.phase=phase;
   $('overlayRound').textContent=`ROUND ${String(data.round||1).padStart(2,'0')}`;
   $('footerRound').textContent=String(data.round||1).padStart(3,'0');
-  $('overlayLiveText').textContent=phase==='results'?'FINISHED':phase==='active'?'LIVE NOW':'STANDBY';
+  $('overlayLiveText').textContent=phase==='registration'?'JOIN NOW':phase==='results'?'FINISHED':phase==='active'?'LIVE NOW':'STANDBY';
   $('modeTag').textContent=mode.en;
   $('questionMode').textContent=mode.short;
   $('questionLabel').textContent=mode.ar;
@@ -122,8 +138,8 @@ function update(data) {
   stateCache.questionKey=questionKey;
   if(s.mode==='race') renderRace(data.race||[],s.target);
   $('overlayWheelCount').textContent=number(data.entriesCount||0)+' مشارك';
-  $('wheelEntriesPreview').textContent=(data.entries||[]).slice(0,3).join(' • ')||'اكتب !join للمشاركة';
-  $('overlayPlayers').textContent=number(data.playerCount||0);
+  $('wheelEntriesPreview').textContent=(data.entries||[]).slice(0,3).join(' • ')||'أسماء المسجلين في الفعالية';
+  $('overlayPlayers').textContent=number(data.registration?.count ?? data.playerCount ?? 0);
   $('overlaySubmissions').textContent=number(s.mode==='wheel'?data.entriesCount||0:s.mode==='race'?(data.race||[]).length:s.submissionCount||0);
   $('overlayStatus').textContent=s.active?'الجولة جارية • أرسل إجابتك الآن':s.results?'اكتملت الجولة • النتائج ظهرت':s.notice||'جاهز لبدء الجولة';
   $('footerDetail').textContent=phase==='active'?'إجابتك الأولى فقط هي المعتمدة':phase==='results'?'الصدارة للأسرع في الإجابة الصحيحة':'انتظر انطلاق المنافسة';
@@ -132,6 +148,9 @@ function update(data) {
   $('overlayTimer').hidden=['race','wheel'].includes(s.mode);
   updateStandings(data.leaderboard||[]);
   renderResults(s,data.round);
+  // Signup takes priority over a stale results screen from the previous round.
+  if(phase==='registration') $('roundResultsOverlay').hidden=true;
+  renderRegistration(data.registration);
   const banner=$('winnerBanner');
   if(s.lastEvent?.winner && !s.results){
     if(stateCache.lastWinnerAt!==s.lastEvent.at){

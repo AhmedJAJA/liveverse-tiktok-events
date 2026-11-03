@@ -37,8 +37,11 @@ function isAuthorized(req) { return matchesToken((req.headers.authorization || '
 async function handleAction(action, body) {
   switch (action) {
     case 'configure': engine.configure(body); return { ok: true };
+    case 'registration-open': engine.openRegistration(body); return { ok: true };
+    case 'registration-close': engine.closeRegistration(); return { ok: true };
     case 'bank-next': {
       if (engine.status.active) throw new Error('أوقف الجولة الحالية قبل اختيار سؤال جديد');
+      if (body.start && !engine.players.size) throw new Error('افتح التسجيل أولًا وانتظر المشاركين');
       const q = questionBank.draw(body);
       engine.configure({ mode: 'quiz', title: 'تحدي ' + (questionBank.stats().categories[q.category]?.title || 'المعلومات'), prompt: q.question, options: q.options, answer: q.answer });
       if (body.start === true) engine.start();

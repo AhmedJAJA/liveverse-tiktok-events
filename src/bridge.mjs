@@ -29,7 +29,12 @@ export class LiveBridge {
     this.connection = connection;
     connection.on(WebcastEvent.CHAT, event => {
       if (generation !== this.generation) return;
-      this.engine.receiveChat({ id: String(event.user?.userId || event.user?.uniqueId || ''), username: event.user?.uniqueId || event.user?.nickname || 'مشاهد', text: event.comment || '' });
+      // v2.5+ modern protobuf: user.id, user.displayId and event.content.
+      // Keep legacy fallbacks for older connector payload shapes.
+      const user = event.user || {};
+      const stableId = user.id || user.userId || user.displayId || user.uniqueId || event.userId || event.uniqueId;
+      if (!stableId) return;
+      this.engine.receiveChat({ id: String(stableId), username: user.nickname || user.displayId || user.uniqueId || event.nickname || 'مشاهد', text: event.content || event.comment || '' });
     });
     connection.on(ControlEvent.DISCONNECTED, () => {
       if (generation !== this.generation) return;

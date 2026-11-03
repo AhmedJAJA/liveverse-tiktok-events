@@ -6,8 +6,8 @@ let toastTimeout;
 const instructions = {
   quiz: ['إجابة واحدة لكل مشاهد • ترتيب الأسرع بعد انتهاء الوقت', 'أول اختيار صحيح أو خاطئ يُعتمد ولا يمكن تغييره. ترتيب الفائزين حسب سرعة الإجابة الصحيحة.'],
   guess: ['محاولة واحدة • ترتيب الإجابات الصحيحة حسب السرعة', 'أول تخمين فقط لكل مشاهد؛ لا يمكن تعديله حتى لو كان خاطئًا.'],
-  race: ['كل مشاهد يتقدم بكتابة !go', 'المشاهد يكتب !join للانضمام ثم !go للتقدم. هناك مهلة 1.2 ثانية لكل حركة.'],
-  wheel: ['جمع الأسماء ثم السحب العشوائي', 'المشاهد يكتب !join أو !انضم للمشاركة. اضغط اختيار الفائز عند انتهاء التسجيل.']
+  race: ['المسجلون يتقدمون بكتابة !go', 'سجل اسمك أولًا في شاشة التسجيل، ثم اكتب !go للتقدم. مهلة 1.2 ثانية لكل حركة.'],
+  wheel: ['سحب عشوائي بين المسجلين', 'الأسماء المسجلة في الفعالية تدخل السحب تلقائيًا، ثم يختار المضيف الفائز.']
 };
 const modeLabels = { quiz: 'الأسئلة', guess: 'التخمين', race: 'السباق', wheel: 'العجلة' };
 function toast(message, error=false) { const box=el('toast'); box.textContent=message; box.classList.toggle('error', error); box.classList.add('show'); clearTimeout(toastTimeout); toastTimeout=setTimeout(()=>box.classList.remove('show'),4500); }
@@ -45,8 +45,9 @@ function populate(snapshot) {
   state=snapshot;
   el('totalPlayers').textContent=state.playerCount.toLocaleString('ar-SA');
   paintRoundStatus(state);
+  paintRegistration(state.registration);
   el('roundNumber').textContent=String(state.round).padStart(2,'0');
-  el('statusText').textContent=state.status.active?'جولة جارية':'في الانتظار';
+  el('statusText').textContent=state.registration?.phase==='open'?'التسجيل مفتوح':state.status.active?'جولة جارية':'في الانتظار';
   const live=state.connection.state;
   const online=live==='connected';
   const badge=el('networkBadge');badge.classList.toggle('online',online);
@@ -61,6 +62,27 @@ function populate(snapshot) {
   if (!state.recent.length) feed.append(empty('التعليقات ستظهر هنا عند الاتصال أو المحاكاة.'));
   else state.recent.slice(0,12).forEach(c=>{const row=document.createElement('div');row.className='feed-row';const icon=document.createElement('span');icon.className='chat-icon';icon.textContent='✦';const user=document.createElement('strong');user.textContent=c.name;const text=document.createElement('span');text.textContent=c.message;const time=document.createElement('small');time.textContent=new Date(c.at).toLocaleTimeString('ar-SA',{hour:'2-digit',minute:'2-digit'});row.append(icon,user,text,time);feed.append(row);});
   if(state.status.lastEvent?.winner && state.status.lastEvent.at!==populate.lastWinner) { populate.lastWinner=state.status.lastEvent.at;toast('🏆 '+state.status.lastEvent.winner.name+' تصدّر الجولة!'); }
+}
+function paintRegistration(reg) {
+  if (!reg) return;
+  const phase = reg.phase;
+  const badge = el('regStateBadge');
+  badge.textContent = phase === 'open' ? '● التسجيل مفتوح' : phase === 'closed' ? '✓ التسجيل مغلق' : 'لم يبدأ التسجيل';
+  badge.className = 'reg-state ' + (phase === 'open' ? 'open' : phase === 'closed' ? 'closed' : '');
+  el('registrationCount').textContent = Number(reg.count || 0).toLocaleString('ar-SA');
+  el('registrationStatusText').textContent = phase === 'open'
+    ? `التسجيل مفتوح • اكتب «${reg.keyword}» في الشات • يمكنك بدء السؤال لإغلاق التسجيل تلقائيًا`
+    : phase === 'closed' ? `تم تسجيل ${reg.count} متسابقًا. جاهزون للجولات التالية. لإضافة آخرين افتح التسجيل مجددًا.`
+    : 'ابدأ بث TikTok واتصل به ليظهر التسجيل تلقائيًا، أو افتحه يدويًا للتجربة.';
+  if (document.activeElement !== el('registrationKeyword')) el('registrationKeyword').value = reg.keyword || 'انضم';
+  el('closeRegistrationButton').disabled = phase !== 'open';
+  el('openRegistrationButton').textContent = phase === 'open' ? 'التسجيل مفتوح الآن' : phase === 'closed' ? 'إعادة فتح التسجيل' : '✦ فتح التسجيل للمشاهدين';
+  el('openRegistrationButton').disabled = phase === 'open' || !!state?.status.active;
+  el('newRegistrationButton').disabled = !!state?.status.active;
+  const list=el('registrationRecent'); list.replaceChildren();
+  const entries=reg.recent||[];
+  if (!entries.length) {list.append(empty('بانتظار أول متسابق...'));return;}
+  entries.forEach(x=>{const item=document.createElement('span');item.className='reg-person';item.textContent='✓ '+x.name;list.append(item);});
 }
 const formatSeconds = ms => (Math.max(0, ms) / 1000).toFixed(2) + ' ث';
 let liveClock = { endsAt: null, serverOffset: 0 };
@@ -112,36 +134,38 @@ async function verify() {authToken=el('adminToken').value.trim(); try {await api
 function paintBank(summary) {
   if (!summary || !Number.isInteger(summary.total)) return;
   el('bankCount').textContent = summary.total.toLocaleString('ar-SA') + ' سؤال';
-  el('bankRemaining').textContent = 'المتبقي: ' + summary.remaining.toLocaleString('ar-SA') + ' | المستخدم: ' + summary.used.toLocaleString('ar-SA');
+  el('bankRemaining').textContent = 'المتبقي: ' + summary.remaining.toLocaleString('ar-SA') + ' | المستخدمة: ' + summary.used.toLocaleString('ar-SA');
 }
 async function refreshBank() {
   if (!authToken) return;
-  const r = await fetch('/api/admin/bank', { headers:{ Authorization:'Bearer ' + authToken } });
-  if (!r.ok) throw new Error('تعذر قراءة بنك الأسئلة');
-  paintBank(await r.json());
+  const res = await fetch('/api/admin/bank', { headers: { Authorization: 'Bearer ' + authToken } });
+  if (!res.ok) throw new Error('تعذر قراءة بيانات بنك الأسئلة');
+  paintBank(await res.json());
 }
 function loadBankIntoForm(q) {
   setMode('quiz');
   el('gameTitle').value = 'تحدي المعلومات';
   el('gamePrompt').value = q.question;
-  q.options.forEach((option,i) => { el('opt'+(i+1)).value=option; });
-  el('gameAnswer').value=q.answer;
-  const holder=el('bankSource');holder.replaceChildren();
+  q.options.forEach((option, i) => { el('opt' + (i + 1)).value = option; });
+  el('gameAnswer').value = q.answer;
+  const sourceEl = el('bankSource');
+  sourceEl.replaceChildren();
   if (/^https:\/\//.test(q.source)) {
-    holder.hidden=false;
-    holder.append(document.createTextNode('مرجع عام للموضوع: '));
-    const link=document.createElement('a');
-    link.href=q.source;link.target='_blank';link.rel='noopener noreferrer';
-    link.textContent='عرض المرجع ↗';holder.append(link);
-  } else holder.hidden=true;
+    sourceEl.hidden = false;
+    sourceEl.append(document.createTextNode('مرجع متعلق بالسؤال: '));
+    const link = document.createElement('a');
+    link.href = q.source; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    link.textContent = 'فتح المرجع ↗'; sourceEl.append(link);
+  } else { sourceEl.hidden = true; }
 }
-async function drawBankQuestion(start=false) {
+async function drawBankQuestion(start = false) {
   try {
-    if (state?.status.active) { toast('أوقف الجولة الحالية قبل اختيار سؤال جديد',true); return; }
-    const result=await api('bank-next',{category:el('bankCategory').value,difficulty:el('bankDifficulty').value,start});
+    if (state?.status.active) { toast('أوقف الجولة الحالية قبل تحميل سؤال جديد', true); return; }
+    const result = await api('bank-next', { category: el('bankCategory').value, difficulty: el('bankDifficulty').value, start });
     loadBankIntoForm(result.question);
     paintBank(result.bank);
-    toast(start ? 'بدأ السؤال الجديد! اكتبوا الإجابة في التعليقات' : 'تم تحميل السؤال وحفظه، يمكنك بدء الجولة الآن.');
+    toast(start ? 'بدأ السؤال الجديد! اكتبوا الإجابة في التعليقات' : 'تم تحميل السؤال وحفظه. اضغط بدء الجولة لعرضه.');
+    if (start) el('studio').scrollIntoView({behavior:'smooth',block:'start'});
   } catch {}
 }
 function configureData() {return {mode:currentMode,title:el('gameTitle').value,prompt:el('gamePrompt').value,options:[1,2,3,4].map(i=>el('opt'+i).value),answer:el('gameAnswer').value,target:Number(el('gameTarget').value),duration:Number(el('gameDuration').value)};}
@@ -149,11 +173,22 @@ function wire() {
   el('adminToken').value=authToken;
   if(authToken) el('authLabel').textContent='رمز سابق محفوظ مؤقتًا لهذه الجلسة؛ يمكنك التحقق مجددًا.';
   el('verifyButton').addEventListener('click',verify);
-  el('loadQuestionButton').addEventListener('click',()=>drawBankQuestion(false));
-  el('playQuestionButton').addEventListener('click',()=>drawBankQuestion(true));
-  el('bankResetButton').addEventListener('click',async()=>{
-    if(!confirm('ستُتاح إعادة الأسئلة المستخدمة خلال الجلسة. هل تريد المتابعة؟'))return;
-    try{const r=await api('bank-reset');paintBank(r.bank);toast('تمت إعادة ضبط سجل الأسئلة');}catch{}
+  el('openRegistrationButton').addEventListener('click', async()=>{
+    try { await api('registration-open',{keyword:el('registrationKeyword').value}); toast('التسجيل مفتوح! اكتبوا كلمة الانضمام في الشات.'); } catch {}
+  });
+  el('closeRegistrationButton').addEventListener('click', async()=>{
+    try { await api('registration-close'); toast('تم إغلاق التسجيل. يمكن بدء الجولة.'); } catch {}
+  });
+  el('newRegistrationButton').addEventListener('click', async()=>{
+    if (!confirm('هل تريد فعالية جديدة؟ سيُمسح جميع المتسابقين ونقاطهم وتُفتح مرحلة تسجيل جديدة.')) return;
+    try { await api('registration-open',{keyword:el('registrationKeyword').value, reset:true}); toast('بدأ تسجيل جديد وتم تصفير نتائج الفعالية السابقة'); } catch {}
+  });
+
+  el('loadQuestionButton').addEventListener('click', () => drawBankQuestion(false));
+  el('playQuestionButton').addEventListener('click', () => drawBankQuestion(true));
+  el('bankResetButton').addEventListener('click', async () => {
+    if (!confirm('سيُسمح بإعادة استخدام جميع الأسئلة في الجلسة. هل تريد المتابعة؟')) return;
+    try { const r = await api('bank-reset'); paintBank(r.bank); toast('تم تصفير سجل الأسئلة المستخدمة'); } catch {}
   });
   document.querySelectorAll('.mode').forEach(btn=>btn.addEventListener('click',()=>setMode(btn.dataset.mode)));
   el('gameForm').addEventListener('submit',async e=>{e.preventDefault();try{await api('configure',configureData());toast('تم حفظ إعدادات الجولة');}catch{}});
@@ -164,6 +199,6 @@ function wire() {
   el('disconnectButton').addEventListener('click',async()=>{try{await api('disconnect');toast('تم فصل البث');}catch{}});
   el('simulateButton').addEventListener('click',async()=>{try{await api('simulate',{username:el('demoName').value,text:el('demoMessage').value});el('demoMessage').value='';}catch{}});
   el('demoMessage').addEventListener('keydown',e=>{if(e.key==='Enter')el('simulateButton').click();});
-  el('resetScoresButton').addEventListener('click',async()=>{if(!confirm('متأكد من تصفير جميع نقاط الجلسة؟'))return;try{await api('reset');toast('تم تصفير النقاط');}catch{}});
+  el('resetScoresButton').addEventListener('click',async()=>{if(!confirm('هل تريد مسح المتسابقين ونقاطهم؟ ستحتاج إلى فتح التسجيل من جديد.'))return;try{await api('reset');toast('تم تصفير النقاط');}catch{}});
 }
-wire();if(authToken)refreshBank().catch(()=>{});fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();
+wire();if (authToken) refreshBank().catch(() => {});fetch('/api/state').then(r=>r.json()).then(populate).catch(()=>toast('تعذر الاتصال بالسيرفر',true));socket();

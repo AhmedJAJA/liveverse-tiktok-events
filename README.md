@@ -2,7 +2,8 @@
 
 A standalone Arabic interactive livestream events dashboard. Built with Node.js and WebSockets, with an OBS overlay and a **best-effort unofficial** TikTok LIVE chat bridge.
 
-**Included in v0.1:**
+**Included in v0.5:**
+- Chat-based registration before games (default `انضم`, configurable) with duplicate prevention, auto-open on first LIVE connection.
 - 4 event modes: quiz, guess-the-answer, chat-powered race, and random participant wheel.
 - Live public read-only overlay at `/overlay` (suitable for OBS Browser Source / TikTok LIVE Studio Browser Source if supported).
 - Leaderboard and recent comments stream.
@@ -33,14 +34,24 @@ Open `http://localhost:3000`. Enter the admin token into the studio panel and cl
 
 The `tiktok-live-connector` npm library is **not official TikTok API access**, can fail for offline/private streams, rate limits or platform changes, and depends on third-party signing. We do **not** collect TikTok password/session cookies; connection for public rooms requires just a username. Do not rely on the integration as a guaranteed real-time event feed. TikTok or a signing service may change behavior unexpectedly. Only use with appropriate rights and respect TikTok rules.
 
+## Chat registration: mandatory first step
+
+1. Start your TikTok LIVE and connect LIVEVERSE from the host dashboard. On the **first successful connection**, registration opens automatically; alternatively press **فتح التسجيل** (works with demo chat, too).
+2. Viewers must send the exact chosen word (default `انضم`, e.g. `!join` if you configure that) **in the stream comments** to enroll. Merely entering the TikTok live room or typing an answer does not register someone.
+3. The broadcast overlay switches to a prominent registration screen showing the word, registered count and recent signups. Each stable TikTok user ID can register **once**; duplicate join messages do nothing.
+4. Press **إغلاق التسجيل** or start the first round to close registration. Only registered users can answer, race or enter the wheel. All registered users remain eligible for every subsequent round; no repeated signups required.
+5. You may reopen registration later (keeps names/points), or use **بدء فعالية جديدة** to wipe the current event and open registration for a new audience.
+
+**Important:** the system uses the time that TikTok's comment reaches the server, not the viewer's real typing time. The TikTok connector is unofficial and may delay or drop messages. Registration and scores currently live in RAM, and a Render restart/redeploy clears them. For a serious prize event use reliable always-on hosting and database persistence.
+
 ## Event commands
 
 | Mode | Viewer comment | Points | Behavior |
 |---|---|---:|---|
-| Quiz | `1`, `2`, `3`, `4`, `A`, `B`, `C`, `D`, or answer text | 5 | First correct answer wins and round stops |
-| Guess | Exact answer text (normalizes Arabic diacritics/hamza/punctuation) | 5 | First correct guess wins and round stops |
-| Race | `!join` or `!انضم`, then `!go` / `!انطلق` | 5 | First to target distance wins, 1.2s action cooldown |
-| Wheel | `!join` or `!انضم` | 5 | Names are collected; host draws a secure random pick |
+| Quiz | `1`, `2`, `3`, `4`, `A`, `B`, `C`, `D`, or answer text (registered viewers only) | 10 / 7 / 5 / 3 / 2 / 1 | Only the first valid answer per viewer is accepted; the round remains open for its configured time (10–180 sec), then winners rank by earliest server receipt |
+| Guess | Exact answer text (registered viewers only) | 10 / 7 / 5 / 3 / 2 / 1 | Only one guess per viewer; results ranked by first correct arrival at the round deadline |
+| Race | `!go` / `!انطلق` (registered only) | 5 | First to target distance wins, 1.2s action cooldown |
+| Wheel | Registered contestants are entered automatically | 5 | Names are collected; host draws a secure random pick |
 
 Press **حفظ الإعدادات** to save, or **بدء الجولة** to save and immediately start. The quiz answer is a `1–4` index; the secret guess answer is not sent in public `/api/state` or OBS WebSocket updates.
 
@@ -79,40 +90,34 @@ npm test
 
 Native Node HTTP server, `ws` WebSocket, optional `tiktok-live-connector`, vanilla HTML/CSS/JS. No build step needed.
 
-## Arabic question bank (v0.2)
+## Arabic question library (v0.2)
 
-The site includes **1,207 Arabic multiple-choice questions** in `data/questions.ar.json`, across nine categories: geography, chemistry/science, arithmetic, football, anime, gaming, technology, history and general knowledge.
+The studio now includes an offline, prebuilt Arabic question library under `data/questions.ar.json`.
+Choose a **category** and **difficulty**, then select **تحميل سؤال** to prepare a round or **سؤال عشوائي وابدأ** to begin it immediately. The host can reset used-question history from the studio.
 
-1. Open LIVEVERSE and activate your admin code.
-2. Select a subject and difficulty in the question library.
-3. Choose **تحميل سؤال** to prepare the round, or **سؤال عشوائي وابدأ** to save and start instantly.
-4. The first valid answer per viewer is locked for the round. After the timer, correct entries are ranked by server arrival time (10, 7, 5, 3, 2, then 1 point).
+- Every entry includes a stable ID, category, difficulty, question, four unique options, correct-answer index, and a topical source/reference.
+- Every source is a *reference for factual context*, **not** a claim that question wording came from the linked site. Questions are original compositions, generated factual variants, or arithmetic exercises. The bank has automated schema, duplicate, and arithmetic checks. Editorial checks of every culture/game fact are an ongoing task.
+- The right answer is only returned to an authenticated admin request, never in public state or the OBS overlay.
+- Used-question history is in memory and resets when the service restarts, is redeployed, or the host resets it. Persistent history can be added with a database.
+- The current library mixes hundreds of mathematics and element/geography questions with manually curated games, football, anime and technology questions. The difficulty levels are estimates, not statistically calibrated.
+- The authoring script at `tools/build_questions.py` can rebuild the JSON locally with Python + Babel + RDKit; running the website requires only Node.js.
 
-Questions are unique by text/ID and do not repeat within the current server session. Reset usage history with **إعادة ضبط التكرار**. History and leaderboard currently live in memory; both reset on redeploy/restart.
+### Reference sources for the question library
 
-Every question has a source/reference field. **A topical reference is not a guarantee that each individual question has undergone manual fact-checking.** The bundled questions are original wording based on general facts and reference material, plus mathematically generated problems. Automated tests check schema, duplicates, all arithmetic answers and game-engine integration; editorial review of pop-culture questions can continue.
+- Royal Society of Chemistry periodic table: <https://periodic-table.rsc.org/>.
+- U.S. Department of State's country/capital reference: <https://fam.state.gov/FAM/05FAH01/05FAH011020.html>.
+- FIFA tournament archive and champions: <https://www.archives.fifa.com/fifa_world_cup>, <https://www.fifa.com/en/tournaments/mens/worldcup>.
+- Official Dragon Ball: <https://en.dragon-ball-official.com/about/>.
+- Minecraft gameplay guides: <https://help.minecraft.net/hc/en-us/sections/27983418545293-Minecraft-Game-Guides>.
+- MDN web platform documentation: <https://developer.mozilla.org/en-US/docs/Web>.
 
-The correct answer is never present in public `/api/state` or the OBS overlay; selecting a bank question and seeing its answer requires the admin bearer token. However, **the GitHub repository is currently public** and the JSON data itself includes answer keys. For high-stakes contests, a private question dataset in a protected backend is recommended.
+Open Trivia DB was researched as an optional future provider, but its API questions were **not copied** into this bundled Arabic bank; an external API is not required to play. Its content is CC BY-SA 4.0 and any future import must comply with attribution and share-alike terms: <https://opentdb.com/api_config.php>.
 
-### Sources and third-party data
+## v0.3 — locked first answers and timed podium
 
-- Periodic table: https://periodic-table.rsc.org/
-- Country and capital reference: https://fam.state.gov/FAM/05FAH01/05FAH011020.html
-- FIFA historic tournaments: https://www.archives.fifa.com/fifa_world_cup
-- Official Dragon Ball site: https://en.dragon-ball-official.com/about/
-- Minecraft guides: https://help.minecraft.net/hc/en-us/sections/27983418545293-Minecraft-Game-Guides
-- MDN web development documentation: https://developer.mozilla.org/en-US/docs/Web
-
-Open Trivia Database was researched but **no third-party trivia question text was imported** into the 1,207-question dataset. Its question content uses CC BY-SA 4.0: https://opentdb.com/api_config.php. The Trivia API has a non-commercial license, so it was not used for this public stream project.
-
-
-
-## LIVEVERSE v0.3: One locked answer and speed podium
-
-- Quiz and guessing: one first valid answer per viewer per round, even if incorrect. Repeated attempts never change it.
-- Timed 10–180-second rounds; default 30 seconds. A host can manually stop the question and publish results early.
-- OBS shows up to ten quickest correct answers, their times, and a podium; the host dashboard shows up to twenty.
-- Scoring by place: 10, 7, 5, 3, 2 then 1 point per correct player. Cumulative leaderboard ties use average answer speed.
-- Ranking uses server receipt time. TikTok delivery delay may affect perceived relative speed.
-- Secret answers stay hidden from public game state until the results are displayed.
-- Race and wheel are unchanged; only quiz and guessing use locked attempts.
+- Quiz and guessing rounds accept **exactly one valid answer per unique TikTok user ID per round**, even if it was incorrect. Chat without any of the four valid quiz choices is ignored. A second response is never able to replace a previously locked answer.
+- Configure a 10–180 second timer (30 seconds by default). The server ends the round even if nobody comments; the host's **إيقاف** button also ends the round early and opens results.
+- At round end, the OBS overlay shows a full results panel with up to the first 10 fastest correct respondents, server-receipt times relative to the start, and podium medals. The host dashboard shows up to 20.
+- Speed awards cumulative points: 1st **10**, 2nd **7**, 3rd **5**, 4th **3**, 5th **2**, all subsequent correct responses **1** point. Cumulative tie-breaks use average response time.
+- The answer key is never included in public state before the results screen. Times reflect **server arrival**, not precise time the viewer pressed Send, because TikTok may buffer/delay comments.
+- Race and wheel modes keep their existing rules; the single-answer rule applies only to quiz and guessing rounds.
