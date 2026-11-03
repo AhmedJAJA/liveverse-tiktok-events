@@ -180,7 +180,9 @@ function paintPresenter(data) {
   const active=!!data.status.active, open=data.registration?.phase==='open';
   const count=data.registration?.count||0;
   document.body.dataset.phase=open?'registration':active?'active':data.status.results?'results':'waiting';
-  el('presenterKeyword').textContent=data.registration?.keyword||'انضم';
+  el('presenterKeyword').textContent=active&&data.status.mode==='quiz'?'1–4':data.registration?.keyword||'انضم';
+  el('presenterAudienceCount').textContent=count.toLocaleString('ar-SA');
+  el('presenterQuestionNumber').textContent=String(data.round||0).padStart(2,'0');
   el('presenterRegistrationLabel').textContent=open?'إغلاق التسجيل':'فتح التسجيل';
   el('presenterRegistration').disabled=active||presenterBusy;
   el('presenterStop').disabled=!active||presenterBusy;
