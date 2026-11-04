@@ -305,3 +305,6 @@
 .party-panel>.party-split,.party-panel>.sea-duels,.party-panel>.party-grid{min-height:0}
 .party-panel:has(>.sea-out){grid-template-rows:auto minmax(0,1fr) auto}
 .party-panel:has(>.sea-roles-head){grid-template-rows:auto auto auto minmax(0,1fr)}
+/* chair tokens keep their seat positions (the generic chip entrance animation would reset transform) */
+.sea-token{animation:none!important}
+.sea-chairs.is-music .sea-token{animation:sea-counter 9s linear infinite!important}
