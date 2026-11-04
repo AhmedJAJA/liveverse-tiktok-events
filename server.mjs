@@ -15,7 +15,7 @@ import { DrawHub } from './src/draw.mjs';
 import { PromoStore, PROMO_LEVELS } from './src/promo.mjs';
 import { createPool, migrate } from './src/db.mjs';
 import { PromoMirror, SessionMirror } from './src/persist.mjs';
-import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS } from './src/platform.mjs';
+import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS, privacyOf } from './src/platform.mjs';
 import { createMailer, createGateway } from './src/services.mjs';
 import { GoogleVerifier } from './src/google.mjs';
 
@@ -179,8 +179,16 @@ const REMEMBER_S = 30 * 86400;
 /** Every request with a remembered account session pushes its expiry back to 30 days (at most once a day). */
 function renewSession(req, res) {
   const id = parseCookies(req.headers.cookie)[COOKIE];
+  if (id) sessions.seen(id);
   if (!id || !sessions.renew(id)) return;
   setSession(res, req, id, REMEMBER_S);
+}
+/** A short, human label for «الأجهزة والجلسات» (browser + system), from the User-Agent only. */
+function deviceLabel(req) {
+  const ua = String(req.headers['user-agent'] || '');
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'متصفح';
+  const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'Mac' : /Linux/.test(ua) ? 'Linux' : 'جهاز';
+  return browser + ' — ' + os;
 }
 function sessionOf(req) { return sessions.get(parseCookies(req.headers.cookie)[COOKIE]); }
 /** Who is acting: the owner (Bearer ADMIN_TOKEN → main room), an account, or a guest. */
@@ -511,7 +519,7 @@ async function handleAuth(action, req, res) {
       if (!signupLimiter.hit('ip:' + ip)) return json(res, 429, { error: 'محاولات تسجيل كثيرة من هذه الشبكة. حاول بعد ساعة.' });
       const u = await platform.register(body, { ip });
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
-      setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false }), body.remember !== false ? REMEMBER_S : 0);
+      setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false, device: deviceLabel(req) }), body.remember !== false ? REMEMBER_S : 0);
       platform.touchLogin(u.id).catch(() => {});
       return json(res, 201, { ok: true, account: accountView(u.id), next: '/account?welcome=1' });
     }
@@ -522,7 +530,7 @@ async function handleAuth(action, req, res) {
       const u = await platform.login(id, String(body.password));
       if (!u) { await new Promise((r) => setTimeout(r, 300)); return json(res, 401, { error: 'بيانات الدخول غير صحيحة', fields: { password: 'تحقق من البيانات' } }); }
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
-      setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false }), body.remember !== false ? REMEMBER_S : 0);
+      setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false, device: deviceLabel(req) }), body.remember !== false ? REMEMBER_S : 0);
       platform.touchLogin(u.id).catch(() => {});
       const a = accountView(u.id);
       return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
@@ -545,7 +553,7 @@ async function handleAuth(action, req, res) {
       if (user.disabled_at) return json(res, 403, { error: 'هذا الحساب موقوف. تواصل مع الدعم.' });
       await platform.refresh(user.id);
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
-      setSession(res, req, sessions.create('acct', { userId: user.id, remember: body.remember !== false }), body.remember !== false ? REMEMBER_S : 0);
+      setSession(res, req, sessions.create('acct', { userId: user.id, remember: body.remember !== false, device: deviceLabel(req) }), body.remember !== false ? REMEMBER_S : 0);
       await platform.touchLogin(user.id, { picture: g.picture }).catch(() => {});
       const a = accountView(user.id);
       return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
@@ -568,12 +576,59 @@ async function handleMe(action, req, res) {
   try {
     if (action === 'profile' && req.method === 'GET') return json(res, 200, await platform.profile(userId));
     if (action === 'payment' && req.method === 'GET') return json(res, 200, await platform.paymentStatus(userId, new URL(req.url, 'http://x').searchParams.get('id')));
+    if (action === 'sessions' && req.method === 'GET') return json(res, 200, { sessions: sessions.listUser(userId, s.id).map((x) => ({ ...x, createdAt: new Date(x.createdAt).toISOString(), lastSeenAt: new Date(x.lastSeenAt).toISOString(), expiresAt: new Date(x.expiresAt).toISOString() })), reauthed: sessions.reauthed(s.id) });
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'طلب من مصدر غير مسموح' });
     if (!meLimiter.hit(userId)) return json(res, 429, { error: 'طلبات كثيرة، انتظر قليلًا' });
     const body = await readBody(req, 8192).catch(() => ({}));
     // Only these fields can come from the browser; plan, dates, IDs and admin rights are never read from the body.
     if (action === 'update') { await platform.updateProfile(userId, { displayName: body.displayName, avatar: body.avatar }); return json(res, 200, { ok: true, account: accountView(userId) }); }
+    /* ---- «الإعدادات» ---- */
+    if (action === 'privacy') return json(res, 200, { ok: true, privacy: await platform.setPrivacy(userId, String(body.key || ''), body.value) });
+    if (action === 'sessions-revoke') {
+      if (body.others !== true && sessions.key(s.id).slice(0, 16) === String(body.id)) return json(res, 400, { error: 'لإنهاء هذه الجلسة استخدم «تسجيل الخروج»' });
+      const n = body.others === true ? sessions.destroyWhere((x) => x.userId === userId && x.key !== sessions.key(s.id)) : sessions.destroyUserSession(userId, String(body.id || ''));
+      return json(res, 200, { ok: true, removed: n });
+    }
+    // Sensitive changes need a fresh proof of identity: the current password, or Google again (never a Google password here).
+    if (action === 'reauth') {
+      const me = platform.cached(userId).user;
+      if (body.credential) {
+        if (!google.enabled) return json(res, 503, { error: 'تسجيل الدخول باستخدام Google غير مفعّل' });
+        let g; try { g = await google.verify(String(body.credential), { nonce: parseCookies(req.headers.cookie).g_nonce || '' }); } catch { return json(res, 401, { error: 'تعذر التحقق عبر Google' }); }
+        if (!me.google_sub || g.sub !== me.google_sub) return json(res, 403, { error: 'استخدم حساب Google المرتبط بحسابك' });
+      } else {
+        if (!authLimiter.hit('reauth:' + userId)) return json(res, 429, { error: 'محاولات كثيرة. انتظر قليلًا' });
+        if (!(await platform.checkUserPassword(userId, body.password))) return json(res, 401, { error: 'كلمة المرور الحالية غير صحيحة', fields: { password: 'غير صحيحة' } });
+      }
+      sessions.markReauth(s.id);
+      return json(res, 200, { ok: true, reauthUntil: new Date(Date.now() + 10 * 60_000).toISOString() });
+    }
+    if (['password', 'email', 'google-unlink'].includes(action) && !sessions.reauthed(s.id)) return json(res, 403, { error: 'أكّد هويتك أولًا', reauth: true });
+    if (action === 'password') {
+      if (String(body.password || '') !== String(body.confirm || '')) return json(res, 400, { error: 'كلمتا المرور غير متطابقتين', fields: { confirm: 'غير متطابقة' } });
+      await platform.setPassword(userId, body.password);
+      // other devices sign in again with the new password
+      sessions.destroyWhere((x) => x.userId === userId && x.key !== sessions.key(s.id));
+      return json(res, 200, { ok: true, account: accountView(userId) });
+    }
+    if (action === 'email') { const r = await platform.changeEmail(userId, body.email); return json(res, 200, { ok: true, sent: !!r.sent, account: accountView(userId) }); }
+    if (action === 'google-unlink') { await platform.unlinkGoogle(userId); return json(res, 200, { ok: true, account: accountView(userId) }); }
+    if (action === 'stream-link') {
+      // same rules as the studio: an active plan, then a proof of ownership in the account's own LIVE chat
+      const actor = actorFor(req);
+      if (!actor) return json(res, 402, { error: 'تحتاج إلى اشتراك فعال لربط بثك المباشر', needPlan: true });
+      try { return json(res, 200, await handleAction('connect', { platform: body.platform, username: body.username }, actor)); }
+      catch (err) { return json(res, err.status || 400, { error: String(err.message || err).slice(0, 240), ...(err.needPlan ? { needPlan: true } : {}) }); }
+    }
+    if (action === 'stream-unlink') {
+      const service = body.platform === 'kick' ? 'kick' : body.platform === 'tiktok' ? 'tiktok' : '';
+      if (!service) return json(res, 400, { error: 'منصة غير معروفة' });
+      const r = await platform.unlinkStream(userId, service);
+      const room = rooms.get(platform.cached(userId).user.room);
+      if (room && room.engine.connection.platform === service && room.engine.connection.username) room.revokeStream('أُزيل ربط الحساب من الإعدادات');
+      return json(res, 200, { ok: true, ...r });
+    }
     if (action === 'trial-claim') return json(res, 200, { ok: true, trial: await platform.claimTrial(userId) });
     if (action === 'trial-start') { const r = await platform.startTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, next: '/studio', account: accountView(userId) }); }
     if (action === 'link-google') {
@@ -712,6 +767,7 @@ function liveStatus(room) {
   if (room.kind === 'acct') { const u = platform?.cached(room.ownerId); subscribed = !!u && !u.user.disabled_at && platform.entitlement(room.ownerId).active; }
   else if (room.id === 'main') subscribed = true;
   const reasons = [];
+  if (room.kind === 'acct' && platform && privacyOf(platform.cached(room.ownerId)?.user).hideStream) reasons.push('hidden'); // «إخفاء بثي من الصفحة الرئيسية»
   if (!subscribed) reasons.push('no-subscription');
   if (!meta.verified) reasons.push('not-verified');
   if (c.state !== 'connected' || !meta.liveConfirmed) reasons.push('not-live');
@@ -750,7 +806,14 @@ function sweepLive() {
     if (room.kind === 'acct' && !st.subscribed && ['connected', 'connecting'].includes(room.engine.connection.state)) room.revokeStream('انتهى الاشتراك — جدّد لربط البث');
     const inGame = ['waiting', 'running'].includes(st.state);
     if (inGame && !room.gameSessionId) room.gameSessionId = randomUUID();
-    if (!inGame) room.gameSessionId = null;
+    // streamer statistics count only real sessions: every listing condition holds (a hidden stream still counts)
+    const real = inGame && st.reasons.every((x) => x === 'hidden');
+    if (real && room.kind === 'acct' && platform && !room.sessionCounted) { room.sessionCounted = true; room.sessionPeak = 0; platform.recordStreamSession(room.ownerId, room.engine.status.mode).catch(() => {}); }
+    if (room.sessionCounted) room.sessionPeak = Math.max(room.sessionPeak || 0, room.engine.realPlayerCount());
+    if (!inGame) {
+      if (room.sessionCounted && platform) platform.addStreamPlayers(room.ownerId, room.sessionPeak).catch(() => {});
+      room.gameSessionId = null; room.sessionCounted = false; room.sessionPeak = 0;
+    }
     if (room.kind !== 'acct' || !platform) continue;
     const sig = st.state + '|' + st.listed + '|' + room.gameSessionId + '|' + room.engine.realPlayerCount();
     if (sig === room.saved.sig && now - room.saved.at < 60_000) continue;
@@ -764,7 +827,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -781,6 +844,11 @@ const server = http.createServer(async (req, res) => {
       return room ? json(res, 200, room.view()) : json(res, 404, { error: 'الغرفة غير موجودة' });
     }
     if (url.pathname === '/api/site' && req.method === 'GET') return json(res, 200, { ...siteConfig(), updates: UPDATES, plans: PLANS });
+    if (url.pathname.startsWith('/api/u/') && req.method === 'GET') {
+      if (!platform) return json(res, 404, { error: 'غير موجود' });
+      const p = await platform.publicProfile(decodeURIComponent(url.pathname.slice(7)));
+      return p ? json(res, 200, p) : json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
+    }
     if (url.pathname === '/api/streams' && req.method === 'GET') return json(res, 200, streams());
     if (url.pathname === '/api/sketch' && req.method === 'GET') { const room = publicRoom(url.searchParams.get('room')); return room ? json(res, 200, room.sketch || { data: '', v: 0 }) : json(res, 404, { error: 'الغرفة غير موجودة' }); }
     if (url.pathname.startsWith('/api/role/')) return await handleRole(url.pathname.slice('/api/role/'.length), url, req, res);
@@ -838,7 +906,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/admin' && !adminActor(req)) { res.writeHead(302, { Location: '/login?next=/admin', 'Cache-Control': 'no-store' }); return res.end(); }
   if (url.pathname === '/account' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/account' + encodeURIComponent(url.search), 'Cache-Control': 'no-store' }); return res.end(); }
   const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/sponge-512.webp' };
-  const relative = fileMap[url.pathname] || url.pathname.slice(1);
+  const relative = fileMap[url.pathname] || (/^\/u\/SPG-[A-Z0-9]{6}$/i.test(url.pathname) ? 'profile.html' : url.pathname.slice(1));
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });
   try { return await serveStatic(req, res, relative); }
