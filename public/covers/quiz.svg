@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="SKY LIVE — quiz">
+<defs>
+<radialGradient id="cquiz-sky" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#13307a"/><stop offset=".55" stop-color="#0a1640"/><stop offset="1" stop-color="#050818"/></radialGradient>
+<radialGradient id="cquiz-glow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#3d8bff" stop-opacity=".75"/><stop offset="1" stop-color="#3d8bff" stop-opacity="0"/></radialGradient>
+<radialGradient id="cquiz-floor" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#D4AF37" stop-opacity=".7"/><stop offset=".6" stop-color="#D4AF37" stop-opacity=".12"/><stop offset="1" stop-color="#D4AF37" stop-opacity="0"/></radialGradient>
+<linearGradient id="cquiz-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF6D8"/><stop offset=".3" stop-color="#F1D58C"/><stop offset=".62" stop-color="#C9982F"/><stop offset="1" stop-color="#F4DA92"/></linearGradient>
+<linearGradient id="cquiz-goldv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF1C2"/><stop offset=".5" stop-color="#D4AF37"/><stop offset="1" stop-color="#7a5f1c"/></linearGradient>
+<radialGradient id="cquiz-vig" cx="50%" cy="45%" r="72%"><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></radialGradient>
+</defs>
+<rect width="512" height="512" fill="url(#cquiz-sky)"/>
+<g opacity=".22" stroke="#9cc4ff" stroke-width="1.2"><path d="M256 -40 L-80 560"/><path d="M256 -40 L4 560"/><path d="M256 -40 L88 560"/><path d="M256 -40 L172 560"/><path d="M256 -40 L256 560"/><path d="M256 -40 L340 560"/><path d="M256 -40 L424 560"/><path d="M256 -40 L508 560"/><path d="M256 -40 L592 560"/></g>
+<ellipse cx="256" cy="210" rx="230" ry="190" fill="url(#cquiz-glow)"/>
+<ellipse cx="256" cy="440" rx="260" ry="70" fill="url(#cquiz-floor)"/>
+<g fill="#fff"><circle cx="60" cy="70" r="2" opacity=".85"/><circle cx="430" cy="60" r="2.6" opacity=".85"/><circle cx="470" cy="170" r="1.6" opacity=".85"/><circle cx="90" cy="200" r="1.4" opacity=".85"/><circle cx="380" cy="120" r="1.2" opacity=".85"/><circle cx="150" cy="40" r="1.4" opacity=".85"/><circle cx="330" cy="30" r="1.8" opacity=".85"/></g>
+<g fill="#FFF1C2"><path d="M420 240q2 8 10 10q-8 2-10 10q-2-8-10-10q8-2 10-10Z"/><path d="M72 290q2 8 10 10q-8 2-10 10q-2-8-10-10q8-2 10-10Z"/><path d="M300 60q2 8 10 10q-8 2-10 10q-2-8-10-10q8-2 10-10Z"/></g>
+<path d="M150 -10 196 300h120l46-310Z" fill="#fff" opacity=".06"/>
+<g transform="translate(256 200)">
+<rect x="-132" y="-96" width="264" height="182" rx="26" fill="url(#cquiz-gold)"/>
+<rect x="-118" y="-82" width="236" height="154" rx="18" fill="#081536"/>
+<rect x="-118" y="-82" width="236" height="154" rx="18" fill="none" stroke="#5bc8ff" stroke-opacity=".5" stroke-width="2"/>
+<path d="M-26 -38c0-24 18-38 38-38 22 0 38 14 38 34 0 30-34 30-34 58v6" fill="none" stroke="#FFF6D8" stroke-width="20" stroke-linecap="round" transform="translate(-12 0)"/>
+<circle cx="0" cy="54" r="11" fill="#FFF6D8"/>
+<circle cx="-120" cy="-104" r="4" fill="#FFF1C2" opacity="1"/><circle cx="-101.5" cy="-104" r="4" fill="#FFF1C2" opacity="0.5"/><circle cx="-83" cy="-104" r="4" fill="#FFF1C2" opacity="1"/><circle cx="-64.5" cy="-104" r="4" fill="#FFF1C2" opacity="0.5"/><circle cx="-46" cy="-104" r="4" fill="#FFF1C2" opacity="1"/><circle cx="-27.5" cy="-104" r="4" fill="#FFF1C2" opacity="0.5"/><circle cx="-9" cy="-104" r="4" fill="#FFF1C2" opacity="1"/><circle cx="9.5" cy="-104" r="4" fill="#FFF1C2" opacity="0.5"/><circle cx="28" cy="-104" r="4" fill="#FFF1C2" opacity="1"/><circle cx="46.5" cy="-104" r="4" fill="#FFF1C2" opacity="0.5"/><circle cx="65" cy="-104" r="4" fill="#FFF1C2" opacity="1"/><circle cx="83.5" cy="-104" r="4" fill="#FFF1C2" opacity="0.5"/><circle cx="102" cy="-104" r="4" fill="#FFF1C2" opacity="1"/><circle cx="120.5" cy="-104" r="4" fill="#FFF1C2" opacity="0.5"/>
+</g>
+<ellipse cx="150" cy="352" rx="30" ry="13" fill="#E0694B"/><ellipse cx="150" cy="346" rx="30" ry="13" fill="#E0694B" opacity=".9"/><ellipse cx="142" cy="342" rx="10" ry="4" fill="#fff" opacity=".5"/><ellipse cx="222" cy="352" rx="30" ry="13" fill="#5B7FC9"/><ellipse cx="222" cy="346" rx="30" ry="13" fill="#5B7FC9" opacity=".9"/><ellipse cx="214" cy="342" rx="10" ry="4" fill="#fff" opacity=".5"/><ellipse cx="294" cy="352" rx="30" ry="13" fill="#46A883"/><ellipse cx="294" cy="346" rx="30" ry="13" fill="#46A883" opacity=".9"/><ellipse cx="286" cy="342" rx="10" ry="4" fill="#fff" opacity=".5"/><ellipse cx="366" cy="352" rx="30" ry="13" fill="#9774C6"/><ellipse cx="366" cy="346" rx="30" ry="13" fill="#9774C6" opacity=".9"/><ellipse cx="358" cy="342" rx="10" ry="4" fill="#fff" opacity=".5"/>
+<g transform="translate(412 360) scale(0.78 0.78)">
+<ellipse cx="0" cy="96" rx="58" ry="10" fill="#000" opacity=".45"/>
+<path d="M-44 92c-4-26 4-46 22-52h44c18 6 26 26 22 52Z" fill="#14151a" stroke="url(#cquiz-gold)" stroke-width="3"/>
+<circle cx="0" cy="66" r="8" fill="url(#cquiz-gold)"/>
+<rect x="-52" y="-30" width="104" height="80" rx="38" fill="#17181e" stroke="url(#cquiz-gold)" stroke-width="4"/>
+<rect x="-38" y="-12" width="76" height="40" rx="20" fill="#071a33" stroke="#2b6fd6" stroke-width="2"/>
+<ellipse cx="-15" cy="8" rx="8" ry="10" fill="#7fe3ff"/><ellipse cx="15" cy="8" rx="8" ry="10" fill="#7fe3ff"/>
+<circle cx="-12" cy="4" r="3" fill="#fff"/><circle cx="18" cy="4" r="3" fill="#fff"/>
+<path d="M-8 22q8 6 16 0" fill="none" stroke="#7fe3ff" stroke-width="3" stroke-linecap="round"/>
+<path d="M-34 -28 -40 -62 -16 -44 0 -70 16 -44 40 -62 34 -28Z" fill="url(#cquiz-goldv)" stroke="#FFF1C2" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="0" cy="-48" r="5" fill="#5bc8ff"/>
+<path d="M-52 40c-16 6-22 20-18 34M52 40c16 6 22 20 18 34" fill="none" stroke="#17181e" stroke-width="12" stroke-linecap="round"/>
+<circle cx="-70" cy="76" r="9" fill="url(#cquiz-gold)"/><circle cx="70" cy="76" r="9" fill="url(#cquiz-gold)"/>
+</g>
+<rect width="512" height="512" fill="url(#cquiz-vig)"/></svg>

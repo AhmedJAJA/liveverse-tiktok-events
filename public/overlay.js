@@ -7,8 +7,18 @@ const modeInfo = {
   race: { en:'CHAT RACE', short:'RACE', ar:'السباق المباشر', instruction:'المسجلون يتقدمون بكتابة !go أو انطلق' },
   wheel: { en:'LUCKY DRAW', short:'WHEEL', ar:'عجلة المشاركين', instruction:'كل المسجلين في الفعالية داخل السحب تلقائيًا' },
   bomb: { en:'TIME BOMB', short:'BOMB', ar:'القنبلة المؤقتة', instruction:'حامل القنبلة يكتب !مرر ثم رقم اللاعب قبل الانفجار' },
-  glass: { en:'GLASS BRIDGE', short:'GLASS', ar:'الجسر الزجاجي', instruction:'اكتب 1 أو 2 لاختيار اللوح الآمن — محاولة واحدة لكل خطوة' }
+  glass: { en:'GLASS BRIDGE', short:'GLASS', ar:'الجسر الزجاجي', instruction:'اكتب 1 أو 2 لاختيار اللوح الآمن — محاولة واحدة لكل خطوة' },
+  rps: { en:'ROCK PAPER SCISSORS', short:'RPS', ar:'حجر ورقة مقص', instruction:'اكتب حجر أو ورقة أو مقص — Sky يكشف اختياره بعد الوقت' },
+  minority: { en:'MINORITY WINS', short:'MINORITY', ar:'الأقلية تفوز', instruction:'اكتب 1 أو 2 — الجهة الأقل عددًا تنجو' },
+  higherlower: { en:'HIGHER OR LOWER', short:'HI-LO', ar:'أعلى أم أقل', instruction:'اكتب أعلى أو أقل — الورقة التالية تحسم' },
+  truefalse: { en:'TRUE OR FALSE', short:'T / F', ar:'حقيقة أم كذب', instruction:'اكتب صح أو خطأ — الأسرع يحصد نقاطًا أكثر' },
+  redlight: { en:'RED LIGHT', short:'RED LIGHT', ar:'الضوء الأحمر', instruction:'عند الأخضر اكتب رقمًا من 1 إلى 5 — الحركة عند الأحمر تقصيك' },
+  bowling: { en:'BOWLING', short:'BOWLING', ar:'البولينج', instruction:'اكتب رقمًا من 1 إلى 10 لترمي الكرة' }
 };
+const PARTY = new Set(['rps','minority','higherlower','truefalse','redlight','bowling']);
+const params = new URLSearchParams(location.search);
+if (params.get('perf') === '1') document.documentElement.classList.add('au-perf');
+const apiPath = path => (window.SkySession ? window.SkySession.withRoom(path) : path);
 const stateCache = { questionKey:null, leaderboardKey:null, raceKey:null, resultsKey:null, lastWinnerAt:null, lastSubmissionCount:0 };
 let clock = { endsAt: null, duration:30, offset:0, active:false };
 let countdownTimers = [];
@@ -212,7 +222,7 @@ function podiumCard(p, rank) {
   if (rank===1) card.append(icon('i-crown','podium-crown'));
   const avatar=node('div','podium-avatar');
   paintAvatar(avatar,p);
-  const time=node('span','podium-time');time.append(icon('i-timer','i i-sm'),node('span','num',formatMs(p.elapsedMs)));
+  const time=node('span','podium-time');if(p.detail)time.append(icon('i-star','i i-sm'),node('span','',p.detail));else time.append(icon('i-timer','i i-sm'),node('span','num',formatMs(p.elapsedMs)));
   const points=node('span','podium-points',`+${p.points} نقاط`);
   const base=node('div','podium-base');base.append(node('b','num',String(rank)),node('small','caps',['Gold','Silver','Bronze'][rank-1]||''));
   card.append(avatar,node('strong','podium-name',p.name),time,points,base);
@@ -220,15 +230,16 @@ function podiumCard(p, rank) {
 }
 function renderResults(status, round) {
   const results=status.results;
-  const show=!!results && ['quiz','guess','glass'].includes(status.mode);
+  const show=!!results && (['quiz','guess','glass'].includes(status.mode)||PARTY.has(status.mode));
   const screen=$('roundResultsOverlay');
   screen.hidden=!show;
   if (!show) {stateCache.resultsKey=null;return;}
   const key=`${round}:${results.completedAt}`;
   if (stateCache.resultsKey===key) return;
   stateCache.resultsKey=key;
-  $('resultsRoundLabel').textContent=`نتائج السؤال ${round}`;
-  $('resultsSubtitle').textContent=results.correctCount?'الترتيب حسب أسرع إجابة صحيحة وصلت إلى السيرفر':'انتهى الوقت — هذه الجولة بدون إجابات صحيحة';
+  const partyMode=PARTY.has(status.mode);
+  $('resultsRoundLabel').textContent=partyMode?`نتائج ${modeInfo[status.mode].ar}`:`نتائج السؤال ${round}`;
+  $('resultsSubtitle').textContent=partyMode?'الترتيب النهائي للعبة':results.correctCount?'الترتيب حسب أسرع إجابة صحيحة وصلت إلى السيرفر':'انتهى الوقت — هذه الجولة بدون إجابات صحيحة';
   $('resultsCorrect').textContent=results.correctAnswer||'—';
   $('resultsAnswers').textContent=`${number(results.correctCount)} صحيحة من ${number(results.totalAnswers)}`;
   const podium=$('resultsPodium');const list=$('resultsOthers');podium.replaceChildren();list.replaceChildren();
@@ -249,7 +260,7 @@ function renderResults(status, round) {
       const avatar=node('span','result-avatar');
       paintAvatar(avatar,p);
       nameCell.append(avatar,node('strong','result-person-name',p.name));
-      const speed=node('span','result-speed');speed.append(icon('i-bolt','i i-sm'),node('span','num',formatMs(p.elapsedMs)));
+      const speed=node('span','result-speed');if(p.detail)speed.append(node('span','',p.detail));else speed.append(icon('i-bolt','i i-sm'),node('span','num',formatMs(p.elapsedMs)));
       row.append(node('span','result-rank num',String(p.rank).padStart(2,'0')),nameCell,speed,node('b','num',`+${p.points}`));
       list.append(row);
     });
@@ -518,6 +529,68 @@ function hideBomb(){
   $('bombStage').hidden=true;$('bombBlast').hidden=true;$('bombVictory').hidden=true;
   clearTimeout(bombView.blastTimer);clearTimeout(bombView.victoryTimer);
 }
+/* ---------- Party games (rps, minority, higherlower, truefalse, redlight, bowling) ---------- */
+const partyCache = { key:null };
+function hearts(n) { const box=node('span','party-hearts'); for(let i=0;i<3;i++){const h=icon('i-flame','i heart'+(i<n?' is-on':''));box.append(h);} box.setAttribute('aria-label',n+' حيوات'); return box; }
+function chip(p, extra) { const c=node('span','party-chip'); const av=node('span','member-avatar party-av'); paintAvatar(av,p); c.append(av,node('bdi','party-name',p.name)); if(extra)c.append(extra); return c; }
+function renderParty(party, mode) {
+  const panel=$('partyPanel');
+  if(!party){panel.hidden=true;return;}
+  panel.hidden=false;
+  panel.dataset.mode=mode; panel.dataset.phase=party.phase;
+  const key=JSON.stringify([mode,party.round,party.phase,party.reveal,party.players,party.track,party.lanes,party.light,party.card,party.alive,party.out]);
+  if(key===partyCache.key)return; partyCache.key=key;
+  panel.replaceChildren();
+  const head=node('div','party-head');
+  head.append(node('span','party-round',`الجولة ${number(party.round)} / ${number(party.rounds)}`));
+  if(['rps','minority','redlight'].includes(mode)) head.append(node('span','party-alive',`${number(party.alive)} من ${number(party.total)} في اللعبة`));
+  panel.append(head);
+  const r=party.reveal;
+  if(mode==='rps'){
+    if(party.phase==='reveal'&&r){
+      const banner=node('div','party-banner'); banner.append(node('small','','Sky اختار'),node('strong','party-big',r.house),node('span','',r.note|| (r.eliminated?.length?`خرج ${number(r.eliminated.length)}`:`${number(r.lost)} خسروا حياة`)));
+      panel.append(banner);
+    }
+    const grid=node('div','party-grid'); (party.players||[]).forEach(p=>grid.append(chip(p,hearts(p.lives)))); panel.append(grid);
+  } else if(mode==='minority'){
+    if(party.phase==='reveal'&&r){ const b=node('div','party-banner'); b.append(node('small','',r.tie?'تعادل':'الأقلية'),node('strong','party-big',r.tie?'الكل ينجو':(party.options[r.minority]||'')),node('span','',r.note||`خرج ${number(r.eliminatedCount)}`)); panel.append(b); }
+    const grid=node('div','party-grid'); (party.players||[]).forEach(p=>grid.append(chip(p))); panel.append(grid);
+  } else if(mode==='higherlower'||mode==='truefalse'){
+    const row=node('div','party-split');
+    if(mode==='higherlower'){
+      const cards=node('div','party-cards');
+      const c1=node('div','party-card'); c1.append(node('b','',party.phase==='reveal'&&r?r.from:party.card));
+      cards.append(c1);
+      if(party.phase==='reveal'&&r){ const c2=node('div','party-card is-next'); c2.append(node('b','',r.to)); cards.append(icon(r.right===0?'i-arrow':'i-arrow','i party-arrow'+(r.right===0?' is-up':' is-down')),c2); }
+      row.append(cards);
+    } else if(party.phase==='reveal'&&r){ const b=node('div','party-banner'); b.append(node('small','','الإجابة'),node('strong','party-big '+(r.truth?'is-true':'is-false'),r.truth?'صح':'خطأ'),node('span','',`${number(r.correct)} إجابة صحيحة`)); row.append(b); }
+    const list=node('ol','party-standings'); (party.players||[]).slice(0,6).forEach((p,i)=>{const li=node('li','');li.append(node('span','num',String(i+1)),chip(p),node('b','num',number(p.points)));list.append(li);}); row.append(list);
+    panel.append(row);
+  } else if(mode==='redlight'){
+    const light=node('div','party-light is-'+party.light); light.append(node('i',''),node('strong','',party.light==='green'?'أخضر — تحرّك':'أحمر — تجمّد!'));
+    const track=node('div','party-track');
+    (party.track||[]).forEach(p=>{const rowEl=node('div','party-lane'+(p.alive?'':' is-out'));const bar=node('div','party-bar');const fill=node('i','');fill.style.width=Math.min(100,100*p.progress/(party.target||20))+'%';bar.append(fill,icon('i-flag','party-finish'));rowEl.append(chip(p),bar,node('small','num',`${p.progress}/${party.target}`));track.append(rowEl);});
+    const wrap=node('div','party-split'); wrap.append(light,track); panel.append(wrap);
+  } else if(mode==='bowling'){
+    if(party.phase==='reveal'&&r){ const b=node('div','party-banner'); b.append(node('small','','حارة الحظ'),node('strong','party-big num',String(r.lucky)),node('span','',`${number(r.strikes)} ضربة كاملة`)); panel.append(b); }
+    const lanes=node('div','party-lanes');
+    (party.lanes||[]).forEach(p=>{const lane=node('div','party-bowl');const frames=node('span','party-frames');(p.frames||[]).forEach(f=>frames.append(node('i','num'+(f===10?' is-strike':''),f===10?'X':String(f))));lane.append(chip(p),frames,node('b','num',number(p.total)));lanes.append(lane);});
+    panel.append(lanes);
+  }
+}
+function markPartyChoices(party, mode) {
+  const cards=[...$('overlayOptions').querySelectorAll('.choice')];
+  const r=party?.phase==='reveal'?party.reveal:null;
+  let win=-1;
+  if(r){ if(mode==='rps')win=(r.houseIndex+1)%3; else if(mode==='minority')win=r.tie?-1:r.minority; else if(mode==='higherlower'||mode==='truefalse')win=r.right; }
+  cards.forEach((c,i)=>{c.classList.toggle('is-correct',!!r&&i===win);c.classList.toggle('is-dim',!!r&&win>=0&&i!==win);});
+}
+function renderMascot(branding) {
+  const box=$('arenaMascot'); if(!box||!window.SkyMascot)return;
+  const key=JSON.stringify(branding?.mascot||{});
+  if(box.dataset.key===key)return; box.dataset.key=key;
+  box.replaceChildren(window.SkyMascot.element(branding?.mascot||{}, { size: 40 }));
+}
 function update(data) {
   if (!data || !data.status) return;
   window.lastLiveverseState=data;
@@ -543,14 +616,25 @@ function update(data) {
   $('overlayRace').hidden=s.mode!=='race';
   $('overlayWheel').hidden=s.mode!=='wheel';
   $('overlayWheel').classList.toggle('is-spinning',s.mode==='wheel'&&!!s.active);
-  const questionKey=JSON.stringify([s.mode,s.options,s.prompt,data.round,s.glassStep]);
-  if((s.mode==='quiz'||s.mode==='glass') && questionKey!==stateCache.questionKey) {
-    renderOptions(s.mode==='glass'?['اللوح الأول','اللوح الثاني']:(s.options||[]));
+  const party=PARTY.has(s.mode)?data.party:null;
+  const partyOptions=party?.options||[];
+  if(PARTY.has(s.mode)){
+    $('overlayOptions').hidden=!partyOptions.length;
+    $('overlayHint').textContent=mode.instruction;
+    $('overlayPrompt').textContent=party?.prompt||s.title||mode.ar;
+    $('overlayRound').replaceChildren(document.createTextNode('الجولة '),node('b','num',String(party?.round||1).padStart(2,'0')));
+  }
+  renderParty(party, s.mode);
+  renderMascot(data.branding);
+  const questionKey=JSON.stringify([s.mode,PARTY.has(s.mode)?partyOptions:s.options,PARTY.has(s.mode)?party?.prompt:s.prompt,data.round,s.glassStep,party?.round]);
+  if((s.mode==='quiz'||s.mode==='glass'||(PARTY.has(s.mode)&&partyOptions.length)) && questionKey!==stateCache.questionKey) {
+    renderOptions(s.mode==='glass'?['اللوح الأول','اللوح الثاني']:PARTY.has(s.mode)?partyOptions:(s.options||[]));
     restartAnimation($('questionCard'),'question-enter');
     restartAnimation($('overlayOptions'),'choices-enter');
   }
   if(s.mode==='quiz') updateVoteCounts(s.choiceCounts||[],s.choiceVoters||[]);
    if(s.mode==='glass') updateVoteCounts(data.glass?.choiceCounts||[0,0],[[],[]]);
+  if(PARTY.has(s.mode)&&partyOptions.length){updateVoteCounts(party?.counts||[],[]);markPartyChoices(party,s.mode);}
   $('overlayPrompt').classList.toggle('is-long',(s.prompt||'').length>70);
   $('overlayPrompt').classList.toggle('is-very-long',(s.prompt||'').length>125);
   if(questionKey!==stateCache.questionKey)requestAnimationFrame(fitBroadcastText);
@@ -559,13 +643,13 @@ function update(data) {
   $('overlayWheelCount').textContent=number(data.entriesCount||0)+' مشارك في السحب';
   $('wheelEntriesPreview').textContent=(data.entries||[]).slice(0,4).join(' • ')||'أسماء المسجلين في الفعالية';
   $('overlayPlayers').textContent=number(data.registration?.count ?? data.playerCount ?? 0);
-  const subCount = s.mode==='wheel'?data.entriesCount||0:s.mode==='race'?(data.race||[]).length:s.submissionCount||0;
+  const subCount = party?party.submitted||0:s.mode==='wheel'?data.entriesCount||0:s.mode==='race'?(data.race||[]).length:s.submissionCount||0;
   $('overlaySubmissions').textContent=number(subCount);
   if (subCount > stateCache.lastSubmissionCount) restartAnimation($('answerTotalBox'),'pulse-hit');
   stateCache.lastSubmissionCount = subCount;
   $('overlayStatus').textContent=s.active?'الجولة جارية • أرسل إجابتك الآن':s.results?'اكتملت الجولة • النتائج ظهرت':s.notice||'جاهز لبدء الجولة';
   $('footerDetail').textContent=phase==='active'?'إجابتك الأولى فقط هي المعتمدة':phase==='results'?'الصدارة للأسرع في الإجابة الصحيحة':'انتظر انطلاق المنافسة';
-  clock={endsAt:s.endsAt??null,duration:s.mode==='glass'?(Number(data.glass?.duration)||10):(Number(s.duration)||30),offset:(Number(data.serverTime)||Date.now())-Date.now(),active:!!s.active&&['quiz','guess','glass'].includes(s.mode)};
+  clock={endsAt:(party?party.endsAt:s.endsAt)??null,duration:party?Math.max(1,(party.phaseMs||party.seconds*1000)/1000):s.mode==='glass'?(Number(data.glass?.duration)||10):(Number(s.duration)||30),offset:(Number(data.serverTime)||Date.now())-Date.now(),active:!!s.active&&(['quiz','guess','glass'].includes(s.mode)||!!party)};
   renderClock();
   $('overlayTimer').hidden=['race','wheel'].includes(s.mode);
   updateStandings(data.leaderboard||[]);
@@ -594,7 +678,7 @@ function update(data) {
 }
 function connect() {
   const protocol=location.protocol==='https:'?'wss':'ws';
-  const ws=new WebSocket(`${protocol}://${location.host}/ws`);
+  const ws=new WebSocket(window.SkySession?window.SkySession.wsUrl():`${protocol}://${location.host}/ws`);
   ws.addEventListener('open',()=>{$('connectionNotice').hidden=true;});
   ws.addEventListener('message',event=>{try{const packet=JSON.parse(event.data);if(packet.type==='state')update(packet.data);}catch(error){console.warn('Invalid live data',error);}});
   ws.addEventListener('close',()=>{$('connectionNotice').hidden=false;setTimeout(connect,3000);});
@@ -639,5 +723,5 @@ function guardOverlayImages() {
   });
 }
 guardOverlayImages();
-fetch('/api/state').then(res=>{if(!res.ok)throw new Error('API not available');return res.json();}).then(update).catch(()=>{$('overlayStatus').textContent='جارٍ الاتصال بالمنصة...';});
+fetch(apiPath('/api/state')).then(res=>{if(!res.ok)throw new Error('API not available');return res.json();}).then(update).catch(()=>{$('overlayStatus').textContent='جارٍ الاتصال بالمنصة...';});
 connect();

@@ -5,6 +5,7 @@ const fmt = n => new Intl.NumberFormat('en-US').format(Number(n) || 0);
 let state = null;
 let offset = 0;
 let token = sessionStorage.getItem('liveverse_admin') || '';
+const canControl = () => !!token || !!window.SkySession?.hasControl();
 let tab = 'alive';
 let pendingAction = null;
 let busy = false;
@@ -37,8 +38,9 @@ function feedback(message, error = false) { const f = $('feedback'); f.textConte
 
 /* ---------- admin API (server-enforced) ---------- */
 async function admin(action, body = {}) {
-  if (!token) throw Object.assign(new Error('يلزم رمز الإدارة'), { code: 401 });
-  const res = await fetch('/api/admin/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) });
+  if (!canControl()) throw Object.assign(new Error('يلزم رمز الإدارة'), { code: 401 });
+  const headers = { 'Content-Type': 'application/json' }; if (token) Object.assign(headers, { Authorization: 'Bearer ' + token });
+  const res = await fetch('/api/admin/' + action, { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(body) });
   let data = {}; try { data = await res.json(); } catch {}
   if (!res.ok) throw Object.assign(new Error(data.error || 'تعذر تنفيذ الطلب'), { code: res.status });
   return data;
@@ -51,7 +53,7 @@ function openAuth(message = '') {
 /** Run a host action with one in-flight request at a time; prompts for the token when needed. */
 async function run(button, action) {
   if (busy) return;
-  if (!token) { pendingAction = () => run(button, action); openAuth(); return; }
+  if (!canControl()) { pendingAction = () => run(button, action); openAuth(); return; }
   busy = true; button?.classList.add('is-loading');
   try { await action(); }
   catch (error) {
@@ -60,9 +62,9 @@ async function run(button, action) {
   } finally { busy = false; button?.classList.remove('is-loading'); }
 }
 function paintAuth() {
-  $('authLabel').textContent = token ? 'المشرف متصل' : 'دخول المشرف';
-  $('authDot').classList.toggle('on', !!token);
-  document.body.classList.toggle('is-admin', !!token);
+  $('authLabel').textContent = token ? 'المشرف متصل' : canControl() ? 'غرفتك الخاصة' : 'دخول المشرف';
+  $('authDot').classList.toggle('on', canControl());
+  document.body.classList.toggle('is-admin', canControl());
 }
 
 /* ---------- actions ---------- */
@@ -205,9 +207,9 @@ function frame() {
 }
 
 /* ---------- live data ---------- */
-async function refresh() { const res = await fetch('/api/state', { cache: 'no-store' }); if (res.ok) render(await res.json()); }
+async function refresh() { await window.SkySession?.ready; paintAuth(); const res = await fetch(window.SkySession ? window.SkySession.withRoom('/api/state') : '/api/state', { cache: 'no-store' }); if (res.ok) render(await res.json()); }
 function socket(retry = 0) {
-  const ws = new WebSocket((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws');
+  const ws = new WebSocket(window.SkySession ? window.SkySession.wsUrl() : (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws');
   ws.addEventListener('open', () => { retry = 0; });
   ws.addEventListener('message', ev => { try { const p = JSON.parse(ev.data); if (p.type === 'state') render(p.data); } catch {} });
   ws.addEventListener('close', () => setTimeout(() => socket(retry + 1), Math.min(10000, 1500 * (retry + 1))));
@@ -239,7 +241,8 @@ document.querySelectorAll('.bp-tabs [data-tab]').forEach(button => button.addEve
   document.querySelectorAll('.bp-tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b === button)));
   if (state) renderPlayers(state);
 }));
-$('authButton').addEventListener('click', () => token ? toast('صلاحية المشرف مفعّلة لهذه الجلسة') : openAuth());
+$('authAccount')?.addEventListener('click', () => { $('authDialog').close(); window.SkyAccount?.open({ onDone: () => { paintAuth(); refresh().catch(() => {}); if (pendingAction && canControl()) { const run = pendingAction; pendingAction = null; run(); } } }); });
+$('authButton').addEventListener('click', () => token ? toast('صلاحية المشرف مفعّلة لهذه الجلسة') : window.SkySession?.hasControl() ? window.SkyAccount?.open({ onDone: () => location.reload() }) : openAuth());
 $('authCancel').addEventListener('click', () => { pendingAction = null; $('authDialog').close(); });
 $('authForm').addEventListener('submit', async ev => {
   ev.preventDefault();

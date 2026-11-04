@@ -4,6 +4,9 @@ const allowedAvatars = ['tiktokcdn.com','tiktokcdn-us.com','tiktokcdn-eu.com','t
 let sessionState = null;
 let socketRetry = 0;
 let adminToken = sessionStorage.getItem('liveverse_admin') || '';
+let dialogIntent = 'connect';
+let siteGames = [];
+let lastConnState = '';
 const menuToggle = byId('menuToggle');
 const nav = byId('navLinks');
 
@@ -136,15 +139,16 @@ function populate(state) {
   renderChampions(leaderboard);
   renderLeaderboard(leaderboard);
   byId('headerPlayers').textContent=Number(state.playerCount||0).toLocaleString('en-US')+' مشارك';
+  if(state.connection?.state!==lastConnState){lastConnState=state.connection?.state;renderLive(state);}
+  renderKeyword(state.registration?.keyword);
 }
 async function refresh() {
-  const response=await fetch('/api/state',{cache:'no-store'});
+  const response=await fetch(roomPath('/api/state'),{cache:'no-store'});
   if (!response.ok)throw new Error('تعذر قراءة بيانات البث');
   populate(await response.json());
 }
 function socket() {
-  const proto=location.protocol==='https:'?'wss':'ws';
-  const ws=new WebSocket(proto+'://'+location.host+'/ws');
+  const ws=new WebSocket(window.SkySession?window.SkySession.wsUrl():(location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/ws');
   ws.addEventListener('open',()=>{socketRetry=0;});
   ws.addEventListener('message',event=>{
     try {const packet=JSON.parse(event.data);if(packet.type==='state')populate(packet.data);}catch { /* ignore invalid packet */ }
@@ -155,14 +159,23 @@ function socket() {
   });
   ws.addEventListener('error',()=>ws.close());
 }
+const roomPath=path=>window.SkySession?window.SkySession.withRoom(path):path;
+const hasControl=()=>!!adminToken||!!window.SkySession?.hasControl();
+function openAccount(tab, onDone) {
+  if(window.SkyAccount)window.SkyAccount.open({tab,onDone});
+  else showAdminDialog('','login');
+}
 async function callAdmin(action, body, token=adminToken) {
-  const response=await fetch('/api/admin/'+action,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body||{})});
+  const headers={'Content-Type':'application/json'};
+  if(token)Object.assign(headers,{Authorization:'Bearer '+token});
+  const response=await fetch('/api/admin/'+action,{method:'POST',headers,credentials:'same-origin',body:JSON.stringify(body||{})});
   let result={};
   try{result=await response.json();}catch{}
   if(!response.ok){const error=new Error(result.error||'تعذر تنفيذ الطلب');error.code=response.status;throw error;}
   return result;
 }
-function showAdminDialog(message='') {
+function showAdminDialog(message='', intent='connect') {
+  dialogIntent=intent;
   const dialog=byId('adminDialog');
   byId('landingAuthError').hidden=!message;
   byId('landingAuthError').textContent=message;
@@ -170,24 +183,29 @@ function showAdminDialog(message='') {
   byId('landingAdminToken').focus();
 }
 async function connectBroadcast() {
+  const platform=byId('livePlatform')?.value==='kick'?'kick':'tiktok';
   const username=byId('liveUsername').value.trim().replace(/^@/,'');
-  if(!/^[\w.]{2,30}$/.test(username)) {
-    byId('connectionNote').textContent='أدخل اسم مستخدم TikTok صحيحًا، بدون رابط أو مسافات.';
+  const valid=platform==='kick'?/^[A-Za-z0-9_-]{2,30}$/:/^[\w.]{2,30}$/;
+  if(!valid.test(username)) {
+    byId('connectionNote').textContent=platform==='kick'?'أدخل اسم قناتك على Kick كما يظهر في الرابط، بدون مسافات.':'أدخل اسم مستخدم TikTok صحيحًا، بدون رابط أو مسافات.';
     byId('liveUsername').focus();
     return;
   }
-  if(!adminToken){showAdminDialog();return;}
+  if(!hasControl()){openAccount('login',()=>connectBroadcast());return;}
   const button=byId('liveConnectButton');
   button.disabled=true;
   byId('liveConnectionStatus').textContent='جارٍ الاتصال';
   byId('liveConnectionBadge').classList.add('connecting');
   try {
-    await callAdmin('connect',{username});
+    await callAdmin('connect',{username,platform});
     byId('connectionNote').textContent='تم ربط البث. يمكنك بدء التسجيل من الاستوديو.';
     await refresh();
   } catch(error) {
     byId('connectionNote').textContent=error.message;
-    if(error.code===401){adminToken='';sessionStorage.removeItem('liveverse_admin');showAdminDialog('انتهت صلاحية الرمز. أعد إدخال رمز الإدارة.');}
+    if(error.code===401){
+      if(adminToken){adminToken='';sessionStorage.removeItem('liveverse_admin');showAdminDialog('انتهت صلاحية الرمز. أعد إدخال رمز الإدارة.');}
+      else openAccount('login',()=>connectBroadcast());
+    }
     else await refresh().catch(()=>{});
   } finally {button.disabled=false;}
 }
@@ -204,11 +222,186 @@ byId('adminLoginForm').addEventListener('submit',async event=>{
     sessionStorage.setItem('liveverse_admin',token);
     byId('landingAdminToken').value='';
     byId('adminDialog').close();
-    await connectBroadcast();
+    markAdmin();
+    if (dialogIntent==='connect') await connectBroadcast();
+    else byId('connectionNote').textContent='تم تفعيل صلاحية المشرف. يمكنك الآن ربط البث أو فتح الاستوديو.';
   } catch(error) {
     byId('landingAuthError').textContent=error.message;
     byId('landingAuthError').hidden=false;
   } finally {button.disabled=false;}
 });
+
+/* ---------- Home page: admin entry, site catalogue, live session, hero preview ---------- */
+function markAdmin() {
+  const button=byId('headerLogin');
+  if(!button||!adminToken)return;
+  button.textContent='الاستوديو';
+  button.dataset.admin='1';
+}
+byId('footerLogin')?.addEventListener('click',event=>{
+  if(event.currentTarget.dataset.admin){location.href='/studio';return;}
+  showAdminDialog('','login');
+});
+byId('headerLogin')?.addEventListener('click',event=>{
+  if(event.currentTarget.dataset.admin){location.href='/studio';return;}
+  openAccount('login',()=>{location.href='/studio';});
+});
+byId('footerAccount')?.addEventListener('click',()=>openAccount('login'));
+byId('heroTry')?.addEventListener('click',event=>{
+  if(hasControl())return; // already has a room: go straight to the studio
+  event.preventDefault();
+  openAccount('register',()=>{location.href='/studio';});
+});
+function markAccount() {
+  const me=window.SkySession?.me()||{};
+  const button=byId('headerLogin');
+  if(!button||button.dataset.admin)return;
+  if(me.user||me.guest){button.textContent='لوحتي';button.dataset.admin='1';}
+}
+window.SkySession?.onChange(markAccount);
+markAdmin();
+
+const number=n=>Number(n||0).toLocaleString('en-US');
+const plural=n=>n===1?'لعبة واحدة':n===2?'لعبتان':(n>=3&&n<=10?n+' ألعاب':n+' لعبة');
+function renderGallery(games) {
+  const box=byId('gameGallery');
+  if(!box||!games.length)return;
+  const cards=games.map(game=>{
+    const a=document.createElement('a');a.className='sh-cover';a.href=game.href;a.dataset.mode=game.mode;
+    const img=document.createElement('img');img.src=game.cover;img.alt='';img.width=180;img.height=180;img.loading='lazy';img.decoding='async';
+    const title=document.createElement('span');title.className='sh-cover-title';
+    const b=document.createElement('b');b.textContent=game.title;
+    const small=document.createElement('small');small.textContent=game.categoryLabel||game.category;
+    title.append(b,small);a.append(img,title);a.title=game.summary||game.title;
+    return a;
+  });
+  box.replaceChildren(...cards);
+}
+function renderPricing(pricing, support) {
+  if(!pricing)return;
+  byId('priceMonthly').textContent=number(pricing.monthly);
+  byId('priceAnnual').textContent=number(pricing.annual);
+  document.querySelectorAll('.sh-cur').forEach(el=>{el.textContent=pricing.currency;});
+  const saving=byId('priceSaving');
+  saving.hidden=!(pricing.annualSaving>0);
+  saving.textContent='وفّر '+number(pricing.annualSaving)+' '+pricing.currency;
+  for (const id of ['planMonthlyCta','planAnnualCta']) {
+    const link=byId(id);
+    if(support?.url){link.href=support.url;link.target='_blank';link.rel='noopener';link.removeAttribute('aria-disabled');}
+    else {link.href='#start';link.setAttribute('aria-disabled','true');link.textContent='الاشتراك قريبًا';}
+  }
+  byId('pricingNote').textContent=support?.url
+    ? 'يتم التفعيل بعد التواصل عبر: '+support.label+'. الأسعار قابلة للتغيير.'
+    : 'الاشتراك يُفعَّل يدويًا حاليًا؛ ستتوفر قناة التواصل قريبًا. الأسعار قابلة للتغيير.';
+}
+async function loadSite() {
+  const response=await fetch('/api/site',{cache:'no-store'});
+  if(!response.ok)return;
+  const site=await response.json();
+  siteGames=Array.isArray(site.games)?site.games:[];
+  byId('heroGameCount').textContent=number(site.gameCount);
+  byId('heroMaxPlayers').textContent=number(site.maxPlayers);
+  if(byId('heroElimCount'))byId('heroElimCount').textContent=number(site.eliminationCount);
+  byId('galleryCount').textContent=plural(Number(site.gameCount||0));
+  renderGallery(siteGames);
+  renderPricing(site.pricing,site.support);
+}
+/* Game details: clicking a cover opens its rules instead of jumping straight in. */
+function openGame(mode) {
+  const game=siteGames.find(g=>g.mode===mode);
+  if(!game)return false;
+  byId('gameDialogCover').src=game.cover;
+  byId('gameDialogTitle').textContent=game.title;
+  byId('gameDialogCategory').textContent=game.categoryLabel||game.category||'';
+  byId('gameDialogSummary').textContent=game.summary||'';
+  byId('gameDialogRules').replaceChildren(...(game.rules||[]).map(rule=>{const li=document.createElement('li');li.textContent=rule;return li;}));
+  const play=byId('gameDialogPlay');
+  play.href='/studio?mode='+encodeURIComponent(game.mode);
+  byId('gameDialogSetup').href=game.href;
+  byId('gameDialogNote').textContent=(game.minPlayers>1?'يحتاج '+game.minPlayers+' لاعبين على الأقل. ':'')+(hasControl()?'':'تحتاج حسابًا أو دخول ضيف لتشغيلها على بثك.');
+  const dialog=byId('gameDialog');
+  if(!dialog.open)dialog.showModal();
+  return true;
+}
+byId('gameGallery')?.addEventListener('click',event=>{
+  const card=event.target.closest('.sh-cover');
+  if(!card||event.metaKey||event.ctrlKey)return;
+  if(openGame(card.dataset.mode))event.preventDefault();
+});
+byId('gameDialogPlay')?.addEventListener('click',event=>{
+  if(hasControl())return;
+  event.preventDefault();
+  const href=event.currentTarget.href;
+  byId('gameDialog').close();
+  openAccount('register',()=>{location.href=href;});
+});
+byId('gameDialogClose')?.addEventListener('click',()=>byId('gameDialog').close());
+byId('gameDialog')?.addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
+/* Every connected room is listed; the server sorts by players and flags the busiest one. */
+const liveTemplate=byId('liveCard');
+let streamsTimer=0;
+async function loadStreams() {
+  clearTimeout(streamsTimer);
+  try {
+    const response=await fetch('/api/streams',{cache:'no-store'});
+    if(response.ok)renderStreams(await response.json());
+  } catch { /* keep the previous list */ }
+  streamsTimer=setTimeout(loadStreams,document.hidden?30000:10000);
+}
+function renderStreams(data) {
+  const list=Array.isArray(data?.streams)?data.streams:[];
+  const box=byId('liveCards'),empty=byId('liveEmpty');
+  if(!box||!liveTemplate)return;
+  empty.hidden=list.length>0;
+  byId('liveSummary').textContent=list.length
+    ?(list.length===1?'بث واحد متصل':number(list.length)+' بثوث متصلة')+' • '+number(data.totalPlayers)+' لاعب'
+    :'لا يوجد بث متصل الآن';
+  const cards=list.slice(0,6).map(stream=>{
+    const card=liveTemplate.cloneNode(true);
+    card.removeAttribute('id');card.hidden=false;card.classList.add('is-clone');
+    card.querySelectorAll('[id]').forEach(el=>{el.dataset.ref=el.id;el.removeAttribute('id');});
+    const ref=name=>card.querySelector('[data-ref="'+name+'"]');
+    const handle=String(stream.username||'').replace(/^@/,'');
+    ref('liveHandle').textContent='@'+handle;
+    ref('liveInitial').textContent=(Array.from(handle)[0]||'S').toUpperCase();
+    ref('livePlayers').textContent=number(stream.players);
+    ref('liveGame').textContent=stream.game||'';
+    ref('livePlatformName').textContent=stream.platform==='kick'?'Kick':'TikTok';
+    if(typeof stream.cover==='string'&&/^\/covers\/[a-z]+\.svg$/.test(stream.cover))ref('liveCover').src=stream.cover;
+    ref('liveOpen').href='/overlay'+(stream.room&&stream.room!=='main'?'?room='+encodeURIComponent(stream.room):'');
+    const top=card.querySelector('.sh-top-badge');if(top)top.hidden=!stream.top;
+    card.classList.toggle('is-top',!!stream.top);
+    return card;
+  });
+  box.querySelectorAll('.is-clone').forEach(el=>el.remove());
+  box.append(...cards);
+}
+function renderLive() { loadStreams(); }
+function renderKeyword(keyword) {
+  const word=String(keyword||'انضم').slice(0,32);
+  document.querySelectorAll('.sh-keyword').forEach(el=>{el.textContent=word;});
+  const float=document.querySelector('.sh-float-b b');
+  if(float)float.textContent='«'+word+'»';
+}
+function heroPreview() {
+  const slides=[...document.querySelectorAll('#phoneSlides img')];
+  const feed=byId('phoneFeed');
+  if(!slides.length||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const demo=[['س','سارا','انضمت للتحدي'],['O','Omar','انضم للتحدي'],['ل','لولو','اختارت الإجابة 1'],['K','Khaled','وصل خط النهاية'],['م','مها','انضمت للتحدي']];
+  let i=0,j=0;
+  setInterval(()=>{
+    if(document.hidden)return;
+    slides[i].classList.remove('is-on');i=(i+1)%slides.length;slides[i].classList.add('is-on');
+    const [initial,name,action]=demo[j++%demo.length];
+    const li=document.createElement('li');
+    const av=document.createElement('span');av.className='sh-mini-av';av.textContent=initial;
+    const text=document.createElement('span');const b=document.createElement('b');b.textContent=name;text.append(b,' '+action);
+    li.append(av,text);feed.append(li);
+    while(feed.children.length>3)feed.firstElementChild.remove();
+  },3200);
+}
+heroPreview();
+loadSite().catch(()=>{}).finally(loadStreams);
+
 refresh().catch(()=>{byId('connectionNote').textContent='تعذر تحميل حالة البث. حدّث الصفحة للمحاولة مجددًا.';});
 socket();

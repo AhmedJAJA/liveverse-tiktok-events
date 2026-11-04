@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ارسم وخمّن — Sky Live</title>
+<meta name="description" content="لعبة رسم جماعية: اكتب جملة، ارسمها، وصف رسمة صديقك، وشاهد كيف تتغير القصة في الألبوم.">
+<meta name="theme-color" content="#5C09BE">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/draw.css">
+<link rel="stylesheet" href="/account.css">
+<script src="/session.js" defer></script>
+<script src="/account.js" defer></script>
+<script src="/draw.js" defer></script>
+</head>
+<body class="dr-page">
+<div class="dr-bg" aria-hidden="true"><span class="dr-rays"></span><span class="dr-dots"></span></div>
+
+<header class="dr-bar">
+ <div class="dr-bar-me">
+  <span class="dr-av" id="barAvatar" aria-hidden="true">؟</span>
+  <span id="barName">زائر</span>
+ </div>
+ <a class="dr-home" href="/" aria-label="الرئيسية"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-home"/></svg></a>
+ <div class="dr-bar-tools">
+  <span class="dr-conn" id="connState" role="status"><i aria-hidden="true"></i><span>متصل</span></span>
+  <button type="button" class="dr-icon-btn" id="soundToggle" aria-pressed="true" aria-label="الصوت"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-volume"/></svg></button>
+ </div>
+</header>
+
+<main class="dr-main">
+ <!-- ===== Entry ===== -->
+ <section id="entryView" class="dr-entry">
+  <div class="dr-hero">
+   <img src="/draw-mark.svg" alt="" width="96" height="96">
+   <h1>ارسم وخمّن</h1>
+   <p>اكتب جملة، ارسم جملة غيرك، ثم صف رسمته… وفي النهاية شاهدوا كيف تحولت القصة في الألبوم.</p>
+  </div>
+
+  <div class="dr-cols">
+   <!-- identity -->
+   <article class="dr-card" aria-labelledby="idTitle">
+    <h2 id="idTitle">من أنت؟</h2>
+    <div class="dr-tabs" role="tablist" aria-label="طريقة الدخول">
+     <button type="button" role="tab" id="tabGuest" aria-selected="true" aria-controls="guestPanel">ضيف</button>
+     <button type="button" role="tab" id="tabAccount" aria-selected="false" aria-controls="guestPanel">حسابي</button>
+    </div>
+    <div id="guestPanel" class="dr-ident">
+     <button type="button" class="dr-avatar-btn" id="avatarButton" aria-label="غيّر لون الصورة الرمزية"><span id="avatarPreview">؟</span><svg class="i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg></button>
+     <label class="dr-field"><span>اسمك في اللعبة</span><input id="playerName" type="text" maxlength="20" autocomplete="nickname" placeholder="مثال: سارا"></label>
+     <p class="dr-hint" id="identHint">الضيوف يمكنهم الانضمام لأي غرفة تسمح بالضيوف.</p>
+    </div>
+   </article>
+
+   <!-- join -->
+   <article class="dr-card dr-card-join" aria-labelledby="joinTitle">
+    <h2 id="joinTitle">انضم إلى غرفة</h2>
+    <form id="joinForm" class="dr-join" novalidate>
+     <fieldset class="dr-code" aria-describedby="joinError">
+      <legend>رمز الغرفة (5 خانات)</legend>
+      <input class="dr-code-box" inputmode="latin" maxlength="1" aria-label="الخانة 1" autocomplete="off">
+      <input class="dr-code-box" inputmode="latin" maxlength="1" aria-label="الخانة 2" autocomplete="off">
+      <input class="dr-code-box" inputmode="latin" maxlength="1" aria-label="الخانة 3" autocomplete="off">
+      <input class="dr-code-box" inputmode="latin" maxlength="1" aria-label="الخانة 4" autocomplete="off">
+      <input class="dr-code-box" inputmode="latin" maxlength="1" aria-label="الخانة 5" autocomplete="off">
+     </fieldset>
+     <button type="submit" class="dr-btn dr-btn-mint" id="joinButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg>ادخل الغرفة</button>
+     <p class="dr-error" id="joinError" role="alert" hidden></p>
+    </form>
+    <div class="dr-or"><span>أو</span></div>
+    <button type="button" class="dr-btn dr-btn-line" id="createButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-sparkle"/></svg>أنشئ غرفة جديدة</button>
+    <p class="dr-hint">إنشاء الغرف متاح للمشتركين وصاحب المنصة.</p>
+   </article>
+
+   <!-- how to play -->
+   <article class="dr-card" aria-labelledby="howTitle">
+    <h2 id="howTitle">طريقة اللعب</h2>
+    <div class="dr-slides" id="howSlides" aria-live="polite">
+     <figure class="is-on"><span class="dr-step">1</span><figcaption><b>اكتب جملة</b>كل لاعب يكتب جملة مضحكة أو غريبة.</figcaption></figure>
+     <figure><span class="dr-step">2</span><figcaption><b>ارسمها</b>تصلك جملة لاعب آخر، ارسمها خلال 90 ثانية.</figcaption></figure>
+     <figure><span class="dr-step">3</span><figcaption><b>صف الرسمة</b>تصلك رسمة بدون الجملة الأصلية، اكتب ما تراه.</figcaption></figure>
+     <figure><span class="dr-step">4</span><figcaption><b>كرر</b>تتناوب الكتابة والرسم حتى تمر كل قصة على الجميع.</figcaption></figure>
+     <figure><span class="dr-step">5</span><figcaption><b>الألبوم</b>المضيف يعرض كل قصة خطوة بخطوة… وتبدأ الضحكات.</figcaption></figure>
+    </div>
+    <div class="dr-slide-nav">
+     <button type="button" class="dr-icon-btn" id="howPrev" aria-label="السابق"><svg class="i dr-flip" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></button>
+     <div class="dr-dots-nav" id="howDots"></div>
+     <button type="button" class="dr-icon-btn" id="howNext" aria-label="التالي"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></button>
+    </div>
+   </article>
+  </div>
+ </section>
+
+ <!-- ===== Game ===== -->
+ <section id="gameView" class="dr-game" hidden>
+  <header class="dr-game-head">
+   <div><span class="dr-label">الغرفة</span><button type="button" class="dr-room-code" id="roomCode" aria-label="انسخ رمز الغرفة">-----</button></div>
+   <div class="dr-progress" id="stepInfo"></div>
+   <div class="dr-timer" id="timer" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-timer"/></svg><b id="timerText">0</b></div>
+  </header>
+
+  <div class="dr-game-grid">
+   <aside class="dr-card dr-roster" aria-labelledby="rosterTitle">
+    <h2 id="rosterTitle">اللاعبون <small id="rosterCount"></small></h2>
+    <ul id="roster"></ul>
+    <button type="button" class="dr-btn dr-btn-ghost" id="leaveButton">مغادرة الغرفة</button>
+   </aside>
+
+   <div class="dr-card dr-stage">
+    <!-- lobby -->
+    <div id="lobbyPane" class="dr-pane" hidden>
+     <h2>بانتظار اللاعبين</h2>
+     <p>شارك الرمز <b class="dr-inline-code" id="lobbyCode">-----</b> مع أصدقائك. تحتاج لاعبَين على الأقل (حتى 8).</p>
+     <label class="dr-switch" id="guestsWrap" hidden><input type="checkbox" id="allowGuests" checked><span>السماح بدخول الضيوف</span></label>
+     <button type="button" class="dr-btn dr-btn-mint" id="startButton" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg>ابدأ اللعبة</button>
+     <p class="dr-hint" id="lobbyHint"></p>
+    </div>
+    <!-- write / describe -->
+    <form id="textPane" class="dr-pane" hidden novalidate>
+     <h2 id="textTitle">اكتب جملة</h2>
+     <figure class="dr-prompt-img" id="describeFigure" hidden><img id="describeImage" alt="رسمة لاعب آخر"></figure>
+     <p class="dr-hint" id="textHint"></p>
+     <label class="dr-field dr-field-lg"><span class="sr-only">النص</span><input id="textInput" type="text" maxlength="120" autocomplete="off"></label>
+     <button type="submit" class="dr-btn dr-btn-mint" id="textSubmit">إرسال</button>
+    </form>
+    <!-- draw -->
+    <div id="drawPane" class="dr-pane dr-draw" hidden>
+     <h2>ارسم: <span id="drawPrompt"></span></h2>
+     <div class="dr-canvas-wrap"><canvas id="canvas" width="640" height="440" aria-label="لوحة الرسم"></canvas></div>
+     <div class="dr-tools" role="toolbar" aria-label="أدوات الرسم">
+      <div class="dr-palette" id="palette"></div>
+      <div class="dr-sizes" id="sizes">
+       <button type="button" data-size="4" aria-label="فرشاة رفيعة" aria-pressed="false"><i></i></button>
+       <button type="button" data-size="9" aria-label="فرشاة متوسطة" aria-pressed="true"><i></i></button>
+       <button type="button" data-size="18" aria-label="فرشاة عريضة" aria-pressed="false"><i></i></button>
+      </div>
+      <button type="button" class="dr-icon-btn" id="undoButton" aria-label="تراجع"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg></button>
+      <button type="button" class="dr-icon-btn" id="clearButton" aria-label="امسح اللوحة"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-trash"/></svg></button>
+      <button type="button" class="dr-btn dr-btn-mint" id="drawSubmit">أرسل الرسمة</button>
+     </div>
+    </div>
+    <!-- waiting -->
+    <div id="waitPane" class="dr-pane dr-wait" hidden>
+     <span class="dr-spinner" aria-hidden="true"></span>
+     <h2>أحسنت! بانتظار البقية</h2>
+     <p id="waitHint"></p>
+    </div>
+    <!-- album -->
+    <div id="albumPane" class="dr-pane" hidden>
+     <h2>الألبوم: قصة <span id="albumOwner"></span> <small id="albumIndex"></small></h2>
+     <ol class="dr-album" id="albumList"></ol>
+     <div class="dr-album-nav" id="albumHost" hidden>
+      <button type="button" class="dr-btn dr-btn-ghost" id="albumPrev">السابق</button>
+      <button type="button" class="dr-btn dr-btn-ghost" id="albumAll">اعرض القصة كاملة</button>
+      <button type="button" class="dr-btn dr-btn-mint" id="albumNext">التالي</button>
+      <button type="button" class="dr-btn dr-btn-line" id="restartButton">جولة جديدة</button>
+     </div>
+     <p class="dr-hint" id="albumHint"></p>
+    </div>
+    <p class="dr-error" id="gameError" role="alert" hidden></p>
+   </div>
+  </div>
+ </section>
+</main>
+</body>
+</html>

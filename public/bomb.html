@@ -9,7 +9,13 @@
 <link rel="icon" href="/sky-live-mark.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/royal-core.css">
 <link rel="stylesheet" href="/bomb.css">
+<link rel="stylesheet" href="/royal-luxe.css">
+<link rel="stylesheet" href="/aurum.css">
+<link rel="stylesheet" href="/account.css">
+<script defer src="/session.js"></script>
+<script defer src="/account.js"></script>
 <script type="module" src="/bomb.js"></script>
+<script defer src="/aurum.js"></script>
 </head>
 <body class="bomb-page">
 <header class="bp-header">
@@ -125,6 +131,7 @@
     <input id="authToken" type="password" dir="ltr" required aria-label="رمز الإدارة">
     <p class="bp-error" id="authError" hidden role="alert"></p>
     <div class="bp-actions"><button type="submit" class="btn btn-gold">تفعيل</button><button type="button" class="btn btn-line" id="authCancel">إلغاء</button></div>
+    <button type="button" class="btn btn-line bp-account" id="authAccount">الدخول بحسابك أو كزائر لغرفتك الخاصة</button>
   </form>
 </dialog>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

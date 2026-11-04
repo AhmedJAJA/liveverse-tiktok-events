@@ -33,7 +33,8 @@ test('champion cards and score progress are populated from real API state',()=>{
 test('home game links select working studio game modes, without fake gameplay',()=>{
   for(const mode of ['quiz','race','guess','wheel']) {
     assert.ok(home.includes('mode='+mode),mode);
-    assert.ok(studio.includes("['quiz','guess','race','wheel','glass','bomb'].includes(requestedMode)"));
+    assert.ok(studio.includes('STUDIO_MODES.includes(requestedMode)'));
+    assert.match(studio,/const STUDIO_MODES = \['quiz','guess','race','wheel','glass','bomb',...PARTY_MODES\];/);
   }
   assert.match(studio,/urlOptions\.get\('panel'\) === 'games'/);
 });

@@ -5,6 +5,12 @@ const GAME_MODES = Object.freeze({
  quiz: {title:'تحدي المعلومات',category:'ذكاء',description:'سؤال وأربع إجابات: اكتب رقم الاختيار الصحيح في الشات — والأسرع يتصدر',label:'مدة الجولة',timeLabel:'وقت الإجابة',badgeUnit:'ث',lengths:{short:15,normal:30,long:60},seconds:30},
  guess: {title:'خمّن الكلمة',category:'ذكاء وسرعة',description:'شاهد التلميح وأرسل تخمينك في الشات — أول إجابة صحيحة تحصد النقاط',label:'مدة الجولة',timeLabel:'وقت التخمين',badgeUnit:'ث',lengths:{short:15,normal:30,long:60},seconds:30},
  race: {title:'سباق الجمهور',category:'سرعة',description:'متابعينك يكتبون !go في الشات ليتقدموا نحو خط النهاية — والأسرع يفوز',label:'طول السباق',timeLabel:'هدف السباق',badgeUnit:'حركة',lengths:{short:5,normal:12,long:25},seconds:0},
+ rps: {title:'حجر ورقة مقص',category:'إقصاء',description:'تحدَّ Sky: اكتب حجر أو ورقة أو مقص — ثلاث حيوات وآخر باقٍ يفوز',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:8,normal:15,long:25},seconds:15,party:true},
+ minority: {title:'الأقلية تفوز',category:'ذكاء وسرعة',description:'خياران في كل جولة: اكتب 1 أو 2 — الجهة الأقل عددًا تنجو',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:6,normal:10,long:15},seconds:15,party:true},
+ higherlower: {title:'أعلى أم أقل',category:'ذكاء وسرعة',description:'هل الورقة التالية أعلى أم أقل؟ اكتب إجابتك في الشات',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:5,normal:8,long:12},seconds:10,party:true},
+ truefalse: {title:'حقيقة أم كذب',category:'ذكاء وسرعة',description:'عبارة في كل جولة: اكتب صح أو خطأ — الأسرع يحصد نقاطًا أكثر',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:5,normal:8,long:12},seconds:15,party:true},
+ redlight: {title:'الضوء الأحمر',category:'إقصاء',description:'عند الأخضر اكتب رقمًا من 1 إلى 5 للتقدم — أي حركة عند الأحمر تقصيك',label:'عدد الإشارات',timeLabel:'إشارات',badgeUnit:'إشارة',lengths:{short:10,normal:16,long:24},seconds:0,party:true},
+ bowling: {title:'البولينج',category:'حظ',description:'اكتب رقمًا من 1 إلى 10 لترمي الكرة — رقم الحظ مخفي في كل إطار',label:'عدد الإطارات',timeLabel:'وقت الرمية',badgeUnit:'إطار',lengths:{short:2,normal:3,long:5},seconds:10,party:true},
  wheel: {title:'عجلة الأسماء',category:'حظ',description:'المسجلون يدخلون السحب تلقائيًا — اختر فائزًا عشوائيًا بضغطة واحدة',label:'عدد المشاركين',timeLabel:'سحب مباشر',badgeUnit:'',lengths:{short:10,normal:20,long:30},seconds:0}
 });
 const params = new URLSearchParams(location.search);
@@ -15,6 +21,8 @@ let selectedLength = 'normal';
 let selectedAudience = 'all';
 let currentState = null;
 let token = sessionStorage.getItem('liveverse_admin') || '';
+const canControl = () => !!token || !!window.SkySession?.hasControl();
+const roomPath = (p) => window.SkySession ? window.SkySession.withRoom(p) : p;
 let launchBusy=false;
 let resumeAfterAuth=false;
 let socketRetries=0;
@@ -76,10 +84,14 @@ function configureVisuals() {
  }else if(['quiz','guess'].includes(game)){
   $('stepSeconds').value='30';
   $('stepSeconds').closest('.advanced-row').hidden=false;
+ }else if(meta.party && meta.seconds){
+  $('stepSeconds').value=String(meta.seconds);
+  $('stepSeconds').closest('.advanced-row').hidden=false;
  }else{
   $('stepSeconds').closest('.advanced-row').hidden=true;
  }
- $('advancedSettings').querySelector('summary small').textContent=['glass','quiz','guess'].includes(game)?'3':'2';
+ $('advancedSettings').querySelector('summary small').textContent=['glass','quiz','guess'].includes(game)||(meta.party&&meta.seconds)?'3':'2';
+ const cover=$('modeCoverArt'); if(cover&&meta.party){cover.src='/covers/'+game+'.svg';cover.hidden=false;}
  updateStats();
  if(game==='guess')ensureGuessFields();
 }
@@ -110,7 +122,7 @@ function numPlayers() {
 function updateStats() {
  $('statPlayers').textContent=String(numPlayers());
  const n=meta.lengths[selectedLength];
- $('statDuration').textContent=game==='glass' ? $('stepSeconds').value+' ث' : game==='wheel' ? 'سحب' : (game==='race'?String(n):String(n)+' ث');
+ $('statDuration').textContent=meta.party ? String(n)+' '+meta.badgeUnit : game==='glass' ? $('stepSeconds').value+' ث' : game==='wheel' ? 'سحب' : (game==='race'?String(n):String(n)+' ث');
 }
 function setLength(value) {
  if(!Object.hasOwn(meta.lengths,value))return;
@@ -146,7 +158,7 @@ function setAudience(value, persist=false) {
  }
 }
 function persistAudience(value) {
- if(!token){
+ if(!canControl()){
    pendingAudience=value;
    openAuth('أدخل رمز الإدارة لحفظ شرط المتابعة وتطبيقه على التسجيل.');
    return Promise.resolve(false);
@@ -212,14 +224,14 @@ function viewState(data) {
  }
 }
 async function requestState(){
- const res=await fetch('/api/state',{cache:'no-store'});
+ const res=await fetch(roomPath('/api/state'),{cache:'no-store'});
  if(!res.ok)throw new Error('تعذر الاتصال بالسيرفر');
  viewState(await res.json());
 }
 function eventSocket() {
  const proto=location.protocol==='https:'?'wss':'ws';
  let socket;
- try{socket=new WebSocket(proto+'://'+location.host+'/ws');}catch{return;}
+ try{socket=new WebSocket(window.SkySession?window.SkySession.wsUrl():proto+'://'+location.host+'/ws');}catch{return;}
  socket.addEventListener('open',()=>{socketRetries=0;});
  socket.addEventListener('message',ev=>{
    try{const data=JSON.parse(ev.data);if(data.type==='state')viewState(data.data);}catch{}
@@ -228,8 +240,9 @@ function eventSocket() {
  socket.addEventListener('error',()=>socket.close());
 }
 async function admin(action,body={}){
- if(!token)throw Object.assign(new Error('يلزم تفعيل صلاحية الإدارة'),{code:401});
- const response=await fetch('/api/admin/'+action,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)});
+ if(!canControl())throw Object.assign(new Error('يلزم تفعيل صلاحية الإدارة'),{code:401});
+ const headers={'Content-Type':'application/json'};if(token)headers.Authorization='Bearer '+token;
+ const response=await fetch('/api/admin/'+action,{method:'POST',headers,credentials:'same-origin',body:JSON.stringify(body)});
  let data={};try{data=await response.json();}catch{}
  if(!response.ok)throw Object.assign(new Error(data.error||'تعذر تنفيذ الطلب'),{code:response.status});
  return data;
@@ -251,6 +264,7 @@ function configForGame() {
    Object.assign(config,{answer,prompt});
  }
  if(game==='race')config.target=len;
+ if(meta.party){config.rounds=len; if(meta.seconds)config.roundSeconds=Number($('stepSeconds').value);}
  return config;
 }
 async function startEvent() {
@@ -258,7 +272,7 @@ async function startEvent() {
  let state=currentState;
  if(state?.status.active){
    if(game==='wheel' && state.status.mode==='wheel'){
-     if(!token){resumeAfterAuth=true;openAuth();return;}
+     if(!canControl()){resumeAfterAuth=true;openAuth();return;}
      launchBusy=true;
      try{const result=await admin('draw');report('🏆 الفائز: '+result.result.name);await requestState();}catch(error){report(error.message,true);}finally{launchBusy=false;}
      return;
@@ -266,7 +280,7 @@ async function startEvent() {
    report('هناك فعالية قيد التشغيل حاليًا. أنهِ الجولة من الاستوديو قبل بدء فعالية أخرى.',true);
    return;
  }
- if(!token){resumeAfterAuth=true;openAuth();return;}
+ if(!canControl()){resumeAfterAuth=true;openAuth();return;}
  // Finish saving the selected follower restriction before opening signups.
  await audienceSaveQueue.catch(()=>{});
  if(audienceDirty) {
@@ -331,6 +345,7 @@ $('maxPlayers').addEventListener('change',updateStats);
 $('increasePlayers').addEventListener('click',()=>{$('maxPlayers').value=String(Math.min(30,numPlayers()+1));updateStats();});
 $('decreasePlayers').addEventListener('click',()=>{$('maxPlayers').value=String(Math.max(1,numPlayers()-1));updateStats();});
 $('stepSeconds').addEventListener('change',updateStats);
+$('accountAccess')?.addEventListener('click',()=>{ $('accessDialog').close(); window.SkyAccount?.open({ onDone: () => { if(window.SkySession?.hasControl()){ report('تم الدخول — أصبحت تتحكم في غرفتك الخاصة.'); if(resumeAfterAuth){resumeAfterAuth=false;startEvent();} } } }); });
 document.querySelectorAll('.length-option').forEach(btn=>btn.addEventListener('click',()=>setLength(btn.dataset.length)));
 document.querySelectorAll('.audience-option').forEach(btn=>btn.addEventListener('click',()=>setAudience(btn.dataset.audience,true)));
 $('resetDefaults').addEventListener('click',resetDefaults);
