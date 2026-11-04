@@ -59,6 +59,12 @@ test('client pages: light home, single WebSocket, cleanup on leave, pause when h
   assert.match(homeCss, /prefers-reduced-motion:reduce\)\{[\s\S]*\.hm-lb i\{animation:none/);
   assert.match(homeCss, /content-visibility:auto/, 'lower sections render lazily');
   assert.doesNotMatch(pub('home.js'), /WebSocket/, 'no WebSocket on the home page');
+  // v1.3 layout: sticky bar + side menu, real live streams (no invented partners), payments shown honestly, refund policy linked
+  for (const id of ['menuButton', 'menu', 'live', 'liveTrack', 'liveEmpty', 'enter', 'plans', 'pay', 'faq', 'contact']) assert.match(home, new RegExp('id="' + id + '"'), id);
+  assert.match(pub('home.js'), /fetch\('\/api\/streams'/, 'live cards come from real connected rooms');
+  assert.match(home, /قريبًا/, 'card payments are marked as coming, not live');
+  assert.match(home, /href="\/refund"/);
+  assert.doesNotMatch(home, /\$|USD|دولار/, 'prices in riyal only');
   assert.match(studio, /if \(ws && ws\.readyState <= 1\) return;/, 'never two sockets');
   assert.match(studio, /addEventListener\('pagehide'/);
   assert.doesNotMatch(sponge, /getContext\('2d'\)/, 'bubbles are CSS, not a per-frame canvas');
