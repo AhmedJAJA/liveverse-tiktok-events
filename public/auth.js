@@ -37,7 +37,7 @@
   // «المتابعة باستخدام Google»: the button appears only when Google sign-in is configured on the server.
   if (window.SpongeGoogle) window.SpongeGoogle.render($('googleBox'), async (credential) => {
     $('googleError').hidden = true;
-    try { await continueIntent(await window.SpongeGoogle.signIn(credential)); }
+    try { await continueIntent(await window.SpongeGoogle.signIn(credential, { remember: $('rememberMe').checked })); }
     catch (err) { $('googleError').textContent = err.message; $('googleError').hidden = false; }
   }, { text: isLogin ? 'signin_with' : 'signup_with' }).then((shown) => { $('googleOr').hidden = !shown; });
 
@@ -74,9 +74,9 @@
   }
   const val = (f, n) => f.elements[n].value;
   bind($('signupForm'), $('signupError'), '/api/auth/register',
-    (f) => ({ username: val(f, 'username').trim().toLowerCase(), email: val(f, 'email').trim(), password: val(f, 'password'), confirm: val(f, 'confirm') }),
+    (f) => ({ username: val(f, 'username').trim().toLowerCase(), email: val(f, 'email').trim(), password: val(f, 'password'), confirm: val(f, 'confirm'), remember: $('rememberMe').checked }),
     (d) => (intent ? continueIntent(d) : location.replace(d.next || '/account?welcome=1')));
   bind($('loginForm'), $('loginError'), '/api/auth/login',
-    (f) => ({ identifier: val(f, 'identifier').trim(), password: val(f, 'password') }),
+    (f) => ({ identifier: val(f, 'identifier').trim(), password: val(f, 'password'), remember: $('rememberMe').checked }),
     (d) => continueIntent(d));
 })();

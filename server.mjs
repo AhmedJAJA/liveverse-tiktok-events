@@ -101,7 +101,9 @@ function publicRoom(id) {
 
 /* --------------------------------------------------------------- accounts */
 const accounts = new AccountStore({ file: path.join(DATA_DIR, 'users.json') });
-const sessions = new Sessions({ file: path.join(DATA_DIR, 'sessions.json') });
+// Test runs may move the session clock forward to check expiry and renewal; never outside NODE_ENV=test.
+const clock = () => Date.now() + (process.env.NODE_ENV === 'test' ? Number(process.env.SKY_TEST_CLOCK_OFFSET_MS) || 0 : 0);
+const sessions = new Sessions({ file: path.join(DATA_DIR, 'sessions.json'), now: clock });
 const promos = new PromoStore({ file: path.join(DATA_DIR, 'promo-codes.json') });
 // Optional bootstrap codes from the environment (comma separated); stored hashed, never in public files.
 for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
@@ -125,8 +127,16 @@ const authLimiter = new RateLimiter({ limit: 12, windowMs: 10 * 60_000 });
 const draw = new DrawHub();
 const isHttps = (req) => req.socket.encrypted || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
 const clientIp = (req) => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'ip';
+/** maxAge in seconds; 0 = a browser-session cookie (gone when the browser closes, «تذكرني» off). */
 function setSession(res, req, id, maxAge) {
-  res.setHeader('Set-Cookie', `${COOKIE}=${id}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${maxAge}${isHttps(req) ? '; Secure' : ''}`);
+  res.setHeader('Set-Cookie', `${COOKIE}=${id}; HttpOnly; Path=/; SameSite=Lax${maxAge ? '; Max-Age=' + maxAge : ''}${isHttps(req) ? '; Secure' : ''}`);
+}
+const REMEMBER_S = 30 * 86400;
+/** Every request with a remembered account session pushes its expiry back to 30 days (at most once a day). */
+function renewSession(req, res) {
+  const id = parseCookies(req.headers.cookie)[COOKIE];
+  if (!id || !sessions.renew(id)) return;
+  setSession(res, req, id, REMEMBER_S);
 }
 function sessionOf(req) { return sessions.get(parseCookies(req.headers.cookie)[COOKIE]); }
 /** Who is acting: the owner (Bearer ADMIN_TOKEN → main room), an account, or a guest. */
@@ -177,7 +187,9 @@ function accountView(userId) {
     trial: platform.trialStatus(userId), expired: !ent.active && e.hadAccess, trialNeedsVerifiedEmail: platform.trialNeedsVerifiedEmail };
 }
 function accountSession(req) { const s = sessionOf(req); return s?.kind === 'acct' && platform?.cached(s.userId) ? s : null; }
-function sameOrigin(req) { const origin = req.headers.origin; if (!origin) return true; try { return new URL(origin).host === req.headers.host; } catch { return false; } }
+function sameOrigin(req) {
+  if (req.headers['sec-fetch-site'] === 'cross-site') return false; // CSRF: browsers label requests sent from other sites
+  const origin = req.headers.origin; if (!origin) return true; try { return new URL(origin).host === req.headers.host; } catch { return false; } }
 function json(res, status, value) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(value)); }
 async function readBody(req, limit = 16384) {
   let size = 0, bytes = [];
@@ -189,7 +201,7 @@ function secureHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin'); // Google Identity Services needs the origin
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
 }
 
 async function handleAction(action, body, actor) {
@@ -402,6 +414,11 @@ const platformOff = (res) => json(res, 503, { error: 'الحسابات غير م
 const pErr = (res, err) => { if (err instanceof PlatformError) return json(res, err.status, { error: err.message, ...(err.fields ? { fields: err.fields } : {}) }); throw err; };
 
 async function handleAuth(action, req, res) {
+  if (action === 'me' && req.method === 'GET') {
+    // Restores the signed-in state on page load: who is this, and what access do they have right now.
+    const s = sessionOf(req), me = meFor(req);
+    return json(res, 200, { signedIn: !!actorFor(req), ...me, session: s ? { kind: s.kind, remember: s.remember !== false, expiresAt: new Date(s.expires).toISOString() } : null });
+  }
   if (action === 'google' && req.method === 'GET') {
     // A fresh nonce for Google's button, bound to this browser by an HttpOnly cookie; the ID token must carry it back.
     if (!platform || !google.enabled) return json(res, 200, { enabled: false });
@@ -421,7 +438,8 @@ async function handleAuth(action, req, res) {
       if (!signupLimiter.hit('ip:' + ip)) return json(res, 429, { error: 'محاولات تسجيل كثيرة من هذه الشبكة. حاول بعد ساعة.' });
       const u = await platform.register(body, { ip });
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
-      setSession(res, req, sessions.create('acct', { userId: u.id }), 30 * 86400);
+      setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false }), body.remember !== false ? REMEMBER_S : 0);
+      platform.touchLogin(u.id).catch(() => {});
       return json(res, 201, { ok: true, account: accountView(u.id), next: '/account?welcome=1' });
     }
     if (action === 'login') {
@@ -431,7 +449,8 @@ async function handleAuth(action, req, res) {
       const u = await platform.login(id, String(body.password));
       if (!u) { await new Promise((r) => setTimeout(r, 300)); return json(res, 401, { error: 'بيانات الدخول غير صحيحة', fields: { password: 'تحقق من البيانات' } }); }
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
-      setSession(res, req, sessions.create('acct', { userId: u.id }), 30 * 86400);
+      setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false }), body.remember !== false ? REMEMBER_S : 0);
+      platform.touchLogin(u.id).catch(() => {});
       const a = accountView(u.id);
       return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
     }
@@ -453,7 +472,8 @@ async function handleAuth(action, req, res) {
       if (user.disabled_at) return json(res, 403, { error: 'هذا الحساب موقوف. تواصل مع الدعم.' });
       await platform.refresh(user.id);
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
-      setSession(res, req, sessions.create('acct', { userId: user.id }), 30 * 86400);
+      setSession(res, req, sessions.create('acct', { userId: user.id, remember: body.remember !== false }), body.remember !== false ? REMEMBER_S : 0);
+      await platform.touchLogin(user.id, { picture: g.picture }).catch(() => {});
       const a = accountView(user.id);
       return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
     }
@@ -624,6 +644,7 @@ const STATIC = new Set(['index.html','home.html','home.js','home.css','pages.css
 
 const server = http.createServer(async (req, res) => {
   secureHeaders(res);
+  renewSession(req, res);
   let url; try { url = new URL(req.url, 'http://localhost'); } catch { return json(res, 400, { error: 'Bad URL' }); }
   try {
     if (url.pathname === '/health') return json(res, 200, { ok: true, mode: mainRoom.engine.status.mode, rooms: rooms.size, accounts: !!platform });
@@ -675,6 +696,12 @@ const server = http.createServer(async (req, res) => {
     if (acct) { res.writeHead(302, { Location: '/account?need=plan', 'Cache-Control': 'no-store' }); return res.end(); }
     if (!viewer && !actorFor(req)) { res.writeHead(302, { Location: '/?next=' + encodeURIComponent(url.pathname + url.search), 'Cache-Control': 'no-store' }); return res.end(); }
     if (url.pathname === '/play' && !viewer) { res.writeHead(302, { Location: '/studio' + (url.search || ''), 'Cache-Control': 'no-store' }); return res.end(); }
+  }
+  if ((url.pathname === '/login' || url.pathname === '/signup') && accountSession(req)) {
+    const intent = url.searchParams.get('intent'), next = url.searchParams.get('next') || '';
+    const a = accountView(accountSession(req).userId);
+    const to = /^\/(account|studio|admin)(?:[/?#]|$)/.test(next) ? next : intent === 'studio' && a?.entitled ? '/studio' : intent === 'trial' ? '/account?verify=trial#trial' : '/account';
+    res.writeHead(302, { Location: to, 'Cache-Control': 'no-store' }); return res.end();
   }
   if (url.pathname === '/admin' && !adminActor(req)) { res.writeHead(302, { Location: '/login?next=/admin', 'Cache-Control': 'no-store' }); return res.end(); }
   if (url.pathname === '/account' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/account' + encodeURIComponent(url.search), 'Cache-Control': 'no-store' }); return res.end(); }

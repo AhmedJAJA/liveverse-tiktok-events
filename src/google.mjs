@@ -54,6 +54,7 @@ export class GoogleVerifier {
       email: typeof claims.email === 'string' ? claims.email : '',
       emailVerified: claims.email_verified === true || claims.email_verified === 'true',
       name: typeof claims.name === 'string' ? claims.name : '',
+      picture: typeof claims.picture === 'string' ? claims.picture : '',
     };
   }
 }

@@ -50,7 +50,11 @@
       $('linkLogin').hidden = true;
       $('linkTrial').href = $('planTrial').href = $('heroTrial').href = $('barTrial').href = $('menuTrial').href = '/account#trial';
       $('barAccount').href = $('menuAccount').href = '/account';
-      $('barAccountLabel').textContent = $('menuAccountLabel').textContent = 'حسابي';
+      // restored from the session cookie: show who is signed in (name, picture, permanent ID)
+      const shortName = me.account.displayName.length > 14 ? me.account.displayName.slice(0, 13) + '…' : me.account.displayName;
+      $('bar').classList.add('is-signed');
+      $('barAccountLabel').textContent = shortName; $('menuAccountLabel').textContent = 'حسابي — ' + me.account.publicId;
+      if (me.account.picture) { const img = document.createElement('img'); img.className = 'hm-bar-pic'; img.src = me.account.picture; img.alt = ''; img.width = 26; img.height = 26; img.referrerPolicy = 'no-referrer'; $('barAccount').querySelector('svg')?.replaceWith(img); }
       $('barAccount').title = me.account.publicId;
       $('menuSecond').hidden = true; $('menuLogout').hidden = false;
       if (me.account.entitled) { $('barTrial').textContent = 'الاستوديو'; $('barTrial').href = '/studio'; }
@@ -59,7 +63,7 @@
       $('barTrial').textContent = 'الاستوديو'; $('barTrial').href = '/studio'; $('menuLogout').hidden = false;
     }
     updateConnectGate(); paintStatus();
-  }).catch(() => {});
+  }).catch(() => {}).finally(() => document.documentElement.classList.remove('me-pending'));
   fetch('/api/site', { cache: 'force-cache' }).then((r) => r.json()).then((site) => {
     const url = site.support?.url; if (!url) return;
     const a = $('supportLink'); a.href = url; a.hidden = false;

@@ -588,3 +588,13 @@ html.menu-open{overflow:hidden}
   .hm-dot,.hm-plan .pop,.hm-plan .note,.hm-plan .spark{display:none}
   .hm-jelly,.hm-stage,.hm-reef{translate:none}
 }
+
+/* while the session is being restored, keep account buttons hidden instead of flashing «تسجيل الدخول» */
+.me-pending .hm-bar-actions,.me-pending #heroStatus{opacity:0;animation:hm-late 0s 2.5s forwards}
+@keyframes hm-late{to{opacity:1}}
+.hm-bar-actions,#heroStatus{transition:opacity .25s}
+.hm-bar-pic{width:26px;height:26px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px rgba(140,232,255,.7)}
+
+/* signed in on a phone: the header shows the account (name/picture) so it is obvious the session is restored */
+@media (max-width:600px){.is-signed #barAccount{display:inline-flex;max-width:150px}.is-signed #barAccount span{overflow:hidden;text-overflow:ellipsis}.is-signed #barAccount svg{display:inline}}
+@media (max-width:400px){.is-signed #barTrial{display:none}}
