@@ -41,7 +41,7 @@ export async function fakePlatforms() {
     if (url.pathname === '/tiktok/userinfo') {
       const t = bearer(req); if (!t || t.platform !== 'tiktok') return send(res, 401, { error: { code: 'access_token_invalid' } });
       const u = users.tiktok.get(t.uid);
-      return send(res, 200, { data: { user: { open_id: t.uid, union_id: 'u-' + t.uid, display_name: u.name, avatar_url: u.avatar, username: u.username } }, error: { code: 'ok' } });
+      return send(res, 200, { data: { user: { open_id: t.uid, union_id: 'u-' + t.uid, display_name: u.name, avatar_url: u.avatar, ...(u.linkOnly ? { profile_web_link: 'https://www.tiktok.com/@' + u.username } : { username: u.username }) } }, error: { code: 'ok' } });
     }
     if (url.pathname === '/tiktok/revoke') { revoked.push(['tiktok', form.token]); access.delete(form.token); return send(res, 200, {}); }
     // ---- Kick
@@ -80,7 +80,7 @@ export async function fakePlatforms() {
       TIKTOK_AUTH_URL: base + '/tiktok/authorize', TIKTOK_TOKEN_URL: base + '/tiktok/token', TIKTOK_REVOKE_URL: base + '/tiktok/revoke', TIKTOK_USERINFO_URL: base + '/tiktok/userinfo',
       KICK_AUTH_URL: base + '/kick/authorize', KICK_TOKEN_URL: base + '/kick/token', KICK_REVOKE_URL: base + '/kick/revoke', KICK_PUBLIC_API: base + '/kick/v1',
     },
-    addTikTok(uid, { username, name = username, avatar = 'https://p16-sign.tiktokcdn.com/' + uid + '.jpeg' }) { users.tiktok.set(uid, { username, name, avatar }); },
+    addTikTok(uid, { username, name = username, linkOnly = false, avatar = 'https://p16-sign.tiktokcdn.com/' + uid + '.jpeg' }) { users.tiktok.set(uid, { username, name, avatar, linkOnly }); },
     addKick(uid, { slug, name = slug, live = true, avatar = 'https://files.kick.com/images/user/' + uid + '/p.webp' }) { users.kick.set(String(uid), { slug, name, live, avatar }); },
     setKickLive(uid, live) { users.kick.get(String(uid)).live = live; },
     /** What the platform's sign-in page does after the person logs in and agrees: a code bound to that account. */

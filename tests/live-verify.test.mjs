@@ -65,7 +65,7 @@ const streams = async (b) => (await b('GET', '/api/streams')).data;
 test('official TikTok/Kick sign-in, linked-only connections and the active-streams rules', { skip, timeout: 240_000 }, async () => {
   const fake = await fakePlatforms();
   fake.addKick(501, { slug: 'hostchan', name: 'Host Chan' }); fake.addKick(777, { slug: 'otherchan' });
-  fake.addTikTok('tt-open-1', { username: 'reef.host', name: 'Reef Host' });
+  fake.addTikTok('tt-open-1', { username: 'reef.host', name: 'Reef Host', linkOnly: true }); // username read from the profile link
   const srv = await boot({ ...fake.env, KICK_LIVE_CHECK_MS: '5000', SKY_HOST_TIMEOUT_MS: '5000' });
   const pool = new pg.Pool({ connectionString: dbUrl });
   const owner = browser(srv.base, { Authorization: 'Bearer ' + OWNER });
