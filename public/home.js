@@ -101,7 +101,7 @@
   function canConnect() { return !!(me && me.signedIn && me.live); }
   function updateConnectGate() {
     if (!me) return;
-    if (canConnect()) { msg.textContent = 'يُربط البث بغرفتك في الاستوديو. كتابة الاسم وحدها لا تثبت ملكية الحساب — الحالة تتحول إلى «متصل» فقط عند وصول شات البث فعلًا.'; return; }
+    if (canConnect()) { msg.textContent = 'يُربط البث بغرفتك في الاستوديو. أول مرة تربط حسابًا ستحصل على رمز تكتبه في تعليقات بثك لإثبات أن الحساب حسابك.'; return; }
     if (me.account && !me.account.verified) msg.textContent = 'أكّد بريدك الإلكتروني من صفحة «حسابي» ثم فعّل التجربة أو اشترك لربط البث.';
     else if (me.account) msg.textContent = 'فعّل التجربة المجانية أو اشترك من صفحة «حسابي» لربط بثك.';
     else if (me.signedIn && !me.live) msg.textContent = 'رمزك الحالي للتجربة بلاعبين تجريبيين فقط ولا يشمل ربط البث.';
@@ -117,8 +117,10 @@
     setStatus('connecting', 'جارٍ الاتصال بالبث…');
     try {
       const res = await post('/api/admin/connect', { platform, username: name });
-      if (!res.ok) { setStatus(res.status === 402 || res.status === 403 ? 'blocked' : 'error', res.data.error || 'تعذر الربط'); return; }
-      pollUntil = Date.now() + 90_000; poll();
+      if (!res.ok) { setStatus(res.status === 402 || res.status === 403 ? 'blocked' : 'error', res.data.error || 'تعذر الربط'); if (res.data.needPlan) msg.textContent = 'تحتاج إلى اشتراك فعال لربط بثك المباشر — اختر باقة من «الأسعار» أو فعّل التجربة المجانية.'; return; }
+      // Ownership: until the code appears in the account's own LIVE chat, the stream is not trusted.
+      if (res.data.verify) msg.textContent = 'لإثبات أن الحساب حسابك: اكتب الرمز ' + res.data.verify.code + ' في تعليقات بثك من حساب @' + res.data.verify.handle + ' خلال 10 دقائق.';
+      pollUntil = Date.now() + (res.data.verify ? 600_000 : 90_000); poll();
     } catch { setStatus('error', 'تعذر الاتصال بالخادم'); }
     finally { connecting = false; connectBtn.disabled = false; connectBtn.classList.remove('is-busy'); }
   });
@@ -129,7 +131,8 @@
     try {
       const s = await fetch('/api/state?room=' + encodeURIComponent(me.room || 'main'), { cache: 'no-store', credentials: 'same-origin' }).then((r) => r.json());
       const c = s.connection || {};
-      if (c.state === 'connected') { setStatus('connected', 'متصل — ' + (c.platform === 'kick' ? 'Kick' : 'TikTok') + ' @' + (c.username || '')); return; }
+      if (c.state === 'connected' && c.verifying && !c.verified) setStatus('connecting', 'متصل — بانتظار رمز التحقق في تعليقات بثك');
+      else if (c.state === 'connected') { setStatus('connected', 'متصل — ' + (c.platform === 'kick' ? 'Kick' : 'TikTok') + ' @' + (c.username || '') + (c.verified ? ' ✓ موثّق' : '')); if (c.verified) msg.textContent = 'حسابك موثّق ✓ — شغّل لعبة من الاستوديو ليظهر بثك في «البثوث النشطة».'; return; }
       if (c.state === 'error') setStatus('error', c.message || 'تعذر الاتصال — تأكد أن البث شغال الآن');
       else setStatus('connecting', c.message || 'جارٍ الاتصال بالبث…');
     } catch { /* keep the last status */ }
@@ -335,7 +338,7 @@
         document.querySelector('.hm-car-nav').hidden = (d.streams || []).length < 2;
       } catch { /* keep what is shown */ }
     }
-    liveTimer = setTimeout(loadStreams, 45_000);
+    liveTimer = setTimeout(loadStreams, 20_000);
   }
   loadStreams();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) loadStreams(); });

@@ -479,10 +479,41 @@ export class Platform {
   }
 
   /* --------------------------------------------------- linked streams */
-  async linkAccount(userId, platform, handle, connected) {
-    await this.pool.query(`INSERT INTO linked_accounts (user_id, platform, handle, last_connected_at) VALUES ($1,$2,$3,$4)
-      ON CONFLICT (user_id, platform) DO UPDATE SET handle=EXCLUDED.handle, verified=false, last_connected_at=COALESCE(EXCLUDED.last_connected_at, CASE WHEN linked_accounts.handle=EXCLUDED.handle THEN linked_accounts.last_connected_at END)`,
-    [userId, platform, String(handle).slice(0, 64), connected ? new Date(this.now()) : null]);
+  /** The account this user proved to own on a platform (null when none). */
+  async verifiedStream(userId, platform) {
+    const r = await this.pool.query('SELECT handle, platform_user_id, verified_at FROM linked_accounts WHERE user_id=$1 AND platform=$2 AND verified', [userId, platform]);
+    return r.rows[0] ? { handle: r.rows[0].handle, platformUserId: r.rows[0].platform_user_id, verifiedAt: iso(r.rows[0].verified_at) } : null;
+  }
+  /** Record a proof of ownership. A newer proof for the same platform account moves it to this user
+      (whoever can post from the account controls it); the previous owner is returned so their room can be closed. */
+  async markStreamVerified(userId, platform, handle, platformUserId = null) {
+    const h = String(handle).replace(/^@/, '').slice(0, 64);
+    const pid = /^[A-Za-z0-9_-]{1,40}$/.test(String(platformUserId || '')) ? String(platformUserId) : null;
+    return tx(this.pool, async (c) => {
+      const prev = (await c.query('SELECT user_id FROM linked_accounts WHERE platform=$1 AND lower(handle)=lower($2) AND verified AND user_id<>$3 FOR UPDATE', [platform, h, userId])).rows.map((r) => r.user_id);
+      if (prev.length) await c.query('UPDATE linked_accounts SET verified=false WHERE platform=$1 AND lower(handle)=lower($2) AND user_id<>$3', [platform, h, userId]);
+      await c.query(`INSERT INTO linked_accounts (user_id, platform, handle, verified, platform_user_id, verified_at, verify_method, last_connected_at, last_live_at)
+        VALUES ($1,$2,$3,true,$4,now(),'live-chat-code',now(),now())
+        ON CONFLICT (user_id, platform) DO UPDATE SET handle=EXCLUDED.handle, verified=true, platform_user_id=EXCLUDED.platform_user_id,
+          verified_at=now(), verify_method='live-chat-code', last_connected_at=now(), last_live_at=now()`, [userId, platform, h, pid]);
+      await c.query('INSERT INTO admin_audit_logs (actor, action, target_user_id, details) VALUES ($1,$2,$3,$4)',
+        ['system', 'stream-verified', userId, { platform, handle: h, platformUserId: pid, movedFrom: prev }]);
+      return { previousOwners: prev };
+    });
+  }
+  async touchStream(userId, platform) {
+    await this.pool.query('UPDATE linked_accounts SET last_connected_at=now(), last_live_at=now() WHERE user_id=$1 AND platform=$2 AND verified', [userId, platform]);
+  }
+  /** Server-kept live session row (one per host). */
+  async saveLiveSession(userId, v) {
+    await this.pool.query(`INSERT INTO live_sessions (user_id, room, game_session_id, platform, handle, platform_user_id, verified, subscription_active, state, listed, current_game, players, last_heartbeat_at, last_live_check_at, live_confirmed, updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,now())
+      ON CONFLICT (user_id) DO UPDATE SET room=EXCLUDED.room, game_session_id=EXCLUDED.game_session_id, platform=EXCLUDED.platform, handle=EXCLUDED.handle,
+        platform_user_id=EXCLUDED.platform_user_id, verified=EXCLUDED.verified, subscription_active=EXCLUDED.subscription_active, state=EXCLUDED.state, listed=EXCLUDED.listed,
+        current_game=EXCLUDED.current_game, players=EXCLUDED.players, last_heartbeat_at=EXCLUDED.last_heartbeat_at, last_live_check_at=EXCLUDED.last_live_check_at,
+        live_confirmed=EXCLUDED.live_confirmed, updated_at=now()`,
+    [userId, v.room, v.gameSessionId || null, v.platform || null, v.handle || null, v.platformUserId || null, !!v.verified, !!v.subscriptionActive, v.state, !!v.listed,
+      v.currentGame || null, Math.max(0, v.players | 0), v.lastHeartbeatAt ? new Date(v.lastHeartbeatAt) : null, v.lastLiveCheckAt ? new Date(v.lastLiveCheckAt) : null, !!v.liveConfirmed]);
   }
 
   /* ------------------------------------------------------------ profile */
@@ -493,7 +524,7 @@ export class Platform {
     const [subs, pays, links, trial] = await Promise.all([
       this.pool.query('SELECT id, plan, price_halalas, currency, starts_at, ends_at, status, source, created_at FROM subscriptions WHERE user_id=$1 ORDER BY starts_at DESC LIMIT 50', [userId]),
       this.pool.query('SELECT id, plan, amount_halalas, currency, status, created_at, verified_at FROM payments WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20', [userId]),
-      this.pool.query('SELECT platform, handle, verified, last_connected_at FROM linked_accounts WHERE user_id=$1', [userId]),
+      this.pool.query('SELECT platform, handle, verified, verified_at, last_connected_at FROM linked_accounts WHERE user_id=$1', [userId]),
       this.trialState(userId),
     ]);
     const t = this.now();
@@ -501,7 +532,7 @@ export class Platform {
       user: this.publicUser(e.user),
       access: { ...ent, planName: ent.plan ? PLANS[ent.plan].name : null, endsAt: iso(ent.endsAt), remainingMs: ent.active ? ent.endsAt - t : 0 },
       trial,
-      linked: Object.fromEntries(links.rows.map((l) => [l.platform, { handle: l.handle, verified: l.verified, lastConnectedAt: iso(l.last_connected_at) }])),
+      linked: Object.fromEntries(links.rows.map((l) => [l.platform, { handle: l.handle, verified: l.verified, verifiedAt: iso(l.verified_at), lastConnectedAt: iso(l.last_connected_at) }])),
       history: subs.rows.map((s) => ({ id: s.id, plan: s.plan, planName: PLANS[s.plan]?.name || s.plan, price: s.price_halalas / 100, currency: s.currency, startsAt: iso(s.starts_at), endsAt: iso(s.ends_at), source: s.source,
         status: s.status === 'cancelled' ? 'cancelled' : +new Date(s.ends_at) <= t ? 'expired' : +new Date(s.starts_at) > t ? 'scheduled' : 'active' })),
       payments: pays.rows.map((p) => ({ id: p.id, plan: p.plan, amount: p.amount_halalas / 100, currency: p.currency, status: p.status, createdAt: iso(p.created_at) })),

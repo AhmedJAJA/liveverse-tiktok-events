@@ -103,7 +103,7 @@ test('promo access over HTTP: studio gated, codes checked on the server, session
     assert.equal((await demo('POST', '/api/access/redeem', { code: demoCode })).status, 200);
     assert.equal((await jar(srv.base)('POST', '/api/access/redeem', { code: demoCode })).status, 401, 'single-use code');
     const conn = await demo('POST', '/api/admin/connect', { username: 'someone' });
-    assert.equal(conn.status, 403, 'demo level cannot connect a real stream');
+    assert.equal(conn.status, 402, 'a promo code is not a subscription: no real stream'); assert.equal(conn.data.needPlan, true);
     // disabling a code closes its sessions
     await owner('POST', '/api/admin/promo-update', { id: made.data.code.id, active: false });
     assert.equal((await demo('GET', '/studio')).status, 302);

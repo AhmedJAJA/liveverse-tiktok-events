@@ -39,12 +39,16 @@
     const a = el('a', '', 'تجديد الاشتراك'); a.href = '/account#plans';
     b.append(t, a); document.body.prepend(b);
   }
+  // One id per studio window: the server lets only one window control the room and counts it as the host being present.
+  const TAB = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9_-]/g, '');
   async function admin(action, body = {}) {
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = { 'Content-Type': 'application/json', 'X-Studio-Tab': TAB };
     const t = ownerToken(); if (t) Object.assign(headers, { Authorization: 'Bearer ' + t });
     const res = await fetch('/api/admin/' + action, { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(body) });
     let data = {}; try { data = await res.json(); } catch {}
-    if (res.status === 402) expired(data.error);
+    if (res.status === 402 && data.needPlan && action === 'connect') $('planNotice').hidden = false;
+    else if (res.status === 402) expired(data.error);
+    if (res.status === 409 && data.otherWindow) $('windowBanner').hidden = false;
     if (!res.ok) throw Object.assign(new Error(data.error || 'تعذر تنفيذ الطلب'), { code: res.status });
     return data;
   }
@@ -314,9 +318,57 @@
   }));
   $('againButton').addEventListener('click', (e) => run(e.currentTarget, () => admin('prepare', { mode })));
 
+  /* ---------- presence: the server only lists a stream while its studio window keeps beating ---------- */
+  let beatTimer = 0;
+  async function beat(takeover = false) {
+    clearTimeout(beatTimer);
+    try {
+      const r = await admin('heartbeat', { tab: TAB, screen: document.body.dataset.screen === 'game' ? 'game' : 'games', ...(takeover ? { takeover: true } : {}) });
+      $('windowBanner').hidden = r.primary;
+      paintListed(r);
+    } catch { /* offline or plan ended: the server stops listing the stream by itself */ }
+    beatTimer = setTimeout(() => beat(), 15_000);
+  }
+  const REASONS = { 'no-subscription': 'لا يوجد اشتراك فعال', 'not-verified': 'لم تُثبت ملكية حساب البث', 'not-live': 'البث غير مباشر الآن', 'studio-closed': 'الاستوديو مغلق', 'no-game': 'شغّل لعبة ليظهر بثك' };
+  function paintListed(r) {
+    const t = $('sideListed');
+    t.textContent = r.listed ? 'ظاهر الآن في البثوث النشطة ✓' : 'غير ظاهر في البثوث النشطة — ' + (REASONS[(r.reasons || []).find((x) => x !== 'studio-closed')] || 'غير متصل');
+    t.classList.toggle('is-on', !!r.listed);
+  }
+  $('takeOver').addEventListener('click', () => beat(true));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) beat(); });
+
+  /* ---------- proof of account ownership ---------- */
+  let verifyTimer = 0, verifyEnds = 0;
+  function showVerify(v) {
+    $('verifyPanel').hidden = false; $('verifyPanel').classList.remove('is-done');
+    $('verifyTitle').textContent = 'أثبت أن الحساب حسابك'; $('verifyHelp').hidden = false;
+    $('verifyHandle').textContent = '@' + v.handle; $('verifyPlatform').textContent = v.platform === 'kick' ? 'Kick' : 'TikTok';
+    $('verifyCode').textContent = v.code; $('verifyCopy').hidden = false; $('verifyCode').hidden = false;
+    verifyEnds = Date.parse(v.expiresAt) || Date.now() + 600_000;
+    clearInterval(verifyTimer);
+    const tick = () => { const s = Math.max(0, Math.round((verifyEnds - Date.now()) / 1000)); $('verifyLeft').textContent = s ? 'ينتهي الرمز خلال ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : 'انتهت مهلة الرمز — اربط مرة أخرى'; if (!s) clearInterval(verifyTimer); };
+    tick(); verifyTimer = setInterval(tick, 1000);
+  }
+  function paintVerify(c) {
+    if (!c || $('verifyPanel').hidden) return;
+    if (c.verified) {
+      clearInterval(verifyTimer);
+      $('verifyPanel').classList.add('is-done'); $('verifyTitle').textContent = 'تم التحقق من ملكية الحساب ✓';
+      $('verifyHelp').hidden = true; $('verifyCode').hidden = true; $('verifyCopy').hidden = true;
+      $('verifyLeft').textContent = 'حسابك موثّق الآن — لن تحتاج الرمز مرة أخرى لهذا الحساب.';
+      setTimeout(() => { $('verifyPanel').hidden = true; }, 6000);
+    } else if (!c.verifying && c.state !== 'connected' && c.state !== 'connecting') { clearInterval(verifyTimer); $('verifyPanel').hidden = true; }
+  }
+  $('verifyCopy').addEventListener('click', () => { navigator.clipboard?.writeText($('verifyCode').textContent).then(() => feedback('نُسخ الرمز — الصقه في تعليقات بثك.')).catch(() => {}); });
+
   /* ---------- data ---------- */
   let leaving = false;
-  addEventListener('pagehide', () => { leaving = true; try { ws?.close(); } catch {} });
+  addEventListener('pagehide', () => {
+    leaving = true; try { ws?.close(); } catch {}
+    // tell the server this window closed, so the stream leaves the active list at once
+    try { navigator.sendBeacon('/api/admin/heartbeat', new Blob([JSON.stringify({ tab: TAB, closing: true })], { type: 'text/plain' })); } catch {}
+  });
   async function refresh() {
     const res = await fetch(roomPath('/api/state'), { cache: 'no-store' });
     if (res.ok) render(await res.json());
@@ -400,6 +452,7 @@
   });
   function showScreen(name) {
     document.body.dataset.screen = name;
+    setTimeout(() => beat(), 0);
     if (name === 'games') { history.replaceState(null, '', '/studio'); document.title = 'الاستوديو | SPONGE LIVE'; }
     scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -459,16 +512,19 @@
     const username = $('handleInput').value.trim().replace(/^@/, '');
     if (!username) { $('handleInput').focus(); throw new Error('اكتب اسم الحساب'); }
     const platform = $('platformSelect').value;
-    await admin('connect', { username, platform, ...(platform === 'kick' && $('kickChatroom').value ? { chatroomId: $('kickChatroom').value.trim() } : {}) });
-    feedback('جارٍ الاتصال بالبث…');
+    $('planNotice').hidden = true;
+    const r = await admin('connect', { username, platform, ...(platform === 'kick' && $('kickChatroom').value ? { chatroomId: $('kickChatroom').value.trim() } : {}) });
+    if (r.verify) showVerify(r.verify); else $('verifyPanel').hidden = true;
+    feedback(r.verify ? 'متصل بالبث — بقي إثبات ملكية الحساب بالرمز' : 'تم ربط بثك الموثّق.');
   }); });
-  $('disconnectButton').addEventListener('click', (e) => run(e.currentTarget, () => admin('disconnect')));
+  $('disconnectButton').addEventListener('click', (e) => run(e.currentTarget, async () => { await admin('disconnect'); $('verifyPanel').hidden = true; clearInterval(verifyTimer); }));
   function paintConnection(c) {
     const st = c?.state || 'disconnected';
     $('connState').dataset.state = st;
-    $('connText').textContent = { connected: 'متصل' + (c.username ? ' @' + c.username : ''), connecting: 'جارٍ الاتصال…', error: 'خطأ في الاتصال', disconnected: 'غير متصل' }[st] || st;
+    $('connText').textContent = { connected: 'متصل' + (c.username ? ' @' + c.username : '') + (c.verified ? ' ✓' : c.verifying ? ' — بانتظار رمز التحقق' : ''), connecting: 'جارٍ الاتصال…', error: 'خطأ في الاتصال', disconnected: 'غير متصل' }[st] || st;
     $('connState').title = c?.detail || '';
     $('sideDot').dataset.state = st;
+    paintVerify(c);
     $('sideConn').textContent = (c?.platform === 'kick' || $('platformSelect').value === 'kick' ? 'Kick' : 'TikTok') + ' — ' + $('connText').textContent;
     $('disconnectButton').hidden = !['connected', 'connecting'].includes(st);
     $('connectButton').hidden = st === 'connected';
@@ -517,7 +573,8 @@
     paintNav(); paintGame(); paintRoom();
     if (params.has('mode')) document.body.dataset.screen = 'game';
     const s = session(); if (s) await s.ready;
-    await prepare();
+    if (document.body.dataset.screen === 'game') await prepare(); // the library alone never starts a game session
+    beat(true); // the window opened last takes control (a reload never waits for the old window to time out)
     await refresh().catch(() => feedback('تعذر الاتصال بالسيرفر', true));
     socket();
   }

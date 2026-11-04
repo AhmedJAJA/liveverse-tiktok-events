@@ -67,7 +67,7 @@
     // billing
     for (const b of document.querySelectorAll('[data-checkout]')) b.disabled = !p.billing.enabled || !u.verified;
     // linked accounts
-    const linked = (x) => (x ? '@' + x.handle + (x.lastConnectedAt ? ' — آخر اتصال ' + fmtDate(x.lastConnectedAt) : ' — لم يكتمل الاتصال') : 'لا يوجد');
+    const linked = (x) => (x ? '@' + x.handle + (x.verified ? ' — موثّق ✓' : ' — غير موثّق') + (x.lastConnectedAt ? ' — آخر اتصال ' + fmtDate(x.lastConnectedAt) : '') : 'لا يوجد');
     $('linkedTiktok').textContent = linked(p.linked.tiktok); $('linkedKick').textContent = linked(p.linked.kick);
     // history
     const rows = $('historyRows'); rows.replaceChildren();

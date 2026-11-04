@@ -6,7 +6,9 @@
 // instead. Every failure is reported in the dashboard as a clear connection state.
 import { WebSocket } from 'ws';
 
-export const KICK_PUSHER_URL = process.env.KICK_PUSHER_URL ||
+// Tests point these at a local stand-in; outside NODE_ENV=test the real Kick hosts are always used.
+const KICK_API = process.env.NODE_ENV === 'test' && process.env.KICK_API_URL || 'https://kick.com';
+export const KICK_PUSHER_URL = (process.env.NODE_ENV === 'test' && process.env.KICK_PUSHER_URL) ||
   'wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false';
 
 const SUB_BADGES = new Set(['subscriber', 'founder', 'og', 'sub_gifter']);
@@ -44,13 +46,14 @@ export class KickBridge {
   async lookup(slug) {
     if (typeof this.fetch !== 'function') throw new Error('بيئة الخادم لا تدعم الاتصال بـ Kick');
     let res;
-    try { res = await this.fetch(`https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`, { headers: { Accept: 'application/json', 'User-Agent': 'SkyLive/1.0' } }); }
+    try { res = await this.fetch(`${KICK_API}/api/v2/channels/${encodeURIComponent(slug)}`, { headers: { Accept: 'application/json', 'User-Agent': 'SkyLive/1.0' } }); }
     catch { throw new Error('تعذّر الوصول إلى Kick. أدخل رقم غرفة الشات يدويًا من إعدادات الربط.'); }
     if (!res.ok) throw new Error(`رفض Kick طلب قراءة القناة (${res.status}). أدخل رقم غرفة الشات يدويًا.`);
     const data = await res.json().catch(() => null);
     const id = Number(data?.chatroom?.id);
     if (!Number.isInteger(id) || id <= 0) throw new Error('لم يُعثر على غرفة الشات لهذه القناة');
-    this.profile = { displayName: String(data?.user?.username || ''), avatar: String(data?.user?.profile_pic || '') };
+    this.profile = { displayName: String(data?.user?.username || ''), avatar: String(data?.user?.profile_pic || ''), platformId: String(data?.user_id ?? data?.user?.id ?? '') };
+    this.live = !!(data?.livestream && data.livestream.is_live !== false); // Kick lists the current livestream only while it is on air
     return id;
   }
   async connect(username, { chatroomId } = {}) {
@@ -58,7 +61,7 @@ export class KickBridge {
     if (!slug) throw new Error('اسم قناة Kick غير صالح');
     await this.disconnect(false);
     const generation = ++this.generation;
-    this.slug = slug; this.profile = null;
+    this.slug = slug; this.profile = null; this.live = false; clearInterval(this.liveTimer);
     this.engine.setConnection('connecting', slug, 'جارٍ الاتصال بشات Kick (تجريبي)…', 'kick');
     try {
       const manual = chatroomId === undefined || chatroomId === null || chatroomId === '' ? null : Number(chatroomId);
@@ -87,6 +90,8 @@ export class KickBridge {
         else if (packet.event === 'pusher_internal:subscription_succeeded') {
           this.engine.setConnection('connected', this.slug, 'متصل بشات Kick (تجريبي)', 'kick');
           if (this.profile) this.engine.setStreamer(this.profile);
+          this.engine.setConnectionMeta?.({ liveConfirmed: this.live });
+          this.watchLive(generation);
           done();
         } else if (packet.event === 'pusher:ping') ws.send(JSON.stringify({ event: 'pusher:pong', data: {} }));
         else if (packet.event === 'pusher:error') done(new Error('رفض خادم الشات الاشتراك في القناة'));
@@ -105,6 +110,18 @@ export class KickBridge {
       });
     });
   }
+  /** Kick keeps chat open while offline, so the live state is re-read from the channel API every few minutes. */
+  watchLive(generation) {
+    clearInterval(this.liveTimer);
+    if (!this.profile) return; // chatroom typed by hand: live state unknown, so never confirmed
+    let misses = 0;
+    this.liveTimer = setInterval(async () => {
+      if (generation !== this.generation) { clearInterval(this.liveTimer); return; }
+      try { await this.lookup(this.slug); misses = 0; this.engine.setConnectionMeta?.({ liveConfirmed: this.live }); }
+      catch { if (++misses >= 2) this.engine.setConnectionMeta?.({ liveConfirmed: false }); }
+    }, Number(process.env.KICK_LIVE_CHECK_MS) || 180_000);
+    this.liveTimer.unref?.();
+  }
   schedule(generation) {
     if (this.retry || generation !== this.generation) return;
     this.retry = setTimeout(async () => {
@@ -118,7 +135,7 @@ export class KickBridge {
     this.retry.unref?.();
   }
   async disconnect(report = true) {
-    this.generation++;
+    this.generation++; clearInterval(this.liveTimer);
     clearTimeout(this.retry); this.retry = null;
     const old = this.ws; this.ws = null;
     if (old) { try { old.close(); } catch {} }

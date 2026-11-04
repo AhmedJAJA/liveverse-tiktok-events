@@ -134,6 +134,25 @@ body[data-drawer=closed] .st-drawer{display:none!important}
 .st-reg .pl-btn{height:40px;padding:0 14px;font-size:14px;min-width:0}
 .st-main .pl-roster{border-radius:24px}
 
+/* server notices: plan needed, ownership code, another window */
+.st-notices{display:grid;gap:8px;width:100%;max-width:1680px;margin-inline:auto;padding:0 16px}
+.st-notices:has(.st-notice:not([hidden])){padding-top:12px}
+.st-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 16px;border-radius:18px;border:1px solid rgba(56,212,255,.4);background:rgba(6,26,68,.88);font-weight:800}
+.st-notice[hidden]{display:none}
+.st-notice.is-plan{border-color:rgba(255,106,138,.6);background:rgba(58,11,44,.9);color:#FFE3EA}
+.st-notice.is-window{border-color:rgba(255,210,31,.6);background:rgba(58,44,6,.85);color:#FFF1B8}
+.st-notice.is-verify{border-color:rgba(255,210,31,.7);box-shadow:0 0 0 3px rgba(255,210,31,.12)}
+.st-notice.is-verify.is-done{border-color:rgba(47,217,160,.7);box-shadow:0 0 0 3px rgba(47,217,160,.14)}
+.st-notice-btn{display:inline-flex;align-items:center;height:38px;padding:0 14px;border:0;border-radius:12px;background:#FFD62A;color:#0A1A3D;font:900 14px "Tajawal",system-ui,sans-serif;text-decoration:none;cursor:pointer}
+.st-notice-btn[hidden]{display:none}
+.st-verify-text{display:grid;gap:2px;flex:1 1 260px;min-width:0}
+.st-verify-text span{color:var(--pl-text-2);font-weight:700}
+.st-verify-code{padding:6px 14px;border-radius:12px;background:#020A22;border:1px dashed #FFD21F;color:#FFE14D;font:900 22px/1.2 var(--font-latin,system-ui);letter-spacing:.12em}
+.st-verify-code[hidden]{display:none}
+.st-verify-left{color:var(--pl-text-3);font-weight:700}
+.st-side-listed{color:var(--pl-text-3);font-size:12px;font-weight:700;line-height:1.4}
+.st-side-listed.is-on{color:#7DF0C6}
+
 /* side panel */
 .st-side-card{display:flex;align-items:center;gap:12px;padding:10px;border-radius:16px;background:rgba(2,10,34,.6);border:1px solid rgba(56,212,255,.2)}
 .st-side-card img{width:56px;height:72px;flex:none;border-radius:10px;object-fit:cover;background:#020A22}
