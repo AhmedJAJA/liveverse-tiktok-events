@@ -53,6 +53,12 @@ test('client pages: light home, single WebSocket, cleanup on leave, pause when h
   assert.equal(imgs.filter((i) => /\/games\/\d\d-[\w-]+-120\.webp/.test(i) && /srcset=/.test(i)).length, 12, 'small card images with srcset');
   assert.match(homeCss, /grid-template-columns:minmax\(0,1fr\)/, 'the card strip cannot widen the page');
   assert.match(homeCss, /overflow-x:auto/);
+  // logo bubbles: CSS only, behind the letters plus edge-only ones in front, more on hover, off for reduced motion
+  assert.match(home, /class="hm-lb hm-lb-back"/); assert.match(home, /class="hm-lb hm-lb-front"/);
+  assert.match(homeCss, /\.hm-logo:hover \.hm-lb i\.x/);
+  assert.match(homeCss, /prefers-reduced-motion:reduce\)\{[\s\S]*\.hm-lb i\{animation:none/);
+  assert.match(homeCss, /content-visibility:auto/, 'lower sections render lazily');
+  assert.doesNotMatch(pub('home.js'), /WebSocket/, 'no WebSocket on the home page');
   assert.match(studio, /if \(ws && ws\.readyState <= 1\) return;/, 'never two sockets');
   assert.match(studio, /addEventListener\('pagehide'/);
   assert.doesNotMatch(sponge, /getContext\('2d'\)/, 'bubbles are CSS, not a per-frame canvas');

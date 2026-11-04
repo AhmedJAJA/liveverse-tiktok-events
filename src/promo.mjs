@@ -15,7 +15,7 @@ export function generateCode(length = 10) { let s = ''; for (let i = 0; i < leng
 
 export class PromoStore {
   constructor({ file = null, now = () => Date.now() } = {}) {
-    this.file = file; this.now = now; this.codes = new Map(); this.byHash = new Map(); this.pepper = null; this.saveTimer = null;
+    this.file = file; this.now = now; this.codes = new Map(); this.byHash = new Map(); this.pepper = null; this.saveTimer = null; this.mirror = null;
     if (file && fs.existsSync(file)) {
       try {
         const data = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -27,6 +27,9 @@ export class PromoStore {
   }
   hash(code) { return createHash('sha256').update(this.pepper + ':' + normalizeCode(code)).digest('base64url'); }
   add(c) { this.codes.set(c.id, c); this.byHash.set(c.hash, c); return c; }
+  /** Swap in the codes loaded from the database (see src/persist.mjs). */
+  replaceAll(pepper, records) { this.pepper = pepper; this.codes.clear(); this.byHash.clear(); for (const c of records) this.add(c); this.save(); }
+  changed(c) { this.save(); this.mirror?.put(c); }
   save() {
     if (!this.file) return;
     clearTimeout(this.saveTimer);
@@ -53,7 +56,7 @@ export class PromoStore {
     const hash = this.hash(plain);
     if (this.byHash.has(hash)) throw Object.assign(new Error('هذا الرمز موجود بالفعل'), { status: 409 });
     const c = this.add({ id: 'pc_' + randomBytes(6).toString('hex'), hash, hint: plain.slice(0, 2) + '•••' + plain.slice(-2), label: String(label).slice(0, 60), maxUses: uses, uses: 0, expiresAt: expires, active: true, level, createdAt: this.now(), lastUsedAt: null });
-    this.save();
+    this.changed(c);
     return { ...this.public(c), code: plain };
   }
   /** Ensure a code from the environment exists (unlimited, live). The plain value is never stored. */
@@ -74,7 +77,7 @@ export class PromoStore {
     if (plain.length < 4) return null;
     const c = this.byHash.get(this.hash(plain));
     if (!c || this.status(c) !== 'active') return null;
-    c.uses++; c.lastUsedAt = this.now(); this.save();
+    c.uses++; c.lastUsedAt = this.now(); this.changed(c);
     return c;
   }
   /** Is a session that came from this code still allowed? (disabled codes revoke their sessions) */
@@ -86,10 +89,10 @@ export class PromoStore {
     if (maxUses !== undefined) { const n = Number(maxUses); if (!Number.isInteger(n) || n < 0) throw Object.assign(new Error('عدد مرات غير صالح'), { status: 400 }); c.maxUses = n; }
     if (expiresAt !== undefined) c.expiresAt = expiresAt ? new Date(expiresAt).getTime() || null : null;
     if (level !== undefined) { if (!PROMO_LEVELS[level]) throw Object.assign(new Error('مستوى الصلاحية غير معروف'), { status: 400 }); c.level = level; }
-    this.save();
+    this.changed(c);
     return this.public(c);
   }
-  remove(id) { const c = this.codes.get(id); if (!c) return false; this.codes.delete(id); this.byHash.delete(c.hash); this.save(); return true; }
+  remove(id) { const c = this.codes.get(id); if (!c) return false; this.codes.delete(id); this.byHash.delete(c.hash); this.save(); this.mirror?.del(id); return true; }
   public(c) { const { hash, ...rest } = c; return { ...rest, status: this.status(c), levelLabel: PROMO_LEVELS[c.level] }; }
   list() { return [...this.codes.values()].sort((a, b) => b.createdAt - a.createdAt).map((c) => this.public(c)); }
 }

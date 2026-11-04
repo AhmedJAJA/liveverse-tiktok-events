@@ -17,3 +17,26 @@ services:
       # SKY_DATA_DIR to its mount path to keep everything.
       - key: SPONGE_PROMO_CODES
         sync: false
+      # PostgreSQL for accounts, permanent IDs, trials, subscriptions, payments, admin audit, and also
+      # promo codes and sessions. Use the database's Internal URL. Without it, accounts stay switched off.
+      # Note: a free Render Postgres is deleted after 30 days and has no backups — use a paid plan.
+      - key: DATABASE_URL
+        sync: false
+      # Public address used in e-mail and payment links, e.g. https://sponge.example.com
+      - key: APP_URL
+        sync: false
+      # E-mail verification (Resend). MAIL_FROM must be a verified sender, e.g. "SPONGE LIVE <no-reply@your-domain>".
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # Payments (Moyasar hosted invoices). Leave empty to keep checkout disabled.
+      - key: MOYASAR_SECRET_KEY
+        sync: false
+      - key: MOYASAR_WEBHOOK_SECRET
+        sync: false
+# To let the blueprint create the database too, uncomment (paid plan, so data and backups are kept):
+# databases:
+#   - name: sponge-db
+#     plan: basic-256mb
+#     postgresMajorVersion: "16"

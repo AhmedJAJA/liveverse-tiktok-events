@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020A22">
+<meta name="robots" content="noindex">
+<title>الإدارة — SPONGE LIVE</title>
+<link rel="icon" href="/brand/favicon-64.png" type="image/png">
+<link rel="stylesheet" href="/home.css">
+<link rel="stylesheet" href="/pages.css">
+<script defer src="/admin.js"></script>
+</head>
+<body class="hm pg">
+<div class="hm-sea" aria-hidden="true"><span class="hm-glow"></span><span class="hm-rays"></span>
+ <i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i>
+</div>
+<header class="pg-top">
+ <a class="pg-brand" href="/" dir="ltr"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>SPONGE</b> LIVE</span></a>
+ <nav class="pg-nav" aria-label="روابط"><a href="/">الرئيسية</a><a href="/studio">الاستوديو</a></nav>
+</header>
+<main class="pg-main">
+ <p class="pg-msg is-err" id="pageError" role="alert" hidden></p>
+ <div class="pg-grid">
+  <section class="pg-card pg-span" aria-labelledby="usersTitle">
+   <h1 id="usersTitle">لوحة الإدارة</h1>
+   <p class="pg-sub" id="stats">…</p>
+   <form class="pg-row" id="searchForm" role="search"><label class="pg-field"><span class="sr-only">بحث</span><input name="q" placeholder="ابحث بالمعرّف SPG-… أو اسم المستخدم أو البريد" dir="auto"></label><button class="pg-btn2" type="submit">بحث</button></form>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>المعرّف</th><th>المستخدم</th><th>البريد</th><th>الاشتراك</th><th>ينتهي</th><th></th></tr></thead><tbody id="userRows"></tbody></table></div>
+  </section>
+
+  <section class="pg-card pg-span" id="userPanel" aria-labelledby="userTitle" hidden>
+   <h2 id="userTitle">الحساب</h2>
+   <dl class="pg-dl" id="userInfo"></dl>
+   <div class="pg-row">
+    <form class="pg-row" id="grantForm"><label class="pg-field"><span>منح اشتراك (أيام)</span><input name="days" type="number" min="1" max="366" value="7" required></label><label class="pg-field"><span>ملاحظة</span><input name="note" maxlength="200"></label><button class="pg-btn2" type="submit">منح</button></form>
+    <form class="pg-row" id="extendForm"><label class="pg-field"><span>تمديد الحالي (أيام)</span><input name="days" type="number" min="1" max="366" value="7" required></label><button class="pg-btn2" type="submit">تمديد</button></form>
+   </div>
+   <div class="pg-row">
+    <button class="pg-btn2 is-danger" type="button" id="stopButton">إيقاف الاشتراك</button>
+    <button class="pg-btn2" type="button" id="verifyButton">تأكيد البريد يدويًا</button>
+    <button class="pg-btn2" type="button" id="trialRevokeButton">إلغاء رمز التجربة غير المستخدم</button>
+    <button class="pg-btn2 is-danger" type="button" id="disableButton">إيقاف الحساب</button>
+   </div>
+   <p class="pg-msg" id="userMsg" role="status" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الباقة</th><th>من</th><th>إلى</th><th>المصدر</th><th>الحالة</th></tr></thead><tbody id="userSubs"></tbody></table></div>
+  </section>
+
+  <section class="pg-card" aria-labelledby="codesTitle">
+   <h2 id="codesTitle">الرموز الترويجية</h2>
+   <form class="pg-form" id="codeForm">
+    <label class="pg-field"><span>الوصف</span><input name="label" maxlength="60" placeholder="مثال: ستريمر ضيف"></label>
+    <div class="pg-row"><label class="pg-field"><span>عدد الاستخدامات (0 = بلا حد)</span><input name="maxUses" type="number" min="0" max="100000" value="1"></label>
+    <label class="pg-field"><span>الصلاحية</span><select name="level"><option value="live">استوديو كامل مع ربط البث</option><option value="demo">تجربة بلا ربط بث</option></select></label></div>
+    <label class="pg-field"><span>ينتهي في (اختياري)</span><input name="expiresAt" type="datetime-local"></label>
+    <button class="pg-btn2" type="submit">إنشاء رمز</button>
+   </form>
+   <p class="pg-msg is-ok" id="newCode" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الرمز</th><th>الوصف</th><th>الاستخدام</th><th>الحالة</th><th></th></tr></thead><tbody id="codeRows"></tbody></table></div>
+  </section>
+
+  <section class="pg-card" aria-labelledby="auditTitle">
+   <h2 id="auditTitle">سجل عمليات الإدارة</h2>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>المنفّذ</th><th>العملية</th><th>الحساب</th></tr></thead><tbody id="auditRows"></tbody></table></div>
+  </section>
+ </div>
+</main>
+</body>
+</html>

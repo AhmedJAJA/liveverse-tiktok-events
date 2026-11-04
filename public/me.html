@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020A22">
+<meta name="robots" content="noindex">
+<title>حسابي — SPONGE LIVE</title>
+<link rel="icon" href="/brand/favicon-64.png" type="image/png">
+<link rel="stylesheet" href="/home.css">
+<link rel="stylesheet" href="/pages.css">
+<script defer src="/me.js"></script>
+</head>
+<body class="hm pg">
+<div class="hm-sea" aria-hidden="true"><span class="hm-glow"></span><span class="hm-rays"></span>
+ <i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i>
+</div>
+<header class="pg-top">
+ <a class="pg-brand" href="/" dir="ltr"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>SPONGE</b> LIVE</span></a>
+ <nav class="pg-nav" aria-label="روابط"><a href="/">الرئيسية</a><a href="/studio" id="navStudio" hidden>الاستوديو</a><a href="/admin" id="navAdmin" hidden>الإدارة</a><button type="button" class="pg-linkbtn" id="logoutButton">تسجيل الخروج</button></nav>
+</header>
+<main class="pg-main">
+ <p class="pg-msg is-info" id="pageNotice" role="status" hidden></p>
+ <p class="pg-msg is-err" id="pageError" role="alert" hidden></p>
+ <div class="pg-grid" id="profile" aria-busy="true">
+  <section class="pg-card" aria-labelledby="whoTitle">
+   <div class="pg-who"><span class="pg-avatar" id="avatarView" aria-hidden="true">🧽</span>
+    <div><h1 id="whoTitle"><span id="displayName">…</span></h1>
+     <div class="pg-id"><span class="sr-only">معرّف الحساب الدائم</span><code id="publicId" dir="ltr">SPG-······</code><button type="button" class="pg-copy" id="copyId">نسخ</button></div>
+    </div>
+   </div>
+   <dl class="pg-dl">
+    <dt>اسم المستخدم</dt><dd dir="ltr" id="username"></dd>
+    <dt>البريد الإلكتروني</dt><dd><span dir="ltr" id="email"></span> <span class="pg-badge" id="emailBadge"></span></dd>
+    <dt>تاريخ الإنشاء</dt><dd id="createdAt"></dd>
+   </dl>
+   <div class="pg-row" id="verifyRow" hidden><button type="button" class="pg-btn2" id="resendButton">إرسال رابط التأكيد مجددًا</button></div>
+  </section>
+
+  <section class="pg-card" aria-labelledby="accessTitle">
+   <h2 id="accessTitle">الاشتراك الحالي</h2>
+   <dl class="pg-dl">
+    <dt>الحالة</dt><dd><span class="pg-badge" id="accessBadge"></span></dd>
+    <dt>النوع</dt><dd id="accessPlan">—</dd>
+    <dt>ينتهي في</dt><dd id="accessEnds">—</dd>
+    <dt>الوقت المتبقي</dt><dd><span class="pg-big" id="accessLeft" dir="ltr">—</span></dd>
+   </dl>
+   <div class="pg-row"><a class="pg-btn" href="/studio" id="openStudio" hidden>افتح الاستوديو</a></div>
+  </section>
+
+  <section class="pg-card" id="trial" aria-labelledby="trialTitle">
+   <h2 id="trialTitle">التجربة المجانية — 24 ساعة</h2>
+   <p class="pg-sub" id="trialText">مرة واحدة لكل حساب. تبدأ الـ24 ساعة من لحظة التفعيل.</p>
+   <div id="trialCode" class="pg-code" hidden><code id="trialCodeValue" dir="ltr"></code><button type="button" class="pg-copy" id="copyTrial">نسخ الرمز</button></div>
+   <dl class="pg-dl" id="trialTimes" hidden><dt>بدأت</dt><dd id="trialStart"></dd><dt>تنتهي / انتهت</dt><dd id="trialEnd"></dd></dl>
+   <div class="pg-row"><button type="button" class="pg-btn" id="trialClaim" hidden>احصل على تجربتك المجانية</button><button type="button" class="pg-btn" id="trialActivate" hidden>فعّل التجربة الآن</button></div>
+  </section>
+
+  <section class="pg-card" id="plans" aria-labelledby="plansTitle">
+   <h2 id="plansTitle">الاشتراك في باقة</h2>
+   <p class="pg-sub">الدفع يتم في صفحة بوابة الدفع الآمنة؛ لا تُحفظ بيانات البطاقة في موقعنا. يُفعّل الاشتراك بعد تأكيد بوابة الدفع فقط.</p>
+   <div class="pg-plans">
+    <div class="pg-plan" id="planWeekly"><b>شفيق العادي</b><span class="pg-price">29 ريال</span><span>7 أيام</span><button type="button" class="pg-btn2" data-checkout="weekly">اشترك الآن</button></div>
+    <div class="pg-plan is-amir" id="planMonthly"><b>أمير الهامور</b><span class="pg-price">44.99 ريال</span><span>شهر واحد</span><button type="button" class="pg-btn" data-checkout="monthly">اشترك الآن</button></div>
+   </div>
+   <p class="pg-msg is-info" id="billingNote" hidden>الدفع الإلكتروني غير مفعّل بعد — سيُعلن عند ربط بوابة الدفع.</p>
+  </section>
+
+  <section class="pg-card" aria-labelledby="editTitle">
+   <h2 id="editTitle">تعديل الملف الشخصي</h2>
+   <form class="pg-form" id="editForm" novalidate>
+    <label class="pg-field"><span>الاسم الظاهر</span><input name="displayName" maxlength="40" required><em class="pg-ferr" data-for="displayName" hidden></em></label>
+    <fieldset class="pg-field"><span>الصورة</span><div class="pg-avatars" id="avatarChoices"></div></fieldset>
+    <p class="pg-note">المعرّف الدائم واسم المستخدم لا يمكن تغييرهما.</p>
+    <p class="pg-msg" id="editMsg" role="status" hidden></p>
+    <button class="pg-btn" type="submit">حفظ</button>
+   </form>
+  </section>
+
+  <section class="pg-card" aria-labelledby="linkedTitle">
+   <h2 id="linkedTitle">حسابات البث المرتبطة</h2>
+   <div class="pg-linked"><div><b>TikTok</b><span id="linkedTiktok">لا يوجد</span></div><div><b>Kick</b><span id="linkedKick">لا يوجد</span></div></div>
+   <p class="pg-note">يظهر الحساب هنا بعد ربطه من الاستوديو أو من الصفحة الرئيسية. الربط الناجح يعني وصول شات البث، ولا يُعد توثيقًا لملكية الحساب.</p>
+  </section>
+
+  <section class="pg-card pg-span" aria-labelledby="historyTitle">
+   <h2 id="historyTitle">سجل الاشتراكات</h2>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الباقة</th><th>من</th><th>إلى</th><th>المبلغ</th><th>الحالة</th></tr></thead><tbody id="historyRows"><tr><td colspan="5">لا يوجد اشتراكات بعد</td></tr></tbody></table></div>
+  </section>
+ </div>
+</main>
+</body>
+</html>
