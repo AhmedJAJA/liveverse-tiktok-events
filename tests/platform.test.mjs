@@ -280,7 +280,7 @@ test('subscription vouchers: one code, one plan period, for the account that red
     const u = browser(srv.base);
     await u('POST', '/api/auth/register', { username: 'voucher_user', email: 'voucher@example.com', password: 'reef2026go', confirm: 'reef2026go' });
     const r1 = await u('POST', '/api/access/redeem', { code: a.toLowerCase() });
-    assert.equal(r1.status, 200); assert.equal(r1.data.voucher.plan, 'monthly'); assert.equal(r1.data.next, '/account?voucher=1');
+    assert.equal(r1.status, 200); assert.equal(r1.data.voucher.plan, 'monthly'); assert.equal(r1.data.next, '/studio');
     assert.equal((await browser(srv.base)('POST', '/api/access/redeem', { code: a })).status, 401, 'used code is still a voucher but needs an account');
     assert.equal((await u('POST', '/api/me/redeem', { code: a })).status, 409, 'single use');
     const r2 = await u('POST', '/api/me/redeem', { code: weekly });
@@ -291,8 +291,8 @@ test('subscription vouchers: one code, one plan period, for the account that red
     assert.equal((await u('POST', '/api/me/redeem', { code: 'AMIR-AAAA-BBBB-CCCC-DDDD' })).status, 401);
     const prof = (await u('GET', '/api/me/profile')).data;
     assert.equal(prof.access.plan, 'monthly'); assert.equal(prof.history.length, 2);
-    await owner('POST', '/api/manage/verify', { publicId: prof.user.publicId });
-    assert.equal((await u('GET', '/studio')).status, 200);
+    assert.equal(prof.user.verified, false);
+    assert.equal((await u('GET', '/studio')).status, 200, 'a redeemed voucher opens the studio without e-mail verification');
     const log = (await owner('GET', '/api/manage/audit')).data.log.map((l) => l.action);
     assert.ok(log.includes('voucher-create') && log.includes('voucher-revoke'));
   } finally { await srv.stop(); }
