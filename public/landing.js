@@ -306,37 +306,7 @@ async function loadSite() {
   renderGallery(siteGames);
   renderPricing(site.pricing,site.support);
 }
-/* Game details: clicking a cover opens its rules instead of jumping straight in. */
-function openGame(mode) {
-  const game=siteGames.find(g=>g.mode===mode);
-  if(!game)return false;
-  byId('gameDialogCover').src=game.cover;
-  byId('gameDialogTitle').textContent=game.title;
-  byId('gameDialogCategory').textContent=game.categoryLabel||game.category||'';
-  byId('gameDialogSummary').textContent=game.summary||'';
-  byId('gameDialogRules').replaceChildren(...(game.rules||[]).map(rule=>{const li=document.createElement('li');li.textContent=rule;return li;}));
-  const play=byId('gameDialogPlay');
-  play.href='/studio?mode='+encodeURIComponent(game.mode);
-  byId('gameDialogSetup').href=game.href;
-  byId('gameDialogNote').textContent=(game.minPlayers>1?'يحتاج '+game.minPlayers+' لاعبين على الأقل. ':'')+(hasControl()?'':'تحتاج حسابًا أو دخول ضيف لتشغيلها على بثك.');
-  const dialog=byId('gameDialog');
-  if(!dialog.open)dialog.showModal();
-  return true;
-}
-byId('gameGallery')?.addEventListener('click',event=>{
-  const card=event.target.closest('.sh-cover');
-  if(!card||event.metaKey||event.ctrlKey)return;
-  if(openGame(card.dataset.mode))event.preventDefault();
-});
-byId('gameDialogPlay')?.addEventListener('click',event=>{
-  if(hasControl())return;
-  event.preventDefault();
-  const href=event.currentTarget.href;
-  byId('gameDialog').close();
-  openAccount('register',()=>{location.href=href;});
-});
-byId('gameDialogClose')?.addEventListener('click',()=>byId('gameDialog').close());
-byId('gameDialog')?.addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
+/* Covers link straight to each game's join page (/play?mode=…). */
 /* Every connected room is listed; the server sorts by players and flags the busiest one. */
 const liveTemplate=byId('liveCard');
 let streamsTimer=0;

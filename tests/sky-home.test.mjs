@@ -34,7 +34,7 @@ test('pricing and support channel are owner settings with safe parsing', () => {
 });
 
 test('home follows the brief structure with Sky Live identity only', () => {
-  for (const id of ['how', 'games', 'pricing', 'platforms', 'season', 'leaderboard', 'start', 'gameGallery', 'phoneSlides', 'liveCard', 'liveEmpty', 'priceMonthly', 'priceAnnual', 'heroGameCount', 'heroElimCount', 'gameDialog', 'livePlatform'])
+  for (const id of ['how', 'games', 'pricing', 'platforms', 'season', 'leaderboard', 'start', 'gameGallery', 'phoneSlides', 'liveCard', 'liveEmpty', 'priceMonthly', 'priceAnnual', 'heroGameCount', 'heroElimCount', 'livePlatform'])
     assert.match(home, new RegExp('id="' + id + '"'), id);
   for (const href of ['#how', '#games', '#pricing']) assert.ok(home.includes(`href="${href}"`), href);
   assert.doesNotMatch(home, /hudhud|هدهد|Kick\.com|دعم كيك/);

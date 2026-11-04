@@ -36,6 +36,8 @@ Free accounts and guests can play every game with demo players; **connecting a r
 
 **Draw & guess** at `/draw`: 2–8 players, 5-character room codes, write → draw → describe chain, album controlled by the host. Creating a room needs the owner token or an active plan; anyone (guests if allowed) can join by code.
 
+**Join page `/play?mode=<game>`** (every game card links here): big call «اكتب انضم في شات البث لبدء اللعب», live roster with avatars and numbers (one seat per viewer), and host-only controls — «شارك كلاعب» / «إلغاء مشاركتي», «ابدأ اللعبة» enabled once the game minimum is reached, then end / next / draw while playing. Viewers who write the join word after kick-off wait and enter the next round automatically. Visitors without a session get a private trial room silently (no login wall); `?room=<id>` opens a read-only view. The old `/event?mode=` and `/bomb` pages remain as advanced settings.
+
 **Public stream list:** `/api/streams` lists every connected room (players, game, platform) for the home page.
 
 ## TIME BOMB | القنبلة المؤقتة

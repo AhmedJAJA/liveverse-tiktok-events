@@ -48,7 +48,7 @@ test('approved mobile visual layout, animations and accessible fallback are pres
   assert.match(home,/الصورة غير متاحة حاليًا/);
 });
 test('TIME BOMB is listed on the homepage and in the studio game modes',()=>{
-  assert.match(home,/href="\/bomb"/);
+  assert.match(home,/href="\/play\?mode=bomb"/);
   assert.match(home,/القنبلة المؤقتة/);
   assert.match(fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8'),/data-mode="bomb"/);
 });

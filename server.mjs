@@ -140,6 +140,19 @@ async function handleAction(action, body, actor) {
     case 'advance': engine.advance(); return { ok: true };
     case 'add-player': return { ok: true, player: engine.addManualPlayer({ name: body.name }) };
     case 'add-host': return { ok: true, player: engine.joinHost() };
+    case 'host-seat': return { ok: true, player: engine.seatHost({ name: actor.user?.displayName || (actor.kind === 'owner' ? 'المشرف' : 'المشرف') }) };
+    case 'host-unseat': return { ok: true, ...engine.unseatHost() };
+    case 'prepare': {
+      // Join page: pick the game and open signups. A quiz gets a fresh question from the bank.
+      const game = GAMES.find((g) => g.mode === body.mode);
+      if (!game) throw new Error('لعبة غير معروفة');
+      const result = engine.prepareJoin({ mode: game.mode, title: game.title });
+      if (game.mode === 'quiz' && result.phase === 'open') {
+        const q = questionBank.draw({});
+        engine.configure({ mode: 'quiz', title: 'تحدي ' + (questionBank.stats().categories[q.category]?.title || 'المعلومات'), prompt: q.question, options: q.options, answer: q.answer });
+      }
+      return { ok: true, ...result };
+    }
     case 'remove-player': return { ok: true, ...engine.removePlayer(body) };
     case 'branding': return { ok: true, branding: engine.setBranding(body) };
     case 'bank-next': {
@@ -268,7 +281,7 @@ function streams() {
   return { streams: list, totalStreams: list.length, totalPlayers: list.reduce((n, s) => n + s.players, 0) };
 }
 
-const STATIC = new Set(['index.html','landing.html','landing.js','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','draw-mark.svg','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','sky-home.css','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
+const STATIC = new Set(['index.html','landing.html','landing.js','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','draw-mark.svg','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','sky-home.css','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
   ...GAMES.map((g) => g.cover.slice(1)),
   'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt']);
 
@@ -305,7 +318,7 @@ const server = http.createServer(async (req, res) => {
     }
   } catch (err) { return json(res, err.status || 500, { error: String(err.message || err).slice(0, 200) }); }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
-  const fileMap = { '/': 'landing.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
+  const fileMap = { '/': 'landing.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });
