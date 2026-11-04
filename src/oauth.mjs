@@ -134,10 +134,13 @@ export class Providers {
   /** The identity of the signed-in platform account, read with its own token. */
   async identity(p, accessToken) {
     if (p === 'tiktok') {
-      const r = await getJson(ENDPOINTS.tiktok.userinfo + '?fields=open_id,union_id,avatar_url,avatar_large_url,display_name,username', accessToken, this.fetch);
+      const r = await getJson(ENDPOINTS.tiktok.userinfo + '?fields=open_id,union_id,avatar_url,avatar_large_url,display_name,username,profile_web_link,profile_deep_link', accessToken, this.fetch);
       const u = r.data?.data?.user;
       if (!r.ok || !u?.open_id) throw new OAuthError('تعذر قراءة بيانات حساب TikTok', 'userinfo', 502);
-      return { platformUserId: String(u.open_id), handle: u.username ? String(u.username) : '', displayName: String(u.display_name || ''), avatar: String(u.avatar_large_url || u.avatar_url || '') };
+      // the username, or else the one in the profile link TikTok returns (https://www.tiktok.com/@name)
+      const fromLink = /tiktok\.com\/@([A-Za-z0-9._]{1,40})/.exec(String(u.profile_web_link || u.profile_deep_link || ''))?.[1] || '';
+      const handle = /^[A-Za-z0-9._]{1,40}$/.test(String(u.username || '')) ? String(u.username) : fromLink;
+      return { platformUserId: String(u.open_id), handle, displayName: String(u.display_name || ''), avatar: String(u.avatar_large_url || u.avatar_url || '') };
     }
     const r = await getJson(ENDPOINTS.kick.api + '/users', accessToken, this.fetch);
     const u = (r.data?.data || [])[0];
