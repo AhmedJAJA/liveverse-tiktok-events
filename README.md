@@ -291,3 +291,11 @@ Open Trivia DB was researched as an optional future provider, but its API questi
 - The answer key is never included in public state before the results screen. Times reflect **server arrival**, not precise time the viewer pressed Send, because TikTok may buffer/delay comments.
 - Race and wheel modes keep their existing rules; the single-answer rule applies only to quiz and guessing rounds.
 
+
+
+## v1.4 — Verified live streams
+
+- **Linking a LIVE** needs a SPONGE LIVE account with a running free trial or subscription (or the site owner); checked by the server on every request. Promo codes and legacy accounts can still play with demo players but cannot link a stream.
+- **Ownership proof:** the first time an account is linked, the server shows a one-time code (`SL-XXXXXX`, 10 minutes). The streamer types it in the chat of their own LIVE; the platform reports that message as sent by that very account (handle, and numeric owner id when available). Until then nothing from that chat reaches a game. Proofs are stored in `linked_accounts` (`verified`, `platform_user_id`, `verified_at`, `verify_method='live-chat-code'`); one owner per platform account. No platform tokens are stored. Official OAuth (TikTok Login Kit / Kick OAuth) needs developer apps registered by the site owner and can be added later.
+- **Active streams** (`/api/streams`) list a room only when: plan active + ownership proven + LIVE confirmed by the platform (TikTok room info / Kick channel API, re-checked every 3 min) + the studio window is beating (`/api/admin/heartbeat`, 45 s grace) + a game is open (waiting or running). State is kept by the server in `live_sessions` (`offline`, `connected`, `in_studio`, `waiting`, `running`, `disconnected`, `ended`).
+- **Several studio windows:** one room per account, one controlling window (`X-Studio-Tab`); the newest window takes control, others get 409 and can take over.

@@ -90,6 +90,8 @@ export class Engine {
     this.status = { mode: 'quiz', active: false, title: 'تحدي المعلومات', prompt: 'ما هي عاصمة المملكة العربية السعودية؟', options: ['الرياض', 'جدة', 'الدمام', 'مكة'], answer: '1', winner: null, notice: 'جاهز للفعالية!', target: 12, duration: 30, startedAt: null, endsAt: null, submissionCount: 0, results: null, lastEvent: null, glassStep: 0, glassSteps: 10, glassRemaining: 0 };
     this.connection = { state: 'disconnected', username: '', detail: 'لم يتم الربط', platform: 'tiktok' };
     this.streamer = { key: '', name: '', avatar: '' };
+    // Server-side facts about the stream: ownership proven, live confirmed by the platform. Never set from a browser.
+    this.connMeta = { verified: false, verifying: false, liveConfirmed: false };
     this.party = null;
     this.partyConfig = {};
     this.simulation = { autoplay: false };
@@ -103,7 +105,10 @@ export class Engine {
   setConnection(state, username = '', detail = '', platform = this.connection.platform || 'tiktok') {
     const previousState = this.connection.state;
     const key = (platform === 'kick' ? 'kick' : 'tiktok') + ':' + String(username || '').toLowerCase();
-    if (this.streamer?.key !== key) this.streamer = { key, name: '', avatar: '' }; // a different channel: forget the old profile
+    if (this.streamer?.key !== key) { // a different channel: forget the old profile and its proofs
+      this.streamer = { key, name: '', avatar: '' };
+      this.connMeta = { verified: false, verifying: false, liveConfirmed: false };
+    }
     this.connection = { state, username: safeLine(username, 50), detail: safeLine(detail, 180), platform: platform === 'kick' ? 'kick' : 'tiktok' };
     if (state === 'connected' && this.registration.phase === 'open' && this.registration.hostJoin === 'auto') this.joinHost(false);
     // First successful LIVE connection opens signups. Reconnects do not wipe a session.
@@ -113,10 +118,23 @@ export class Engine {
     }
     this.emit();
   }
+  /** Players who joined from the real chat (no demo bots, no names typed by the host). */
+  realPlayerCount() { let n = 0; for (const p of this.players.values()) if (!p.id.startsWith('demo:') && !p.manual) n++; return n; }
+  /** Ownership / live facts decided by the server (verification code seen in the owner's chat, platform live check). */
+  setConnectionMeta(meta = {}) {
+    const next = { ...this.connMeta };
+    for (const k of ['verified', 'verifying', 'liveConfirmed']) if (typeof meta[k] === 'boolean') next[k] = meta[k];
+    if (next.verified) next.verifying = false;
+    const changed = Object.keys(next).some((k) => next[k] !== this.connMeta[k]);
+    this.connMeta = next;
+    if (changed) this.emit();
+  }
   /** Broadcaster profile (display name + picture) read from the platform when the stream connects. */
-  setStreamer({ displayName = '', avatar = '' } = {}) {
+  setStreamer({ displayName = '', avatar = '', platformId = '' } = {}) {
     if (!this.streamer) this.streamer = { key: '', name: '', avatar: '' };
     const name = safeLine(displayName, 50), image = safeStreamerAvatar(avatar);
+    const pid = String(platformId || '');
+    if (/^[A-Za-z0-9_-]{1,40}$/.test(pid)) this.streamer.platformId = pid;
     if (name) this.streamer.name = name;
     if (image) this.streamer.avatar = image;
   }
@@ -127,7 +145,7 @@ export class Engine {
       .sort((a,b) => b.progress - a.progress).slice(0, 15);
     return {
       status: { ...this.status, answer: undefined, choiceCounts: [1, 2, 3, 4].map(n => [...this.firstAnswers.values()].filter(a => a.choice === String(n)).length), choiceVoters: [1, 2, 3, 4].map(n => [...this.firstAnswers.entries()].filter(([, a]) => a.choice === String(n)).slice(0, 3).map(([id]) => this.publicPlayer(this.players.get(id)))) },
-      connection: this.connection,
+      connection: { ...this.connection, verified: this.connMeta.verified, verifying: this.connMeta.verifying, liveConfirmed: this.connection.state === 'connected' && this.connMeta.liveConfirmed },
       leaderboard: players,
       race,
       entries: [...this.wheelEntries.values()].map(({ name }) => name).slice(0, 60),

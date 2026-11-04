@@ -2,7 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
+import { randomBytes, timingSafeEqual, createHash, randomInt, randomUUID } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Engine, liveUrlFor } from './src/engine.mjs';
@@ -40,6 +40,19 @@ const MAX_ROOMS = 80;
 const BROADCAST_MS = Math.max(40, Number(process.env.SKY_BROADCAST_MS) || 120);
 const ROOM_IDLE_MS = 3 * 60 * 60_000;
 const rooms = new Map();
+const HOST_TIMEOUT_MS = Math.max(5_000, Number(process.env.SKY_HOST_TIMEOUT_MS) || 45_000); // a studio window that stops beating is gone after this
+const VERIFY_TTL_MS = 10 * 60_000;
+const sameHandle = (a, b) => String(a || '').replace(/^@/, '').toLowerCase() === String(b || '').replace(/^@/, '').toLowerCase();
+/** The proof: the code appears in a chat message that the platform attributes to the channel owner's own account. */
+function proofMatches(room, chat) {
+  const v = room.verify, c = room.engine.connection;
+  if (!v || c.platform !== v.platform || !sameHandle(c.username, v.handle) || !chat?.handle || !sameHandle(chat.handle, v.handle)) return false;
+  const owner = room.engine.streamer?.platformId;
+  if (/^\d+$/.test(owner || '') && /^\d+$/.test(String(chat.id || '')) && String(chat.id) !== owner) return false; // the owner's numeric id, when both are known
+  return String(chat.text || '').toUpperCase().replace(/[\s-]/g, '').includes(v.code.replace(/-/g, ''));
+}
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const newVerifyCode = () => 'SL-' + Array.from({ length: 6 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
 class Room {
   constructor(id, kind, ownerId = null) {
     this.id = id; this.kind = kind; this.ownerId = ownerId; this.clients = new Set(); this.touched = Date.now();
@@ -48,10 +61,41 @@ class Room {
     // each broadcast carries the full current state).
     this.engine = new Engine({ lazy: true, notify: () => this.scheduleBroadcast() });
     this.flushTimer = null; this.lastFlush = 0; this.broadcasts = 0;
-    this.tiktok = new LiveBridge(this.engine);
-    this.kick = new KickBridge(this.engine);
+    // Bridges talk to the room, not the engine: chat from a stream whose ownership is not proven never reaches a game.
+    this.hub = {
+      setConnection: (...a) => this.engine.setConnection(...a), setStreamer: (p) => this.engine.setStreamer(p),
+      setConnectionMeta: (m) => this.engine.setConnectionMeta(m), receiveChat: (c) => this.receiveChat(c),
+    };
+    this.tiktok = new LiveBridge(this.hub);
+    this.kick = new KickBridge(this.hub);
     this.questionBank = new QuestionBank(questions);
+    this.verify = null;        // pending ownership challenge {platform, handle, code, expiresAt, userId}
+    this.tabs = new Map();     // studio windows of the host: tab id -> {at, screen}
+    this.primaryTab = null;    // the one window allowed to control the room
+    this.gameSessionId = null; this.saved = { state: '', at: 0 };
   }
+  receiveChat(chat) {
+    const meta = this.engine.connMeta, c = this.engine.connection;
+    if (c.state === 'connected' && !meta.verified) {
+      if (this.verify && Date.now() < this.verify.expiresAt && proofMatches(this, chat)) this.onVerified(chat);
+      return; // an unproven stream only waits for its code
+    }
+    this.engine.receiveChat(chat);
+  }
+  onVerified(chat) {
+    const v = this.verify; this.verify = null;
+    this.engine.setConnectionMeta({ verified: true, verifying: false });
+    this.ownerProof = v.platform + ':' + v.handle.toLowerCase();
+    if (v.userId && platform) platform.markStreamVerified(v.userId, v.platform, v.handle, this.engine.streamer?.platformId || chat.id)
+      .then(({ previousOwners }) => { for (const r of rooms.values()) if (r !== this && previousOwners.includes(r.ownerId)) r.revokeStream('تم إثبات ملكية الحساب من مستخدم آخر'); })
+      .catch((err) => console.error('[stream] verify save failed', err.message));
+  }
+  revokeStream(reason) {
+    this.verify = null;
+    this.tiktok.disconnect(false).catch(() => {}); this.kick.disconnect(false).catch(() => {});
+    this.engine.setConnection('disconnected', '', reason);
+  }
+  hostTab() { const t = this.primaryTab && this.tabs.get(this.primaryTab); return t && Date.now() - t.at <= HOST_TIMEOUT_MS ? t : null; }
   view() { return { ...this.engine.snapshot(), viewers: this.clients.size }; }
   scheduleBroadcast() {
     if (this.flushTimer) return;
@@ -263,21 +307,44 @@ async function handleAction(action, body, actor) {
     case 'reset': engine.resetScores(); return { ok: true };
     case 'draw': return { ok: true, result: engine.drawWheel() };
     case 'connect': {
-      if (!actor.live) throw Object.assign(new Error(actor.kind === 'guest' ? 'ربط البث يحتاج حسابًا مشتركًا — جرّب الألعاب الآن بلاعبين تجريبيين' : 'ربط البث يحتاج اشتراكًا فعّالًا — جرّب الألعاب الآن بلاعبين تجريبيين'), { status: 403 });
+      // 1) only a running trial or subscription (or the site owner) may link a LIVE — checked here, on the server
+      requireStreamAccess(actor);
       const service = body.platform === 'kick' ? 'kick' : 'tiktok';
-      if (service === 'kick') {
-        if (!validKickSlug(body.username)) throw new Error('اسم قناة Kick غير صالح');
-        await room.tiktok.disconnect(false);
-        await room.kick.connect(body.username, { chatroomId: body.chatroomId });
-      } else {
-        await room.kick.disconnect(false);
-        await room.tiktok.connect(body.username);
+      const handle = String(body.username || '').trim().replace(/^@/, '');
+      if (!liveUrlFor(service, handle) || (service === 'kick' && !validKickSlug(handle))) throw new Error(service === 'kick' ? 'اسم قناة Kick غير صالح' : 'اسم حساب TikTok غير صالح');
+      // 2) has this user already proven that this platform account is theirs?
+      let proven = false;
+      if (actor.kind === 'acct') { const v = await platform.verifiedStream(actor.userId, service); proven = !!v && sameHandle(v.handle, handle); }
+      else proven = room.ownerProof === service + ':' + handle.toLowerCase();
+      room.verify = null;
+      // 3) connect (TikTok refuses a room that is not live; Kick is checked on its channel API)
+      if (service === 'kick') { await room.tiktok.disconnect(false); await room.kick.connect(handle, { chatroomId: body.chatroomId }); }
+      else { await room.kick.disconnect(false); await room.tiktok.connect(handle); }
+      if (proven) {
+        engine.setConnectionMeta({ verified: true, verifying: false });
+        if (actor.kind === 'acct') platform.touchStream(actor.userId, service).catch(() => {});
+        return { ok: true, state: engine.connection.state, verified: true };
       }
-      // A typed name is not proof of ownership; only a connection that actually reached the live chat is recorded as such.
-      if (actor.kind === 'acct') await platform.linkAccount(actor.userId, service, String(body.username).replace(/^@/, ''), engine.connection.state === 'connected').catch(() => {});
-      return { ok: true, state: engine.connection.state };
+      // 4) not proven yet: a one-time code that only the account itself can post in its own LIVE chat
+      room.verify = { platform: service, handle, code: newVerifyCode(), expiresAt: Date.now() + VERIFY_TTL_MS, userId: actor.kind === 'acct' ? actor.userId : null };
+      engine.setConnectionMeta({ verified: false, verifying: true });
+      return { ok: true, state: engine.connection.state, verified: false,
+        verify: { platform: service, handle, code: room.verify.code, expiresAt: new Date(room.verify.expiresAt).toISOString() } };
     }
-    case 'disconnect': await room.tiktok.disconnect(false); await room.kick.disconnect(false); engine.setConnection('disconnected', '', 'تم الفصل'); return { ok: true };
+    case 'disconnect': room.verify = null; await room.tiktok.disconnect(false); await room.kick.disconnect(false); engine.setConnection('disconnected', '', 'تم الفصل'); return { ok: true };
+    case 'heartbeat': {
+      // The studio window says it is open (every ~15 s). Only one window controls the room; it can be taken over.
+      const tab = String(body.tab || '');
+      if (!/^[A-Za-z0-9_-]{8,48}$/.test(tab)) throw new Error('نافذة غير معروفة');
+      const now = Date.now();
+      if (body.closing === true) { room.tabs.delete(tab); if (room.primaryTab === tab) room.primaryTab = null; return { ok: true }; }
+      for (const [id, t] of room.tabs) if (now - t.at > HOST_TIMEOUT_MS) room.tabs.delete(id);
+      if (room.tabs.size >= 12 && !room.tabs.has(tab)) throw new Error('نوافذ كثيرة مفتوحة للاستوديو');
+      room.tabs.set(tab, { at: now, screen: body.screen === 'game' ? 'game' : 'games' });
+      if (!room.hostTab() || body.takeover === true) room.primaryTab = tab;
+      const st = liveStatus(room);
+      return { ok: true, primary: room.primaryTab === tab, state: st.state, listed: st.listed, reasons: st.reasons };
+    }
     case 'simulate': {
       const name = String(body.username ?? '').trim().slice(0,32);
       if (!name || !body.text) throw new Error('أدخل اسم المشاهد والتعليق');
@@ -300,6 +367,12 @@ async function handleAction(action, body, actor) {
     case 'account-password': requireOwner(actor); { await accounts.setPassword(body.username, body.password); const u = accounts.find(body.username); if (u) sessions.destroyUser(u.id); return { ok: true }; }
     default: throw new Error('الإجراء غير معروف');
   }
+}
+/** Linking a LIVE needs a running trial or subscription on a SPONGE LIVE account (or the site owner). */
+function requireStreamAccess(actor) {
+  if (actor.kind === 'owner') return;
+  if (actor.kind === 'acct' && platform?.entitlement(actor.userId).active) return;
+  throw Object.assign(new Error('تحتاج إلى اشتراك فعال لربط بثك المباشر'), { status: 402, needPlan: true });
 }
 function requireOwner(actor) { if (actor.kind !== 'owner') throw Object.assign(new Error('هذا الإجراء لمالك الموقع فقط'), { status: 403 }); }
 
@@ -622,22 +695,73 @@ async function handleRole(action, url, req, res) {
   } catch (err) { return json(res, 400, { error: String(err.message || err).slice(0, 200) }); }
 }
 
+/** Server-kept state of a host's live session. */
+function liveStatus(room) {
+  const e = room.engine, c = e.connection, st = e.status, reg = e.registration || {};
+  const meta = e.connMeta, host = room.hostTab();
+  let state;
+  if (c.state !== 'connected') state = c.username ? 'disconnected' : 'offline';
+  else if (!host) state = 'connected';
+  else if (host.screen !== 'game') state = 'in_studio';
+  else if (st.active) state = 'running';
+  else if (reg.phase === 'open') state = 'waiting';
+  else if (st.results) state = 'ended';
+  else state = 'in_studio';
+  // who stands behind the room: an account with a running plan, or the site owner (main room)
+  let subscribed = false;
+  if (room.kind === 'acct') { const u = platform?.cached(room.ownerId); subscribed = !!u && !u.user.disabled_at && platform.entitlement(room.ownerId).active; }
+  else if (room.id === 'main') subscribed = true;
+  const reasons = [];
+  if (!subscribed) reasons.push('no-subscription');
+  if (!meta.verified) reasons.push('not-verified');
+  if (c.state !== 'connected' || !meta.liveConfirmed) reasons.push('not-live');
+  if (!host) reasons.push('studio-closed');
+  if (!['waiting', 'running'].includes(state)) reasons.push('no-game');
+  return { state, listed: reasons.length === 0, reasons, subscribed, host };
+}
 function streams() {
   const list = [];
   for (const room of rooms.values()) {
+    const st = liveStatus(room);
+    if (!st.listed) continue; // subscription + proven ownership + live on the platform + studio open + a game on screen
     const s = room.engine.snapshot();
-    if (s.connection.state !== 'connected') continue;
     const game = ALL_GAMES.find((g) => g.mode === s.status.mode);
     const who = room.engine.streamer || {};
     const handle = String(s.connection.username || '').replace(/^@/, '');
     list.push({ room: room.id, platform: s.connection.platform, username: handle, displayName: who.name || handle,
-      avatarUrl: who.avatar || '', liveUrl: liveUrlFor(s.connection.platform, handle),
-      players: s.playerCount, active: !!s.status.active, mode: s.status.mode,
+      avatarUrl: who.avatar || '', liveUrl: liveUrlFor(s.connection.platform, handle), state: st.state, verified: true,
+      players: room.engine.realPlayerCount(), active: !!s.status.active, mode: s.status.mode,
       currentGame: game?.title || s.status.title, game: game?.title || s.status.title, cover: game?.cover || '/covers/quiz.svg' });
   }
   list.sort((a, b) => b.players - a.players);
   if (list.length > 1 && list[0].players > 0) list[0].top = true;
   return { streams: list, totalStreams: list.length, totalPlayers: list.reduce((n, s) => n + s.players, 0) };
+}
+/** Every few seconds: expire codes, close streams whose plan ended, keep the live_sessions rows current. */
+function sweepLive() {
+  const now = Date.now();
+  for (const room of rooms.values()) {
+    if (room.verify && now >= room.verify.expiresAt) {
+      room.verify = null;
+      room.tiktok.disconnect(false).catch(() => {}); room.kick.disconnect(false).catch(() => {});
+      room.engine.setConnection('error', '', 'انتهت مهلة التحقق من ملكية الحساب — اربط مرة أخرى واكتب الرمز في تعليقات بثك');
+    }
+    const st = liveStatus(room);
+    if (room.kind === 'acct' && !st.subscribed && ['connected', 'connecting'].includes(room.engine.connection.state)) room.revokeStream('انتهى الاشتراك — جدّد لربط البث');
+    const inGame = ['waiting', 'running'].includes(st.state);
+    if (inGame && !room.gameSessionId) room.gameSessionId = randomUUID();
+    if (!inGame) room.gameSessionId = null;
+    if (room.kind !== 'acct' || !platform) continue;
+    const sig = st.state + '|' + st.listed + '|' + room.gameSessionId + '|' + room.engine.realPlayerCount();
+    if (sig === room.saved.sig && now - room.saved.at < 60_000) continue;
+    if (st.state === 'offline' && room.saved.state === 'offline') continue;
+    room.saved = { sig, state: st.state, at: now };
+    const c = room.engine.connection;
+    platform.saveLiveSession(room.ownerId, { room: room.id, gameSessionId: room.gameSessionId, platform: c.username ? c.platform : null, handle: c.username || null,
+      platformUserId: room.engine.streamer?.platformId || null, verified: room.engine.connMeta.verified, subscriptionActive: st.subscribed, state: st.state, listed: st.listed,
+      currentGame: inGame ? (ALL_GAMES.find((g) => g.mode === room.engine.status.mode)?.title || null) : null, players: room.engine.realPlayerCount(),
+      lastHeartbeatAt: st.host?.at || null, lastLiveCheckAt: c.state === 'connected' ? now : null, liveConfirmed: c.state === 'connected' && room.engine.connMeta.liveConfirmed }).catch(() => {});
+  }
 }
 
 const STATIC = new Set(['index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
@@ -677,12 +801,16 @@ const server = http.createServer(async (req, res) => {
       return json(res, actor ? 200 : 401, { ok: !!actor, ...(actor ? { kind: actor.kind, room: actor.room.id, live: actor.live } : {}) });
     }
     if (url.pathname.startsWith('/api/admin/') && req.method === 'POST') {
-      if (!isAuthorized(req) && accountSession(req)) return json(res, 402, { error: 'اشتراكك أو تجربتك غير فعّالة الآن — فعّل التجربة أو اشترك من صفحة «حسابي»', account: true });
-      if (!isAuthorized(req)) return json(res, 401, { error: 'رمز الإدارة غير صحيح' });
+      const action = url.pathname.slice('/api/admin/'.length);
+      if (!isAuthorized(req) && accountSession(req)) return json(res, 402, { error: action === 'connect' ? 'تحتاج إلى اشتراك فعال لربط بثك المباشر' : 'اشتراكك أو تجربتك غير فعّالة الآن — فعّل التجربة أو اشترك من صفحة «حسابي»', account: true, needPlan: true });
+      if (!isAuthorized(req)) return json(res, 401, { error: action === 'connect' ? 'تحتاج إلى اشتراك فعال لربط بثك المباشر' : 'رمز الإدارة غير صحيح', needPlan: action === 'connect' });
       const actor = actorFor(req);
       actor.room.touched = Date.now();
-      try { const action = url.pathname.slice('/api/admin/'.length); const result = await handleAction(action, await readBody(req, action === 'sketch' ? 200_000 : 16384), actor); return json(res, 200, result); }
-      catch (err) { return json(res, err.status || 400, { error: String(err.message || err).slice(0, 240), ...(err.fields ? { fields: err.fields } : {}) }); }
+      // Several studio windows: only the controlling one may change the room (the others can take over).
+      const tab = String(req.headers['x-studio-tab'] || '');
+      if (tab && action !== 'heartbeat' && actor.room.hostTab() && actor.room.primaryTab !== tab) return json(res, 409, { error: 'الاستوديو مفتوح في نافذة أخرى — اضغط «التحكم من هنا» لنقل التحكم إلى هذه النافذة', otherWindow: true });
+      try { const result = await handleAction(action, await readBody(req, action === 'sketch' ? 200_000 : 16384), actor); return json(res, 200, result); }
+      catch (err) { return json(res, err.status || 400, { error: String(err.message || err).slice(0, 240), ...(err.fields ? { fields: err.fields } : {}), ...(err.needPlan ? { needPlan: true } : {}) }); }
     }
     if (url.pathname === '/api/dev-token' && req.method === 'GET') {
       // Never expose administrator credentials on a deployed or remotely reachable server.
@@ -779,6 +907,8 @@ wss.on('connection', (ws, room) => {
 // 100 ms resolution: every deadline is authoritative on the server, viewers only render it.
 const roundClock = setInterval(() => { for (const room of rooms.values()) room.engine.tick(); draw.tick(); }, 100);
 roundClock.unref?.();
+const liveSweep = setInterval(sweepLive, 5000);
+liveSweep.unref?.();
 const heartbeat = setInterval(() => {
   for (const room of rooms.values()) for (const ws of room.clients) { if (!ws.isAlive) { ws.terminate(); continue; } ws.isAlive = false; ws.ping(); }
   evictIdleRooms(); sessions.prune(); draw.cleanup();
@@ -786,7 +916,7 @@ const heartbeat = setInterval(() => {
 heartbeat.unref?.();
 server.listen(PORT, '0.0.0.0', () => console.log(`TikTok LIVE Events ready on http://localhost:${PORT}`));
 const shutdown = async () => {
-  clearInterval(roundClock); clearInterval(heartbeat);
+  clearInterval(roundClock); clearInterval(heartbeat); clearInterval(liveSweep);
   for (const room of rooms.values()) await room.disconnectAll().catch(() => {});
   wss.close(); server.close(); server.closeIdleConnections?.();
   if (pool) { await promos.mirror?.drain(); await sessions.mirror?.drain(); await pool.end().catch(() => {}); }

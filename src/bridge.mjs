@@ -57,6 +57,12 @@ export class LiveBridge {
         msgId: String(event.common?.msgId ?? event.msgId ?? ''),
         handle: String(user.uniqueId || user.displayId || event.uniqueId || '') });
     });
+    // The streamer ended the LIVE: leave the active list now; reconnect attempts fail while the room is offline.
+    if (WebcastEvent.STREAM_END) connection.on(WebcastEvent.STREAM_END, () => {
+      if (generation !== this.generation) return;
+      this.engine.setConnectionMeta?.({ liveConfirmed: false });
+      this.engine.setConnection('disconnected', this.username, 'انتهى البث المباشر على TikTok', 'tiktok');
+    });
     connection.on(ControlEvent.DISCONNECTED, () => {
       if (generation !== this.generation) return;
       this.engine.setConnection('disconnected', this.username, 'انقطع البث أو الاتصال؛ إعادة المحاولة', 'tiktok');
@@ -68,11 +74,13 @@ export class LiveBridge {
     await connection.connect();
     if (generation !== this.generation) { await connection.disconnect().catch(() => {}); return; }
     this.engine.setConnection('connected', this.username, 'متصل بالبث المباشر', 'tiktok');
+    // The connector fetched the room info first and refuses offline rooms, so reaching this line means TikTok reports the user live.
+    this.engine.setConnectionMeta?.({ liveConfirmed: true });
     // The room info fetched while connecting names the broadcaster and links their profile picture.
     try {
       const owner = connection.roomInfo?.data?.owner || connection.roomInfo?.owner || {};
       const pic = (k) => owner[k]?.url_list?.[0] || owner[k]?.urlList?.[0] || '';
-      this.engine.setStreamer({ displayName: owner.nickname || '', avatar: pic('avatar_large') || pic('avatar_medium') || pic('avatar_thumb') });
+      this.engine.setStreamer({ platformId: String(owner.id_str || owner.id || ''), displayName: owner.nickname || '', avatar: pic('avatar_large') || pic('avatar_medium') || pic('avatar_thumb') });
     } catch {}
   }
   schedule(generation) {

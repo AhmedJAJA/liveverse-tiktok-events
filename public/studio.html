@@ -51,6 +51,17 @@
   </div>
  </div>
 </header>
+<!-- server-decided notices: plan needed, proof of account ownership, another studio window -->
+<div class="st-notices">
+ <div class="st-notice is-plan" id="planNotice" hidden role="alert"><span>تحتاج إلى اشتراك فعال لربط بثك المباشر</span><a class="st-notice-btn" href="/account#plans">عرض الاشتراكات</a></div>
+ <div class="st-notice is-verify" id="verifyPanel" hidden role="status" aria-live="polite">
+  <div class="st-verify-text"><b id="verifyTitle">أثبت أن الحساب حسابك</b><span id="verifyHelp">اكتب هذا الرمز في تعليقات بثك المباشر على <span id="verifyPlatform">TikTok</span> من حسابك نفسه <bdi id="verifyHandle" dir="ltr"></bdi></span></div>
+  <code class="st-verify-code" id="verifyCode" dir="ltr"></code>
+  <button type="button" class="st-notice-btn" id="verifyCopy">نسخ الرمز</button>
+  <small class="st-verify-left" id="verifyLeft"></small>
+ </div>
+ <div class="st-notice is-window" id="windowBanner" hidden role="alert"><span>الاستوديو مفتوح في نافذة أخرى — التحكم هناك الآن.</span><button type="button" class="st-notice-btn" id="takeOver">التحكم من هنا</button></div>
+</div>
 
 <!-- ===== games library: filters, search and a grid of game cards ===== -->
 <section class="st-library" id="gamesView" aria-labelledby="libTitle">
@@ -127,7 +138,7 @@
 
  <!-- ===== control drawer: only the current game's settings ===== -->
  <aside class="st-drawer" id="hostPanel" aria-label="لوحة التحكم">
-  <div class="st-side-card"><img id="sideCover" src="/games/01-knowledge-challenge-120.webp" alt="" width="60" height="77"><div><b id="sideTitle">تحدي المعرفة</b><span class="st-side-conn"><i id="sideDot" aria-hidden="true"></i><span id="sideConn">المنصة: TikTok — غير متصل</span></span></div></div>
+  <div class="st-side-card"><img id="sideCover" src="/games/01-knowledge-challenge-120.webp" alt="" width="60" height="77"><div><b id="sideTitle">تحدي المعرفة</b><span class="st-side-conn"><i id="sideDot" aria-hidden="true"></i><span id="sideConn">المنصة: TikTok — غير متصل</span></span><small class="st-side-listed" id="sideListed">غير ظاهر في البثوث النشطة</small></div></div>
   <div class="st-tabs" role="tablist" aria-label="أقسام التحكم">
    <button type="button" role="tab" id="tab-round" aria-controls="pane-round" aria-selected="true">الجولة</button>
    <button type="button" role="tab" id="tab-players" aria-controls="pane-players" aria-selected="false">اللاعبون</button>

@@ -60,7 +60,7 @@ test('accounts: register, session cookie, isolated rooms, plans and logout', asy
     // free account: demo players work in its own room, live connect needs a plan
     assert.equal((await alice('POST', '/api/admin/demo-players', { count: 3 })).status, 200);
     const conn = await alice('POST', '/api/admin/connect', { username: 'someone' });
-    assert.equal(conn.status, 403); assert.match(conn.data.error, /اشتراك/);
+    assert.equal(conn.status, 402); assert.match(conn.data.error, /تحتاج إلى اشتراك فعال لربط بثك المباشر/); assert.equal(conn.data.needPlan, true);
     const aliceState = (await alice('GET', '/api/state?room=' + aliceRoom)).data;
     const mainState = (await alice('GET', '/api/state')).data;
     assert.ok(aliceState.playerCount >= 3);
@@ -69,14 +69,14 @@ test('accounts: register, session cookie, isolated rooms, plans and logout', asy
     // guests get their own room too
     const g = await bob('POST', '/api/account/guest', {});
     assert.equal(g.status, 200); assert.match(g.data.room, /^g[a-z0-9]{9}$/); assert.notEqual(g.data.room, aliceRoom);
-    assert.equal((await bob('POST', '/api/admin/connect', { username: 'x' })).status, 403);
+    assert.equal((await bob('POST', '/api/admin/connect', { username: 'x' })).status, 402);
     // account-management actions belong to the owner only
     assert.equal((await alice('POST', '/api/admin/account-plan', { username: 'alice_1', plan: 'monthly' })).status, 403);
     const plan = await owner('POST', '/api/admin/account-plan', { username: 'alice_1', plan: 'monthly', days: 30 }, ownerH);
     assert.equal(plan.status, 200); assert.equal(plan.data.account.planActive, true);
     assert.equal((await alice('GET', '/api/account/me')).data.live, true);
-    // kick names are validated before any network call
-    assert.equal((await alice('POST', '/api/admin/connect', { username: 'bad name!', platform: 'kick' })).status, 400);
+    // legacy (file) accounts have no SPONGE LIVE subscription on the platform: linking a LIVE stays closed
+    assert.equal((await alice('POST', '/api/admin/connect', { username: 'bad name!', platform: 'kick' })).status, 402);
 
     // login / wrong password / logout
     const other = client(base);
