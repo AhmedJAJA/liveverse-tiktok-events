@@ -59,6 +59,20 @@
    <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الرمز</th><th>الوصف</th><th>الاستخدام</th><th>الحالة</th><th></th></tr></thead><tbody id="codeRows"></tbody></table></div>
   </section>
 
+  <section class="pg-card" aria-labelledby="vouchersTitle">
+   <h2 id="vouchersTitle">رموز الاشتراك</h2>
+   <p class="pg-sub" id="voucherStats">…</p>
+   <form class="pg-form" id="voucherForm">
+    <div class="pg-row"><label class="pg-field"><span>الباقة</span><select name="plan"><option value="monthly">أمير الهامور — شهر</option><option value="weekly">شفيق العادي — 7 أيام</option></select></label>
+    <label class="pg-field"><span>العدد (حتى 500)</span><input name="count" type="number" min="1" max="500" value="10" required></label></div>
+    <label class="pg-field"><span>الوصف</span><input name="label" maxlength="60"></label>
+    <button class="pg-btn2" type="submit">إنشاء الرموز</button>
+   </form>
+   <p class="pg-msg is-ok" id="voucherOut" hidden></p>
+   <div class="pg-row"><button class="pg-btn2" type="button" id="voucherDownload" hidden>تنزيل الرموز (CSV)</button></div>
+   <form class="pg-row" id="voucherRevokeForm"><label class="pg-field"><span>إلغاء رمز غير مستخدم</span><input name="code" dir="ltr" maxlength="40"></label><button class="pg-btn2 is-danger" type="submit">إلغاء</button></form>
+  </section>
+
   <section class="pg-card" aria-labelledby="auditTitle">
    <h2 id="auditTitle">سجل عمليات الإدارة</h2>
    <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>المنفّذ</th><th>العملية</th><th>الحساب</th></tr></thead><tbody id="auditRows"></tbody></table></div>

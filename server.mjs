@@ -321,6 +321,13 @@ async function handleAccess(action, req, res) {
       catch (err) { if (err instanceof PlatformError) return json(res, err.status, { error: err.message }); throw err; }
     }
     if (trial && !acct) return json(res, 401, { error: 'هذا رمز تجربة مجانية: سجّل الدخول بالحساب الذي حصل عليه ثم أدخله مجددًا', login: true });
+    // A subscription voucher (SHFQ-… / AMIR-…): it adds its plan to the signed-in account.
+    const voucher = trial ? null : await platform.findVoucher(code);
+    if (voucher && !acct) return json(res, 401, { error: 'هذا رمز اشتراك: سجّل الدخول أو أنشئ حسابًا ثم أدخله مجددًا ليُضاف الاشتراك إلى حسابك', login: true, voucher: true });
+    if (voucher) {
+      try { const r = await platform.redeemVoucher(acct.userId, code); return json(res, 200, { ok: true, access: 'account', voucher: r, next: platform.verified(acct.userId) ? '/studio' : '/account?voucher=1' }); }
+      catch (err) { if (err instanceof PlatformError) return json(res, err.status, { error: err.message }); throw err; }
+    }
   }
   if (!promo) { await new Promise((r) => setTimeout(r, 350)); return json(res, 401, { error: 'الرمز غير صحيح أو انتهت صلاحيته' }); }
   if (old) sessions.destroy(old.id);
@@ -445,6 +452,12 @@ async function handleMe(action, req, res) {
     if (action === 'trial-claim') return json(res, 200, { ok: true, trial: await platform.claimTrial(userId) });
     if (action === 'trial-activate') { const r = await platform.activateTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, account: accountView(userId) }); }
     if (action === 'checkout') return json(res, 200, { ok: true, ...(await platform.checkout(userId, String(body.plan || ''))) });
+    if (action === 'redeem') {
+      if (!redeemIp.hit('ip:' + ip)) return json(res, 429, { error: 'محاولات كثيرة. انتظر 10 دقائق ثم حاول مرة أخرى.' });
+      const v = await platform.findVoucher(String(body.code || ''));
+      if (!v) { await new Promise((r) => setTimeout(r, 350)); return json(res, 401, { error: 'رمز الاشتراك غير صحيح' }); }
+      return json(res, 200, { ok: true, voucher: await platform.redeemVoucher(userId, String(body.code)), account: accountView(userId) });
+    }
   } catch (err) { return pErr(res, err); }
   return json(res, 404, { error: 'Not found' });
 }
@@ -481,12 +494,14 @@ async function handleManage(action, req, res) {
       if (action === 'users') return json(res, 200, { users: await platform.searchUsers(url.searchParams.get('q') || ''), stats: await platform.stats() });
       if (action === 'user') { const id = await platform.userByPublicId(url.searchParams.get('id') || ''); if (!id) return json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' }); return json(res, 200, await platform.adminUser(id)); }
       if (action === 'audit') return json(res, 200, { log: await platform.auditLog(Number(url.searchParams.get('limit')) || 100) });
-      if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS });
+      if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
       return json(res, 404, { error: 'Not found' });
     }
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
     const body = await readBody(req, 4096);
     if (action === 'code-create') { const code = promos.create(body); await platform.audit(admin.name, 'promo-create', { details: { id: code.id, label: code.label, level: code.level, maxUses: code.maxUses }, ip }); return json(res, 200, { ok: true, code }); }
+    if (action === 'voucher-create') { const codes = await platform.createVouchers(String(body.plan), body.count, { label: body.label, createdBy: admin.name }); await platform.audit(admin.name, 'voucher-create', { details: { plan: body.plan, count: codes.length, label: String(body.label || '').slice(0, 60) }, ip }); return json(res, 200, { ok: true, codes }); }
+    if (action === 'voucher-revoke') { const r = await platform.revokeVoucher(String(body.code || '')); await platform.audit(admin.name, 'voucher-revoke', { details: { hint: String(body.code).slice(0, 4) + '…' + String(body.code).slice(-4) }, ip }); return json(res, 200, { ok: true, ...r }); }
     if (action === 'code-revoke') { const code = promos.update(String(body.id), { active: false }); sessions.destroyWhere((x) => x.codeId === body.id); await platform.audit(admin.name, 'promo-revoke', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, code }); }
     const userId = await platform.userByPublicId(body.publicId || '');
     if (!userId) return json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });

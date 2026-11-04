@@ -29,6 +29,13 @@ const fail = (message, status, fields) => { throw new PlatformError(message, sta
 export const newPublicId = () => 'SPG-' + Array.from({ length: 6 }, () => ID_ALPHABET[randomInt(ID_ALPHABET.length)]).join('');
 const newRoom = () => 'a' + Array.from({ length: 9 }, () => ROOM_ALPHABET[randomInt(ROOM_ALPHABET.length)]).join('');
 const sha = (v) => createHash('sha256').update(String(v)).digest('base64url');
+/** Subscription vouchers: PREFIX-XXXX-XXXX-XXXX-XXXX, 16 random characters (80 bits) after the plan prefix. */
+export const VOUCHER_PREFIX = Object.freeze({ weekly: 'SHFQ', monthly: 'AMIR' });
+export function newVoucher(plan) {
+  const body = Array.from({ length: 16 }, () => ID_ALPHABET[randomInt(ID_ALPHABET.length)]).join('');
+  return [VOUCHER_PREFIX[plan], body.slice(0, 4), body.slice(4, 8), body.slice(8, 12), body.slice(12)].join('-');
+}
+export const voucherHash = (plain) => 'v1:' + createHash('sha256').update(normalizeCode(plain)).digest('hex');
 
 /** One mailbox = one account: lower-case, drop "+tag", and dots for Gmail. */
 export function canonicalEmail(raw) {
@@ -261,6 +268,56 @@ export class Platform {
   async findTrialCode(plain) {
     if (normalizeCode(plain).length < 6) return null;
     return (await this.pool.query("SELECT id, user_id FROM promo_codes WHERE code_hash=$1 AND kind='trial'", [this.hashCode(plain)])).rows[0] || null;
+  }
+
+  /* -------------------------------------------------- plan vouchers */
+  async findVoucher(plain) {
+    const n = normalizeCode(plain);
+    if (!/^(SHFQ|AMIR)[A-Z0-9]{16}$/.test(n)) return null;
+    return (await this.pool.query("SELECT id, plan, uses, active FROM promo_codes WHERE code_hash=$1 AND kind='plan'", [voucherHash(n)])).rows[0] || null;
+  }
+  /** One voucher → one plan period for the signed-in account, starting when its current access ends. */
+  async redeemVoucher(userId, plain) {
+    const n = normalizeCode(plain);
+    const out = await tx(this.pool, async (c) => {
+      const v = (await c.query("SELECT * FROM promo_codes WHERE code_hash=$1 AND kind='plan' FOR UPDATE", [voucherHash(n)])).rows[0];
+      if (!v) fail('رمز الاشتراك غير صحيح', 401);
+      if (!v.active) fail('هذا الرمز ملغى', 409);
+      if (v.uses >= 1) fail('هذا الرمز مستخدم من قبل', 409);
+      if (v.expires_at && +new Date(v.expires_at) <= this.now()) fail('انتهت صلاحية هذا الرمز', 409);
+      await c.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [userId]);
+      await this.refresh(userId, c);
+      const { starts, ends } = this.periodFor(userId, v.plan);
+      await c.query("INSERT INTO subscriptions (user_id, plan, price_halalas, starts_at, ends_at, source, voucher_id, note) VALUES ($1,$2,0,$3,$4,'voucher',$5,$6)",
+        [userId, v.plan, starts, ends, v.id, 'رمز ' + v.hint]);
+      await c.query('UPDATE promo_codes SET uses=1, user_id=$2, last_used_at=now() WHERE id=$1', [v.id, userId]);
+      return { plan: v.plan, planName: PLANS[v.plan].name, startsAt: iso(starts), endsAt: iso(ends) };
+    });
+    await this.refresh(userId);
+    return out;
+  }
+  async createVouchers(plan, count, { label = '', createdBy = 'owner' } = {}) {
+    if (!VOUCHER_PREFIX[plan]) fail('الباقة غير معروفة');
+    const n = Number(count);
+    if (!Number.isInteger(n) || n < 1 || n > 500) fail('العدد من 1 إلى 500');
+    const codes = [];
+    await tx(this.pool, async (c) => {
+      for (let i = 0; i < n; i++) {
+        const code = newVoucher(plan);
+        await c.query("INSERT INTO promo_codes (id, code_hash, hint, kind, label, plan, max_uses, created_by) VALUES ($1,$2,$3,'plan',$4,$5,1,$6)",
+          ['pv_' + randomBytes(8).toString('hex'), voucherHash(code), code.slice(0, 4) + '…' + code.slice(-4), String(label).slice(0, 60), plan, createdBy]);
+        codes.push(code);
+      }
+    });
+    return codes;
+  }
+  async voucherStats() {
+    return (await this.pool.query("SELECT plan, count(*)::int AS total, count(*) FILTER (WHERE uses>0)::int AS used, count(*) FILTER (WHERE NOT active)::int AS revoked FROM promo_codes WHERE kind='plan' GROUP BY plan")).rows;
+  }
+  async revokeVoucher(plain) {
+    const r = await this.pool.query("UPDATE promo_codes SET active=false WHERE code_hash=$1 AND kind='plan' AND uses=0 RETURNING id", [voucherHash(plain)]);
+    if (!r.rowCount) fail('الرمز غير موجود أو مستخدم', 404);
+    return { revoked: 1 };
   }
 
   /* ---------------------------------------------------- subscriptions */

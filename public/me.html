@@ -63,6 +63,11 @@
     <div class="pg-plan" id="planWeekly"><b>شفيق العادي</b><span class="pg-price">29 ريال</span><span>7 أيام</span><button type="button" class="pg-btn2" data-checkout="weekly">اشترك الآن</button></div>
     <div class="pg-plan is-amir" id="planMonthly"><b>أمير الهامور</b><span class="pg-price">44.99 ريال</span><span>شهر واحد</span><button type="button" class="pg-btn" data-checkout="monthly">اشترك الآن</button></div>
    </div>
+   <form class="pg-form pg-voucher" id="voucherForm" novalidate>
+    <label class="pg-field"><span>لديك رمز اشتراك؟ (شفيق العادي أو أمير الهامور)</span><input name="code" dir="ltr" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="AMIR-XXXX-XXXX-XXXX-XXXX"></label>
+    <p class="pg-msg" id="voucherMsg" role="status" hidden></p>
+    <button class="pg-btn2" type="submit">تفعيل الرمز</button>
+   </form>
    <p class="pg-msg is-info" id="billingNote" hidden>الدفع الإلكتروني غير مفعّل بعد — سيُعلن عند ربط بوابة الدفع.</p>
   </section>
 

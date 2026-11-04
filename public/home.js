@@ -26,7 +26,7 @@
     busy = true; button.disabled = true; button.classList.add('is-busy'); showError('');
     try {
       const res = await post('/api/access/redeem', { code });
-      if (res.ok) { $('promoLabel').textContent = 'تم — جارٍ فتح الاستوديو'; location.replace(next); return; }
+      if (res.ok) { $('promoLabel').textContent = res.data.voucher ? 'تم تفعيل الاشتراك' : 'تم — جارٍ فتح الاستوديو'; location.replace(res.data.voucher ? res.data.next : next); return; }
       showError(res.data.error || (res.status === 429 ? 'محاولات كثيرة، انتظر قليلًا' : 'تعذر التحقق من الرمز'));
       input.select();
     } catch {

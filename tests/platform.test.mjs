@@ -256,3 +256,44 @@ test('without a database the games and promo codes still work and accounts say s
     assert.equal((await fetch(base + '/')).status, 200);
   } finally { child.kill(); }
 });
+
+test('subscription vouchers: one code, one plan period, for the account that redeems it', { skip, timeout: 60_000 }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sponge-voucher-'));
+  const srv = await boot(dir);
+  try {
+    const pool = createPool(dbUrl);
+    const seeded = (await pool.query("SELECT plan, count(*)::int AS n FROM promo_codes WHERE kind='plan' AND label='دفعة نوفمبر 2026' GROUP BY plan ORDER BY plan")).rows;
+    assert.deepEqual(seeded, [{ plan: 'monthly', n: 100 }, { plan: 'weekly', n: 100 }], 'the November batch is installed by migration');
+    const raw = fs.readFileSync(new URL('../migrations/003_vouchers_2026_11.sql', import.meta.url), 'utf8');
+    assert.doesNotMatch(raw, /(AMIR|SHFQ)-[A-Z0-9]{4}/, 'no plain codes in the repository');
+    await pool.end();
+    const owner = browser(srv.base);
+    await owner('POST', '/api/access/redeem', { code: OWNER });
+    const made = await owner('POST', '/api/manage/voucher-create', { plan: 'monthly', count: 2, label: 'اختبار' });
+    assert.equal(made.status, 200);
+    const [a, b] = made.data.codes; assert.match(a, /^AMIR(-[A-HJ-NP-Z2-9]{4}){4}$/);
+    const weekly = (await owner('POST', '/api/manage/voucher-create', { plan: 'weekly', count: 1 })).data.codes[0];
+    assert.match(weekly, /^SHFQ-/);
+    const guest = browser(srv.base);
+    const anon = await guest('POST', '/api/access/redeem', { code: a });
+    assert.equal(anon.status, 401); assert.equal(anon.data.voucher, true);
+    const u = browser(srv.base);
+    await u('POST', '/api/auth/register', { username: 'voucher_user', email: 'voucher@example.com', password: 'reef2026go', confirm: 'reef2026go' });
+    const r1 = await u('POST', '/api/access/redeem', { code: a.toLowerCase() });
+    assert.equal(r1.status, 200); assert.equal(r1.data.voucher.plan, 'monthly'); assert.equal(r1.data.next, '/account?voucher=1');
+    assert.equal((await browser(srv.base)('POST', '/api/access/redeem', { code: a })).status, 401, 'used code is still a voucher but needs an account');
+    assert.equal((await u('POST', '/api/me/redeem', { code: a })).status, 409, 'single use');
+    const r2 = await u('POST', '/api/me/redeem', { code: weekly });
+    assert.equal(r2.status, 200);
+    assert.equal(r2.data.voucher.startsAt, r1.data.voucher.endsAt, 'the week is added after the month');
+    assert.equal((await owner('POST', '/api/manage/voucher-revoke', { code: b })).status, 200);
+    assert.equal((await u('POST', '/api/me/redeem', { code: b })).status, 409, 'revoked');
+    assert.equal((await u('POST', '/api/me/redeem', { code: 'AMIR-AAAA-BBBB-CCCC-DDDD' })).status, 401);
+    const prof = (await u('GET', '/api/me/profile')).data;
+    assert.equal(prof.access.plan, 'monthly'); assert.equal(prof.history.length, 2);
+    await owner('POST', '/api/manage/verify', { publicId: prof.user.publicId });
+    assert.equal((await u('GET', '/studio')).status, 200);
+    const log = (await owner('GET', '/api/manage/audit')).data.log.map((l) => l.action);
+    assert.ok(log.includes('voucher-create') && log.includes('voucher-revoke'));
+  } finally { await srv.stop(); }
+});
