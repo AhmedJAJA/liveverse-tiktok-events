@@ -9,6 +9,7 @@
 <link rel="icon" href="/brand/favicon-64.png" type="image/png">
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/pages.css">
+<script defer src="/google.js"></script>
 <script defer src="/auth.js"></script>
 </head>
 <body class="hm pg">
@@ -26,6 +27,9 @@
    <h1 id="authTitle">إنشاء حساب جديد</h1>
    <p class="pg-sub" id="authSub">حسابك يحصل على معرّف دائم مثل <bdi dir="ltr">SPG-8F42K9</bdi> تستخدمه للتجربة والاشتراك والدعم.</p>
    <p class="pg-msg is-info" id="authNotice" hidden></p>
+   <div class="pg-google" id="googleBox" hidden></div>
+   <p class="pg-or" id="googleOr" hidden><span>أو بالبريد الإلكتروني</span></p>
+   <p class="pg-msg is-err" id="googleError" role="alert" hidden></p>
    <form class="pg-form" id="signupForm" novalidate>
     <label class="pg-field"><span>اسم المستخدم</span><input name="username" dir="ltr" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="24" required><small>3–24 حرفًا إنجليزيًا صغيرًا أو رقمًا أو _ .</small><em class="pg-ferr" data-for="username" hidden></em></label>
     <label class="pg-field"><span>البريد الإلكتروني</span><input name="email" type="email" dir="ltr" autocomplete="email" maxlength="254" required><em class="pg-ferr" data-for="email" hidden></em></label>

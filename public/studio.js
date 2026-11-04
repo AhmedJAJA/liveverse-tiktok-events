@@ -30,11 +30,21 @@
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   function feedback(msg, error = false) { const f = $('feedback'); f.textContent = msg || ''; f.classList.toggle('is-error', !!error); }
 
+  /** The subscription ended while the studio was open: the round on screen is kept (viewers and OBS still see it),
+      but the server refuses new commands until the account is renewed. */
+  function expired(message) {
+    if (document.getElementById('expiredBanner')) return;
+    const b = el('div', 'st-expired'); b.id = 'expiredBanner'; b.setAttribute('role', 'alert');
+    const t = el('span', '', message || 'انتهى اشتراكك أو تجربتك — الجولة الحالية محفوظة على الشاشة، جدّد للمتابعة.');
+    const a = el('a', '', 'تجديد الاشتراك'); a.href = '/account#plans';
+    b.append(t, a); document.body.prepend(b);
+  }
   async function admin(action, body = {}) {
     const headers = { 'Content-Type': 'application/json' };
     const t = ownerToken(); if (t) Object.assign(headers, { Authorization: 'Bearer ' + t });
     const res = await fetch('/api/admin/' + action, { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(body) });
     let data = {}; try { data = await res.json(); } catch {}
+    if (res.status === 402) expired(data.error);
     if (!res.ok) throw Object.assign(new Error(data.error || 'تعذر تنفيذ الطلب'), { code: res.status });
     return data;
   }

@@ -29,7 +29,7 @@
   <a class="hm-bar-brand" href="#top" dir="ltr"><img src="/brand/sponge-128.webp" alt="" width="36" height="36"><span><b>SPONGE</b> LIVE</span></a>
   <div class="hm-bar-actions">
    <a class="hm-pill hm-pill-ghost" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
-   <a class="hm-pill hm-pill-gold" id="barTrial" href="/signup?trial=1">جرّب مجاناً</a>
+   <a class="hm-pill hm-pill-gold" id="barTrial" href="/signup?intent=trial" data-action="trial">جرّب مجاناً</a>
   </div>
  </div>
 </header>
@@ -50,7 +50,7 @@
   <div class="hm-menu-actions">
    <a class="hm-enter hm-enter-sm" id="menuAccount" href="/login"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span id="menuAccountLabel">تسجيل الدخول</span></a>
    <a class="hm-pill hm-pill-ghost hm-pill-wide" id="menuSecond" href="/signup">إنشاء حساب جديد</a>
-   <a class="hm-pill hm-pill-green hm-pill-wide" id="menuTrial" href="/signup?trial=1">تجربة مجانية لمدة 24 ساعة</a>
+   <a class="hm-pill hm-pill-green hm-pill-wide" id="menuTrial" href="/signup?intent=trial" data-action="trial">تجربة مجانية لمدة 24 ساعة</a>
    <button type="button" class="hm-pill hm-pill-danger hm-pill-wide" id="menuLogout" hidden>تسجيل الخروج</button>
   </div>
  </div>
@@ -63,9 +63,10 @@
  <h2 class="hm-hero-title" id="heroTitle">جمهورك يلعب<br><span class="hm-hl">من تعليقات البث.</span></h2>
  <p class="hm-hero-text">اختر لعبة من 12 لعبة جاهزة، يكتب متابعوك «انضم» في الشات، وتبدأ الجولة مباشرة على شاشة بثك.</p>
  <div class="hm-hero-cta">
-  <a class="hm-enter" href="#enter"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-play"></use></svg><span>ادخل الاستوديو</span></a>
-  <a class="hm-ghost" id="heroTrial" href="/signup?trial=1"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-gift"></use></svg><span>جرّب مجاناً 24 ساعة</span></a>
+  <a class="hm-enter" id="heroStudio" href="/login?intent=studio" data-action="studio"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-play"></use></svg><span>ادخل الاستوديو</span></a>
+  <a class="hm-ghost" id="heroTrial" href="/signup?intent=trial" data-action="trial"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-gift"></use></svg><span>جرّب مجاناً 24 ساعة</span></a>
  </div>
+ <a class="hm-status" id="heroStatus" href="/signup?intent=trial" data-action="trial"><i aria-hidden="true"></i><span id="heroStatusText">ابدأ تجربتك المجانية لمدة 24 ساعة</span></a>
  <ul class="hm-chips">
   <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg><span>مشاركة من شات البث</span></li>
   <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user-plus"></use></svg><span>انضمام تلقائي</span></li>
@@ -122,7 +123,7 @@
   <nav class="hm-links" aria-label="الحساب والاشتراك">
    <a href="/signup" id="linkSignup">إنشاء حساب جديد</a>
    <a href="/login" id="linkLogin">تسجيل الدخول</a>
-   <a href="/signup?trial=1" id="linkTrial" class="is-gold">تجربة مجانية لمدة 24 ساعة</a>
+   <a href="/signup?intent=trial" id="linkTrial" data-action="trial" class="is-gold">تجربة مجانية لمدة 24 ساعة</a>
    <a href="#plans">عرض باقات الاشتراك</a>
   </nav>
  </div>
@@ -189,7 +190,7 @@
    <p class="hm-price"><b>0</b> ريال</p>
    <p class="hm-dur">24 ساعة</p>
    <ul><li>مرة واحدة لكل حساب مؤكَّد</li><li>تبدأ الـ24 ساعة من لحظة التفعيل</li><li>بلا بطاقة دفع</li></ul>
-   <a class="hm-plan-btn" id="planTrial" href="/signup?trial=1">احصل على تجربتك المجانية</a>
+   <a class="hm-plan-btn" id="planTrial" href="/signup?intent=trial" data-action="trial">احصل على تجربتك المجانية</a>
   </article>
   <article class="hm-plan hm-plan-shafiq" id="plan-weekly" data-reveal>
    <span class="hm-plan-mark" aria-hidden="true">🎷</span>
@@ -274,6 +275,29 @@
  </div>
 </footer>
 </main>
+
+<div class="hm-modal" id="flow" role="dialog" aria-modal="true" aria-labelledby="flowTitle" hidden>
+ <div class="hm-modal-card">
+  <button type="button" class="hm-icon-btn hm-modal-x" id="flowClose" aria-label="إغلاق"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-close"></use></svg></button>
+  <span class="hm-card-icon" id="flowIcon" aria-hidden="true"><svg width="26" height="26"><use id="flowIconUse" href="/icons.svg#i-gift"></use></svg></span>
+  <h2 id="flowTitle">ابدأ تجربتك المجانية لمدة 24 ساعة</h2>
+  <p class="hm-text" id="flowText">سجّل الدخول أو أنشئ حسابًا، وتبدأ تجربتك مباشرة.</p>
+  <p class="hm-error" id="flowError" role="alert" hidden></p>
+  <div class="hm-flow-auth" id="flowAuth">
+   <div class="hm-google" id="flowGoogle" hidden></div>
+   <p class="hm-or" id="flowOr" hidden><span>أو</span></p>
+   <a class="hm-enter hm-enter-sm" id="flowSignup" href="/signup">إنشاء حساب بالبريد</a>
+   <a class="hm-ghost hm-ghost-sm" id="flowLogin" href="/login">لدي حساب — تسجيل الدخول</a>
+  </div>
+  <div class="hm-flow-plans" id="flowPlans" hidden>
+   <a class="hm-enter hm-enter-sm" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener">تجديد الاشتراك عبر واتساب</a>
+   <a class="hm-ghost hm-ghost-sm" href="#plans" id="flowSeePlans">عرض الباقات</a>
+   <button type="button" class="hm-ghost hm-ghost-sm hm-ghost-green" id="flowTrial" hidden>ابدأ تجربتك المجانية لمدة 24 ساعة</button>
+   <a class="hm-link-sm" href="#enter" id="flowHaveCode">لدي رمز اشتراك</a>
+  </div>
+  <div class="hm-flow-wait" id="flowWait" hidden><span class="hm-spinner" aria-hidden="true"></span><span id="flowWaitText">جارٍ التحقق…</span></div>
+ </div>
+</div>
 
 <a class="hm-fab" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener" aria-label="تواصل معنا عبر واتساب"><svg width="26" height="26" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></a>
 </body>
