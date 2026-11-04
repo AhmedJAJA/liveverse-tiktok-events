@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#020A22">
-<meta name="description" content="SPONGE LIVE — ألعاب تفاعلية للبث المباشر يلعبها جمهورك من التعليقات.">
+<meta name="description" content="SPONGE LIVE — ألعاب تفاعلية للبث المباشر يلعبها جمهورك من التعليقات على TikTok وKick.">
 <meta property="og:title" content="SPONGE LIVE">
 <meta property="og:image" content="/brand/sponge-512.webp">
 <title>SPONGE LIVE</title>
@@ -16,38 +16,62 @@
 <script defer src="/home.js"></script>
 </head>
 <body class="hm">
+<a class="hm-skip" href="#enter">تخطَّ إلى إدخال الرمز</a>
 <div class="hm-sea" aria-hidden="true"><span class="hm-glow"></span><span class="hm-rays"></span><span class="hm-floor"></span>
  <i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i>
  <i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i>
  <i class="hm-b"></i>
 </div>
 
-<div class="hm-hero">
-<header class="hm-top">
- <h1 class="hm-logo"><img src="/brand/sponge-256.webp" srcset="/brand/sponge-128.webp 128w, /brand/sponge-256.webp 256w, /brand/sponge-512.webp 512w" sizes="(max-width:600px) 72px, 104px" alt="" width="104" height="104"><span class="hm-word" dir="ltr"><span class="hm-lb hm-lb-back" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i><i class="x"></i></span><span class="hm-name"><b>SPONGE</b> LIVE</span><span class="hm-lb hm-lb-front" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i></span></span></h1>
+<header class="hm-bar" id="bar">
+ <div class="hm-bar-in">
+  <button type="button" class="hm-icon-btn" id="menuButton" aria-controls="menu" aria-expanded="false" aria-label="القائمة"><span class="hm-burger" aria-hidden="true"><i></i><i></i><i></i></span></button>
+  <a class="hm-bar-brand" href="#top" dir="ltr"><img src="/brand/sponge-128.webp" alt="" width="36" height="36"><span><b>SPONGE</b> LIVE</span></a>
+  <div class="hm-bar-actions">
+   <a class="hm-pill hm-pill-ghost" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
+   <a class="hm-pill hm-pill-gold" id="barTrial" href="/signup?trial=1">جرّب مجاناً</a>
+  </div>
+ </div>
 </header>
 
-<main class="hm-main">
- <section class="hm-card" aria-labelledby="hmTitle">
-  <span class="hm-eyebrow">الدخول باستخدام الرمز الترويجي</span>
-  <h2 id="hmTitle">مرحباً بك في <bdi dir="ltr">SPONGE LIVE!</bdi></h2>
-  <p class="hm-text">أدخل الرمز الترويجي للوصول إلى استوديو الألعاب.</p>
-  <form id="promoForm" class="hm-form" novalidate>
-   <label class="hm-field"><span class="sr-only">الرمز الترويجي</span>
-    <input id="promoCode" name="code" type="text" placeholder="أدخل الرمز الترويجي" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="64" enterkeyhint="go" dir="ltr" required aria-describedby="promoError">
-   </label>
-   <p class="hm-error" id="promoError" role="alert" hidden></p>
-   <button type="submit" class="hm-enter" id="promoSubmit"><span id="promoLabel">دخول الاستوديو</span></button>
-  </form>
-  <p class="hm-session" id="sessionNote" hidden>أنت مسجّل الدخول. <a href="/studio">متابعة إلى الاستوديو</a></p>
-  <nav class="hm-links" aria-label="الحساب والاشتراك">
-   <a href="/signup" id="linkSignup">إنشاء حساب جديد</a>
-   <a href="/login" id="linkLogin">تسجيل الدخول</a>
-   <a href="/signup?trial=1" id="linkTrial" class="is-gold">تجربة مجانية لمدة 24 ساعة</a>
-   <a href="#plans">عرض باقات الاشتراك</a>
+<div class="hm-menu" id="menu" role="dialog" aria-modal="true" aria-label="القائمة" hidden>
+ <div class="hm-menu-panel">
+  <div class="hm-menu-head"><span class="hm-menu-title" dir="ltr"><b>SPONGE</b> LIVE</span><button type="button" class="hm-icon-btn" id="menuClose" aria-label="إغلاق القائمة"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-close"></use></svg></button></div>
+  <nav class="hm-menu-nav" aria-label="أقسام الصفحة">
+   <a href="#top"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-home"></use></svg>الرئيسية</a>
+   <a href="#live"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg>البثوث النشطة</a>
+   <a href="#games"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg>الألعاب</a>
+   <a href="#enter"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg>دخول الاستوديو بالرمز</a>
+   <a href="#connect"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-plug"></use></svg>ربط البث</a>
+   <a href="#plans"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-ticket"></use></svg>الأسعار والباقات</a>
+   <a href="#faq"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-question"></use></svg>الأسئلة الشائعة</a>
+   <a href="#contact"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg>تواصل معنا</a>
   </nav>
- </section>
-</main>
+  <div class="hm-menu-actions">
+   <a class="hm-enter hm-enter-sm" id="menuAccount" href="/login"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span id="menuAccountLabel">تسجيل الدخول</span></a>
+   <a class="hm-pill hm-pill-ghost hm-pill-wide" id="menuSecond" href="/signup">إنشاء حساب جديد</a>
+   <a class="hm-pill hm-pill-green hm-pill-wide" id="menuTrial" href="/signup?trial=1">تجربة مجانية لمدة 24 ساعة</a>
+   <button type="button" class="hm-pill hm-pill-danger hm-pill-wide" id="menuLogout" hidden>تسجيل الخروج</button>
+  </div>
+ </div>
+</div>
+
+<main id="top">
+<section class="hm-hero" aria-labelledby="heroTitle">
+ <p class="hm-kicker"><i aria-hidden="true"></i>ألعاب البث التفاعلية</p>
+ <h1 class="hm-logo"><img src="/brand/sponge-256.webp" srcset="/brand/sponge-128.webp 128w, /brand/sponge-256.webp 256w, /brand/sponge-512.webp 512w" sizes="(max-width:600px) 64px, 96px" alt="" width="96" height="96"><span class="hm-word" dir="ltr"><span class="hm-lb hm-lb-back" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i><i class="x"></i></span><span class="hm-name"><b>SPONGE</b> LIVE</span><span class="hm-lb hm-lb-front" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i></span></span></h1>
+ <h2 class="hm-hero-title" id="heroTitle">جمهورك يلعب<br><span class="hm-hl">من تعليقات البث.</span></h2>
+ <p class="hm-hero-text">اختر لعبة من 12 لعبة جاهزة، يكتب متابعوك «انضم» في الشات، وتبدأ الجولة مباشرة على شاشة بثك.</p>
+ <div class="hm-hero-cta">
+  <a class="hm-enter" href="#enter"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-play"></use></svg><span>ادخل الاستوديو</span></a>
+  <a class="hm-ghost" id="heroTrial" href="/signup?trial=1"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-gift"></use></svg><span>جرّب مجاناً 24 ساعة</span></a>
+ </div>
+ <ul class="hm-chips">
+  <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg><span>مشاركة من شات البث</span></li>
+  <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user-plus"></use></svg><span>انضمام تلقائي</span></li>
+  <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-screen"></use></svg><span>شاشة جاهزة لـ OBS</span></li>
+ </ul>
+</section>
 
 <section class="hm-strip" id="games" aria-labelledby="gamesTitle">
  <h2 class="hm-strip-title" id="gamesTitle">12 لعبة جاهزة لبثّك</h2>
@@ -66,8 +90,43 @@
   <li><img src="/games/12-guess-flag-120.webp" srcset="/games/12-guess-flag-120.webp 120w, /games/12-guess-flag-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="لعبة خمن العلم" loading="lazy" decoding="async"></li>
  </ul>
 </section>
-</div>
-<div class="hm-more">
+
+<section class="hm-sec" id="live" aria-labelledby="liveTitle">
+ <div class="hm-panelbox">
+  <div class="hm-box-head">
+   <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-signal"></use></svg></span>
+   <div class="hm-box-text"><h2 id="liveTitle">البثوث النشطة</h2><p>بثوث متصلة الآن بـ SPONGE LIVE — ادخل وشاهد اللعبة مباشرة.</p></div>
+   <div class="hm-stats"><span class="hm-stat" title="بثوث متصلة"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg><b id="liveCount">0</b></span><span class="hm-stat" title="لاعبون الآن"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-users"></use></svg><b id="livePlayers">0</b></span></div>
+  </div>
+  <div class="hm-car-nav"><button type="button" class="hm-icon-btn" data-scroll="liveTrack" data-dir="prev" aria-label="السابق"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-chevron"></use></svg></button><button type="button" class="hm-icon-btn is-flip" data-scroll="liveTrack" data-dir="next" aria-label="التالي"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-chevron"></use></svg></button></div>
+  <ul class="hm-track" id="liveTrack" aria-live="polite"></ul>
+  <div class="hm-empty" id="liveEmpty"><span aria-hidden="true">🫧</span><b>لا توجد بثوث متصلة الآن</b><p>كن أول من يربط بثه ويظهر هنا.</p><a class="hm-ghost" href="#connect">اربط بثك</a></div>
+ </div>
+</section>
+
+<section class="hm-sec hm-enter-sec" id="enter" aria-labelledby="hmTitle">
+ <div class="hm-card">
+  <span class="hm-card-icon" aria-hidden="true"><svg width="26" height="26" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg></span>
+  <span class="hm-eyebrow">الدخول باستخدام الرمز الترويجي</span>
+  <h2 id="hmTitle">مرحباً بك في <bdi dir="ltr">SPONGE LIVE!</bdi></h2>
+  <p class="hm-text">أدخل الرمز الترويجي أو رمز اشتراكك للوصول إلى استوديو الألعاب.</p>
+  <form id="promoForm" class="hm-form" novalidate>
+   <label class="hm-field"><span class="hm-label">الرمز</span>
+    <input id="promoCode" name="code" type="text" placeholder="أدخل الرمز الترويجي" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="64" enterkeyhint="go" dir="ltr" required aria-describedby="promoHint promoError">
+   </label>
+   <p class="hm-hint" id="promoHint">رموز الاشتراك تبدأ بـ <bdi dir="ltr">AMIR-</bdi> أو <bdi dir="ltr">SHFQ-</bdi> وتحتاج تسجيل الدخول.</p>
+   <p class="hm-error" id="promoError" role="alert" hidden></p>
+   <button type="submit" class="hm-enter" id="promoSubmit"><span id="promoLabel">دخول الاستوديو</span></button>
+  </form>
+  <p class="hm-session" id="sessionNote" hidden>أنت مسجّل الدخول. <a href="/studio">متابعة إلى الاستوديو</a></p>
+  <nav class="hm-links" aria-label="الحساب والاشتراك">
+   <a href="/signup" id="linkSignup">إنشاء حساب جديد</a>
+   <a href="/login" id="linkLogin">تسجيل الدخول</a>
+   <a href="/signup?trial=1" id="linkTrial" class="is-gold">تجربة مجانية لمدة 24 ساعة</a>
+   <a href="#plans">عرض باقات الاشتراك</a>
+  </nav>
+ </div>
+</section>
 
 <section class="hm-sec hm-connect" id="connect" aria-labelledby="connectTitle">
  <h2 class="hm-h" id="connectTitle">حوّل بثك المباشر إلى عالم من الألعاب!</h2>
@@ -114,28 +173,38 @@
 </section>
 
 <section class="hm-sec" id="plans" aria-labelledby="plansTitle">
+ <p class="hm-kicker"><i aria-hidden="true"></i>الباقات</p>
  <h2 class="hm-h" id="plansTitle">باقات الاشتراك</h2>
- <p class="hm-lead">كل الباقات تفتح الاستوديو كاملًا: جميع الألعاب، ربط TikTok أو Kick، وشاشة OBS.</p>
- <div class="hm-plans">
-  <article class="hm-plan hm-plan-trial" data-reveal>
+ <p class="hm-lead">كل الباقات تفتح الاستوديو كاملًا: جميع الألعاب، ربط TikTok أو Kick، وشاشة OBS. الأسعار بالريال السعودي.</p>
+ <div class="hm-plan-tabs" role="tablist" aria-label="اختر الباقة">
+  <button type="button" role="tab" aria-selected="false" data-plan-tab="trial">التجربة</button>
+  <button type="button" role="tab" aria-selected="false" data-plan-tab="weekly">شفيق العادي</button>
+  <button type="button" role="tab" aria-selected="true" data-plan-tab="monthly">أمير الهامور</button>
+ </div>
+ <div class="hm-plans" id="planTrack">
+  <article class="hm-plan hm-plan-trial" id="plan-trial" data-reveal>
+   <span class="hm-plan-mark" aria-hidden="true">🎁</span>
    <h3>التجربة المجانية</h3>
+   <p class="hm-plan-desc">جرّب الاستوديو كاملًا قبل أن تشترك.</p>
    <p class="hm-price"><b>0</b> ريال</p>
    <p class="hm-dur">24 ساعة</p>
    <ul><li>مرة واحدة لكل حساب مؤكَّد</li><li>تبدأ الـ24 ساعة من لحظة التفعيل</li><li>بلا بطاقة دفع</li></ul>
    <a class="hm-plan-btn" id="planTrial" href="/signup?trial=1">احصل على تجربتك المجانية</a>
   </article>
-  <article class="hm-plan hm-plan-shafiq" data-reveal>
+  <article class="hm-plan hm-plan-shafiq" id="plan-weekly" data-reveal>
    <span class="hm-plan-mark" aria-hidden="true">🎷</span>
    <h3>شفيق العادي</h3>
+   <p class="hm-plan-desc">مناسبة لبثوث الأسبوع أو لتجربة أطول.</p>
    <p class="hm-price"><b>29</b> ريال</p>
    <p class="hm-dur">7 أيام <small>≈ 4.14 ريال لليوم</small></p>
    <ul><li>الاستوديو وجميع الألعاب</li><li>ربط بث TikTok أو Kick</li><li>شاشة OBS</li></ul>
    <a class="hm-plan-btn" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener" data-plan="weekly">اشترك الآن عبر واتساب</a>
   </article>
-  <article class="hm-plan hm-plan-amir" data-reveal>
+  <article class="hm-plan hm-plan-amir" id="plan-monthly" data-reveal>
    <span class="hm-plan-tag">الأوفر لكل يوم</span>
    <span class="hm-plan-mark" aria-hidden="true">👑</span>
    <h3>أمير الهامور</h3>
+   <p class="hm-plan-desc">للستريمر المستمر طوال الشهر.</p>
    <p class="hm-price"><b>44.99</b> ريال</p>
    <p class="hm-dur">شهر واحد <small>≈ 1.50 ريال لليوم</small></p>
    <ul><li>الاستوديو وجميع الألعاب</li><li>ربط بث TikTok أو Kick</li><li>شاشة OBS</li></ul>
@@ -145,30 +214,67 @@
  <p class="hm-note hm-center" id="billingNote">الشراء عبر واتساب: تواصل معنا، وبعد الدفع يصلك رمز الاشتراك وتفعّله من صفحة «حسابي».</p>
 </section>
 
+<section class="hm-sec" id="pay" aria-labelledby="payTitle">
+ <div class="hm-panelbox">
+  <div class="hm-box-head">
+   <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-shield"></use></svg></span>
+   <div class="hm-box-text"><h2 id="payTitle">طرق الدفع</h2><p>الدفع حاليًا عن طريق واتساب مع فريق SPONGE LIVE، والدفع الإلكتروني المباشر قيد التجهيز.</p></div>
+  </div>
+  <ul class="hm-pay">
+   <li class="is-on"><a href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener"><span class="hm-pay-ico hm-pay-wa" aria-hidden="true"><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></span><b>واتساب</b><small>متاح الآن</small></a></li>
+   <li><span class="hm-pay-ico" aria-hidden="true">م</span><b>مدى</b><small>قريبًا</small></li>
+   <li><span class="hm-pay-ico" aria-hidden="true">V</span><b>Visa</b><small>قريبًا</small></li>
+   <li><span class="hm-pay-ico" aria-hidden="true">M</span><b>Mastercard</b><small>قريبًا</small></li>
+   <li><span class="hm-pay-ico" aria-hidden="true">Pay</span><b>Apple Pay</b><small>قريبًا</small></li>
+  </ul>
+  <p class="hm-note">لا نطلب بيانات بطاقتك في هذا الموقع. عند تفعيل الدفع الإلكتروني ستتم العملية في صفحة بوابة دفع مرخّصة.</p>
+ </div>
+</section>
+
 <section class="hm-sec" id="faq" aria-labelledby="faqTitle">
+ <p class="hm-kicker"><i aria-hidden="true"></i>أسئلة شائعة</p>
  <h2 class="hm-h" id="faqTitle">الأسئلة الشائعة</h2>
+ <p class="hm-lead">كل ما تحتاج معرفته قبل أن تبدأ.</p>
  <div class="hm-faq">
+  <details open><summary>كيف أبدأ؟</summary><p>أنشئ حسابًا مجانيًا، ثم فعّل التجربة المجانية أو أدخل رمز اشتراكك، وبعدها افتح الاستوديو واختر لعبة. اربط بثك على TikTok أو Kick واكتب لجمهورك «انضم» — والباقي يتم تلقائيًا.</p></details>
+  <details><summary>كيف تعمل الألعاب مع الجمهور؟</summary><p>كل لعبة تقرأ تعليقات البث المباشر: يكتب المتابع «انضم» ليدخل، ثم يجيب أو يختار بكتابة رقم أو كلمة في الشات. النتائج والفائزون يظهرون على شاشة البث فورًا.</p></details>
+  <details><summary>هل يحتاج المتابع إلى تحميل تطبيق؟</summary><p>لا. المتابع يشارك من شات البث نفسه في TikTok أو Kick، بلا تطبيق ولا تسجيل.</p></details>
+  <details><summary>هل أحتاج OBS؟</summary><p>ليس شرطًا للعب، لكن لعرض اللعبة على شاشة بثك تضيف رابط «شاشة البث» من الاستوديو كمصدر Browser في OBS أو TikTok LIVE Studio بمقاس 1920×1080.</p></details>
   <details><summary>كيف أحصل على التجربة المجانية؟</summary><p>أنشئ حسابًا وأكّد بريدك الإلكتروني، ثم من صفحة «حسابي» اضغط «احصل على تجربتك المجانية». يظهر لك رمز خاص بحسابك: فعّله مباشرة من الصفحة أو أدخله في نافذة الرمز الترويجي. تبدأ الـ24 ساعة من لحظة التفعيل، والتجربة مرة واحدة لكل حساب.</p></details>
-  <details><summary>هل أحتاج إلى حساب؟</summary><p>نعم للتجربة المجانية والاشتراكات، فالاشتراك يُربط بمعرّف حسابك الدائم. إذا أعطاك فريق SPONGE LIVE رمزًا ترويجيًا فيكفي إدخاله في النافذة أعلى الصفحة.</p></details>
-  <details><summary>كيف أربط بث TikTok؟</summary><p>ابدأ بثك المباشر على TikTok، ثم اكتب اسم حسابك في قسم الربط أعلاه أو في شريط الاستوديو واضغط «ربط البث المباشر». تتحول الحالة إلى «متصل» عندما تصل تعليقات البث فعلًا؛ إذا لم يكن البث شغالًا ستظهر رسالة توضح ذلك.</p></details>
+  <details><summary>هل أحتاج إلى حساب؟</summary><p>نعم للتجربة المجانية والاشتراكات، فالاشتراك يُربط بمعرّف حسابك الدائم. إذا أعطاك فريق SPONGE LIVE رمزًا ترويجيًا فيكفي إدخاله في نافذة الرمز.</p></details>
+  <details><summary>كيف تعمل الاشتراكات؟</summary><p>اختر «شفيق العادي» (29 ريال / 7 أيام) أو «أمير الهامور» (44.99 ريال / شهر) وتواصل معنا عبر واتساب. بعد الدفع نرسل لك رمز الاشتراك؛ أدخله في «حسابي» أو في نافذة الرمز فيُضاف إلى حسابك فورًا. الاشتراك لا يتجدد تلقائيًا، وإذا اشتركت قبل انتهاء الحالي تُضاف المدة بعده.</p></details>
+  <details><summary>كيف أربط بث TikTok؟</summary><p>ابدأ بثك المباشر على TikTok، ثم اكتب اسم حسابك في قسم الربط أو في شريط الاستوديو واضغط «ربط البث المباشر». تتحول الحالة إلى «متصل» عندما تصل تعليقات البث فعلًا.</p></details>
   <details><summary>هل يدعم الموقع Kick؟</summary><p>نعم. اختر Kick واكتب اسم قناتك. دعم Kick ما زال تجريبيًا، وقد تحتاج أحيانًا رقم غرفة الشات من إعدادات الاستوديو.</p></details>
-  <details><summary>كيف أشترك في باقة؟</summary><p>اضغط «اشترك الآن عبر واتساب» على الباقة التي تريدها وتواصل معنا. بعد الدفع نرسل لك رمز الاشتراك؛ سجّل الدخول بحسابك وأدخله في صفحة «حسابي» أو في نافذة الرمز الترويجي، فيُضاف الاشتراك إلى حسابك فورًا.</p></details>
   <details><summary>كيف أعرف متى ينتهي اشتراكي؟</summary><p>صفحة «حسابي» تعرض نوع اشتراكك، تاريخ انتهائه والوقت المتبقي، وسجل اشتراكاتك السابقة.</p></details>
-  <details><summary>هل يتغير معرف حسابي؟</summary><p>لا. المعرّف (مثل <bdi dir="ltr">SPG-8F42K9</bdi>) يُنشأ مرة واحدة على الخادم ولا يتغير أبدًا، حتى لو غيّرت اسمك أو صورتك. استخدمه عند التواصل مع الدعم.</p></details>
-  <details><summary>كيف أستخدم الموقع في OBS؟</summary><p>من الاستوديو انسخ رابط «شاشة البث»، ثم أضف في OBS مصدرًا من نوع Browser (متصفح) والصق الرابط بمقاس 1920×1080. الشاشة تتحدث وحدها مع كل جولة.</p></details>
+  <details><summary>هل لدي معرّف ثابت؟</summary><p>نعم. كل حساب يحصل على معرّف مثل <bdi dir="ltr">SPG-8F42K9</bdi> يُنشأ مرة واحدة ولا يتغير أبدًا، حتى لو غيّرت اسمك. اذكره عند الشراء أو التواصل مع الدعم.</p></details>
+ </div>
+</section>
+
+<section class="hm-sec" id="contact" aria-labelledby="contactTitle">
+ <div class="hm-panelbox hm-contact">
+  <div class="hm-box-head">
+   <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></span>
+   <div class="hm-box-text"><h2 id="contactTitle">تواصل معنا</h2><p>للاشتراك أو الدعم أو أي سؤال — نرد عليك عبر واتساب.</p></div>
+  </div>
+  <a class="hm-contact-row" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener"><span class="hm-pay-ico hm-pay-wa" aria-hidden="true"><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></span><span><b>واتساب</b><small>اذكر معرّف حسابك إن كان لديك حساب</small></span><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-arrow"></use></svg></a>
  </div>
 </section>
 
 <footer class="hm-foot">
- <div class="hm-foot-brand"><img src="/brand/sponge-128.webp" alt="" width="40" height="40" loading="lazy" decoding="async"><b dir="ltr">SPONGE LIVE</b></div>
- <nav class="hm-foot-nav" aria-label="روابط الموقع">
-  <a href="#connect">ربط البث</a><a href="#why">المزايا</a><a href="#games">الألعاب</a><a href="#start">كيف تبدأ</a><a href="#faq">الأسئلة الشائعة</a>
-  <a href="/login">تسجيل الدخول</a><a href="#plans">الاشتراكات</a>
-  <a href="#" id="supportLink" hidden rel="noopener" target="_blank">الدعم</a>
-  <a href="/privacy">سياسة الخصوصية</a><a href="/terms">شروط الاستخدام</a>
- </nav>
- <p class="hm-copy">© <span id="year">2026</span> <bdi dir="ltr">SPONGE LIVE</bdi>. جميع الحقوق محفوظة.</p>
+ <div class="hm-foot-in">
+  <div class="hm-foot-brand"><img src="/brand/sponge-128.webp" alt="" width="44" height="44" loading="lazy" decoding="async"><b dir="ltr">SPONGE LIVE</b></div>
+  <p class="hm-foot-desc">منصة ألعاب تفاعلية للبث المباشر: جمهورك يلعب من التعليقات، وأنت تدير كل شيء من استوديو واحد.</p>
+  <div class="hm-foot-cols">
+   <nav aria-label="روابط الموقع"><h3>الموقع</h3><a href="#live">البثوث النشطة</a><a href="#games">الألعاب</a><a href="#connect">ربط البث</a><a href="#start">كيف تبدأ</a><a href="#faq">الأسئلة الشائعة</a></nav>
+   <nav aria-label="الحساب"><h3>الحساب</h3><a href="/login">تسجيل الدخول</a><a href="/signup">إنشاء حساب جديد</a><a href="/account">حسابي</a><a href="#plans">الاشتراكات</a></nav>
+   <nav aria-label="تواصل"><h3>تواصل معنا</h3><a href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener">واتساب</a><a href="#" id="supportLink" hidden rel="noopener" target="_blank">الدعم</a></nav>
+  </div>
+  <nav class="hm-foot-policies" aria-label="السياسات"><a href="/privacy">سياسة الخصوصية</a><a href="/terms">شروط الاستخدام</a><a href="/refund">سياسة الاسترداد</a></nav>
+  <p class="hm-copy">© <span id="year">2026</span> <bdi dir="ltr">SPONGE LIVE</bdi>. جميع الحقوق محفوظة.</p>
+ </div>
 </footer>
-</div>
+</main>
+
+<a class="hm-fab" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener" aria-label="تواصل معنا عبر واتساب"><svg width="26" height="26" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></a>
 </body>
 </html>

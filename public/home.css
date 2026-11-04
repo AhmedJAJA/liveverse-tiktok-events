@@ -14,7 +14,7 @@
 html,body{margin:0}
 html{scroll-behavior:smooth;scroll-padding-top:16px}
 body.hm{color:var(--foam);background:var(--deep);font-family:"Tajawal",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-.hm-hero{min-height:100svh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto}
+.hm-hero{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;gap:14px;padding:clamp(28px,6vh,64px) 16px 18px;text-align:center}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 [hidden]{display:none!important}
 
@@ -32,10 +32,9 @@ body.hm{color:var(--foam);background:var(--deep);font-family:"Tajawal",system-ui
 @keyframes hm-breathe{50%{opacity:.55;transform:scale(1.06)}}
 
 /* ---------- logo ---------- */
-.hm-top{display:grid;place-items:center;padding:clamp(18px,4vh,40px) 16px 0}
 .hm-logo{display:flex;align-items:center;gap:clamp(12px,2vw,20px);margin:0;animation:hm-in .8s var(--ease) both}
 .hm-logo img{width:clamp(72px,9vw,104px);height:auto;aspect-ratio:1;border-radius:28%;box-shadow:0 0 0 3px rgba(56,212,255,.75),0 0 28px rgba(56,212,255,.45),0 14px 30px -12px #000}
-.hm-logo span{font:900 clamp(34px,6.4vw,72px)/1 "Tajawal",system-ui,sans-serif;letter-spacing:.06em;color:var(--foam);text-shadow:0 0 18px rgba(56,212,255,.55),0 0 2px rgba(255,255,255,.9)}
+.hm-logo span{font:900 clamp(32px,6vw,64px)/1 "Tajawal",system-ui,sans-serif;letter-spacing:.06em;color:var(--foam);text-shadow:0 0 18px rgba(56,212,255,.55),0 0 2px rgba(255,255,255,.9)}
 .hm-logo b{color:#FFE14D;text-shadow:0 0 18px rgba(255,200,40,.55),0 0 2px rgba(255,255,255,.8)}
 @keyframes hm-in{from{opacity:0;transform:translateY(-14px) scale(.96)}}
 /* bubbles around the name: a layer behind the letters, and a few that pass in front of the edges only,
@@ -62,7 +61,6 @@ body.hm{color:var(--foam);background:var(--deep);font-family:"Tajawal",system-ui
 @keyframes hm-lrise{0%{transform:translate3d(0,0,0) scale(.6);opacity:0}15%{opacity:.85}50%{transform:translate3d(5px,-50px,0) scale(1)}85%{opacity:.7}100%{transform:translate3d(-4px,-104px,0) scale(1.08);opacity:0}}
 
 /* ---------- the promo window: the focal point ---------- */
-.hm-main{display:grid;place-items:center;padding:clamp(16px,3vh,32px) 16px}
 .hm-card{position:relative;width:min(520px,100%);padding:clamp(24px,4vw,40px);border-radius:28px;text-align:center;
   background:linear-gradient(160deg,rgba(14,42,104,.78),rgba(4,16,46,.86));border:1px solid rgba(140,232,255,.55);
   box-shadow:0 0 0 1px rgba(56,212,255,.25),0 0 40px -6px rgba(56,212,255,.45),inset 0 1px 0 rgba(255,255,255,.12),0 30px 60px -30px #000;
@@ -109,7 +107,7 @@ body.hm{color:var(--foam);background:var(--deep);font-family:"Tajawal",system-ui
   .hm-card{border-radius:24px}
   .hm-field input,.hm-enter{height:58px}
 }
-@media (max-height:620px){.hm-top{padding-top:10px}.hm-logo img{width:56px}.hm-logo span{font-size:30px}.hm-main{padding-block:8px}}
+
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .hm-b,.hm-glow,.hm-logo,.hm-card,.hm-error,.hm-cards li{animation:none}
@@ -225,3 +223,165 @@ html.is-hidden *,html.is-hidden *::before{animation-play-state:paused!important}
 .hm-copy{margin:18px 0 0;color:rgba(234,248,255,.5);font-size:14px}
 .hm-handle input:placeholder-shown{direction:rtl;text-align:right}
 .hm-tile bdi,.hm-faq bdi{white-space:nowrap}
+
+/* ================= v1.3 layout: sticky bar, menu, hero, live streams, plans carousel, payments, footer ================= */
+.hm-skip{position:absolute;inset-inline-start:12px;top:-60px;z-index:60;padding:10px 14px;border-radius:12px;background:#FFD62A;color:var(--ink);font-weight:900}
+.hm-skip:focus{top:10px}
+html{scroll-padding-top:84px}
+.hm-bar{position:sticky;top:0;z-index:40;background:rgba(3,14,44,.78);border-bottom:1px solid rgba(140,232,255,.18);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.hm-bar-in{display:flex;align-items:center;gap:10px;width:min(1180px,100%);margin:0 auto;padding:10px 16px}
+.hm-bar-brand{display:inline-flex;align-items:center;gap:8px;color:var(--foam);text-decoration:none;font-weight:900;font-size:19px;white-space:nowrap;min-width:0}
+.hm-bar-brand img{border-radius:10px;box-shadow:0 0 0 2px rgba(56,212,255,.7)}
+.hm-bar-brand b{color:#FFE14D}
+.hm-bar-actions{margin-inline-start:auto;display:flex;gap:8px;align-items:center}
+.hm-icon-btn{display:inline-grid;place-items:center;width:46px;height:46px;flex:0 0 auto;border-radius:14px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.55);color:var(--foam);cursor:pointer;transition:border-color .2s,background .2s}
+.hm-icon-btn:hover{border-color:var(--cyan);background:rgba(56,212,255,.12)}
+.hm-icon-btn:focus-visible,.hm-pill:focus-visible,.hm-ghost:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.hm-icon-btn svg{fill:none;stroke:currentColor}
+.hm-icon-btn.is-flip svg{transform:scaleX(-1)}
+.hm-burger{display:grid;gap:5px;width:20px}
+.hm-burger i{display:block;height:2px;border-radius:2px;background:currentColor}
+.hm-pill{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 14px;border-radius:13px;font:800 15px/1 "Tajawal",system-ui,sans-serif;text-decoration:none;white-space:nowrap;cursor:pointer;border:1px solid transparent}
+.hm-pill svg{fill:none;stroke:currentColor}
+.hm-pill-ghost{color:var(--foam);border-color:rgba(140,232,255,.4);background:rgba(2,10,34,.5)}
+.hm-pill-gold{color:var(--ink);background:var(--yellow);box-shadow:0 3px 0 #C98A00}
+.hm-pill-green{color:#C9FFE2;border-color:rgba(59,227,139,.6);background:rgba(59,227,139,.12)}
+.hm-pill-danger{color:#FFC2CF;border-color:rgba(255,106,138,.6);background:rgba(255,106,138,.08)}
+.hm-pill-wide{width:100%;height:50px;font-size:16px}
+@media (max-width:600px){#barAccount{display:none}.hm-bar-actions .hm-pill{height:42px;padding:0 12px;font-size:14.5px}}
+@media (max-width:360px){.hm-bar-brand span{display:none}}
+.hm-bar-brand{overflow:hidden}.hm-bar-brand span{overflow:hidden;text-overflow:ellipsis}
+
+/* side menu */
+.hm-menu{position:fixed;inset:0;z-index:50;background:rgba(1,6,20,.6);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:hm-fade .2s ease both}
+.hm-menu-panel{position:absolute;inset-block:0;inset-inline-start:0;width:min(340px,88vw);display:flex;flex-direction:column;gap:14px;padding:16px;overflow-y:auto;background:linear-gradient(180deg,#0A2563,#041236);border-inline-end:1px solid rgba(140,232,255,.35);box-shadow:20px 0 60px -20px #000;animation:hm-slide .28s var(--ease) both}
+@keyframes hm-fade{from{opacity:0}}
+@keyframes hm-slide{from{transform:translateX(30px);opacity:0}}
+.hm-menu-head{display:flex;align-items:center;justify-content:space-between}
+.hm-menu-title{font-weight:900;font-size:20px}.hm-menu-title b{color:#FFE14D}
+.hm-menu-nav{display:grid;gap:4px}
+.hm-menu-nav a{display:flex;align-items:center;gap:12px;padding:13px 12px;border-radius:14px;color:var(--foam);text-decoration:none;font-weight:800;font-size:17px;transition:background .2s}
+.hm-menu-nav a svg{color:var(--aqua);fill:none;stroke:currentColor;flex:0 0 auto}
+.hm-menu-nav a:hover,.hm-menu-nav a:focus-visible{background:rgba(56,212,255,.12);outline:none}
+.hm-menu-actions{display:grid;gap:10px;margin-top:auto;padding-top:12px;border-top:1px solid rgba(140,232,255,.18)}
+.hm-menu-actions .hm-enter{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.hm-menu-actions .hm-enter svg{fill:none;stroke:currentColor}
+html.menu-open{overflow:hidden}
+
+/* hero */
+.hm-kicker{display:inline-flex;align-items:center;gap:8px;margin:0;padding:6px 14px;border-radius:999px;border:1px solid rgba(56,212,255,.45);background:rgba(56,212,255,.1);color:var(--aqua);font-weight:800;font-size:14px}
+.hm-kicker i{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.hm-sec > .hm-kicker{display:flex;width:max-content;margin:0 auto 12px}
+.hm-hero-title{margin:6px 0 0;font-size:clamp(34px,7vw,64px);font-weight:900;line-height:1.2}
+.hm-hl{background:linear-gradient(90deg,#8CE8FF,#38D4FF 45%,#FFE14D);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hm-hero-text{margin:0;max-width:620px;color:var(--muted);font-size:clamp(16px,2.4vw,19px);line-height:1.8}
+.hm-hero-cta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(560px,100%);margin-top:6px}
+.hm-hero-cta .hm-enter,.hm-ghost{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+.hm-hero-cta svg,.hm-ghost svg{fill:none;stroke:currentColor;flex:0 0 auto}
+.hm-ghost{height:62px;padding:0 16px;border-radius:18px;border:2px solid rgba(140,232,255,.55);background:rgba(2,10,34,.55);color:var(--foam);font:900 18px/1 "Tajawal",system-ui,sans-serif;transition:background .2s,border-color .2s}
+.hm-ghost:hover{background:rgba(56,212,255,.14);border-color:var(--cyan)}
+.hm-empty .hm-ghost{height:48px;font-size:16px;margin-top:6px}
+.hm-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:min(620px,100%);margin:10px 0 0;padding:0;list-style:none}
+.hm-chips li{display:grid;justify-items:center;gap:8px;color:var(--muted);font-weight:700;font-size:14px;line-height:1.4}
+.hm-chips svg{box-sizing:content-box;padding:9px;border-radius:12px;border:1px solid rgba(140,232,255,.35);background:rgba(56,212,255,.1);color:var(--aqua);fill:none;stroke:currentColor}
+@media (max-width:520px){.hm-hero-cta{grid-template-columns:minmax(0,1fr)}}
+
+/* boxed panels (live streams, payments, contact) */
+.hm-panelbox{position:relative;padding:clamp(18px,3vw,28px);border-radius:28px;background:linear-gradient(160deg,rgba(14,42,104,.7),rgba(4,16,46,.86));border:1px solid rgba(140,232,255,.4);box-shadow:0 0 0 1px rgba(56,212,255,.1),0 0 40px -14px rgba(56,212,255,.45),0 30px 60px -36px #000}
+.hm-box-head{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.hm-box-icon{display:grid;place-items:center;width:54px;height:54px;flex:0 0 auto;border-radius:16px;background:rgba(56,212,255,.14);border:1px solid rgba(56,212,255,.45);color:var(--aqua)}
+.hm-box-icon svg{fill:none;stroke:currentColor}
+.hm-box-text{flex:1 1 220px;min-width:0}
+.hm-box-text h2{margin:2px 0 4px;font-size:clamp(22px,4vw,30px);font-weight:900}
+.hm-box-text p{margin:0;color:var(--muted);line-height:1.7}
+.hm-stats{display:flex;gap:8px}
+.hm-stat{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;border-radius:12px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.5);color:var(--aqua)}
+.hm-stat svg{fill:none;stroke:currentColor}
+.hm-stat b{color:var(--foam);font-size:17px;font-variant-numeric:tabular-nums}
+.hm-car-nav{display:flex;justify-content:flex-end;gap:8px;margin:16px 0 10px}
+.hm-car-nav[hidden]{display:none}
+.hm-track{display:grid;grid-auto-flow:column;grid-auto-columns:min(320px,82%);gap:14px;margin:0;padding:4px 2px 10px;list-style:none;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.hm-track::-webkit-scrollbar{display:none}
+.hm-live{scroll-snap-align:start;display:grid;gap:12px;padding:16px;border-radius:22px;background:rgba(2,10,34,.62);border:1px solid rgba(140,232,255,.3)}
+.hm-live-top{display:flex;align-items:center;gap:12px}
+.hm-ava{display:grid;place-items:center;width:58px;height:58px;flex:0 0 auto;border-radius:50%;font-weight:900;font-size:24px;color:var(--ink);background:var(--yellow);box-shadow:0 0 0 3px rgba(56,212,255,.8),0 0 18px -2px var(--cyan)}
+.hm-live-who{min-width:0}
+.hm-live-who b{display:block;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-live-who span{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:3px 10px;border-radius:999px;background:rgba(56,212,255,.1);color:var(--aqua);font-size:13px;direction:ltr}
+.hm-badge-live{margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(255,106,138,.15);color:#FFC2CF;font-weight:900;font-size:12px;letter-spacing:.06em}
+.hm-badge-live i{width:7px;height:7px;border-radius:50%;background:#FF4D73;box-shadow:0 0 8px #FF4D73;animation:hm-pulse 1.4s ease-in-out infinite}
+.hm-live-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hm-live-game{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,214,42,.45);color:#FFE14D;font-weight:800;font-size:14px;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-live-count{color:var(--muted);font-size:14px}.hm-live-count b{color:var(--foam);font-size:20px}
+.hm-live a.hm-pill{width:100%}
+.hm-empty{display:grid;justify-items:center;gap:6px;padding:26px 12px;text-align:center;border-radius:22px;border:1px dashed rgba(140,232,255,.35);margin-top:14px}
+.hm-empty[hidden]{display:none}
+.hm-empty span{font-size:34px}
+.hm-empty b{font-size:18px}
+.hm-empty p{margin:0;color:var(--muted)}
+
+/* promo card section */
+.hm-enter-sec{display:grid;place-items:center}
+.hm-card-icon{display:grid;place-items:center;width:56px;height:56px;margin:0 auto 12px;border-radius:18px;background:linear-gradient(160deg,#38D4FF,#1E5BFF);color:#fff;box-shadow:0 10px 26px -10px rgba(56,212,255,.9)}
+.hm-card-icon svg{fill:none;stroke:currentColor}
+.hm-label{display:block;margin-bottom:8px;text-align:start;font-weight:800;font-size:15px}
+.hm-hint{margin:-4px 0 0;color:var(--muted);font-size:13.5px;line-height:1.6;text-align:start}
+
+/* plans carousel */
+.hm-plan-tabs{display:flex;justify-content:center;gap:8px;margin:0 auto 18px;flex-wrap:wrap}
+.hm-plan-tabs button{height:44px;padding:0 16px;border-radius:13px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.55);color:var(--muted);font:800 15px/1 "Tajawal",system-ui,sans-serif;cursor:pointer}
+.hm-plan-tabs button[aria-selected="true"]{color:var(--ink);border-color:transparent;background:var(--yellow);box-shadow:0 3px 0 #C98A00}
+.hm-plan-desc{margin:0;color:var(--muted);font-size:14.5px;line-height:1.6}
+.hm-plan.is-focus{outline:3px solid rgba(255,214,42,.8);outline-offset:3px}
+@media (max-width:900px){
+  .hm-plans{display:grid;grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:min(340px,84%);max-width:none;gap:14px;padding:16px 4px 12px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+  .hm-plans::-webkit-scrollbar{display:none}
+  .hm-plan{scroll-snap-align:center}
+  .hm-plan-amir{order:-1}
+}
+
+/* payments */
+.hm-pay{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:18px 0 0;padding:0;list-style:none}
+.hm-pay li,.hm-pay li a{display:grid;justify-items:center;gap:6px;padding:14px 8px;border-radius:18px;text-align:center;color:var(--muted);text-decoration:none}
+.hm-pay li{border:1px solid rgba(140,232,255,.22);background:rgba(2,10,34,.45);padding:0}
+.hm-pay li:not(.is-on){padding:14px 8px;opacity:.75}
+.hm-pay li.is-on{border-color:rgba(59,227,139,.65);background:rgba(59,227,139,.08)}
+.hm-pay li.is-on a{color:#C9FFE2}
+.hm-pay b{color:var(--foam);font-size:15px}
+.hm-pay small{font-size:12.5px}
+.hm-pay-ico{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.08);color:var(--foam);font-weight:900;font-size:16px}
+.hm-pay-ico svg{fill:none;stroke:currentColor}
+.hm-pay-wa{background:#1FAF5A;color:#fff}
+@media (max-width:620px){.hm-pay{grid-template-columns:repeat(2,minmax(0,1fr))}.hm-pay li.is-on{grid-column:1/-1}}
+
+/* faq: plus turns into a cross */
+.hm-faq details[open]{border-color:rgba(56,212,255,.7);box-shadow:0 0 26px -10px rgba(56,212,255,.6)}
+.hm-faq details[open] summary::after{background:linear-gradient(160deg,#38D4FF,#1E5BFF);color:#fff}
+
+/* contact */
+.hm-contact-row{display:flex;align-items:center;gap:14px;margin-top:16px;padding:14px 16px;border-radius:18px;border:1px solid rgba(59,227,139,.5);background:rgba(59,227,139,.07);color:var(--foam);text-decoration:none}
+.hm-contact-row span:not(.hm-pay-ico){display:grid;gap:2px;flex:1}
+.hm-contact-row small{color:var(--muted)}
+.hm-contact-row > svg{fill:none;stroke:currentColor;transform:scaleX(-1)}
+
+/* footer */
+.hm-foot{text-align:start}
+.hm-foot-in{width:min(1120px,100%);margin:0 auto}
+.hm-foot-desc{margin:10px 0 0;max-width:520px;color:var(--muted);line-height:1.8}
+.hm-foot-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:22px}
+.hm-foot-cols nav{display:grid;gap:8px;align-content:start}
+.hm-foot-cols h3{margin:0 0 4px;font-size:16px;color:#FFE14D}
+.hm-foot-cols a{color:var(--muted);text-decoration:none;font-weight:700}
+.hm-foot-cols a:hover,.hm-foot-cols a:focus-visible{color:#fff;outline:none;text-decoration:underline}
+.hm-foot-policies{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.hm-foot-policies a{padding:9px 14px;border-radius:12px;border:1px solid rgba(140,232,255,.3);color:var(--foam);text-decoration:none;font-weight:700;font-size:14px}
+.hm-foot-policies a:hover{border-color:var(--cyan)}
+.hm-foot .hm-copy{padding-top:16px;border-top:1px solid rgba(140,232,255,.15)}
+@media (max-width:620px){.hm-foot-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* floating contact button */
+.hm-fab{position:fixed;inset-inline-end:16px;bottom:max(16px,env(safe-area-inset-bottom));z-index:30;display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:linear-gradient(160deg,#38D4FF,#1E5BFF);color:#fff;box-shadow:0 0 0 4px rgba(2,10,34,.8),0 10px 26px -6px rgba(56,212,255,.8)}
+.hm-fab svg{fill:none;stroke:currentColor}
+.hm-fab:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.hm-menu,.hm-menu-panel,.hm-badge-live i{animation:none}}
+.hm-foot{padding-bottom:max(96px,env(safe-area-inset-bottom))}
