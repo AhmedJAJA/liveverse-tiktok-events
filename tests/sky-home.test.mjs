@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { GAMES, siteConfig } from '../src/catalog.mjs';
+import { GAMES, ALL_GAMES, siteConfig } from '../src/catalog.mjs';
 
 const read = (p) => fs.readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const home = read('public/landing.html'), studio = read('public/index.html'), app = read('public/app.js'), server = read('server.mjs');
 
 test('one catalogue: home gallery, studio modes and catalogue list the same working games', () => {
   const studioModes = [...studio.matchAll(/data-mode="([a-z]+)"/g)].map((m) => m[1]).sort();
-  assert.deepEqual(GAMES.map((g) => g.mode).sort(), studioModes);
+  assert.deepEqual(ALL_GAMES.map((g) => g.mode).sort(), studioModes);
   assert.ok(app.includes('STUDIO_MODES.includes(requestedMode)'));
   for (const game of GAMES) {
     assert.ok(home.includes(`href="${game.href}"`), game.href);

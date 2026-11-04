@@ -8,7 +8,7 @@ import { Engine } from './src/engine.mjs';
 import { LiveBridge } from './src/bridge.mjs';
 import { KickBridge, validKickSlug } from './src/kick.mjs';
 import { QuestionBank, loadDefaultQuestions } from './src/question-bank.mjs';
-import { siteConfig, GAMES, UPDATES } from './src/catalog.mjs';
+import { siteConfig, ALL_GAMES, UPDATES } from './src/catalog.mjs';
 import { AccountStore, Sessions, RateLimiter, FieldError, parseCookies, roomId, PLANS } from './src/accounts.mjs';
 import { DrawHub } from './src/draw.mjs';
 
@@ -18,7 +18,7 @@ const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
 if (!process.env.ADMIN_TOKEN) { if (process.env.NODE_ENV === 'production') console.warn('ADMIN_TOKEN is unset; configure it in the hosting environment.'); else console.log('\n[LOCAL ADMIN TOKEN] ' + authToken + '\nSet ADMIN_TOKEN in hosting environment before publishing.'); }
 const safeToken = Buffer.from(authToken, 'utf8');
 const matchesToken = (raw) => { const incoming = Buffer.from(String(raw||''), 'utf8'); return incoming.length === safeToken.length && timingSafeEqual(incoming, safeToken); };
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.SKY_DATA_DIR || path.join(here, 'data', 'runtime');
 const COOKIE = 'sky_session';
@@ -127,7 +127,7 @@ async function handleAction(action, body, actor) {
   switch (action) {
     case 'configure': engine.configure(body); return { ok: true };
     case 'registration-open': engine.openRegistration(body); return { ok: true };
-    case 'registration-settings': return { ok: true, registration: engine.updateRegistration(body) };
+    case 'registration-settings': return { ok: true, registration: engine.updateRegistration({ ...body, ...(body.hostJoin ? { hostName: actor.user?.displayName || 'المشرف' } : {}) }) };
     case 'registration-close': engine.closeRegistration(); return { ok: true };
     case 'bomb-pause': engine.bombPause(); return { ok: true };
     case 'bomb-resume': engine.bombResume(); return { ok: true };
@@ -142,9 +142,20 @@ async function handleAction(action, body, actor) {
     case 'add-host': return { ok: true, player: engine.joinHost() };
     case 'host-seat': return { ok: true, player: engine.seatHost({ name: actor.user?.displayName || (actor.kind === 'owner' ? 'المشرف' : 'المشرف') }) };
     case 'host-unseat': return { ok: true, ...engine.unseatHost() };
+    case 'secret': return { ok: true, secret: engine.partySecret() };
+    case 'judge': engine.judgeAnswer(body.accept === true); return { ok: true };
+    case 'roles-admin': return { ok: true, ...engine.rolesAdmin() };
+    case 'sketch': {
+      // «خمن الرسمة»: the host's canvas as a PNG, pushed to every screen of this room.
+      const data = String(body.data ?? '');
+      if (data && (!/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(data) || data.length > 180_000)) throw new Error('الرسمة غير صالحة أو كبيرة جدًا');
+      room.sketch = { data, v: (room.sketch?.v || 0) + 1 };
+      for (const ws of room.clients) send(ws, { type: 'sketch', data: room.sketch });
+      return { ok: true, v: room.sketch.v };
+    }
     case 'prepare': {
       // Join page: pick the game and open signups. A quiz gets a fresh question from the bank.
-      const game = GAMES.find((g) => g.mode === body.mode);
+      const game = ALL_GAMES.find((g) => g.mode === body.mode);
       if (!game) throw new Error('لعبة غير معروفة');
       const result = engine.prepareJoin({ mode: game.mode, title: game.title });
       if (game.mode === 'quiz' && result.phase === 'open') {
@@ -239,7 +250,7 @@ async function handleAccount(action, req, res) {
   if (action === 'forgot') {
     // No email service is configured: recovery goes through the support channel, never by revealing whether an account exists.
     const support = siteConfig().support;
-    return json(res, 200, { ok: true, message: 'استعادة كلمة المرور تتم عبر فريق Sky Live: تواصل معنا باسم المستخدم أو البريد المسجل وسنعيد تعيينها لك.', support });
+    return json(res, 200, { ok: true, message: 'استعادة كلمة المرور تتم عبر فريق SPONGE LIVE: تواصل معنا باسم المستخدم أو البريد المسجل وسنعيد تعيينها لك.', support });
   }
   return json(res, 404, { error: 'Not found' });
 }
@@ -267,12 +278,31 @@ async function handleDraw(action, req, res) {
   } catch (err) { return json(res, 400, { error: String(err.message || err).slice(0, 240) }); }
 }
 
+/* «الأدوار المخفية»: a player's private role page. The page gets a one-time code; the player writes
+   «دوري <code>» in the stream chat, which proves which viewer owns this browser token. */
+const roleLimiter = new RateLimiter({ limit: 30, windowMs: 10 * 60_000 });
+async function handleRole(action, url, req, res) {
+  const room = publicRoom(url.searchParams.get('room'));
+  if (!room) return json(res, 404, { error: 'الغرفة غير موجودة' });
+  const token = String(req.headers['x-role-token'] || '');
+  try {
+    if (action === 'me' && req.method === 'GET') return json(res, 200, room.engine.rolesPrivate(token));
+    if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+    if (action === 'claim') {
+      if (!roleLimiter.hit('role:' + clientIp(req))) return json(res, 429, { error: 'محاولات كثيرة، انتظر قليلًا' });
+      return json(res, 200, room.engine.rolesClaim());
+    }
+    if (action === 'act') { const body = await readBody(req, 1024); room.engine.rolesAct(token, body.number); return json(res, 200, { ok: true }); }
+    return json(res, 404, { error: 'Not found' });
+  } catch (err) { return json(res, 400, { error: String(err.message || err).slice(0, 200) }); }
+}
+
 function streams() {
   const list = [];
   for (const room of rooms.values()) {
     const s = room.engine.snapshot();
     if (s.connection.state !== 'connected') continue;
-    const game = GAMES.find((g) => g.mode === s.status.mode);
+    const game = ALL_GAMES.find((g) => g.mode === s.status.mode);
     list.push({ room: room.id, platform: s.connection.platform, username: s.connection.username, players: s.playerCount, active: !!s.status.active,
       mode: s.status.mode, game: game?.title || s.status.title, cover: game?.cover || '/covers/quiz.svg' });
   }
@@ -281,8 +311,10 @@ function streams() {
   return { streams: list, totalStreams: list.length, totalPlayers: list.reduce((n, s) => n + s.players, 0) };
 }
 
-const STATIC = new Set(['index.html','landing.html','landing.js','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','draw-mark.svg','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','sky-home.css','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
-  ...GAMES.map((g) => g.cover.slice(1)),
+const STATIC = new Set(['index.html','landing.html','landing.js','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','sky-home.css','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
+  ...ALL_GAMES.map((g) => g.cover.slice(1)),
+  // game art, legacy covers and flags: every file in these folders is public
+  ...['games', 'covers', 'flags'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt']);
 
 const server = http.createServer(async (req, res) => {
@@ -296,6 +328,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === '/api/site' && req.method === 'GET') return json(res, 200, { ...siteConfig(), updates: UPDATES, plans: PLANS });
     if (url.pathname === '/api/streams' && req.method === 'GET') return json(res, 200, streams());
+    if (url.pathname === '/api/sketch' && req.method === 'GET') { const room = publicRoom(url.searchParams.get('room')); return room ? json(res, 200, room.sketch || { data: '', v: 0 }) : json(res, 404, { error: 'الغرفة غير موجودة' }); }
+    if (url.pathname.startsWith('/api/role/')) return await handleRole(url.pathname.slice('/api/role/'.length), url, req, res);
     if (url.pathname.startsWith('/api/account/')) return await handleAccount(url.pathname.slice('/api/account/'.length), req, res);
     if (url.pathname.startsWith('/api/draw/')) return await handleDraw(url.pathname.slice('/api/draw/'.length), req, res);
     if (url.pathname === '/api/admin/bank' && req.method === 'GET') { const actor = actorFor(req); return actor ? json(res, 200, actor.room.questionBank.stats()) : json(res, 401, { error: 'رمز الإدارة غير صحيح' }); }
@@ -307,7 +341,7 @@ const server = http.createServer(async (req, res) => {
       if (!isAuthorized(req)) return json(res, 401, { error: 'رمز الإدارة غير صحيح' });
       const actor = actorFor(req);
       actor.room.touched = Date.now();
-      try { const result = await handleAction(url.pathname.slice('/api/admin/'.length), await readBody(req), actor); return json(res, 200, result); }
+      try { const action = url.pathname.slice('/api/admin/'.length); const result = await handleAction(action, await readBody(req, action === 'sketch' ? 200_000 : 16384), actor); return json(res, 200, result); }
       catch (err) { return json(res, err.status || 400, { error: String(err.message || err).slice(0, 240), ...(err.fields ? { fields: err.fields } : {}) }); }
     }
     if (url.pathname === '/api/dev-token' && req.method === 'GET') {
@@ -318,7 +352,7 @@ const server = http.createServer(async (req, res) => {
     }
   } catch (err) { return json(res, err.status || 500, { error: String(err.message || err).slice(0, 200) }); }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
-  const fileMap = { '/': 'landing.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
+  const fileMap = { '/': 'landing.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });
@@ -344,6 +378,7 @@ wss.on('connection', (ws, room) => {
   ws.on('message', () => {});
   ws.on('close', () => { room.clients.delete(ws); socketCount--; room.touched = Date.now(); });
   send(ws, { type: 'state', data: room.view() });
+  if (room.sketch?.data) send(ws, { type: 'sketch', data: room.sketch }); // reconnects get the current drawing
 });
 // 100 ms resolution: every deadline is authoritative on the server, viewers only render it.
 const roundClock = setInterval(() => { for (const room of rooms.values()) room.engine.tick(); draw.tick(); }, 100);

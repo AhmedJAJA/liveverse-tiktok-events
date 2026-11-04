@@ -10,16 +10,21 @@
 //   redlight    الضوء الأحمر  — move 1–5 steps on green; moving on red eliminates
 //   bowling     البولينج      — pick 1–10 to roll; no number guarantees a strike
 
-export const PARTY_MODES = ['rps', 'minority', 'higherlower', 'truefalse', 'redlight', 'bowling'];
-export const PARTY_MIN_PLAYERS = { rps: 1, minority: 3, higherlower: 1, truefalse: 1, redlight: 1, bowling: 1 };
+import { ROUND_DEFAULTS, POINTS, norm, firstNumber, pub, card, RoundGame } from './round-game.mjs';
+import { SEA_GAMES, SEA_MIN_PLAYERS, SEA_DEFAULTS, RpsDuel } from './sea-games.mjs';
+export { norm };
+export const PARTY_MODES = ['rps', 'minority', 'higherlower', 'truefalse', 'redlight', 'bowling', ...Object.keys(SEA_GAMES)];
+export const PARTY_MIN_PLAYERS = { rps: 2, minority: 3, higherlower: 1, truefalse: 1, redlight: 1, bowling: 1, ...SEA_MIN_PLAYERS };
 export const PARTY_DEFAULTS = {
-  rps: { rounds: 15, seconds: 15 },
+  rps: { rounds: 30, seconds: 15 },
   minority: { rounds: 10, seconds: 15 },
   higherlower: { rounds: 8, seconds: 12 },
   truefalse: { rounds: 8, seconds: 15 },
   redlight: { rounds: 16, seconds: 6, target: 20 },
-  bowling: { rounds: 3, seconds: 12 }
+  bowling: { rounds: 3, seconds: 12 },
+  ...SEA_DEFAULTS
 };
+Object.assign(ROUND_DEFAULTS, PARTY_DEFAULTS);
 
 export const MINORITY_QUESTIONS = Object.freeze([
   ['قهوة', 'شاي'], ['صيف', 'شتاء'], ['بحر', 'بر'], ['قطط', 'كلاب'], ['سهر', 'نوم مبكر'], ['برجر', 'بيتزا'],
@@ -47,84 +52,6 @@ export const TRUE_FALSE = Object.freeze([
   ['الأرض هي الكوكب الثالث بعدًا عن الشمس', true], ['للإنسان قلبان', false], ['البحر الميت أخفض نقطة على اليابسة', true],
   ['الذهب يصدأ بسهولة', false], ['الأخضر لون ناتج من خلط الأزرق والأصفر', true]
 ]);
-
-const POINTS = [10, 7, 5, 3, 2, 1];
-const ARABIC_DIGITS = /[٠-٩۰-۹]/g;
-export function norm(raw) {
-  return String(raw ?? '').toLowerCase().normalize('NFKC')
-    .replace(ARABIC_DIGITS, d => String(d.charCodeAt(0) - (d.charCodeAt(0) >= 0x6f0 ? 0x6f0 : 0x660)))
-    .replace(/[ً-ٰٟـ]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
-    .replace(/[^\p{L}\p{N}]/gu, '').trim();
-}
-const firstNumber = (raw, min, max) => {
-  const text = String(raw ?? '').trim().normalize('NFKC').replace(ARABIC_DIGITS, d => String(d.charCodeAt(0) - (d.charCodeAt(0) >= 0x6f0 ? 0x6f0 : 0x660)));
-  if (!/^\d{1,2}$/.test(text)) return null;
-  const n = Number(text);
-  return n >= min && n <= max ? n : null;
-};
-const pub = (p) => ({ id: p.id, name: p.name, number: p.number, ...(p.avatar ? { avatar: p.avatar } : {}) });
-const card = (n) => ({ 1: 'A', 11: 'J', 12: 'Q', 13: 'K' }[n] || String(n));
-
-class RoundGame {
-  constructor(mode, { now = () => Date.now(), random = (n) => Math.floor(Math.random() * n), rounds, seconds, revealMs = 3500, target } = {}) {
-    const d = PARTY_DEFAULTS[mode];
-    this.mode = mode; this.now = now; this.random = random;
-    this.rounds = rounds ?? d.rounds; this.seconds = seconds ?? d.seconds; this.revealMs = revealMs; this.target = target ?? d.target;
-    this.phase = 'idle'; this.round = 0; this.finished = false; this.reason = null;
-    this.inputs = new Map(); this.totalInputs = 0; this.reveal = null; this.rankings = [];
-  }
-  start(players) {
-    this.roster = new Map(players.map((p, i) => [p.id, { ...pub(p), number: p.number || i + 1, alive: true, points: 0, lives: 3, wins: 0, correctMs: 0, correct: 0, progress: 0, eliminatedRound: null, total: 0, frames: [] }]));
-    this.startedAt = this.now();
-    this.setup?.();
-    this.nextRound();
-  }
-  get alive() { return [...this.roster.values()].filter((p) => p.alive); }
-  nextRound() {
-    this.round++; this.inputs = new Map(); this.reveal = null;
-    this.phase = 'input'; this.phaseStartedAt = this.now(); this.endsAt = this.phaseStartedAt + this.seconds * 1000;
-    this.prepareRound?.();
-  }
-  /** Returns true when the input was accepted. One input per player per round; eliminated players are ignored. */
-  input(id, message, at = this.now()) {
-    if (this.finished || this.phase !== 'input' || at > this.endsAt) return false;
-    const p = this.roster.get(id);
-    if (!p || !p.alive || this.inputs.has(id)) return false;
-    const value = this.parse(message, p);
-    if (value === null || value === undefined) return false;
-    this.inputs.set(id, { value, at }); this.totalInputs++;
-    // Everyone answered: resolve shortly instead of waiting for the full timer.
-    if (this.inputs.size >= this.alive.length) this.endsAt = Math.min(this.endsAt, at + 700);
-    return true;
-  }
-  tick() {
-    if (this.finished) return false;
-    const t = this.now();
-    if (this.phase === 'input' && t >= this.endsAt) {
-      this.resolve(); this.phase = 'reveal'; this.phaseStartedAt = t; this.endsAt = t + this.revealMs; return true;
-    }
-    if (this.phase === 'reveal' && t >= this.endsAt) {
-      if (this.isOver()) this.finish('complete'); else this.nextRound();
-      return true;
-    }
-    return false;
-  }
-  /** Simulation control: jump to the end of the current phase. */
-  advance() { if (this.finished) return false; this.endsAt = this.now(); return this.tick(); }
-  end(reason = 'manual') { if (!this.finished) this.finish(reason); }
-  finish(reason) {
-    this.finished = true; this.reason = reason; this.phase = 'finished'; this.endsAt = null;
-    this.rankings = this.rank().map((p, i) => ({ rank: i + 1, id: p.id, name: p.name, number: p.number, ...(p.avatar ? { avatar: p.avatar } : {}), points: POINTS[Math.min(i, POINTS.length - 1)], detail: this.detail(p) }));
-  }
-  eliminate(p) { p.alive = false; p.eliminatedRound = this.round; }
-  counts(n) { const c = Array(n).fill(0); for (const { value } of this.inputs.values()) if (Number.isInteger(value) && value >= 0 && value < n) c[value]++; return c; }
-  snapshot() {
-    const base = { mode: this.mode, round: this.round, rounds: this.rounds, phase: this.phase, endsAt: this.endsAt ?? null, phaseMs: this.phase === 'reveal' ? this.revealMs : this.seconds * 1000,
-      seconds: this.seconds, alive: this.alive.length, total: this.roster?.size || 0, submitted: this.inputs.size, reveal: this.reveal, finished: this.finished };
-    return { ...base, ...this.view() };
-  }
-  summary() { return ''; }
-}
 
 /* ---------------- حجر ورقة مقص ---------------- */
 const RPS = [['حجر', ['حجر', '1', 'rock', '✊', '👊']], ['ورقة', ['ورقه', '2', 'paper', '✋', '🖐', '🖐️']], ['مقص', ['مقص', '3', 'scissors', '✌', '✌️']]];
@@ -157,7 +84,7 @@ class RockPaperScissors extends RoundGame {
   }
   detail(p) { return p.alive ? `نجا بـ ${p.lives} ${p.lives === 1 ? 'حياة' : 'حيوات'}` : `خرج في الجولة ${p.eliminatedRound}`; }
   view() {
-    return { prompt: 'اختر: حجر أو ورقة أو مقص — Sky يكشف اختياره بعد الوقت', options: RPS.map(([l]) => l), counts: this.counts(3),
+    return { prompt: 'اختر: حجر أو ورقة أو مقص — بوبل يكشف اختياره بعد الوقت', options: RPS.map(([l]) => l), counts: this.counts(3),
       players: [...this.roster.values()].filter((p) => p.alive).sort((a, b) => b.lives - a.lives || a.number - b.number).slice(0, 24).map((p) => ({ ...pub(p), lives: p.lives })) };
   }
   summary() { return this.alive.length === 1 ? 'آخر ناجٍ' : 'اكتملت الجولات'; }
@@ -307,8 +234,9 @@ class Bowling extends RoundGame {
     const rolls = [];
     for (const [id, { value }] of this.inputs) {
       const p = this.roster.get(id);
-      // The chosen number only matters if it hits this frame's hidden lucky lane — no number is a guaranteed win.
-      const pins = value === this.lucky ? 10 : Math.min(10, this.random(6) + this.random(6));
+      // The closer the aim is to this frame's hidden sweet spot, the more pins fall — no number is a guaranteed win.
+      const miss = Math.abs(value - this.lucky);
+      const pins = miss === 0 ? 10 : Math.max(0, 10 - miss * 2 - this.random(2));
       const score = pins + (pins === 10 ? 5 : 0);
       p.total += score; p.frames.push(pins);
       rolls.push({ ...pub(p), pins, score, total: p.total });
@@ -321,13 +249,15 @@ class Bowling extends RoundGame {
   rank() { return [...this.roster.values()].sort((a, b) => b.total - a.total || Math.max(...b.frames, 0) - Math.max(...a.frames, 0) || a.number - b.number); }
   detail(p) { return `${p.total} نقطة • ${p.frames.filter((f) => f === 10).length} ضربة كاملة`; }
   view() {
-    return { prompt: 'اختر رقمًا من 1 إلى 10 لترمي الكرة — رقم الحظ مخفي', options: [], counts: [],
+    return { prompt: 'اكتب نقطة التصويب من 1 إلى 10 — كلما اقتربت من النقطة المخفية سقطت قوارير أكثر', options: [], counts: [],
       lanes: [...this.roster.values()].sort((a, b) => b.total - a.total || a.number - b.number).slice(0, 8).map((p) => ({ ...pub(p), total: p.total, frames: p.frames.slice(-this.rounds) })) };
   }
 }
 
-const GAMES = { rps: RockPaperScissors, minority: MinorityWins, higherlower: HigherLower, truefalse: TrueFalse, redlight: RedLight, bowling: Bowling };
-export function createPartyGame(mode, options) {
+const GAMES = { ...SEA_GAMES, rps: RockPaperScissors, minority: MinorityWins, higherlower: HigherLower, truefalse: TrueFalse, redlight: RedLight, bowling: Bowling };
+export function createPartyGame(mode, options = {}) {
+  // «حجرة ورقة مقص» runs as head-to-head duels; the original «vs Sky» format stays available.
+  if (mode === 'rps' && options.format !== 'sky') return new RpsDuel(options);
   const Game = GAMES[mode];
   if (!Game) throw new Error('لعبة غير معروفة');
   return new Game(options);

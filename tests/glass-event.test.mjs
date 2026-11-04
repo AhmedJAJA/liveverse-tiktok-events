@@ -98,8 +98,8 @@ test('event details route matches approved screenshot layout and safely binds to
   assert.match(server,/'\/event': 'event\.html'/);
   for(const asset of ['event.html','event.js','event.css'])assert.ok(server.includes("'"+asset+"'"),asset);
   // Home covers open each game's join page; this setup page stays the advanced settings screen.
-  assert.match(landing,/href="\/play\?mode=glass"/);
-  for(const mode of ['quiz','race','wheel','guess'])assert.ok(landing.includes('/play?mode='+mode),mode);
+  // SPONGE LIVE home lists its twelve games; this page stays reachable from the studio and the join page.
+  for(const mode of ['quiz','drawguess','chairs','bowling','bomb','categories','rps','roles','roulette','redlight','country','flag'])assert.ok(landing.includes('/play?mode='+mode),mode);
   for(const act of ['registration-open','registration-close','configure','start','bank-next'])assert.ok(js.includes("'"+act+"'"),act);
   assert.match(js,/sessionStorage\.getItem\('liveverse_admin'\)/);
   assert.doesNotMatch(js,/\/api\/dev-token/);

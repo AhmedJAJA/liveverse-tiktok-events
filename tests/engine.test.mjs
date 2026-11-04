@@ -15,7 +15,7 @@ const fixture = () => {
   return {e,send,advance,enroll,finish};
 };
 
-test('supports all twelve modes',()=>assert.deepEqual(MODES,['quiz','guess','race','wheel','glass','bomb','rps','minority','higherlower','truefalse','redlight','bowling']));
+test('supports the twelve SPONGE LIVE games plus the earlier modes',()=>assert.deepEqual(MODES,['quiz','guess','race','wheel','glass','bomb','rps','minority','higherlower','truefalse','redlight','bowling','drawguess','chairs','categories','roles','roulette','country','flag']));
 test('normalizes accented Arabic and punctuation',()=>assert.equal(normalizeAnswer('إِجَابَة!'),'اجابه'));
 test('normalizes case',()=>assert.equal(normalizeAnswer('Riyadh !!'),'riyadh'));
 test('strips control characters',()=>assert.equal(safeLine('a\nb',2),'a '));

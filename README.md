@@ -1,6 +1,6 @@
-# SKY LIVE — TikTok LIVE Event Studio
+# SPONGE LIVE — TikTok LIVE Game Platform
 
-**SKY LIVE** is the current public brand; repository and hosting slugs retain their earlier names to preserve existing links.
+**SPONGE LIVE** is the current public brand (previously SKY LIVE); repository and hosting slugs retain their earlier names to preserve existing links.
 
 SKY LIVE is an Arabic interactive livestream events website with a public homepage at `/`, a presenter studio at `/studio`, and a read-only broadcast screen at `/overlay`. Built with Node.js and WebSockets, with an OBS overlay and a **best-effort unofficial** TikTok LIVE chat bridge.
 
@@ -13,6 +13,33 @@ SKY LIVE is an Arabic interactive livestream events website with a public homepa
 - Admin controls protected by an `ADMIN_TOKEN` bearer token.
 - Automatic WebSocket updates, reconnect attempts and basic tests.
 - RTL / mobile-friendly dashboard with English technical labels.
+
+## v1.0 — SPONGE LIVE
+
+Ocean / Bikini-Bottom-at-night identity: deep navy backgrounds, rising bubbles at three depths (`public/sponge.js`), sea-floor silhouettes, neon-cyan card frames and a sponge-yellow primary action (`public/sponge.css`, loaded last on every page). The brand mark is `public/sponge-mark.svg`. Viewers can switch off sound and effects (they are remembered per browser); OBS can use `/overlay?mute=1` or `?fx=0`.
+
+**Game art.** The twelve card images live in `public/games/NN-name.png` (with `.webp` copies used by the pages). They were cut from the supplied 12-card sheet and the «SKY LIVE» label was replaced with «SPONGE LIVE»; drop higher-resolution originals with the same file names into `public/games/` to replace them. The characters in this artwork belong to their rights holders.
+
+**The twelve games** (rules in `src/sea-games.mjs`, `src/party.mjs`, `src/bomb.mjs`; no UI code, so every rule is unit-tested):
+
+| # | Game | How viewers play |
+|---|---|---|
+| 1 | تحدي المعرفة | write 1–4; first answer counts; fastest correct ranks first |
+| 2 | خمن الرسمة | the host draws a secret word on the join page; first correct chat guess wins the round |
+| 3 | كراسي موسيقية | silence while the music plays; when it stops write «اجلس»; seats shrink each round |
+| 4 | لعبة البولينج | write an aim 1–10; the closer to the hidden sweet spot, the more pins fall |
+| 5 | القنبلة الموقوتة | random first holder, 15 s fuse, `!مرر <رقم>`; explosion eliminates; last one wins |
+| 6 | اسم حيوان جماد نبات | the chosen player writes a word for the letter + category within 15 s; unknown words go to the host |
+| 7 | حجرة ورقة مقص | head-to-head duels revealed together; loser out, ties replay (or the old «vs بوبل» format) |
+| 8 | الأدوار المخفية | private role page `/role` linked by a one-time chat code; night actions there, day votes `صوت <رقم>` |
+| 9 | الروليت | server-picked fair spin; each spin eliminates (or one spin picks a winner) |
+| 10 | الضوء الأحمر | write 1–5 on green only; any number on red eliminates |
+| 11 | خمن الدولة | three clues over time; Arabic/English spellings accepted; earlier answers score more |
+| 12 | لعبة خمن العلم | a flag (`public/flags/`, from the MIT-licensed flag-icons set) and a timer |
+
+The earlier games (guess, race, glass bridge, true/false, higher/lower, minority, name wheel) remain playable from the studio.
+
+**No rooms, no codes.** Clicking a game opens `/play?mode=<game>` immediately: «اكتب «انضم» في تعليقات البث للدخول إلى اللعبة». The host controls signups (open/close, keyword, player limit), «دخّلني أنا» / «دخّلني تلقائياً في كل لعبة», manual add and remove, start / stop / restart / end, back to the games list, per-game rules, sound and effects. Every one of these is a server action checked against the room's credentials, not a hidden button. «وضع التجربة» fills a room with players clearly labelled «تجريبي».
 
 ## v0.8 — Sky Live platform (accounts, 12 games, Kick, draw page)
 

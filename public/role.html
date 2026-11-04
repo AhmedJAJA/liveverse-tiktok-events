@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020A22">
+<meta name="robots" content="noindex">
+<title>دوري السري | SPONGE LIVE</title>
+<link rel="icon" href="/sponge-mark.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/royal-core.css">
+<link rel="stylesheet" href="/play.css">
+<link rel="stylesheet" href="/sponge.css">
+<script defer src="/session.js"></script>
+<script defer src="/sponge.js"></script>
+<script defer src="/sponge-ui.js"></script>
+<script defer src="/role.js"></script>
+</head>
+<body class="pl-page role-page" data-category="group">
+<header class="pl-bar">
+ <a class="sp-brand pl-brand" href="/" aria-label="SPONGE LIVE"><img src="/sponge-mark.svg" alt="" width="34" height="34"><span dir="ltr"><b>SPONGE</b> LIVE</span></a>
+</header>
+<main class="pl-main role-main">
+ <section class="pl-call" id="linkStep">
+  <p class="pl-call-sub">الأدوار المخفية — صفحتك الخاصة</p>
+  <p class="pl-call-main">اكتب في شات البث:<br><b class="pl-word" id="codeText" dir="rtl">دوري ····</b></p>
+  <p class="pl-call-sub" id="linkHint">بعد كتابة الرمز يظهر دورك هنا فقط. لا تشارك هذه الصفحة مع أحد.</p>
+ </section>
+ <section class="pl-call role-card" id="roleStep" hidden>
+  <p class="pl-call-sub" id="roleName"></p>
+  <p class="pl-call-main"><span id="roleLabel">—</span></p>
+  <p class="pl-call-sub" id="roleHelp"></p>
+  <p class="role-mates" id="roleMates" hidden></p>
+  <div class="role-actions" id="roleActions" hidden>
+   <h2 id="actionTitle">اختر لاعبًا</h2>
+   <div class="role-targets" id="roleTargets"></div>
+  </div>
+  <ul class="role-inspected" id="roleInspected" hidden></ul>
+ </section>
+ <p class="pl-feedback" id="roleFeedback" role="status" aria-live="polite"></p>
+</main>
+</body>
+</html>

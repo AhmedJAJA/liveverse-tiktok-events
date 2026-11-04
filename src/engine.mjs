@@ -1,7 +1,9 @@
 import { randomInt } from 'node:crypto';
 import { BombGame, parsePassCommand } from './bomb.mjs';
 import { PARTY_MODES, PARTY_MIN_PLAYERS, PARTY_DEFAULTS, createPartyGame } from './party.mjs';
-import { GAMES } from './catalog.mjs';
+import { ALL_GAMES as GAMES } from './catalog.mjs';
+import { CATEGORY_WORDS } from './word-banks.mjs';
+const botWord = (category, letter) => (CATEGORY_WORDS[category] || []).find(w => normalizeAnswer(w).replace(/^ال/, '').startsWith(normalizeAnswer(letter)));
 
 export const MODES = ['quiz', 'guess', 'race', 'wheel', 'glass', 'bomb', ...PARTY_MODES];
 export { PARTY_MODES };
@@ -158,7 +160,8 @@ export class Engine {
     }
     return removed;
   }
-  updateRegistration({ keyword = this.registration.keyword, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience, hostJoin } = {}) {
+  updateRegistration({ keyword = this.registration.keyword, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience, hostJoin, hostName } = {}) {
+    if (hostName !== undefined) this.registration.hostName = safeLine(hostName, 32).replace(/^@/, '') || 'المشرف';
     if (hostJoin !== undefined) {
       if (!['manual', 'auto'].includes(hostJoin)) throw new Error('خيار دخول المضيف غير صالح');
       this.registration.hostJoin = hostJoin;
@@ -202,7 +205,7 @@ export class Engine {
       this.party = null;
     }
     if (!reset) this.pruneForAudience(audience);
-    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience, hostJoin: this.registration.hostJoin || 'manual' };
+    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience, hostJoin: this.registration.hostJoin || 'manual', hostName: this.registration.hostName };
     if (this.registration.hostJoin === 'auto') this.joinHost(false);
     this.status.results = null; this.status.winner = null; this.status.endsAt = null;
     this.status.notice = `التسجيل مفتوح! اكتب ${clean} في شات البث`;
@@ -249,7 +252,7 @@ export class Engine {
     this.status.winner = winner;
     this.status.lastEvent = { text: this.status.notice, at: this.now(), winner };
   }
-  configure({ mode, title, prompt, options, answer, target, duration, glassSteps, glassStepDuration, bombSeconds, rounds, roundSeconds } = {}) {
+  configure({ mode, title, prompt, options, answer, target, duration, glassSteps, glassStepDuration, bombSeconds, rounds, roundSeconds, variant } = {}) {
     if (this.status.active) throw new Error('أنه الجولة الحالية قبل تغيير إعداداتها');
     if (bombSeconds !== undefined) this.bomb.configure({ seconds: bombSeconds });
     if (mode !== undefined && !MODES.includes(mode)) throw new Error('نمط غير معروف');
@@ -272,6 +275,13 @@ export class Engine {
       this.status.duration = seconds;
     }
     const partyMode = PARTY_MODES.includes(mode ?? this.status.mode) ? (mode ?? this.status.mode) : null;
+    if (partyMode && variant !== undefined) {
+      // Per-game rule switches, validated against a fixed list.
+      const allowed = { rps: { format: ['duel', 'sky'] }, roulette: { rule: ['eliminate', 'winner'] }, categories: { scoring: ['elimination', 'points'] }, drawguess: { winners: [1, 2, 3] } }[partyMode] || {};
+      const clean = {};
+      for (const [k, v] of Object.entries(variant || {})) { if (!allowed[k]?.includes(v)) throw new Error('خيار غير صالح لهذه اللعبة'); clean[k] = v; }
+      this.partyConfig[partyMode] = { ...this.partyConfig[partyMode], ...clean };
+    }
     if (partyMode && (rounds !== undefined || roundSeconds !== undefined)) {
       const cfg = { ...PARTY_DEFAULTS[partyMode], ...this.partyConfig[partyMode] };
       if (rounds !== undefined) {
@@ -345,7 +355,7 @@ export class Engine {
     this.party = null;
     if (partyMode) {
       const cfg = { ...PARTY_DEFAULTS[this.status.mode], ...this.partyConfig[this.status.mode] };
-      this.party = createPartyGame(this.status.mode, { now: () => this.now(), random: n => this.random(n), rounds: cfg.rounds, seconds: cfg.seconds });
+      this.party = createPartyGame(this.status.mode, { ...cfg, now: () => this.now(), random: n => this.random(n) });
       this.party.start([...this.players.values()].slice(0, this.registration.maxPlayers));
       this.syncParty(false);
     }
@@ -678,9 +688,9 @@ export class Engine {
   }
   /** Seat the streamer (connected account) as a contestant. */
   joinHost(strict = true) {
-    const handle = this.connection.username;
+    const handle = this.connection.username || this.registration.hostName;
     if (!handle) { if (strict) throw new Error('اربط البث أولًا ليُعرف حساب المضيف'); return null; }
-    if (this.players.has('host:' + handle.toLowerCase())) { if (strict) throw new Error('المضيف مسجل بالفعل'); return null; }
+    if (this.hostSeat() || this.players.has('host:' + handle.toLowerCase())) { if (strict) throw new Error('المضيف مسجل بالفعل'); return null; }
     try { return this.addManualPlayer({ name: handle, host: true }); } catch (error) { if (strict) throw error; return null; }
   }
   hostSeat() { for (const p of this.players.values()) if (p.host) return p; return null; }
@@ -689,7 +699,7 @@ export class Engine {
   seatHost({ name } = {}) {
     if (this.status.active) throw new Error('لا يمكن تغيير المشاركة أثناء اللعب');
     if (this.hostSeat()) throw new Error('أنت مشارك بالفعل');
-    const label = this.connection.username || safeLine(name, 32).replace(/^@/, '') || 'المشرف';
+    const label = this.connection.username || safeLine(name, 32).replace(/^@/, '') || this.registration.hostName || 'المشرف';
     return this.addManualPlayer({ name: label, host: true });
   }
   unseatHost() {
@@ -733,6 +743,14 @@ export class Engine {
     this.emit();
     return { ...this.simulation };
   }
+  /* ---- private game helpers (host-only or player-private; never part of the public snapshot) ---- */
+  requireParty(mode) { if (!this.party || this.status.mode !== mode || !this.status.active) throw new Error('هذه اللعبة ليست جارية'); return this.party; }
+  partySecret() { return this.status.active && this.party?.secret ? this.party.secret() : null; }
+  judgeAnswer(accept) { const g = this.requireParty('categories'); if (!g.judge(accept)) throw new Error('لا توجد إجابة بانتظار الحكم'); this.syncParty(); return true; }
+  rolesClaim() { return this.requireParty('roles').claim(); }
+  rolesPrivate(token) { if (this.status.mode !== 'roles' || !this.party) return { linked: false, idle: true }; return this.party.privateView(String(token || '')); }
+  rolesAct(token, number) { const g = this.requireParty('roles'); g.act(String(token || ''), number); this.emit(); return true; }
+  rolesAdmin() { const g = this.requireParty('roles'); return g.adminView(!!this.hostSeat()); }
   /** Demo contestants act like real viewers so every rule can be tried without a stream. */
   botStep() {
     const t = this.now(), mode = this.status.mode;
@@ -750,13 +768,19 @@ export class Engine {
       else if (mode === 'glass') text = String(this.random(2) + 1);
       else if (mode === 'bomb') { const b = this.bomb.snapshot(); if (b.holder && this.bomb.holder === bot.id) { const alive = (b.alive || []).filter(p => p.number !== b.holder.number); if (alive.length) text = '!مرر ' + pick(alive).number; } }
       else if (party && party.phase === 'input') {
-        if (mode === 'rps') text = pick(['حجر', 'ورقة', 'مقص']);
+        if (mode === 'rps') text = pick(['حجرة', 'ورقة', 'مقص']);
+        else if (mode === 'drawguess') text = this.random(100) < 20 && this.party.word ? this.party.word : pick(['بيت', 'قمر', 'شجرة', 'سمكة', 'نجمة']);
+        else if (mode === 'chairs') text = 'اجلس';
+        else if (mode === 'categories') { if (this.party.chosen === bot.id) text = this.random(100) < 75 ? (botWord(this.party.category, this.party.letter) || 'لا أعرف') : 'لا أعرف'; }
+        else if (mode === 'roles') { if (party.phase === 'day') { const others = party.players.filter(x => x.alive && x.number !== bot.number); if (others.length) text = 'صوت ' + pick(others).number; } }
+        else if (mode === 'country' || mode === 'flag') text = this.random(100) < 18 && this.party.country ? this.party.country.name : pick(['مصر', 'فرنسا', 'اليابان', 'البرازيل', 'كندا']);
         else if (mode === 'minority') text = String(this.random(2) + 1);
         else if (mode === 'higherlower') text = pick(['أعلى', 'أقل']);
         else if (mode === 'truefalse') text = pick(['صح', 'خطأ']);
         else if (mode === 'bowling') text = String(this.random(10) + 1);
         else if (mode === 'redlight') text = party.light === 'green' || this.random(100) < 6 ? String(this.random(5) + 1) : null;
-      }
+      } else if (party && mode === 'chairs' && party.phase === 'music' && this.random(100) < 3) text = 'اجلس';
+      else if (party && mode === 'roles' && party.phase === 'day') { const others = party.players.filter(x => x.alive && x.number !== bot.number); if (others.length) text = 'صوت ' + pick(others).number; }
       if (text) this.applyMessage(bot, text, t);
       if (!this.status.active) break;
     }

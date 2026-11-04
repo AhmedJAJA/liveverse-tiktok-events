@@ -14,11 +14,12 @@ test('royal Sky Live emblem is committed as a valid, optimized WebP image and an
   assert.match(mark,/^<svg[^>]+viewBox="0 0 512 512"/);
   assert.match(mark,/aria-label="SKY LIVE"/);
 });
-test('public pages are branded SKY LIVE without displaying the former logo',()=>{
+test('public pages are branded SPONGE LIVE without displaying the former logo',()=>{
   for(const name of files){
     const html=publicFile(name);
-    assert.match(html,/SKY LIVE/);
-    assert.match(html,/sky-live(-mark\.svg|\.webp)/);
+    assert.match(html,/SPONGE LIVE/);
+    assert.match(html,/sponge-mark\.svg/);
+    assert.doesNotMatch(html,/SKY LIVE/);
     assert.doesNotMatch(html,/LIVEVERSE/);
     assert.doesNotMatch(html,/liveverse-brand\.svg|sky-live-brand\.svg/);
   }
@@ -38,16 +39,17 @@ test('server offers images, icons and fonts with correct MIME and preserves publ
   assert.match(server, /'\/studio': 'index\.html'/);
   assert.match(server, /'\/overlay': 'overlay\.html'/);
 });
-test('enforces Royal Black — Obsidian & Gold palette across public pages and the core theme',()=>{
+test('enforces the SPONGE LIVE ocean palette across public pages and the core theme',()=>{
   const css=publicFile('royal-core.css');
-  for(const hex of ['#08090B','#121316','#202126','#D4AF37','#F1D58C','#F6F1E7']){
-    assert.ok(css.includes(hex),'Missing Royal Black palette color '+hex);
+  for(const hex of ['#050B17','#0A132A','#102045','#37B3D4','#8CD9F1','#E7F2F6']){
+    assert.ok(css.includes(hex),'Missing ocean palette color '+hex);
   }
   for(const sheet of ['royal-core.css','royal-studio.css','royal-broadcast.css','royal-landing.css'])
     assert.doesNotMatch(publicFile(sheet),/#020b26|#051a4d|#0a3585/i);
   for(const name of files){
     const html=publicFile(name);
-    assert.match(html,/name="theme-color" content="#08090B"/);
+    assert.match(html,/name="theme-color" content="#020A22"/);
+    assert.match(html,/href="\/sponge\.css"/);
     assert.doesNotMatch(html,/#020b26/i);
   }
 });
