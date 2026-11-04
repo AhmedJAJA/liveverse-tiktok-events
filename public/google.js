@@ -31,8 +31,8 @@
     return true;
   }
   /** Send the token to the server: sign in / sign up, or link to the signed-in account. */
-  async function signIn(credential, { link = false } = {}) {
-    const res = await fetch(link ? '/api/me/link-google' : '/api/auth/google', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, link }) });
+  async function signIn(credential, { link = false, remember = true } = {}) {
+    const res = await fetch(link ? '/api/me/link-google' : '/api/auth/google', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential, link, remember }) });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw Object.assign(new Error(data.error || 'تعذر تسجيل الدخول باستخدام Google'), { data, status: res.status });
     return data;

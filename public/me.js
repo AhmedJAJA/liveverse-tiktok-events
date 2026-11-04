@@ -37,9 +37,11 @@
     profile = p;
     const u = p.user;
     $('profile').setAttribute('aria-busy', 'false');
-    $('displayName').textContent = u.displayName; $('avatarView').textContent = AVATARS[u.avatar] || '🧽';
+    $('displayName').textContent = u.displayName;
+    if (u.picture && u.avatar === 'sponge') { const img = document.createElement('img'); img.src = u.picture; img.alt = ''; img.width = 72; img.height = 72; img.referrerPolicy = 'no-referrer'; img.className = 'pg-avatar-img'; $('avatarView').replaceChildren(img); }
+    else $('avatarView').textContent = AVATARS[u.avatar] || '🧽';
     $('publicId').textContent = u.publicId; $('username').textContent = u.username; $('email').textContent = u.email;
-    $('createdAt').textContent = fmtDate(u.createdAt);
+    $('createdAt').textContent = fmtDate(u.createdAt); $('lastLogin').textContent = fmtDate(u.lastLoginAt);
     badge($('emailBadge'), u.verified ? 'مؤكَّد' : 'غير مؤكَّد', u.verified ? 'is-on' : 'is-warn');
     $('verifyRow').hidden = u.verified;
     $('navAdmin').hidden = !u.isAdmin;

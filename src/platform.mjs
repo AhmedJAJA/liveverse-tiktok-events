@@ -148,7 +148,7 @@ export class Platform {
 
   publicUser(u) {
     return { publicId: u.public_id, username: u.username, displayName: u.display_name, email: u.email, avatar: u.avatar, room: u.room,
-      verified: !!u.email_verified_at, isAdmin: !!u.is_admin, createdAt: iso(u.created_at), googleLinked: !!u.google_sub, hasPassword: String(u.password_hash || '').startsWith('scrypt$') };
+      verified: !!u.email_verified_at, isAdmin: !!u.is_admin, createdAt: iso(u.created_at), googleLinked: !!u.google_sub, picture: u.picture_url || null, lastLoginAt: iso(u.last_login_at), hasPassword: String(u.password_hash || '').startsWith('scrypt$') };
   }
 
   /* ----------------------------------------------------------- accounts */
@@ -307,6 +307,13 @@ export class Platform {
     });
     await this.refresh(userId);
     return out;
+  }
+
+  /** Record a successful sign-in (and refresh the Google picture when one was given). */
+  async touchLogin(userId, { picture = null } = {}) {
+    const pic = typeof picture === 'string' && /^https:\/\/[a-z0-9.-]+\.googleusercontent\.com\//.test(picture) ? picture.slice(0, 500) : null;
+    await this.pool.query('UPDATE users SET last_login_at=now(), picture_url=COALESCE($2, picture_url) WHERE id=$1', [userId, pic]);
+    await this.refresh(userId);
   }
 
   /* ----------------------------------------------------- Google accounts */

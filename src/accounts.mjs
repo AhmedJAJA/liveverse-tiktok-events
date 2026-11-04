@@ -148,10 +148,14 @@ export class Sessions {
     }, 200);
     this.saveTimer.unref?.();
   }
-  create(kind, { userId = null, room = null, codeId = null, level = null } = {}) {
+  /**
+   * remember=true: the session lasts `ttl` (30 days) and is renewed while it is used.
+   * remember=false: a browser-session cookie, and the server forgets it after a day at most.
+   */
+  create(kind, { userId = null, room = null, codeId = null, level = null, remember = true } = {}) {
     if (this.map.size >= this.max) this.prune(true);
-    const id = token(32), key = this.key(id);
-    const s = { key, kind, userId, room, codeId, level, created: this.now(), expires: this.now() + (kind === 'guest' ? DAY : this.ttl) };
+    const id = token(32), key = this.key(id), t = this.now();
+    const s = { key, kind, userId, room, codeId, level, remember: remember !== false, created: t, renewed: t, expires: t + (kind === 'guest' || remember === false ? DAY : this.ttl) };
     this.map.set(key, s);
     this.save(); this.mirror?.put(s);
     return id;
@@ -162,6 +166,17 @@ export class Sessions {
     if (!s) return null;
     if (s.expires <= this.now()) { this.map.delete(key); this.mirror?.del(key); return null; }
     return { ...s, id };
+  }
+  /** Sliding expiry: a remembered session that is still in use is pushed back to a full `ttl`, at most once a day. */
+  renew(id) {
+    const key = this.key(id), s = this.map.get(key);
+    if (!s || s.remember === false || s.kind === 'guest') return false;
+    const t = this.now();
+    if (s.expires <= t) return false; // an expired session is never brought back
+    if (t - (s.renewed || s.created) < DAY) return false;
+    s.renewed = t; s.expires = t + this.ttl;
+    this.save(); this.mirror?.put(s);
+    return true;
   }
   destroy(id) { const key = this.key(id); if (this.map.delete(key)) { this.save(); this.mirror?.del(key); } }
   destroyWhere(test) { let n = 0; for (const [k, s] of this.map) if (test(s)) { this.map.delete(k); this.mirror?.del(k); n++; } if (n) this.save(); return n; }
