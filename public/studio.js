@@ -59,7 +59,10 @@
     $('gameRules').replaceChildren(...(game.rules || []).map((r) => el('li', '', r)));
     const cover = game.cover ? game.cover.replace('.webp', '-200.webp') : '/covers/' + mode + '.svg';
     $('gameCover').src = cover;
-    document.querySelectorAll('.st-game').forEach((b) => b.setAttribute('aria-current', String(b.dataset.mode === mode)));
+    $('crumbTitle').textContent = game.title || '';
+    $('sideTitle').textContent = game.title || '';
+    $('sideCover').src = game.cover ? coverAt(game, 120) : cover;
+    if ($('gameNav').children.length) markCurrent();
     $('gameCover').closest('.pl-cover').classList.toggle('is-art', cover.startsWith('/games/'));
     $('setupLink').href = game.setup || '/studio';
     $('guessFields').hidden = mode !== 'guess';
@@ -136,6 +139,7 @@
     const out = new Set((s.party?.players || []).filter((p) => p.alive === false).map((p) => p.name));
     renderRoster(Array.isArray(s.roster) ? s.roster : [], host && !s.status.active, out);
     $('topCount').textContent = num(count); paintConnection(s.connection); paintLeaders(s.leaderboard);
+    if (!prev || prev.status.active !== s.status.active || prev.status.mode !== s.status.mode) markCurrent();
 
     const need = Math.max(0, (reg.minPlayers || game.minPlayers || 1) - count);
     $('needNote').textContent = view === 'join' ? (need ? 'ينقص ' + num(need) + (need === 1 ? ' لاعب' : ' لاعبين') + ' للبدء' : 'العدد مكتمل — جاهزون للبدء') : '';
@@ -332,22 +336,93 @@
     $('tab-codes').hidden = !(me.owner || ownerToken());
   }
 
-  /* ---------- game navigation ---------- */
-  function navItem(g) {
-    const li = el('li'), b = el('button', 'st-game'); b.type = 'button'; b.dataset.mode = g.mode;
-    const img = el('img'); img.alt = ''; img.width = 44; img.height = 56; img.loading = 'lazy'; img.decoding = 'async';
-    img.src = g.cover?.startsWith('/games/') ? g.cover.replace('.webp', '-120.webp') : g.cover;
-    b.append(img, el('span', '', g.title)); li.append(b); return li;
+  /* ---------- game library: category filters, search and a grid of cards ---------- */
+  const allGames = () => [...(site?.games || []), ...(site?.extraGames || [])];
+  const coverAt = (g, w) => (g.cover?.startsWith('/games/') ? g.cover.replace('.webp', '-' + w + '.webp') : g.cover || '/covers/' + g.mode + '.svg');
+  let filterCat = 'all';
+  function gameCard(g, i, extra) {
+    const li = el('li', 'st-card'); li.dataset.mode = g.mode; li.dataset.cat = g.category || 'smart'; li.dataset.tone = String(i % 6);
+    if (extra) li.dataset.extra = '1';
+    li.dataset.search = (g.title + ' ' + (g.summary || '') + ' ' + (g.categoryLabel || '')).toLowerCase();
+    const art = el('div', 'st-card-art');
+    const img = el('img'); img.alt = ''; img.width = 120; img.height = 154; img.loading = i < 8 ? 'eager' : 'lazy'; img.decoding = 'async';
+    img.src = coverAt(g, 200); art.append(img);
+    const tags = el('div', 'st-card-tags');
+    tags.append(el('span', 'st-badge', g.categoryLabel || ''));
+    if (extra) tags.append(el('span', 'st-badge is-extra', 'إضافية'));
+    const live = el('span', 'st-badge is-live', 'تعمل الآن'); live.hidden = true; tags.append(live);
+    const body = el('div', 'st-card-body');
+    body.append(tags, el('h3', '', g.title), el('p', '', g.summary || ''));
+    const acts = el('div', 'st-card-acts');
+    const play = el('button', 'st-play'); play.type = 'button'; play.dataset.play = g.mode;
+    const arrow = el('span', 'st-play-arrow', '‹'); arrow.setAttribute('aria-hidden', 'true');
+    play.append(el('span', '', 'تشغيل اللعبة'), arrow);
+    const how = el('button', 'st-how', 'شرح'); how.type = 'button'; how.dataset.how = g.mode; how.setAttribute('aria-label', 'شرح ' + g.title);
+    acts.append(play, how);
+    li.append(art, body, acts);
+    return li;
   }
   function paintNav() {
-    $('gameNav').replaceChildren(...(site?.games || []).map(navItem));
-    $('extraNav').replaceChildren(...(site?.extraGames || []).map(navItem));
-    document.querySelectorAll('.st-game').forEach((b) => b.setAttribute('aria-current', String(b.dataset.mode === mode)));
+    const main = site?.games || [], extras = site?.extraGames || [];
+    $('gameNav').replaceChildren(...main.map((g, i) => gameCard(g, i, false)), ...extras.map((g, i) => gameCard(g, main.length + i, true)));
+    const cats = [['all', 'الكل']];
+    for (const g of main) if (g.category && !cats.some(([k]) => k === g.category)) cats.push([g.category, g.categoryLabel || g.category]);
+    if (extras.length) cats.push(['extra', 'ألعاب إضافية']);
+    $('gameCats').replaceChildren(...cats.map(([k, label]) => {
+      const b = el('button', 'st-cat', label); b.type = 'button'; b.dataset.cat = k; b.setAttribute('aria-pressed', String(k === filterCat)); return b;
+    }));
+    applyFilter(); markCurrent();
   }
-  document.querySelector('.st-games').addEventListener('click', (e) => {
-    const b = e.target.closest('.st-game'); if (!b || b.dataset.mode === mode) return;
-    selectGame(b.dataset.mode);
+  function applyFilter() {
+    const q = $('gameSearch').value.trim().toLowerCase();
+    let shown = 0;
+    for (const li of $('gameNav').children) {
+      const okCat = filterCat === 'all' || (filterCat === 'extra' ? li.dataset.extra === '1' : li.dataset.cat === filterCat && li.dataset.extra !== '1');
+      const ok = okCat && (!q || li.dataset.search.includes(q));
+      li.hidden = !ok; if (ok) shown++;
+    }
+    $('gameCount').textContent = shown === 1 ? 'لعبة واحدة' : shown === 2 ? 'لعبتان' : num(shown) + (shown <= 10 ? ' ألعاب' : ' لعبة');
+    $('gameNone').hidden = shown > 0;
+  }
+  function markCurrent() {
+    const running = state?.status?.active ? state.status.mode : null;
+    for (const li of $('gameNav').children) {
+      li.classList.toggle('is-current', li.dataset.mode === mode);
+      const tag = li.querySelector('.is-live'); if (tag) tag.hidden = li.dataset.mode !== running;
+    }
+  }
+  $('gameSearch').addEventListener('input', applyFilter);
+  $('gameCats').addEventListener('click', (e) => {
+    const b = e.target.closest('.st-cat'); if (!b) return;
+    filterCat = b.dataset.cat;
+    for (const x of $('gameCats').children) x.setAttribute('aria-pressed', String(x === b));
+    applyFilter();
   });
+  function showScreen(name) {
+    document.body.dataset.screen = name;
+    if (name === 'games') { history.replaceState(null, '', '/studio'); document.title = 'الاستوديو | SPONGE LIVE'; }
+    scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function openRules(m) {
+    const g = allGames().find((x) => x.mode === m); if (!g) return;
+    $('rulesTitle').textContent = g.title; $('rulesSummary').textContent = g.summary || ''; $('rulesCat').textContent = g.categoryLabel || '';
+    $('rulesCover').src = coverAt(g, 200);
+    $('rulesList').replaceChildren(...(g.rules || []).map((r) => el('li', '', r)));
+    $('rulesPlay').dataset.play = m;
+    if (typeof $('rulesDialog').showModal === 'function') $('rulesDialog').showModal();
+  }
+  async function playGame(m) {
+    showScreen('game');
+    if (m === mode && prepared) { paintGame(); history.replaceState(null, '', '/studio?mode=' + mode); return; }
+    await selectGame(m);
+  }
+  $('gameNav').addEventListener('click', (e) => {
+    const how = e.target.closest('[data-how]'); if (how) { openRules(how.dataset.how); return; }
+    const play = e.target.closest('[data-play]'); if (play) playGame(play.dataset.play);
+  });
+  $('rulesPlay').addEventListener('click', () => { $('rulesDialog').close(); playGame($('rulesPlay').dataset.play); });
+  $('backToGames').addEventListener('click', () => showScreen('games'));
+  $('gamesLink').addEventListener('click', () => showScreen('games'));
   async function selectGame(next) {
     if (!MODES.includes(next)) return;
     mode = next;
@@ -393,6 +468,8 @@
     $('connState').dataset.state = st;
     $('connText').textContent = { connected: 'متصل' + (c.username ? ' @' + c.username : ''), connecting: 'جارٍ الاتصال…', error: 'خطأ في الاتصال', disconnected: 'غير متصل' }[st] || st;
     $('connState').title = c?.detail || '';
+    $('sideDot').dataset.state = st;
+    $('sideConn').textContent = (c?.platform === 'kick' || $('platformSelect').value === 'kick' ? 'Kick' : 'TikTok') + ' — ' + $('connText').textContent;
     $('disconnectButton').hidden = !['connected', 'connecting'].includes(st);
     $('connectButton').hidden = st === 'connected';
     if (st === 'connected' && c.username && document.activeElement !== $('handleInput')) $('handleInput').value = c.username;
@@ -438,6 +515,7 @@
     try { me = await (await fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' })).json(); if (!me.signedIn && !ownerToken()) { location.href = '/?next=' + encodeURIComponent(location.pathname + location.search); return; } } catch {}
     game = [...(site?.games || []), ...(site?.extraGames || [])].find((x) => x.mode === mode) || game;
     paintNav(); paintGame(); paintRoom();
+    if (params.has('mode')) document.body.dataset.screen = 'game';
     const s = session(); if (s) await s.ready;
     await prepare();
     await refresh().catch(() => feedback('تعذر الاتصال بالسيرفر', true));

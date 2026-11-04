@@ -17,36 +17,68 @@
 <script defer src="/sponge-ui.js"></script>
 <script defer src="/studio.js"></script>
 </head>
-<body class="pl-page st-page" data-category="smart" data-view="join" data-drawer="open">
+<body class="pl-page st-page" data-category="smart" data-view="join" data-drawer="open" data-screen="games">
 <header class="st-top">
- <a class="sp-brand st-brand" href="/" aria-label="SPONGE LIVE"><img src="/brand/sponge-128.webp" alt="" width="34" height="34"><span dir="ltr"><b>SPONGE</b> LIVE</span></a>
- <form class="st-connect" id="connectForm" autocomplete="off">
-  <label class="sr-only" for="platformSelect">المنصة</label>
-  <select id="platformSelect"><option value="tiktok">TikTok</option><option value="kick">Kick (تجريبي)</option></select>
-  <label class="st-handle"><span aria-hidden="true">@</span><span class="sr-only">اسم الحساب</span><input id="handleInput" dir="ltr" maxlength="40" placeholder="اسم حساب TikTok" spellcheck="false"></label>
-  <button type="submit" class="pl-btn pl-btn-gold st-connect-btn" id="connectButton">اتصال</button>
-  <button type="button" class="pl-btn pl-btn-ghost" id="disconnectButton" hidden>قطع</button>
-  <span class="st-status" id="connState" role="status"><i aria-hidden="true"></i><span id="connText">غير متصل</span></span>
- </form>
- <div class="st-top-tools">
-  <span class="pl-room" id="roomBadge" hidden></span>
-  <span class="st-count" title="عدد المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b id="topCount">0</b></span>
-  <a class="pl-chip" id="overlayLink" href="/overlay" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg><span>شاشة OBS</span></a>
-  <button type="button" class="pl-chip" data-sp-toggle="sound" aria-label="الصوت"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-volume"/></svg></button>
-  <button type="button" class="pl-chip" id="drawerToggle" aria-expanded="true" aria-controls="hostPanel"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>التحكم</span></button>
-  <button type="button" class="pl-chip" id="logoutButton">خروج</button>
+ <div class="st-top-row">
+  <a class="sp-brand st-brand" href="/" aria-label="SPONGE LIVE"><img src="/brand/sponge-128.webp" alt="" width="34" height="34"><span dir="ltr"><b>SPONGE</b> LIVE</span></a>
+  <nav class="st-links" aria-label="روابط الموقع">
+   <a href="/">الرئيسية</a>
+   <button type="button" class="st-link-btn" id="gamesLink">الألعاب</button>
+   <a href="/#plans">الأسعار</a>
+   <a href="/#faq">الأسئلة الشائعة</a>
+   <a href="/#contact">تواصل معنا</a>
+  </nav>
+  <div class="st-top-user">
+   <span class="pl-room" id="roomBadge" hidden></span>
+   <a class="st-account" href="/account"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user"/></svg><span>حسابي</span></a>
+   <button type="button" class="pl-chip" id="logoutButton">خروج</button>
+  </div>
+ </div>
+ <div class="st-toolbar" role="toolbar" aria-label="أدوات البث">
+  <form class="st-connect" id="connectForm" autocomplete="off">
+   <label class="sr-only" for="platformSelect">المنصة</label>
+   <select id="platformSelect"><option value="tiktok">TikTok</option><option value="kick">Kick (تجريبي)</option></select>
+   <label class="st-handle"><span aria-hidden="true">@</span><span class="sr-only">اسم الحساب</span><input id="handleInput" dir="ltr" maxlength="40" placeholder="اسم حساب TikTok" spellcheck="false"></label>
+   <button type="submit" class="pl-btn pl-btn-gold st-connect-btn" id="connectButton">اتصال</button>
+   <button type="button" class="pl-btn pl-btn-ghost" id="disconnectButton" hidden>قطع</button>
+   <span class="st-status" id="connState" role="status"><i aria-hidden="true"></i><span id="connText">غير متصل</span></span>
+  </form>
+  <div class="st-top-tools">
+   <span class="st-count" title="عدد المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b id="topCount">0</b></span>
+   <a class="pl-chip" id="overlayLink" href="/overlay" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg><span>شاشة OBS</span></a>
+   <button type="button" class="pl-chip" data-sp-toggle="sound" aria-label="الصوت"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-volume"/></svg></button>
+   <button type="button" class="pl-chip" id="drawerToggle" aria-expanded="true" aria-controls="hostPanel"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>التحكم</span></button>
+  </div>
  </div>
 </header>
 
-<div class="st-layout">
- <!-- ===== game navigation ===== -->
- <nav class="st-games" aria-label="الألعاب">
-  <ol id="gameNav"></ol>
-  <details class="st-extra"><summary>ألعاب إضافية</summary><ol id="extraNav"></ol></details>
- </nav>
+<!-- ===== games library: filters, search and a grid of game cards ===== -->
+<section class="st-library" id="gamesView" aria-labelledby="libTitle">
+ <div class="st-lib-head">
+  <div><h1 id="libTitle">ألعاب البث</h1><p>اختر لعبة وشغّلها — المشاهدون يدخلون بكتابة «انضم» في التعليقات.</p></div>
+  <span class="st-lib-count" id="gameCount" aria-live="polite">0 لعبة</span>
+ </div>
+ <div class="st-filters">
+  <label class="st-search"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-search"/></svg><span class="sr-only">بحث</span><input type="search" id="gameSearch" placeholder="ابحث باسم اللعبة…" autocomplete="off" maxlength="40"></label>
+  <div class="st-cats" id="gameCats" role="group" aria-label="التصنيفات"></div>
+ </div>
+ <ol class="st-grid" id="gameNav"></ol>
+ <p class="st-none" id="gameNone" hidden>لا توجد لعبة بهذا الاسم.</p>
+</section>
 
+<dialog class="st-dialog" id="rulesDialog" aria-labelledby="rulesTitle">
+ <form method="dialog" class="st-dialog-in">
+  <div class="st-dialog-top"><img id="rulesCover" alt="" width="96" height="123"><div><span class="st-badge" id="rulesCat"></span><h2 id="rulesTitle"></h2><p id="rulesSummary"></p></div></div>
+  <h3>طريقة اللعب</h3>
+  <ol class="st-dialog-rules" id="rulesList"></ol>
+  <div class="st-dialog-actions"><button type="button" class="pl-btn pl-btn-gold" id="rulesPlay">تشغيل اللعبة</button><button class="pl-btn pl-btn-ghost" value="close">إغلاق</button></div>
+ </form>
+</dialog>
+
+<div class="st-layout" id="gameScreen">
  <!-- ===== the selected game ===== -->
  <main class="st-main">
+  <div class="st-crumbs"><button type="button" class="pl-chip" id="backToGames"><svg class="i st-flip" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg><span>كل الألعاب</span></button><span class="st-crumb-now" id="crumbTitle"></span></div>
   <section class="pl-hero st-hero" aria-labelledby="gameTitle">
    <figure class="pl-cover is-art"><img id="gameCover" src="/games/01-knowledge-challenge-200.webp" alt="" width="200" height="256"></figure>
    <div class="pl-id">
@@ -61,7 +93,10 @@
   <section class="pl-call" id="joinCall" aria-live="polite">
    <p class="pl-call-main">اكتب «<b class="pl-word" id="joinWord">انضم</b>» في تعليقات البث للدخول إلى اللعبة</p>
    <p class="pl-call-sub" id="callSub"><span class="pl-pulse" aria-hidden="true"></span><span id="callSubText">بانتظار انضمام اللاعبين</span></p>
-   <div class="pl-count"><b id="playerCount">0</b><span id="playerCountLabel">لاعب منضم</span></div>
+   <div class="st-call-stats">
+    <div class="pl-count"><b id="playerCount">0</b><span id="playerCountLabel">لاعب منضم</span></div>
+    <div class="st-reg"><span class="st-reg-state" id="regState">الانضمام مفتوح</span><button type="button" class="pl-btn pl-btn-line" id="regToggle">إغلاق الانضمام</button></div>
+   </div>
   </section>
 
   <section class="pl-live" id="liveView" hidden aria-label="اللعبة الجارية">
@@ -92,6 +127,7 @@
 
  <!-- ===== control drawer: only the current game's settings ===== -->
  <aside class="st-drawer" id="hostPanel" aria-label="لوحة التحكم">
+  <div class="st-side-card"><img id="sideCover" src="/games/01-knowledge-challenge-120.webp" alt="" width="60" height="77"><div><b id="sideTitle">تحدي المعرفة</b><span class="st-side-conn"><i id="sideDot" aria-hidden="true"></i><span id="sideConn">المنصة: TikTok — غير متصل</span></span></div></div>
   <div class="st-tabs" role="tablist" aria-label="أقسام التحكم">
    <button type="button" role="tab" id="tab-round" aria-controls="pane-round" aria-selected="true">الجولة</button>
    <button type="button" role="tab" id="tab-players" aria-controls="pane-players" aria-selected="false">اللاعبون</button>
@@ -99,7 +135,6 @@
    <button type="button" role="tab" id="tab-codes" aria-controls="pane-codes" aria-selected="false" hidden>الرموز</button>
   </div>
   <div class="st-pane" role="tabpanel" id="pane-round" aria-labelledby="tab-round">
-   <div class="pl-row"><span id="regState">الانضمام مفتوح</span><button type="button" class="pl-btn pl-btn-line" id="regToggle">إغلاق الانضمام</button></div>
    <label class="pl-check"><input type="checkbox" id="autoHost"><span>دخّلني تلقائياً في كل لعبة</span></label>
    <div class="pl-row st-round-btns">
     <button type="button" class="pl-btn pl-btn-ghost" id="stopButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-stop"/></svg><span>إيقاف الجولة</span></button>
@@ -112,7 +147,6 @@
    <form class="pl-row" id="addForm"><label><span>إضافة لاعب يدويًا</span><input id="addName" maxlength="32" placeholder="اسم اللاعب" autocomplete="off"></label><button type="submit" class="pl-btn pl-btn-ghost">إضافة</button></form>
    <p class="pl-hint">لحذف لاعب اضغط ✕ على بطاقته قبل بدء الجولة.</p>
    <button type="button" class="pl-btn pl-btn-ghost" id="demoButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-robot"/></svg><span>وضع التجربة: لاعبون تجريبيون</span></button>
-   <button type="button" class="pl-btn pl-btn-ghost" id="resetButton">تصفير النقاط والمتسابقين</button>
    <h3 class="st-sub">المتصدرون</h3>
    <ol class="st-leaders" id="leaders"></ol>
   </div>
@@ -151,6 +185,7 @@
   <div class="pl-admin-join" id="adminJoin">
    <button type="button" class="pl-btn pl-btn-line" id="hostSeatButton" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg><span id="hostSeatLabel">دخّلني أنا</span></button>
    <button type="button" class="pl-btn pl-btn-gold" id="startButton" disabled><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span id="startLabel">ابدأ اللعبة</span></button>
+   <button type="button" class="pl-btn pl-btn-ghost st-reset" id="resetButton" title="تصفير النقاط وقائمة المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg><span>إعادة تعيين</span></button>
   </div>
   <div class="pl-admin-live" id="adminLive" hidden>
    <button type="button" class="pl-btn pl-btn-gold" id="drawButton" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-wheel"/></svg><span>اسحب الفائز</span></button>
