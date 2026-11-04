@@ -12,7 +12,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
-import { fakeKick } from './fake-kick.mjs';
+import { fakePlatforms } from './fake-platforms.mjs';
+/** Official sign-in round trip: our start → the platform's page (approved as uid) → our callback. */
+async function signIn(fake, b, p, uid) { const s = await b('GET', '/api/oauth/' + p + '/start'); const { code, state } = fake.approve(s.location, uid); return b('GET', '/api/oauth/' + p + '/callback?' + new URLSearchParams({ code, state })); }
 
 const ADMIN = process.env.TEST_DATABASE_URL || 'postgres://sponge@localhost:55432/postgres';
 const dbName = 'sponge_settings_' + process.pid;
@@ -63,9 +65,9 @@ const ownerCall = (b) => (m, r, body) => b(m, r, body, { Authorization: 'Bearer 
 
 test('settings dashboard: redeem, platforms, billing, e-mail/password, Google re-auth, privacy, sessions, permanent ID', { skip, timeout: 180_000 }, async () => {
   const keys = await jwks();
-  const kick = await fakeKick();
-  kick.add('reefking', { userId: 801 });
-  const srv = await boot({ GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_JWKS_URL: keys.url, KICK_API_URL: kick.api, KICK_PUSHER_URL: kick.socket, SKY_HOST_TIMEOUT_MS: '5000' });
+  const kick = await fakePlatforms();
+  kick.addKick(801, { slug: 'reefking' });
+  const srv = await boot({ GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_JWKS_URL: keys.url, ...kick.env, SKY_HOST_TIMEOUT_MS: '5000' });
   const pool = new pg.Pool({ connectionString: dbUrl });
   const owner = ownerCall(ownerOf(srv.base));
   const anon = browser(srv.base);
@@ -92,11 +94,10 @@ test('settings dashboard: redeem, platforms, billing, e-mail/password, Google re
     assert.equal(prof.access.active, true); assert.equal(prof.access.plan, 'weekly'); assert.equal(prof.access.planName, 'شفيق العادي');
     assert.equal(prof.history.filter((h) => h.plan === 'weekly').length, 1);
 
-    // 4. link Kick from settings: code in the owner's own LIVE chat, stored as verified
-    let r = await u('POST', '/api/me/stream-link', { platform: 'kick', username: 'reefking' });
-    assert.equal(r.status, 200); assert.equal(r.data.verified, false); assert.match(r.data.verify.code, /^SL-/);
-    kick.say('reefking', { id: 801, slug: 'reefking' }, r.data.verify.code);
-    await waitFor(async () => (await u('GET', '/api/me/profile')).data.linked.kick?.verified, 6000, 'verified link');
+    // 4. link Kick from settings: official sign-in with Kick (no typed name), stored as verified
+    let r = await signIn(kick, u, 'kick', 801);
+    assert.match(r.location, /linked=kick/);
+    assert.equal((await u('GET', '/api/me/profile')).data.linked.kick.verified, true);
     // 6. after signing in again (another device) the link is still there
     const again = browser(srv.base, { ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Safari/604.1' });
     assert.equal((await again('POST', '/api/auth/login', { identifier: 'reef_host', password: 'reef2026go' })).status, 200);
@@ -105,7 +106,7 @@ test('settings dashboard: redeem, platforms, billing, e-mail/password, Google re
     assert.equal((await again('POST', '/api/me/stream-unlink', { platform: 'kick' })).data.removed, true);
     assert.equal((await u('GET', '/api/me/profile')).data.linked.kick, undefined);
     await waitFor(async () => (await anon('GET', '/api/state?room=' + reg.data.account.room)).data.connection.state === 'disconnected', 5000, 'connection closed');
-    assert.equal((await pool.query("SELECT count(*)::int n FROM admin_audit_logs WHERE action IN ('stream-verified','stream-unlink')")).rows[0].n, 2);
+    assert.equal((await pool.query("SELECT count(*)::int n FROM admin_audit_logs WHERE action IN ('stream-oauth-link','stream-unlink')")).rows[0].n, 2);
 
     // sessions: both devices listed with a label; sign out the other one
     let ses = (await u('GET', '/api/me/sessions')).data.sessions;
@@ -141,9 +142,8 @@ test('settings dashboard: redeem, platforms, billing, e-mail/password, Google re
     assert.equal((await back('POST', '/api/auth/login', { identifier: 'new.reef@example.com', password: 'reef2026go' })).status, 200);
     assert.equal((await back('GET', '/api/me/profile')).data.privacy.hideStream, true, 'kept after signing in again');
     // a real listed stream: verified Kick + studio heartbeat + open game
-    r = await back('POST', '/api/me/stream-link', { platform: 'kick', username: 'reefking' });
-    kick.say('reefking', { id: 801, slug: 'reefking' }, r.data.verify.code);
-    await waitFor(async () => (await back('GET', '/api/me/profile')).data.linked.kick?.verified, 6000, 'verified again');
+    assert.match((await signIn(kick, back, 'kick', 801)).location, /linked=kick/);
+    assert.equal((await back('POST', '/api/admin/connect', { platform: 'kick' })).status, 200);
     await back('POST', '/api/admin/heartbeat', { tab: 'settings-tab-1', screen: 'game' });
     await back('POST', '/api/admin/prepare', { mode: 'quiz' });
     let hb = (await back('POST', '/api/admin/heartbeat', { tab: 'settings-tab-1', screen: 'game' })).data;
@@ -177,8 +177,9 @@ test('settings dashboard: redeem, platforms, billing, e-mail/password, Google re
     assert.equal((await owner('POST', '/api/manage/stop', { publicId: pid })).status, 200);
     prof = (await back('GET', '/api/me/profile')).data;
     assert.equal(prof.access.active, false);
-    r = await back('POST', '/api/me/stream-link', { platform: 'kick', username: 'reefking' });
+    r = await back('POST', '/api/admin/connect', { platform: 'kick' });
     assert.equal(r.status, 402); assert.equal(r.data.needPlan, true);
+    assert.match((await back('GET', '/api/oauth/kick/start')).location, /link_error=plan/);
 
     // 10 + 11. Google account: re-auth with Google (the same Google account only), then add a local password
     const g = browser(srv.base);

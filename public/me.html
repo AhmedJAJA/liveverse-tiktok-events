@@ -78,20 +78,18 @@
       <article class="ds-card ds-plat" data-platform="tiktok">
        <div class="ds-plat-top"><span class="ds-logo is-tiktok"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-note"/></svg></span><b>TikTok</b><span class="pg-badge is-off" data-role="badge">غير مرتبط</span></div>
        <p class="ds-plat-text" data-role="text">اربط حساب TikTok مرة واحدة لبدء البث التفاعلي من قناتك.</p>
-       <div class="ds-plat-linked" data-role="linked" hidden><span class="ds-plat-ava" data-role="ava" aria-hidden="true">T</span><div><b dir="ltr" data-role="handle"></b><small data-role="since"></small></div></div>
-       <form class="ds-plat-form" data-role="form" novalidate><label class="ds-at"><span aria-hidden="true">@</span><span class="sr-only">اسم حسابك على TikTok</span><input name="handle" dir="ltr" maxlength="40" autocomplete="off" spellcheck="false" placeholder="اسم حسابك"></label>
-        <button class="ds-btn is-blue" type="submit"><span class="ds-spin" aria-hidden="true"></span><span>ربط TikTok</span></button></form>
-       <div class="ds-proof" data-role="proof" hidden></div>
-       <button type="button" class="ds-btn is-ghost is-danger" data-role="unlink" hidden>إزالة الربط</button>
+       <div class="ds-plat-linked" data-role="linked" hidden><span class="ds-plat-ava" data-role="ava" aria-hidden="true"><span data-role="avaLetter">T</span></span><div><b dir="ltr" data-role="handle"></b><small data-role="since"></small></div></div>
+       <a class="ds-btn is-tiktok-btn" data-role="signin" href="/api/oauth/tiktok/start" rel="nofollow"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-note"/></svg><span>المتابعة باستخدام TikTok</span></a>
+       <p class="ds-plat-why" data-role="why" hidden></p>
+       <button type="button" class="ds-btn is-ghost is-danger" data-role="unlink" hidden>إلغاء ربط TikTok</button>
       </article>
       <article class="ds-card ds-plat" data-platform="kick">
        <div class="ds-plat-top"><span class="ds-logo is-kick"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-kick"/></svg></span><b>Kick</b><span class="pg-badge is-off" data-role="badge">غير مرتبط</span></div>
        <p class="ds-plat-text" data-role="text">اربط حساب Kick مرة واحدة لبدء البث التفاعلي من قناتك.</p>
-       <div class="ds-plat-linked" data-role="linked" hidden><span class="ds-plat-ava" data-role="ava" aria-hidden="true">K</span><div><b dir="ltr" data-role="handle"></b><small data-role="since"></small></div></div>
-       <form class="ds-plat-form" data-role="form" novalidate><label class="ds-at"><span aria-hidden="true">@</span><span class="sr-only">اسم قناتك على Kick</span><input name="handle" dir="ltr" maxlength="40" autocomplete="off" spellcheck="false" placeholder="اسم قناتك"></label>
-        <button class="ds-btn is-blue" type="submit"><span class="ds-spin" aria-hidden="true"></span><span>ربط Kick</span></button></form>
-       <div class="ds-proof" data-role="proof" hidden></div>
-       <button type="button" class="ds-btn is-ghost is-danger" data-role="unlink" hidden>إزالة الربط</button>
+       <div class="ds-plat-linked" data-role="linked" hidden><span class="ds-plat-ava" data-role="ava" aria-hidden="true"><span data-role="avaLetter">K</span></span><div><b dir="ltr" data-role="handle"></b><small data-role="since"></small></div></div>
+       <a class="ds-btn is-kick-btn" data-role="signin" href="/api/oauth/kick/start" rel="nofollow"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-kick"/></svg><span>المتابعة باستخدام Kick</span></a>
+       <p class="ds-plat-why" data-role="why" hidden></p>
+       <button type="button" class="ds-btn is-ghost is-danger" data-role="unlink" hidden>إلغاء ربط Kick</button>
       </article>
       <article class="ds-card ds-plat is-soon" data-platform="twitch" aria-disabled="true">
        <div class="ds-plat-top"><span class="ds-logo is-twitch"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-chat"/></svg></span><b>Twitch</b><span class="pg-badge is-warn">قريبًا</span></div>
@@ -99,7 +97,7 @@
        <button type="button" class="ds-btn is-ghost" disabled>قريبًا</button>
       </article>
      </div>
-     <p class="ds-note"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-shield"/></svg> لإثبات أن الحساب حسابك: ابدأ بثك المباشر، اضغط «ربط»، ثم اكتب الرمز الذي يظهر لك في تعليقات بثك من حسابك نفسه. كتابة الاسم وحدها لا تكفي. الربط يحتاج اشتراكًا فعالًا.</p>
+     <p class="ds-note"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-shield"/></svg> الربط يتم بتسجيل الدخول الرسمي في TikTok أو Kick والموافقة على الصلاحيات — لا نطلب اسم المستخدم ولا كلمة مرور المنصة. الربط يحتاج اشتراكًا فعالًا، وإلغاء الربط متاح دائمًا.</p>
     </div>
 
     <div class="ds-two">

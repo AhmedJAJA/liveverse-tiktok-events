@@ -48,7 +48,7 @@
       // signed in with an account: the sign-up/login links become the account page
       $('linkSignup').textContent = 'حسابي (' + me.account.publicId + ')'; $('linkSignup').href = '/account';
       $('linkLogin').hidden = true;
-      $('linkTrial').href = $('planTrial').href = $('heroTrial').href = $('barTrial').href = $('menuTrial').href = '/account#trial';
+      $('linkTrial').href = $('planTrial').href = $('barTrial').href = $('menuTrial').href = '/account#trial';
       $('barAccount').href = $('menuAccount').href = '/account';
       // restored from the session cookie: show who is signed in (name, picture, permanent ID)
       const shortName = me.account.displayName.length > 14 ? me.account.displayName.slice(0, 13) + '…' : me.account.displayName;
@@ -57,12 +57,13 @@
       if (me.account.picture) { const img = document.createElement('img'); img.className = 'hm-bar-pic'; img.src = me.account.picture; img.alt = ''; img.width = 26; img.height = 26; img.referrerPolicy = 'no-referrer'; $('barAccount').querySelector('svg')?.replaceWith(img); }
       $('barAccount').title = me.account.publicId;
       $('menuSecond').hidden = true; $('menuLogout').hidden = false;
-      if (me.account.entitled) { $('barTrial').textContent = 'الاستوديو'; $('barTrial').href = '/studio'; }
+      if (me.account.entitled) { $('barTrial').hidden = true; $('barStudio').hidden = false; $('heroStudio').querySelector('span').textContent = 'ادخل الاستوديو'; $('heroStudio').href = '/studio'; }
+      else { $('heroStudio').querySelector('span').textContent = 'حسابي'; $('heroStudio').href = '/account'; }
     } else if (me.signedIn) {
       // promo-code or owner session: offer the studio and a way out
-      $('barTrial').textContent = 'الاستوديو'; $('barTrial').href = '/studio'; $('menuLogout').hidden = false;
+      $('barTrial').hidden = true; $('barStudio').hidden = false; $('menuLogout').hidden = false;
     }
-    updateConnectGate(); paintStatus();
+    paintStatus();
   }).catch(() => {}).finally(() => document.documentElement.classList.remove('me-pending'));
   fetch('/api/site', { cache: 'force-cache' }).then((r) => r.json()).then((site) => {
     const url = site.support?.url; if (!url) return;
@@ -70,74 +71,63 @@
   }).catch(() => {});
   $('year').textContent = String(new Date().getFullYear());
 
-  /* -------------------------------------------------------------------- connect */
-  const PLATFORMS = {
-    tiktok: { name: 'TikTok LIVE', icon: '/icons.svg#i-note', placeholder: 'أدخل اسم حسابك على TikTok', hint: 'ابدأ بثك المباشر على TikTok أولًا، ثم اربطه هنا.' },
-    kick: { name: 'Kick LIVE', icon: '/icons.svg#i-kick', placeholder: 'أدخل اسم حسابك على Kick', hint: 'اكتب اسم قناتك على Kick كما يظهر في رابطها (دعم تجريبي).' },
-  };
-  const panel = $('connectPanel'), handle = $('connectHandle'), connectBtn = $('connectButton'), status = $('connectStatus'), stateText = $('connectStateText'), msg = $('connectMsg');
-  const tabs = [...document.querySelectorAll('.hm-tabs [role="tab"]')];
-  let platform = 'tiktok', pollTimer = 0, pollUntil = 0, connecting = false;
-  function setPlatform(p, focus) {
-    platform = p; const cfg = PLATFORMS[p];
-    for (const t of tabs) { const on = t.dataset.platform === p; t.setAttribute('aria-selected', String(on)); t.tabIndex = on ? 0 : -1; if (on && focus) t.focus(); }
-    panel.dataset.platform = p; panel.setAttribute('aria-labelledby', p === 'kick' ? 'tabKick' : 'tabTiktok');
-    $('connectName').textContent = cfg.name; $('connectHint').textContent = cfg.hint;
-    $('connectIcon').setAttribute('href', cfg.icon);
-    handle.placeholder = cfg.placeholder; $('connectLabel').textContent = cfg.placeholder; handle.value = '';
-    setStatus('idle', 'غير متصل'); updateConnectGate();
-  }
-  tabs.forEach((t, i) => {
-    t.addEventListener('click', () => setPlatform(t.dataset.platform));
-    t.addEventListener('keydown', (e) => {
-      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-      e.preventDefault();
-      const j = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (i + (e.key === 'ArrowLeft' ? 1 : -1) + tabs.length) % tabs.length; // RTL: left = next
-      setPlatform(tabs[j].dataset.platform, true);
+  /* ------------------------------------------------------- hero: demo wheel + simulated chat
+     An illustration only (no stream, no server): the real game's results are decided on the server. */
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const SEATS = ['ليلى', 'عمر', 'سارة', 'نور', 'علي', 'ريم', 'فهد', 'مها'];
+  const disc = $('wheelDisc'), wheel = $('wheel'), spinBtn = $('spinButton');
+  let turn = 0, spinning = false;
+  function spin() {
+    if (spinning) return;
+    spinning = true; spinBtn.disabled = true; $('wheelWinner').textContent = ''; wheel.classList.remove('has-winner');
+    for (const s of disc.querySelectorAll('.hm-seat.is-win')) s.classList.remove('is-win');
+    const pick = Math.floor(Math.random() * SEATS.length);
+    // seat i sits at i*45°; the pointer is at the top, so turn until that seat reaches 0°, plus whole turns
+    const from = turn, to = turn + 360 * (reduce ? 1 : 6) + ((360 - pick * 45 - (turn % 360)) % 360 + 360) % 360;
+    const done = () => {
+      turn = to % 360; disc.style.setProperty('--spin', turn + 'deg');
+      for (const a of anims) a.cancel(); // the static CSS takes over at the same angle
+      spinning = false; spinBtn.disabled = false; wheel.classList.remove('is-spinning'); wheel.classList.add('has-winner');
+      disc.querySelector('.s' + pick)?.classList.add('is-win');
+      $('wheelWinner').textContent = '🎉 الفائز: ' + SEATS[pick];
+      spinBtn.querySelector('span').textContent = 'أعد التجربة';
+      if (!reduce) { const c = $('confetti'); c.classList.remove('is-on'); void c.offsetWidth; c.classList.add('is-on'); }
+    };
+    // Web Animations on transform only: the compositor turns the disc, the seats turn back so names stay upright
+    const opts = { duration: reduce ? 1 : 5200, easing: 'cubic-bezier(.45,.05,.12,1)', fill: 'forwards' };
+    wheel.classList.add('is-spinning');
+    const anims = [disc.animate([{ transform: 'rotate(' + from + 'deg)' }, { transform: 'rotate(' + to + 'deg)' }], opts)];
+    disc.querySelectorAll('.hm-seat').forEach((seat, i) => {
+      const inner = seat.firstElementChild, a = i * 45;
+      anims.push(inner.animate([{ transform: 'rotate(' + -(a + from) + 'deg)' }, { transform: 'rotate(' + -(a + to) + 'deg)' }], opts));
     });
-  });
-  function setStatus(state, text) { status.dataset.state = state; stateText.textContent = text; }
-  /** Who may connect: a live promo session, the owner, or an account with a running trial/subscription. */
-  function canConnect() { return !!(me && me.signedIn && me.live); }
-  function updateConnectGate() {
-    if (!me) return;
-    if (canConnect()) { msg.textContent = 'يُربط البث بغرفتك في الاستوديو. أول مرة تربط حسابًا ستحصل على رمز تكتبه في تعليقات بثك لإثبات أن الحساب حسابك.'; return; }
-    if (me.account && !me.account.verified) msg.textContent = 'أكّد بريدك الإلكتروني من صفحة «حسابي» ثم فعّل التجربة أو اشترك لربط البث.';
-    else if (me.account) msg.textContent = 'فعّل التجربة المجانية أو اشترك من صفحة «حسابي» لربط بثك.';
-    else if (me.signedIn && !me.live) msg.textContent = 'رمزك الحالي للتجربة بلاعبين تجريبيين فقط ولا يشمل ربط البث.';
-    else msg.textContent = 'لربط البث: أنشئ حسابًا وفعّل التجربة المجانية أو اشترك، أو ادخل برمز ترويجي.';
+    anims[0].finished.then(done, done);
   }
-  panel.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (connecting) return;
-    const name = handle.value.trim().replace(/^@/, '');
-    if (!name) { setStatus('error', 'أدخل اسم الحساب أولًا'); handle.focus(); return; }
-    if (!canConnect()) { setStatus('blocked', 'يلزم تسجيل الدخول وتجربة أو اشتراك فعّال'); updateConnectGate(); msg.focus?.(); return; }
-    connecting = true; connectBtn.disabled = true; connectBtn.classList.add('is-busy');
-    setStatus('connecting', 'جارٍ الاتصال بالبث…');
-    try {
-      const res = await post('/api/admin/connect', { platform, username: name });
-      if (!res.ok) { setStatus(res.status === 402 || res.status === 403 ? 'blocked' : 'error', res.data.error || 'تعذر الربط'); if (res.data.needPlan) msg.textContent = 'تحتاج إلى اشتراك فعال لربط بثك المباشر — اختر باقة من «الأسعار» أو فعّل التجربة المجانية.'; return; }
-      // Ownership: until the code appears in the account's own LIVE chat, the stream is not trusted.
-      if (res.data.verify) msg.textContent = 'لإثبات أن الحساب حسابك: اكتب الرمز ' + res.data.verify.code + ' في تعليقات بثك من حساب @' + res.data.verify.handle + ' خلال 10 دقائق.';
-      pollUntil = Date.now() + (res.data.verify ? 600_000 : 90_000); poll();
-    } catch { setStatus('error', 'تعذر الاتصال بالخادم'); }
-    finally { connecting = false; connectBtn.disabled = false; connectBtn.classList.remove('is-busy'); }
-  });
-  /* status comes from the room state (the same truth the studio shows), polled every 2.5 s only while waiting */
-  async function poll() {
-    clearTimeout(pollTimer);
-    if (document.hidden) { pollTimer = setTimeout(poll, 2500); return; }
-    try {
-      const s = await fetch('/api/state?room=' + encodeURIComponent(me.room || 'main'), { cache: 'no-store', credentials: 'same-origin' }).then((r) => r.json());
-      const c = s.connection || {};
-      if (c.state === 'connected' && c.verifying && !c.verified) setStatus('connecting', 'متصل — بانتظار رمز التحقق في تعليقات بثك');
-      else if (c.state === 'connected') { setStatus('connected', 'متصل — ' + (c.platform === 'kick' ? 'Kick' : 'TikTok') + ' @' + (c.username || '') + (c.verified ? ' ✓ موثّق' : '')); if (c.verified) msg.textContent = 'حسابك موثّق ✓ — شغّل لعبة من الاستوديو ليظهر بثك في «البثوث النشطة».'; return; }
-      if (c.state === 'error') setStatus('error', c.message || 'تعذر الاتصال — تأكد أن البث شغال الآن');
-      else setStatus('connecting', c.message || 'جارٍ الاتصال بالبث…');
-    } catch { /* keep the last status */ }
-    if (Date.now() < pollUntil) pollTimer = setTimeout(poll, 2500);
-    else if (status.dataset.state === 'connecting') setStatus('error', 'لم يصل شات البث بعد — تأكد أن البث شغال ثم حاول مجددًا');
+  spinBtn.addEventListener('click', spin);
+
+  const CHAT = [
+    ['🐠', 'ليلى', 'انضم', 'join'], ['🦀', 'عمر', 'جاهزين للجولة؟'], ['⭐', 'سارة', 'انضم', 'join'], ['🐙', 'نور', 'الإجابة 2', 'right'],
+    ['🐚', 'علي', 'يلا نلعب!'], ['🐳', 'ريم', 'انضم', 'join'], ['🪼', 'فهد', 'الإجابة 3'], ['🐡', 'مها', 'الإجابة 2', 'right'],
+  ];
+  const list = $('chatList');
+  let ci = 0, chatTimer = 0, heroVisible = true;
+  function addChat() {
+    const [av, name, text, kind] = CHAT[ci++ % CHAT.length];
+    const li = document.createElement('li'); li.className = 'hm-msg' + (kind ? ' is-' + kind : '');
+    const a = document.createElement('i'); a.className = 'av'; a.textContent = av;
+    const body = document.createElement('div'); const n = document.createElement('b'); n.textContent = name;
+    const t = document.createElement('span'); t.textContent = kind === 'join' ? 'انضم للجولة ✓' : text;
+    body.append(n, t); li.append(a, body);
+    if (kind === 'right') { const ok = document.createElement('em'); ok.textContent = 'إجابة صحيحة'; li.append(ok); }
+    list.append(li);
+    while (list.children.length > 4) list.firstElementChild.remove();
+  }
+  function chatLoop() { clearTimeout(chatTimer); if (!heroVisible || document.hidden) return; addChat(); chatTimer = setTimeout(chatLoop, 1900); }
+  for (let i = 0; i < 3; i++) addChat();
+  if (!reduce) {
+    // pause everything while the hero is off-screen or the tab is hidden
+    new IntersectionObserver(([e]) => { heroVisible = e.isIntersecting; $('heroPlay').classList.toggle('is-off', !heroVisible); if (heroVisible) chatTimer = setTimeout(chatLoop, 1200); else clearTimeout(chatTimer); }).observe($('heroPlay'));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && heroVisible) chatTimer = setTimeout(chatLoop, 1200); });
   }
 
   /* ---------------------------------------------- studio & free-trial flow
@@ -325,15 +315,25 @@
     li.append(top, bottom, acts);
     return li;
   }
-  let liveTimer = 0;
+  let liveTimer = 0, lastStreams = [];
+  function paintStreams() {
+    const g = $('liveGame').value;
+    $('liveTrack').replaceChildren(...lastStreams.filter((x) => !g || (x.currentGame || x.game) === g).slice(0, 20).map(streamCard));
+  }
+  $('liveGame').addEventListener('change', paintStreams);
   async function loadStreams() {
     clearTimeout(liveTimer);
     if (!document.hidden) {
       try {
         const d = await fetch('/api/streams', { cache: 'no-store' }).then((r) => r.json());
         $('liveCount').textContent = String(d.totalStreams || 0); $('livePlayers').textContent = String(d.totalPlayers || 0);
-        $('liveTrack').replaceChildren(...(d.streams || []).slice(0, 20).map(streamCard));
-        const empty = !(d.streams || []).length;
+        lastStreams = d.streams || [];
+        const sel = $('liveGame'), games = [...new Set(lastStreams.map((x) => x.currentGame || x.game).filter(Boolean))];
+        const keep = sel.value;
+        sel.replaceChildren(new Option('كل الألعاب', ''), ...games.map((g) => new Option(g, g)));
+        sel.value = games.includes(keep) ? keep : '';
+        paintStreams();
+        const empty = !lastStreams.length;
         $('liveEmpty').hidden = !empty; $('liveTrack').hidden = empty;
         document.querySelector('.hm-car-nav').hidden = (d.streams || []).length < 2;
       } catch { /* keep what is shown */ }

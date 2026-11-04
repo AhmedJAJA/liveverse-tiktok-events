@@ -18,6 +18,7 @@ import { PromoMirror, SessionMirror } from './src/persist.mjs';
 import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS, privacyOf } from './src/platform.mjs';
 import { createMailer, createGateway } from './src/services.mjs';
 import { GoogleVerifier } from './src/google.mjs';
+import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, 'public');
@@ -41,18 +42,7 @@ const BROADCAST_MS = Math.max(40, Number(process.env.SKY_BROADCAST_MS) || 120);
 const ROOM_IDLE_MS = 3 * 60 * 60_000;
 const rooms = new Map();
 const HOST_TIMEOUT_MS = Math.max(5_000, Number(process.env.SKY_HOST_TIMEOUT_MS) || 45_000); // a studio window that stops beating is gone after this
-const VERIFY_TTL_MS = 10 * 60_000;
 const sameHandle = (a, b) => String(a || '').replace(/^@/, '').toLowerCase() === String(b || '').replace(/^@/, '').toLowerCase();
-/** The proof: the code appears in a chat message that the platform attributes to the channel owner's own account. */
-function proofMatches(room, chat) {
-  const v = room.verify, c = room.engine.connection;
-  if (!v || c.platform !== v.platform || !sameHandle(c.username, v.handle) || !chat?.handle || !sameHandle(chat.handle, v.handle)) return false;
-  const owner = room.engine.streamer?.platformId;
-  if (/^\d+$/.test(owner || '') && /^\d+$/.test(String(chat.id || '')) && String(chat.id) !== owner) return false; // the owner's numeric id, when both are known
-  return String(chat.text || '').toUpperCase().replace(/[\s-]/g, '').includes(v.code.replace(/-/g, ''));
-}
-const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const newVerifyCode = () => 'SL-' + Array.from({ length: 6 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
 class Room {
   constructor(id, kind, ownerId = null) {
     this.id = id; this.kind = kind; this.ownerId = ownerId; this.clients = new Set(); this.touched = Date.now();
@@ -69,29 +59,18 @@ class Room {
     this.tiktok = new LiveBridge(this.hub);
     this.kick = new KickBridge(this.hub);
     this.questionBank = new QuestionBank(questions);
-    this.verify = null;        // pending ownership challenge {platform, handle, code, expiresAt, userId}
+    this.kickOfficial = null;  // Kick chat delivered by Kick's webhooks: {broadcasterUserId, userId, checkedAt}
     this.tabs = new Map();     // studio windows of the host: tab id -> {at, screen}
     this.primaryTab = null;    // the one window allowed to control the room
     this.gameSessionId = null; this.saved = { state: '', at: 0 };
   }
   receiveChat(chat) {
-    const meta = this.engine.connMeta, c = this.engine.connection;
-    if (c.state === 'connected' && !meta.verified) {
-      if (this.verify && Date.now() < this.verify.expiresAt && proofMatches(this, chat)) this.onVerified(chat);
-      return; // an unproven stream only waits for its code
-    }
+    // An account room only plays with a stream whose account was linked by signing in with the platform.
+    if (this.kind === 'acct' && !this.engine.connMeta.verified) return;
     this.engine.receiveChat(chat);
   }
-  onVerified(chat) {
-    const v = this.verify; this.verify = null;
-    this.engine.setConnectionMeta({ verified: true, verifying: false });
-    this.ownerProof = v.platform + ':' + v.handle.toLowerCase();
-    if (v.userId && platform) platform.markStreamVerified(v.userId, v.platform, v.handle, this.engine.streamer?.platformId || chat.id)
-      .then(({ previousOwners }) => { for (const r of rooms.values()) if (r !== this && previousOwners.includes(r.ownerId)) r.revokeStream('تم إثبات ملكية الحساب من مستخدم آخر'); })
-      .catch((err) => console.error('[stream] verify save failed', err.message));
-  }
   revokeStream(reason) {
-    this.verify = null;
+    this.kickOfficial = null;
     this.tiktok.disconnect(false).catch(() => {}); this.kick.disconnect(false).catch(() => {});
     this.engine.setConnection('disconnected', '', reason);
   }
@@ -109,7 +88,7 @@ class Room {
     const raw = JSON.stringify({ type: 'state', data: this.view() });
     for (const ws of this.clients) if (ws.readyState === WebSocket.OPEN && (ws.bufferedAmount || 0) < 4_000_000) ws.send(raw);
   }
-  async disconnectAll() { await this.tiktok.disconnect(false); await this.kick.disconnect(false); this.engine.setConnection('disconnected', '', 'تم الفصل'); }
+  async disconnectAll() { this.kickOfficial = null; await this.tiktok.disconnect(false); await this.kick.disconnect(false); this.engine.setConnection('disconnected', '', 'تم الفصل'); }
 }
 const mainRoom = new Room('main', 'main');
 rooms.set('main', mainRoom);
@@ -163,6 +142,9 @@ if (pool) {
   await platform.init();
   for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
 } else console.warn('[db] DATABASE_URL is not set: games and promo codes work; accounts, trials and subscriptions are off.');
+const appUrl = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000)).replace(/\/$/, '');
+const providers = new Providers({ appUrl });
+const tokenBox = new TokenBox();
 const google = new GoogleVerifier({ clientId: process.env.GOOGLE_CLIENT_ID || '', jwksUrl: process.env.GOOGLE_JWKS_URL || undefined });
 const OPEN_SIGNUP = process.env.SKY_OPEN_SIGNUP === '1';
 const redeemIp = new RateLimiter({ limit: 8, windowMs: 10 * 60_000 });
@@ -315,31 +297,22 @@ async function handleAction(action, body, actor) {
     case 'reset': engine.resetScores(); return { ok: true };
     case 'draw': return { ok: true, result: engine.drawWheel() };
     case 'connect': {
-      // 1) only a running trial or subscription (or the site owner) may link a LIVE — checked here, on the server
+      // 1) only a running trial or subscription (or the site owner) may connect a LIVE — checked here, on the server
       requireStreamAccess(actor);
       const service = body.platform === 'kick' ? 'kick' : 'tiktok';
-      const handle = String(body.username || '').trim().replace(/^@/, '');
-      if (!liveUrlFor(service, handle) || (service === 'kick' && !validKickSlug(handle))) throw new Error(service === 'kick' ? 'اسم قناة Kick غير صالح' : 'اسم حساب TikTok غير صالح');
-      // 2) has this user already proven that this platform account is theirs?
-      let proven = false;
-      if (actor.kind === 'acct') { const v = await platform.verifiedStream(actor.userId, service); proven = !!v && sameHandle(v.handle, handle); }
-      else proven = room.ownerProof === service + ':' + handle.toLowerCase();
-      room.verify = null;
-      // 3) connect (TikTok refuses a room that is not live; Kick is checked on its channel API)
-      if (service === 'kick') { await room.tiktok.disconnect(false); await room.kick.connect(handle, { chatroomId: body.chatroomId }); }
-      else { await room.kick.disconnect(false); await room.tiktok.connect(handle); }
-      if (proven) {
-        engine.setConnectionMeta({ verified: true, verifying: false });
-        if (actor.kind === 'acct') platform.touchStream(actor.userId, service).catch(() => {});
-        return { ok: true, state: engine.connection.state, verified: true };
+      if (actor.kind !== 'acct') {
+        // the site owner's own room: a manual test connection; it is never listed among the active streams
+        const handle = String(body.username || '').trim().replace(/^@/, '');
+        if (!liveUrlFor(service, handle) || (service === 'kick' && !validKickSlug(handle))) throw new Error(service === 'kick' ? 'اسم قناة Kick غير صالح' : 'اسم حساب TikTok غير صالح');
+        room.kickOfficial = null;
+        if (service === 'kick') { await room.tiktok.disconnect(false); await room.kick.connect(handle, { chatroomId: body.chatroomId }); }
+        else { await room.kick.disconnect(false); await room.tiktok.connect(handle); }
+        return { ok: true, state: engine.connection.state, verified: false };
       }
-      // 4) not proven yet: a one-time code that only the account itself can post in its own LIVE chat
-      room.verify = { platform: service, handle, code: newVerifyCode(), expiresAt: Date.now() + VERIFY_TTL_MS, userId: actor.kind === 'acct' ? actor.userId : null };
-      engine.setConnectionMeta({ verified: false, verifying: true });
-      return { ok: true, state: engine.connection.state, verified: false,
-        verify: { platform: service, handle, code: room.verify.code, expiresAt: new Date(room.verify.expiresAt).toISOString() } };
+      // 2) accounts: only the platform account they signed in with — never a name typed in the browser
+      return connectLinked(actor, room, service);
     }
-    case 'disconnect': room.verify = null; await room.tiktok.disconnect(false); await room.kick.disconnect(false); engine.setConnection('disconnected', '', 'تم الفصل'); return { ok: true };
+    case 'disconnect': room.kickOfficial = null; await room.tiktok.disconnect(false); await room.kick.disconnect(false); engine.setConnection('disconnected', '', 'تم الفصل'); return { ok: true };
     case 'heartbeat': {
       // The studio window says it is open (every ~15 s). Only one window controls the room; it can be taken over.
       const tab = String(body.tab || '');
@@ -381,6 +354,134 @@ function requireStreamAccess(actor) {
   if (actor.kind === 'owner') return;
   if (actor.kind === 'acct' && platform?.entitlement(actor.userId).active) return;
   throw Object.assign(new Error('تحتاج إلى اشتراك فعال لربط بثك المباشر'), { status: 402, needPlan: true });
+}
+/* ------------------------------------------------ official platform sign-in (TikTok / Kick) */
+const KICK_LIVE_CHECK_MS = Math.max(5_000, Number(process.env.KICK_LIVE_CHECK_MS) || 120_000);
+const oauthStates = new Map(); // state -> { userId, platform, verifier, sessionKey, expires }
+const OAUTH_STATE_MS = 10 * 60_000;
+const linkableNow = (p) => providers.enabled(p) && tokenBox.ready && !!platform;
+/** A usable access token for the linked account: refreshed when it is about to expire; a refused refresh marks the link for re-authorisation. */
+async function linkToken(userId, p, link) {
+  let access = tokenBox.open(link.accessTokenEnc);
+  if (access && link.tokenExpiresAt - Date.now() > 120_000) return access;
+  try {
+    const t = await providers.refresh(p, tokenBox.open(link.refreshTokenEnc));
+    await platform.updateOAuthLink(userId, p, { accessTokenEnc: tokenBox.seal(t.accessToken), refreshTokenEnc: tokenBox.seal(t.refreshToken), expiresAt: t.expiresAt, refreshExpiresAt: t.refreshExpiresAt || undefined, needsReauth: false });
+    return t.accessToken;
+  } catch (err) {
+    if (err instanceof OAuthError && err.code === 'unauthorized') await platform.updateOAuthLink(userId, p, { needsReauth: true }).catch(() => {});
+    throw err;
+  }
+}
+const needLink = (p, msg) => Object.assign(new Error(msg || ('اربط حسابك على ' + (p === 'kick' ? 'Kick' : 'TikTok') + ' من «الإعدادات» أولًا')), { status: 409, needLink: true });
+/** Connect an account room to the platform account it signed in with (stored official id; nothing typed). */
+async function connectLinked(actor, room, p) {
+  if (!linkableNow(p)) throw Object.assign(new Error('ربط ' + (p === 'kick' ? 'Kick' : 'TikTok') + ' غير مفعّل على الموقع بعد'), { status: 503 });
+  const link = await platform.verifiedStream(actor.userId, p);
+  if (!link) throw needLink(p);
+  if (link.needsReauth) throw needLink(p, 'انتهى تفويض ' + (p === 'kick' ? 'Kick' : 'TikTok') + ' — أعد الربط من «الإعدادات»');
+  let token;
+  try { token = await linkToken(actor.userId, p, link); }
+  catch (err) { if (err instanceof OAuthError && err.code === 'unauthorized') throw needLink(p, err.message); throw err; }
+  const { engine } = room;
+  if (p === 'tiktok') {
+    // the current username comes from TikTok itself (it can change); LIVE chat is then read by the stream bridge
+    const who = await providers.identity('tiktok', token);
+    if (who.platformUserId !== link.platformUserId) throw needLink(p, 'حساب TikTok تغيّر — أعد الربط من «الإعدادات»');
+    if (!who.handle) throw needLink(p, 'اسمح بصلاحية «الملف الشخصي» عند الربط حتى نصل إلى بثك المباشر');
+    await platform.updateOAuthLink(actor.userId, p, { handle: who.handle, displayName: who.displayName, avatar: who.avatar }).catch(() => {});
+    room.kickOfficial = null; await room.kick.disconnect(false);
+    try { await room.tiktok.connect(who.handle); }
+    catch (err) { throw Object.assign(new Error(/offline|isn't online|not online|UserOffline/i.test(String(err?.message)) ? 'بثك على TikTok غير مباشر الآن — ابدأ البث ثم اتصل' : 'تعذر الوصول إلى بث TikTok — تأكد أن البث شغال'), { status: 409 }); }
+    engine.setStreamer({ displayName: who.displayName, avatar: who.avatar });
+  } else {
+    // Kick: the official API says whether the channel is live; chat is delivered to our webhook by Kick
+    const ch = await providers.kickChannel(token);
+    if (ch.broadcasterUserId !== link.platformUserId) throw needLink(p, 'قناة Kick تغيّرت — أعد الربط من «الإعدادات»');
+    if (!ch.live) throw Object.assign(new Error('بثك على Kick غير مباشر الآن — ابدأ البث ثم اتصل'), { status: 409 });
+    await room.tiktok.disconnect(false); await room.kick.disconnect(false);
+    await providers.kickSubscribeChat(token, ch.broadcasterUserId);
+    room.kickOfficial = { broadcasterUserId: ch.broadcasterUserId, userId: actor.userId, checkedAt: Date.now() };
+    engine.setConnection('connected', ch.slug, 'متصل بـ Kick (الربط الرسمي)', 'kick');
+    engine.setStreamer({ displayName: link.displayName || ch.slug, avatar: link.avatar || '', platformId: ch.broadcasterUserId });
+    engine.setConnectionMeta({ liveConfirmed: true });
+  }
+  engine.setConnectionMeta({ verified: true, verifying: false });
+  platform.touchStream(actor.userId, p).catch(() => {});
+  return { ok: true, state: engine.connection.state, verified: true, platform: p, handle: engine.connection.username };
+}
+/** Kick live state, re-read from the official API every few minutes while connected. */
+async function checkKickLive(room) {
+  const k = room.kickOfficial; if (!k || k.checking) return;
+  k.checking = true; k.checkedAt = Date.now();
+  try {
+    const link = await platform.verifiedStream(k.userId, 'kick');
+    if (!link) return room.revokeStream('أُزيل ربط Kick');
+    const ch = await providers.kickChannel(await linkToken(k.userId, 'kick', link));
+    room.engine.setConnectionMeta({ liveConfirmed: ch.live });
+    if (!ch.live) room.engine.setConnection('disconnected', room.engine.connection.username, 'انتهى البث المباشر على Kick', 'kick');
+    else if (room.engine.connection.state !== 'connected') room.engine.setConnection('connected', ch.slug, 'متصل بـ Kick (الربط الرسمي)', 'kick');
+  } catch { room.engine.setConnectionMeta({ liveConfirmed: false }); }
+  finally { k.checking = false; }
+}
+/** GET /api/oauth/:platform/start → the platform's sign-in page; GET /api/oauth/:platform/callback ← back here. */
+async function handleOAuth(p, step, req, res, url) {
+  const back = (q) => { res.writeHead(302, { Location: '/account?' + q + '#settings', 'Cache-Control': 'no-store' }); res.end(); };
+  if (!['tiktok', 'kick'].includes(p)) return json(res, 404, { error: 'Not found' });
+  const s = accountSession(req);
+  if (step === 'start') {
+    if (!s) { res.writeHead(302, { Location: '/login?next=' + encodeURIComponent('/account#settings') }); return res.end(); }
+    if (!linkableNow(p)) return back('link_error=unavailable&p=' + p);
+    if (!platform.entitlement(s.userId).active) return back('link_error=plan&p=' + p);
+    const now = Date.now();
+    for (const [k, v] of oauthStates) if (v.expires < now) oauthStates.delete(k);
+    if (oauthStates.size > 5000) return back('link_error=busy&p=' + p);
+    const state = randomBytes(24).toString('base64url'), { verifier, challenge } = pkcePair();
+    oauthStates.set(state, { userId: s.userId, platform: p, verifier, sessionKey: sessions.key(s.id), expires: now + OAUTH_STATE_MS });
+    res.writeHead(302, { Location: providers.authorizeUrl(p, { state, challenge }), 'Cache-Control': 'no-store',
+      'Set-Cookie': `oa_state=${state}; HttpOnly; Path=/api/oauth/; Max-Age=600; SameSite=Lax${isHttps(req) ? '; Secure' : ''}` });
+    return res.end();
+  }
+  if (step !== 'callback') return json(res, 404, { error: 'Not found' });
+  const state = url.searchParams.get('state') || '', entry = oauthStates.get(state);
+  oauthStates.delete(state); // single use
+  const cookieState = parseCookies(req.headers.cookie).oa_state || '';
+  res.setHeader('Set-Cookie', `oa_state=; HttpOnly; Path=/api/oauth/; Max-Age=0; SameSite=Lax${isHttps(req) ? '; Secure' : ''}`);
+  // the same browser, the same signed-in account, the same platform, within 10 minutes
+  if (!entry || !state || cookieState !== state || entry.platform !== p || entry.expires < Date.now() || !s || sessions.key(s.id) !== entry.sessionKey || s.userId !== entry.userId) return back('link_error=state&p=' + p);
+  if (url.searchParams.get('error')) return back('link_error=denied&p=' + p);
+  const code = url.searchParams.get('code') || '';
+  if (!code) return back('link_error=denied&p=' + p);
+  if (!platform.entitlement(s.userId).active) return back('link_error=plan&p=' + p);
+  try {
+    const t = await providers.exchange(p, { code, verifier: entry.verifier });
+    const who = await providers.identity(p, t.accessToken);
+    if (p === 'tiktok' && t.platformUserId && t.platformUserId !== who.platformUserId) throw new OAuthError('mismatch', 'userinfo');
+    const { previousOwners } = await platform.saveOAuthLink(s.userId, p, { platformUserId: who.platformUserId, handle: who.handle, displayName: who.displayName, avatar: who.avatar,
+      scope: t.scope, accessTokenEnc: tokenBox.seal(t.accessToken), refreshTokenEnc: tokenBox.seal(t.refreshToken), expiresAt: t.expiresAt, refreshExpiresAt: t.refreshExpiresAt });
+    for (const r of rooms.values()) if (previousOwners.includes(r.ownerId) && r.engine.connection.platform === p) r.revokeStream('ارتبط هذا الحساب بحساب SPONGE LIVE آخر');
+    return back('linked=' + p);
+  } catch (err) {
+    console.warn('[oauth]', p, err.code || '', String(err.message).slice(0, 120));
+    return back('link_error=' + (err.code === 'network' ? 'network' : 'failed') + '&p=' + p);
+  }
+}
+/** Kick event webhook (chat.message.sent): signed by Kick; routed to the room of the linked broadcaster. */
+async function handleKickWebhook(req, res) {
+  let raw = ''; let size = 0;
+  for await (const chunk of req) { size += chunk.length; if (size > 65536) return json(res, 413, { error: 'too large' }); raw += chunk; }
+  if (!(await providers.kickWebhookValid(req.headers, raw))) return json(res, 400, { error: 'bad signature' });
+  if (req.headers['kick-event-type'] !== 'chat.message.sent') return json(res, 200, { ok: true });
+  let ev; try { ev = JSON.parse(raw); } catch { return json(res, 400, { error: 'bad json' }); }
+  const bid = String(ev?.broadcaster?.user_id ?? '');
+  const room = [...rooms.values()].find((r) => r.kickOfficial?.broadcasterUserId === bid);
+  const sender = ev?.sender || {};
+  if (room && sender.user_id !== undefined && ev.content) {
+    room.receiveChat({ id: 'kick:' + sender.user_id, username: String(sender.username || 'مشاهد'), handle: String(sender.channel_slug || sender.username || ''),
+      text: String(ev.content).replace(/\[emote:\d+:[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim(), msgId: 'kick:' + String(req.headers['kick-event-message-id'] || ev.message_id || ''),
+      avatar: '', isFollower: false, isSubscriber: (sender.identity?.badges || []).some((b) => /subscriber|founder|og/i.test(String(b?.type || ''))) });
+  }
+  return json(res, 200, { ok: true });
 }
 function requireOwner(actor) { if (actor.kind !== 'owner') throw Object.assign(new Error('هذا الإجراء لمالك الموقع فقط'), { status: 403 }); }
 
@@ -574,8 +675,13 @@ async function handleMe(action, req, res) {
   if (!s) return json(res, 401, { error: 'سجّل الدخول أولًا', login: true });
   const userId = s.userId, ip = clientIp(req);
   try {
-    if (action === 'profile' && req.method === 'GET') return json(res, 200, await platform.profile(userId));
+    if (action === 'profile' && req.method === 'GET') return json(res, 200, { ...(await platform.profile(userId)), platforms: { tiktok: linkableNow('tiktok'), kick: linkableNow('kick'), twitch: false } });
     if (action === 'payment' && req.method === 'GET') return json(res, 200, await platform.paymentStatus(userId, new URL(req.url, 'http://x').searchParams.get('id')));
+    if (action === 'links' && req.method === 'GET') {
+      // what the studio needs: the signed-in platform accounts (no tokens), and which sign-ins the site offers
+      const p = await platform.profile(userId);
+      return json(res, 200, { linked: p.linked, platforms: { tiktok: linkableNow('tiktok'), kick: linkableNow('kick'), twitch: false }, entitled: platform.entitlement(userId).active });
+    }
     if (action === 'sessions' && req.method === 'GET') return json(res, 200, { sessions: sessions.listUser(userId, s.id).map((x) => ({ ...x, createdAt: new Date(x.createdAt).toISOString(), lastSeenAt: new Date(x.lastSeenAt).toISOString(), expiresAt: new Date(x.expiresAt).toISOString() })), reauthed: sessions.reauthed(s.id) });
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'طلب من مصدر غير مسموح' });
@@ -614,20 +720,15 @@ async function handleMe(action, req, res) {
     }
     if (action === 'email') { const r = await platform.changeEmail(userId, body.email); return json(res, 200, { ok: true, sent: !!r.sent, account: accountView(userId) }); }
     if (action === 'google-unlink') { await platform.unlinkGoogle(userId); return json(res, 200, { ok: true, account: accountView(userId) }); }
-    if (action === 'stream-link') {
-      // same rules as the studio: an active plan, then a proof of ownership in the account's own LIVE chat
-      const actor = actorFor(req);
-      if (!actor) return json(res, 402, { error: 'تحتاج إلى اشتراك فعال لربط بثك المباشر', needPlan: true });
-      try { return json(res, 200, await handleAction('connect', { platform: body.platform, username: body.username }, actor)); }
-      catch (err) { return json(res, err.status || 400, { error: String(err.message || err).slice(0, 240), ...(err.needPlan ? { needPlan: true } : {}) }); }
-    }
     if (action === 'stream-unlink') {
       const service = body.platform === 'kick' ? 'kick' : body.platform === 'tiktok' ? 'tiktok' : '';
       if (!service) return json(res, 400, { error: 'منصة غير معروفة' });
-      const r = await platform.unlinkStream(userId, service);
+      // works with or without a running plan: managing and removing links is always allowed
       const room = rooms.get(platform.cached(userId).user.room);
       if (room && room.engine.connection.platform === service && room.engine.connection.username) room.revokeStream('أُزيل ربط الحساب من الإعدادات');
-      return json(res, 200, { ok: true, ...r });
+      const r = await platform.unlinkStream(userId, service);
+      const revoked = r.accessTokenEnc ? await providers.revoke(service, tokenBox.open(r.accessTokenEnc)) : false;
+      return json(res, 200, { ok: true, removed: r.removed, revoked });
     }
     if (action === 'trial-claim') return json(res, 200, { ok: true, trial: await platform.claimTrial(userId) });
     if (action === 'trial-start') { const r = await platform.startTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, next: '/studio', account: accountView(userId) }); }
@@ -797,11 +898,7 @@ function streams() {
 function sweepLive() {
   const now = Date.now();
   for (const room of rooms.values()) {
-    if (room.verify && now >= room.verify.expiresAt) {
-      room.verify = null;
-      room.tiktok.disconnect(false).catch(() => {}); room.kick.disconnect(false).catch(() => {});
-      room.engine.setConnection('error', '', 'انتهت مهلة التحقق من ملكية الحساب — اربط مرة أخرى واكتب الرمز في تعليقات بثك');
-    }
+    if (room.kickOfficial && now - room.kickOfficial.checkedAt > KICK_LIVE_CHECK_MS) checkKickLive(room);
     const st = liveStatus(room);
     if (room.kind === 'acct' && !st.subscribed && ['connected', 'connecting'].includes(room.engine.connection.state)) room.revokeStream('انتهى الاشتراك — جدّد لربط البث');
     const inGame = ['waiting', 'running'].includes(st.state);
@@ -855,6 +952,8 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/access/')) return await handleAccess(url.pathname.slice('/api/access/'.length), req, res);
     if (url.pathname.startsWith('/api/account/')) return await handleAccount(url.pathname.slice('/api/account/'.length), req, res);
     if (url.pathname.startsWith('/api/auth/')) return await handleAuth(url.pathname.slice('/api/auth/'.length), req, res);
+    { const m = /^\/api\/oauth\/(tiktok|kick)\/(start|callback)$/.exec(url.pathname); if (m && req.method === 'GET') return await handleOAuth(m[1], m[2], req, res, url); }
+    if (url.pathname === '/api/kick/webhook' && req.method === 'POST') return await handleKickWebhook(req, res);
     if (url.pathname.startsWith('/api/me/')) return await handleMe(url.pathname.slice('/api/me/'.length), req, res);
     if (url.pathname.startsWith('/api/manage/')) return await handleManage(url.pathname.slice('/api/manage/'.length), req, res);
     if (url.pathname === '/api/billing/webhook' && req.method === 'POST') return await handleWebhook(req, res);
