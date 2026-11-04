@@ -324,25 +324,10 @@ body.sky-home-page::before{display:none}
 .sh-top-badge{margin-inline:8px auto;align-self:center;padding:3px 10px;border-radius:999px;background:var(--sh-gold-btn);color:#2A1A05;font-size:12px;font-weight:900}
 .sh-live-card.is-top{border-color:#FFC94A;box-shadow:0 0 0 1px rgba(255,201,74,.4),0 18px 40px -18px rgba(255,180,60,.6)}
 .sh-cover{cursor:pointer}
-.sh-game-dialog{width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:24px;border-radius:24px;border:1px solid var(--sh-line-2);background:linear-gradient(160deg,#1d1509 0%,#0b0907 70%);color:var(--sh-text);display:none;gap:22px;overflow:auto}
-.sh-game-dialog[open]{display:grid;grid-template-columns:200px minmax(0,1fr);align-items:start}
-.sh-game-dialog::backdrop{background:rgba(4,3,6,.78);backdrop-filter:blur(6px)}
-.sh-game-dialog img{width:200px;height:200px;border-radius:20px;border:1px solid var(--sh-line-2)}
-.sh-game-body h2{margin:6px 0 8px!important;font-size:28px;font-weight:900}
-.sh-game-body p{color:var(--sh-text-2);line-height:1.7}
-.sh-game-body ol{margin:12px 0 18px;padding-inline-start:22px;color:var(--sh-text-2);line-height:1.8}
-.sh-game-body .sh-cta-row{display:flex;flex-wrap:wrap;gap:10px}
-.sh-game-body .sh-note{margin-top:10px;color:var(--sh-text-3);font-size:14px}
-.sh-dialog-close{position:absolute;top:12px;inset-inline-end:12px;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--sh-line);color:var(--sh-text);cursor:pointer}
-.sh-dialog-close .i{width:18px;height:18px}
-.sh-game-dialog{position:fixed}
 @media (max-width:1024px){
   .sh-platforms{grid-template-areas:"head" "card" "kick" "form" "note"}
 }
 @media (max-width:560px){
-  .sh-game-dialog[open]{grid-template-columns:1fr;padding:18px}
-  .sh-game-dialog img{width:120px;height:120px}
   .sh-select{flex:1 1 100%}
 }
-@media (prefers-reduced-motion:reduce){.sh-game-dialog::backdrop{backdrop-filter:none}}
 html:has(body.sky-home-page),body.sky-home-page{overflow-x:clip}

@@ -135,3 +135,28 @@ test('kick chat parsing and channel validation', () => {
   assert.equal(parseKickChat({ content: 'hi', sender: {} }), null);
   assert.equal(parseKickChat({ content: '[emote:1:x]', sender: { id: 1 } }), null);
 });
+
+test('join page over HTTP: a guest host prepares, sits in, starts; anonymous viewers cannot control', async () => {
+  const { base, stop } = await boot();
+  try {
+    const host = client(base), viewer = client(base);
+    assert.equal((await fetch(base + '/play?mode=rps')).status, 200);
+    for (const f of ['/play.js', '/play.css']) assert.equal((await fetch(base + f)).status, 200, f);
+    assert.equal((await viewer('POST', '/api/admin/prepare', { mode: 'rps' })).status, 401);
+    const g = (await host('POST', '/api/account/guest', {})).data;
+    assert.equal((await host('POST', '/api/admin/prepare', { mode: 'nope' })).status, 400);
+    assert.equal((await host('POST', '/api/admin/prepare', { mode: 'rps' })).status, 200);
+    let st = (await viewer('GET', '/api/state?room=' + g.room)).data;
+    assert.equal(st.status.mode, 'rps'); assert.equal(st.registration.phase, 'open');
+    assert.equal((await host('POST', '/api/admin/host-seat', {})).status, 200);
+    assert.equal((await host('POST', '/api/admin/host-seat', {})).status, 400, 'no double seat');
+    st = (await viewer('GET', '/api/state?room=' + g.room)).data;
+    assert.equal(st.registration.hostSeated, true); assert.equal(st.playerCount, 1);
+    assert.equal((await host('POST', '/api/admin/start', {})).status, 200);
+    assert.equal((await host('POST', '/api/admin/host-unseat', {})).status, 400, 'cannot leave after kick-off');
+    st = (await viewer('GET', '/api/state?room=' + g.room)).data;
+    assert.equal(st.status.active, true); assert.equal(st.registration.phase, 'closed');
+    // the owner's main room was never touched by the guest
+    assert.equal((await viewer('GET', '/api/state')).data.status.active, false);
+  } finally { stop(); }
+});

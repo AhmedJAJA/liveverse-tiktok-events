@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { BombGame, parsePassCommand } from './bomb.mjs';
 import { PARTY_MODES, PARTY_MIN_PLAYERS, PARTY_DEFAULTS, createPartyGame } from './party.mjs';
+import { GAMES } from './catalog.mjs';
 
 export const MODES = ['quiz', 'guess', 'race', 'wheel', 'glass', 'bomb', ...PARTY_MODES];
 export { PARTY_MODES };
@@ -14,6 +15,11 @@ const MAX_ENTRIES = 500;
 const KEEP_CHAT = 35;
 const QUIZ_POINTS = [10, 7, 5, 3, 2, 1];
 const REGISTRATION_PREVIEW = 10;
+const MAX_WAITING = 300;
+/** Minimum contestants each game needs before it can start (one source: the catalogue). */
+export function minPlayersFor(mode) {
+  return Math.max(GAMES.find(g => g.mode === mode)?.minPlayers || 1, PARTY_MIN_PLAYERS[mode] || 1);
+}
 
 const AVATAR_HOSTS = ['tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokcdn-eu.com', 'tiktokcdn-in.com', 'byteoversea.com', 'ibytedtos.com', 'ibyteimg.com', 'muscdn.com'];
 export function safeAvatarUrl(raw) {
@@ -57,6 +63,8 @@ export class Engine {
     this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0, maxPlayers: MAX_PLAYERS, audience: 'all', hostJoin: 'manual' };
     this.glass = { steps: 10, stepDuration: 10, step: 0, safeSide: 0, survivors: new Set(), choices: new Map(), choiceTimes: new Map() };
     this.registrationRecent = [];
+    // Viewers who wrote the join word after kick-off: they enter the next round automatically.
+    this.waiting = new Map();
     this.firstAnswers = new Map();
     this.correctAnswers = [];
     this.answerSequence = 0;
@@ -104,7 +112,8 @@ export class Engine {
       simulation: { ...this.simulation },
       branding: this.branding,
       roster: [...this.players.values()].slice(0, 300).map(p => ({ number: p.number, name: p.name, score: p.score, ...(p.avatar ? { avatar: p.avatar } : {}), ...(p.host ? { host: true } : {}), ...(p.manual ? { manual: true } : {}), ...(p.id.startsWith('demo:bot-') ? { bot: true } : {}) })),
-      registration: { ...this.registration, count: this.players.size, recent: [...this.registrationRecent], participants: [...this.players.values()].slice(-100).map((p, i, tail) => ({ name: p.name, number: this.players.size - tail.length + i + 1, ...(p.avatar ? { avatar: p.avatar } : {}) })) },
+      registration: { ...this.registration, count: this.players.size, minPlayers: minPlayersFor(this.status.mode), hostSeated: !!this.hostSeat(),
+        waitingCount: this.waiting.size, waitingRecent: [...this.waiting.values()].slice(-5).reverse().map(w => w.name), recent: [...this.registrationRecent], participants: [...this.players.values()].slice(-100).map((p, i, tail) => ({ name: p.name, number: this.players.size - tail.length + i + 1, ...(p.avatar ? { avatar: p.avatar } : {}) })) },
       serverTime: this.now()
     };
   }
@@ -198,8 +207,17 @@ export class Engine {
     this.status.results = null; this.status.winner = null; this.status.endsAt = null;
     this.status.notice = `التسجيل مفتوح! اكتب ${clean} في شات البث`;
     this.status.lastEvent = null;
+    this.admitWaiting();
     this.emit();
     return this.registration;
+  }
+  /** Late joiners from the previous round enter as soon as signups reopen (same eligibility rules). */
+  admitWaiting() {
+    if (this.registration.phase !== 'open' || !this.waiting.size) return 0;
+    let added = 0;
+    for (const [id, w] of this.waiting) { if (this.register(id, w.name, w.avatar, w, false)) added++; }
+    this.waiting.clear();
+    return added;
   }
   closeRegistration() {
     if (this.registration.phase !== 'open') throw new Error('التسجيل ليس مفتوحًا');
@@ -209,7 +227,7 @@ export class Engine {
     this.emit();
     return this.registration;
   }
-  register(id, name, avatar = '', { isFollower = false, isSubscriber = false } = {}) {
+  register(id, name, avatar = '', { isFollower = false, isSubscriber = false } = {}, notify = true) {
     if (this.registration.phase !== 'open' || !id || this.players.has(id)) return false;
     if (this.players.size >= this.registration.maxPlayers) return false;
     if (this.registration.audience === 'followers' && !isFollower) return false;
@@ -220,7 +238,7 @@ export class Engine {
     player.isSubscriber = isSubscriber === true;
     this.registrationRecent.unshift({ name: player.name, joinedAt: this.now(), ...(player.avatar ? { avatar: player.avatar } : {}) });
     this.registrationRecent.length = Math.min(this.registrationRecent.length, REGISTRATION_PREVIEW);
-    this.emit();
+    if (notify) this.emit();
     return true;
   }
   hasValidJoinWord(text) {
@@ -304,10 +322,8 @@ export class Engine {
       this.bomb.start([...this.players.values()].slice(0, this.registration.maxPlayers));
     }
     const partyMode = PARTY_MODES.includes(this.status.mode);
-    if (partyMode) {
-      const need = PARTY_MIN_PLAYERS[this.status.mode] || 1;
-      if (this.players.size < need) throw new Error(`هذه اللعبة تحتاج ${need} متسابقين على الأقل`);
-    }
+    const need = minPlayersFor(this.status.mode);
+    if (this.players.size < need) throw new Error(`هذه اللعبة تحتاج ${need} متسابقين على الأقل`);
     if (this.registration.phase === 'open') this.closeRegistration();
     this.round++;
     this.status.active = true;
@@ -516,6 +532,7 @@ export class Engine {
     this.players.clear(); this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear(); this.recent = [];
     this.glass.survivors.clear(); this.glass.choices.clear(); this.glass.choiceTimes.clear(); this.glass.step=0;
     this.registrationRecent = [];
+    this.waiting.clear();
     this.party = null;
     this.registration.phase = 'idle'; this.registration.openedAt = null; this.registration.closedAt = null;
     this.status.results = null; this.status.winner = null;
@@ -550,6 +567,8 @@ export class Engine {
     // Joining the TikTok room does NOT enroll the viewer. Only the chosen chat word does.
     if (this.registration.phase === 'open') {
       if (this.hasValidJoinWord(message)) this.register(identity, name, avatar, {isFollower,isSubscriber});
+    } else if (this.registration.phase === 'closed' && !this.players.has(identity) && this.hasValidJoinWord(message)) {
+      if (!this.waiting.has(identity) && this.waiting.size < MAX_WAITING) this.waiting.set(identity, { name, avatar, isFollower, isSubscriber });
     } else if (this.registration.phase === 'closed' && this.status.active && this.players.has(identity)) {
       const player = this.player(identity, name, avatar);
       if (player) this.applyMessage(player, message, currentTime);
@@ -663,6 +682,32 @@ export class Engine {
     if (!handle) { if (strict) throw new Error('اربط البث أولًا ليُعرف حساب المضيف'); return null; }
     if (this.players.has('host:' + handle.toLowerCase())) { if (strict) throw new Error('المضيف مسجل بالفعل'); return null; }
     try { return this.addManualPlayer({ name: handle, host: true }); } catch (error) { if (strict) throw error; return null; }
+  }
+  hostSeat() { for (const p of this.players.values()) if (p.host) return p; return null; }
+  /** «شارك كلاعب»: the host plays under the same rules. The connected handle is used when there is one,
+      so the host's own chat answers count; otherwise the given display name. */
+  seatHost({ name } = {}) {
+    if (this.status.active) throw new Error('لا يمكن تغيير المشاركة أثناء اللعب');
+    if (this.hostSeat()) throw new Error('أنت مشارك بالفعل');
+    const label = this.connection.username || safeLine(name, 32).replace(/^@/, '') || 'المشرف';
+    return this.addManualPlayer({ name: label, host: true });
+  }
+  unseatHost() {
+    if (this.status.active) throw new Error('بدأ اللعب — لا يمكن إلغاء المشاركة الآن');
+    const seat = this.hostSeat();
+    if (!seat) throw new Error('لست ضمن المشاركين');
+    return this.removePlayer({ number: seat.number });
+  }
+  /** Join page: select the game and open signups without wiping who already joined. */
+  prepareJoin({ mode, title } = {}) {
+    if (!MODES.includes(mode)) throw new Error('نمط غير معروف');
+    if (this.status.active) {
+      if (this.status.mode === mode) return { phase: 'playing' };
+      throw Object.assign(new Error('هناك جولة جارية في «' + this.status.title + '» — أنهِها أولًا'), { busy: this.status.mode });
+    }
+    if (this.status.mode !== mode) this.configure({ mode, ...(title ? { title } : {}) });
+    if (this.registration.phase !== 'open') this.openRegistration({});
+    return { phase: 'open' };
   }
   removePlayer({ number } = {}) {
     if (this.status.active) throw new Error('لا يمكن إزالة لاعب أثناء الجولة');
