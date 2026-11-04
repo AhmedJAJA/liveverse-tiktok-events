@@ -86,7 +86,7 @@ test('event details route matches approved screenshot layout and safely binds to
   const css=read('public/event.css');
   const js=read('public/event.js');
   const server=read('server.mjs');
-  const landing=read('public/landing.html');
+  const studio=read('public/studio.html'), catalog=read('src/catalog.mjs');
   for(const id of ['eventName','eventCategory','joinBannerWord','joinKeyword','maxPlayers','advancedSettings','startGameButton','accessDialog','bridgePanels'])
     assert.ok(page.includes('id="'+id+'"'),id);
   for(const heading of ['رجوع للألعاب','طول اللعبة','الافتراضي','كلمة الانضمام','أقصى لاعبين (حتى 30)','من ينضم؟','إعدادات متقدمة','ابدأ اللعبة'])
@@ -99,7 +99,9 @@ test('event details route matches approved screenshot layout and safely binds to
   for(const asset of ['event.html','event.js','event.css'])assert.ok(server.includes("'"+asset+"'"),asset);
   // Home covers open each game's join page; this setup page stays the advanced settings screen.
   // SPONGE LIVE home lists its twelve games; this page stays reachable from the studio and the join page.
-  for(const mode of ['quiz','drawguess','chairs','bowling','bomb','categories','rps','roles','roulette','redlight','country','flag'])assert.ok(landing.includes('/play?mode='+mode),mode);
+  // the studio lists the twelve games from the catalogue; this page stays the advanced settings screen
+  assert.match(studio,/id="gameNav"/);
+  for(const mode of ['quiz','drawguess','chairs','bowling','bomb','categories','rps','roles','roulette','redlight','country','flag'])assert.ok(catalog.includes("g('"+mode+"'"),mode);
   for(const act of ['registration-open','registration-close','configure','start','bank-next'])assert.ok(js.includes("'"+act+"'"),act);
   assert.match(js,/sessionStorage\.getItem\('liveverse_admin'\)/);
   assert.doesNotMatch(js,/\/api\/dev-token/);

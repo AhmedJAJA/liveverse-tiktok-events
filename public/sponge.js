@@ -57,30 +57,27 @@
   }
   function stopMusic() { clearInterval(musicTimer); musicTimer = 0; }
 
-  /* ---------- bubbles: three depth layers on one canvas ---------- */
+  /* ---------- bubbles: a few CSS-animated elements ----------
+     The previous full-screen canvas redrew every frame on the main thread (measured ~60% CPU on a
+     throttled phone). These bubbles only animate transform/opacity, which the compositor handles. */
   function bubbles(host = document.body) {
     if (host.querySelector(':scope > .sp-bubbles')) return;
-    const canvas = document.createElement('canvas'); canvas.className = 'sp-bubbles'; canvas.setAttribute('aria-hidden', 'true');
-    host.prepend(canvas);
-    const g = canvas.getContext('2d'); let w = 0, h = 0, list = [], raf = 0;
-    const resize = () => { const r = Math.min(2, devicePixelRatio || 1); w = canvas.width = innerWidth * r; h = canvas.height = innerHeight * r; const n = Math.round(Math.min(70, innerWidth / 22)); list = Array.from({ length: n }, () => spawn(true)); };
-    const spawn = (anywhere) => { const depth = Math.random(); return { x: Math.random() * w, y: anywhere ? Math.random() * h : h + 30, r: (2 + depth * 9) * (w / innerWidth), s: (.25 + depth * .9) * (w / innerWidth), d: depth, p: Math.random() * 6.28 }; };
-    const frame = () => {
-      g.clearRect(0, 0, w, h);
-      for (const b of list) {
-        b.y -= b.s; b.p += .02; const x = b.x + Math.sin(b.p) * 6 * b.d;
-        if (b.y < -20) Object.assign(b, spawn(false));
-        g.beginPath(); g.arc(x, b.y, b.r, 0, 6.283);
-        g.strokeStyle = `rgba(150,235,255,${.18 + b.d * .35})`; g.lineWidth = 1 + b.d; g.stroke();
-        g.beginPath(); g.arc(x - b.r * .35, b.y - b.r * .35, b.r * .28, 0, 6.283); g.fillStyle = `rgba(255,255,255,${.12 + b.d * .3})`; g.fill();
-      }
-      raf = requestAnimationFrame(frame);
-    };
-    const run = () => { cancelAnimationFrame(raf); if (fxOff || reduced() || document.hidden) { g.clearRect(0, 0, w, h); return; } frame(); };
-    addEventListener('resize', () => { resize(); run(); }); document.addEventListener('visibilitychange', run);
-    resize(); run();
-    window.SpongeFx._rerun = run;
+    const box = document.createElement('div'); box.className = 'sp-bubbles'; box.setAttribute('aria-hidden', 'true');
+    const n = innerWidth < 700 ? 9 : 16;
+    for (let i = 0; i < n; i++) {
+      const b = document.createElement('i'), depth = (i * 37 % 10) / 10;
+      b.style.setProperty('--x', ((i * 61) % 100) + '%');
+      b.style.setProperty('--s', (8 + depth * 22).toFixed(0) + 'px');
+      b.style.setProperty('--t', (14 + (1 - depth) * 16).toFixed(1) + 's');
+      b.style.setProperty('--d', (-(i * 2.3) % 26).toFixed(1) + 's');
+      b.style.setProperty('--o', (.25 + depth * .45).toFixed(2));
+      box.append(b);
+    }
+    host.prepend(box);
   }
+  // Nothing animates while the tab is hidden.
+  const onVis = () => root.classList.toggle('is-hidden', document.hidden);
+  document.addEventListener('visibilitychange', onVis); onVis();
 
   /** A short burst of bubbles around an element (player joined / won). */
   function burst(el, count = 12) {
@@ -97,6 +94,6 @@
     startMusic, stopMusic, bubbles, burst,
     get muted() { return muted; }, get effectsOff() { return fxOff; },
     setMuted(v) { muted = !!v; store.set('sponge_mute', muted ? '1' : '0'); if (muted) stopMusic(); },
-    setEffects(on) { fxOff = !on; store.set('sponge_fx', fxOff ? '0' : '1'); applyFx(); window.SpongeFx._rerun?.(); }
+    setEffects(on) { fxOff = !on; store.set('sponge_fx', fxOff ? '0' : '1'); applyFx(); }
   };
 })();

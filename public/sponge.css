@@ -20,10 +20,18 @@
   --font-ar:"Tajawal","Royal Latin",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 html{background:var(--sp-deep)}
-body{background:var(--sp-sea) fixed,var(--sp-deep)!important}
-body::after{content:"";position:fixed;inset:auto 0 0;height:min(26vh,240px);z-index:-1;pointer-events:none;background:url(/seafloor.svg) bottom center/cover no-repeat;opacity:.85}
-.sp-bubbles{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+/* The sea is painted once on fixed layers (no background-attachment:fixed repaints while scrolling). */
+body{background:transparent!important}
+html::before{content:"";position:fixed;inset:0;z-index:-3;background:var(--sp-sea);pointer-events:none}
+body::after{content:"";position:fixed;inset:auto 0 0;height:min(26vh,240px);z-index:-2;pointer-events:none;background:url(/seafloor.svg) bottom center/cover no-repeat;opacity:.85}
+.sp-bubbles{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;contain:strict}
+.sp-bubbles i{position:absolute;bottom:-40px;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;opacity:var(--o);
+  border:1.5px solid rgba(160,235,255,.75);background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.55) 0 18%,transparent 22%);
+  will-change:transform;animation:sp-rise var(--t) linear var(--d) infinite}
+@keyframes sp-rise{to{transform:translate3d(14px,-115vh,0)}}
 html.fx-off .sp-bubbles{display:none}
+/* hidden tab = nothing runs */
+html.is-hidden *,html.is-hidden *::before,html.is-hidden *::after{animation-play-state:paused!important}
 
 /* brand mark */
 .sp-brand{display:inline-flex;align-items:center;gap:10px;color:var(--sp-foam);text-decoration:none;font:900 18px/1 var(--font-latin);letter-spacing:.16em;text-shadow:0 0 14px rgba(56,212,255,.65)}

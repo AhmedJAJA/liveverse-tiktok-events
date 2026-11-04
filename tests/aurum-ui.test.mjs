@@ -6,7 +6,8 @@ const server = fs.readFileSync(new URL('../server.mjs', import.meta.url), 'utf8'
 
 test('Aurum UI assets are whitelisted and loaded by every page, including the OBS screen', () => {
   for (const asset of ['aurum.css', 'aurum.js', 'royal-luxe.css', 'royal-arena.css']) assert.ok(server.includes("'" + asset + "'"), asset);
-  for (const page of ['landing.html', 'event.html', 'index.html', 'bomb.html', 'overlay.html']) {
+  // the entry page (home.html) deliberately loads no effect library — it must stay fast on mid-range phones
+  for (const page of ['event.html', 'index.html', 'bomb.html', 'overlay.html']) {
     assert.match(pub(page), /href="\/aurum\.css"/, page);
     assert.match(pub(page), /src="\/aurum\.js"/, page);
   }
@@ -40,13 +41,13 @@ test('registration screen keeps every id overlay.js writes and adds tiered parti
   assert.match(arena, /max-aspect-ratio:4\/5/);
 });
 
-test('landing uses the SVG icon set instead of emoji glyphs', () => {
-  const home = pub('landing.html'), icons = pub('icons.svg');
+test('pages use the SVG icon set instead of emoji glyphs', () => {
+  const home = pub('studio.html'), icons = pub('icons.svg');
   assert.doesNotMatch(home, /🔥|🎁|>♪<|>✦<|>‹</);
   for (const id of ['i-flame', 'i-gift', 'i-note', 'i-laurel', 'i-star', 'i-chevron']) {
     assert.match(icons, new RegExp('id="' + id + '"'), id);
   }
-  assert.match(home, /data-au-tip=/);
+  assert.match(pub('index.html'), /data-au-tip=/);
 });
 
 test('Aurum follows the original Aceternity parameters', () => {

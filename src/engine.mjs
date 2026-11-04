@@ -51,7 +51,8 @@ export function safeUserName(raw) {
   return safeLine(raw, 32) || 'مشاهد';
 }
 export class Engine {
-  constructor({ now = () => Date.now(), random = randomInt, notify = () => {} } = {}) {
+  constructor({ now = () => Date.now(), random = randomInt, notify = () => {}, lazy = false } = {}) {
+    this.lazy = lazy; // lazy: notify() only signals a change; the owner builds one snapshot per broadcast tick
     this.now = now;
     this.random = random;
     this.notify = notify;
@@ -93,7 +94,7 @@ export class Engine {
     }
     this.emit();
   }
-  emit() { this.notify(this.snapshot()); }
+  emit() { if (this.lazy) this.notify(); else this.notify(this.snapshot()); }
   snapshot() {
     const players = [...this.players.values()].sort((a, b) => b.score - a.score || (a.correctRounds && b.correctRounds ? a.totalResponseMs / a.correctRounds - b.totalResponseMs / b.correctRounds : 0) || a.firstSeen - b.firstSeen).slice(0, 20).map(({ id, name, score, avatar, correctRounds = 0, totalResponseMs = 0 }) => ({ id, name, score, ...(avatar ? { avatar } : {}), correctRounds, avgMs: correctRounds ? Math.round(totalResponseMs / correctRounds) : null }));
     const race = [...this.raceProgress.entries()].map(([id, progress]) => ({ id, name: this.players.get(id)?.name || id, progress }))

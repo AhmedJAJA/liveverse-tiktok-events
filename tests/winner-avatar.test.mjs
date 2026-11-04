@@ -78,19 +78,16 @@ test('winning wheel or race preserves the contestant avatar in winner announceme
 });
 
 test('all pages implement smart image loading, skeleton shimmer and luxury fallback UI without raw Image unavailable text',()=>{
-  const files=['landing.html','landing.js','index.html','app.js','overlay.html','overlay.js','royal-core.css'];
+  const files=['home.html','home.js','studio.html','studio.js','index.html','app.js','overlay.html','overlay.js','royal-core.css'];
   for(const f of files){
     const content=fs.readFileSync(new URL('../public/'+f,import.meta.url),'utf8');
     assert.doesNotMatch(content,/Image unavailable\./i);
   }
-  const landingHtml=fs.readFileSync(new URL('../public/landing.html',import.meta.url),'utf8');
-  const landingJs=fs.readFileSync(new URL('../public/landing.js',import.meta.url),'utf8');
   const appJs=fs.readFileSync(new URL('../public/app.js',import.meta.url),'utf8');
   const overlayJs=fs.readFileSync(new URL('../public/overlay.js',import.meta.url),'utf8');
   const themeCss=fs.readFileSync(new URL('../public/royal-core.css',import.meta.url),'utf8');
-  assert.match(landingHtml,/الصورة غير متاحة حاليًا/);
-  assert.match(landingHtml,/img-fallback-card/);
-  assert.match(landingJs,/initSmartImages/);
+  const studioJs=fs.readFileSync(new URL('../public/studio.js',import.meta.url),'utf8');
+  assert.match(studioJs,/img\.addEventListener\('error', \(\) => img\.remove\(\)/); // a broken avatar falls back to the initial
   assert.match(appJs,/createAvatarFallbackSvg/);
   assert.match(appJs,/replaceBrokenImageWithSvg/);
   assert.match(appJs,/window\.addEventListener\('error'/);

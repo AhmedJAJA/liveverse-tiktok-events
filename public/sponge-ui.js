@@ -6,14 +6,20 @@
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   function ready(fn) { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn); else fn(); }
   ready(() => {
-    if (!document.body.classList.contains('no-bubbles')) fx()?.bubbles(document.body);
+    if (!document.body.classList.contains('no-bubbles') && !reduced()) fx()?.bubbles(document.body);
 
     // 3D tilt follows the pointer on any .sp-tilt element (cards, game tiles).
+    let tiltFrame = 0, tiltEvent = null;
     document.addEventListener('pointermove', (e) => {
-      const el = e.target.closest?.('.sp-tilt'); if (!el || reduced() || fx()?.effectsOff) return;
-      const r = el.getBoundingClientRect();
-      el.style.setProperty('--ry', ((e.clientX - r.left) / r.width - .5) * 14 + 'deg');
-      el.style.setProperty('--rx', (.5 - (e.clientY - r.top) / r.height) * 12 + 'deg');
+      if (e.pointerType !== 'mouse') return; // touch screens skip the tilt entirely
+      tiltEvent = e; if (tiltFrame) return;
+      tiltFrame = requestAnimationFrame(() => {
+        tiltFrame = 0; const ev = tiltEvent;
+        const el = ev.target.closest?.('.sp-tilt'); if (!el || reduced() || fx()?.effectsOff) return;
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--ry', ((ev.clientX - r.left) / r.width - .5) * 14 + 'deg');
+        el.style.setProperty('--rx', (.5 - (ev.clientY - r.top) / r.height) * 12 + 'deg');
+      });
     }, { passive: true });
     document.addEventListener('pointerout', (e) => { const el = e.target.closest?.('.sp-tilt'); if (el && !el.contains(e.relatedTarget)) { el.style.removeProperty('--rx'); el.style.removeProperty('--ry'); } });
 

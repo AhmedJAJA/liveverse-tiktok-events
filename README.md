@@ -14,6 +14,32 @@ SKY LIVE is an Arabic interactive livestream events website with a public homepa
 - Automatic WebSocket updates, reconnect attempts and basic tests.
 - RTL / mobile-friendly dashboard with English technical labels.
 
+## v1.1 — performance, promo-code entry, new studio
+
+**What was slow, and what changed (measured locally, Chrome, before → after):**
+
+| | before | after |
+|---|---|---|
+| Chat flood (1,000 joins + 6,000 answers) — messages each screen receives | 8,005 (146 MB) | 31 (0.5 MB) |
+| Server time for the same flood | 10.1 s | 3.6 s |
+| Phone (4× CPU slowdown) — idle CPU on the home page | 90 % | 0.8 % |
+| Phone — idle CPU in the studio | 58 % | 0.4 % |
+| Phone — long tasks while loading the home page | 11.9 s | 0.16 s |
+| Home page transfer | 982 KB / 38 requests | 220 KB / 20 requests |
+
+Root causes found: every chat message rebuilt and sent the full game state to every screen; a full-screen bubble canvas redrew every frame; the old home page ran several effect libraries and opened a WebSocket; static files had no compression or caching.
+Fixes: one batched broadcast per room every 120 ms (`SKY_BROADCAST_MS`), serialised once for all screens; CSS-only bubbles (transform/opacity) that pause in background tabs; gzip + ETag + content-hashed `?v=` links so CSS/JS are cached for a year yet every deploy shows immediately; a minimal entry page; small srcset card images; one WebSocket per page, closed on leave.
+
+**Promo-code entry.** `/` is now a single window: «الدخول باستخدام الرمز الترويجي». The code is checked on the server (`POST /api/access/redeem`, rate-limited per IP and globally), which sets an HttpOnly session cookie (30 days, persisted in `SKY_DATA_DIR/sessions.json`, keys stored hashed). `/studio`, `/dashboard`, `/event`, `/bomb` and `/play` redirect to `/` without a session; `/overlay` and `/role` stay public for viewers.
+- Codes are stored as salted SHA-256 hashes in `SKY_DATA_DIR/promo-codes.json`; the plain code is shown once when created.
+- The owner signs in by typing the `ADMIN_TOKEN` in the same field, then manages codes in the studio drawer («الرموز»): uses limit (0 = unlimited), expiry date, on/off, level (`live` = may connect a stream, `demo` = demo players only). Disabling or deleting a code ends its sessions.
+- `SPONGE_PROMO_CODES=CODE1,CODE2` (environment) seeds unlimited live codes at start — use this on Render's free plan, whose disk is wiped on every deploy.
+- Account sign-up and guest rooms are off unless `SKY_OPEN_SIGNUP=1`.
+
+**Studio (`/studio`).** Game list on the side, the selected game in the middle, and a drawer with tabs (الجولة / اللاعبون / الإعدادات / الرموز) showing only the current game's settings. TikTok/Kick connection and its status sit in the top bar. The previous full control panel remains at `/dashboard`.
+
+**Render cold starts.** On the free plan the service sleeps after ~15 minutes without traffic, and the first visit then waits for it to boot. That is a hosting limit, not something the code can remove; a paid instance (or an external uptime ping to `/health`) avoids it.
+
 ## v1.0 — SPONGE LIVE
 
 Ocean / Bikini-Bottom-at-night identity: deep navy backgrounds, rising bubbles at three depths (`public/sponge.js`), sea-floor silhouettes, neon-cyan card frames and a sponge-yellow primary action (`public/sponge.css`, loaded last on every page). The brand mark is `public/sponge-mark.svg`. Viewers can switch off sound and effects (they are remembered per browser); OBS can use `/overlay?mute=1` or `?fx=0`.

@@ -5,17 +5,17 @@ import fs from 'node:fs';
 const file = path => fs.readFileSync(new URL('../public/'+path, import.meta.url), 'utf8');
 const home=file('index.html');
 const overlay=file('overlay.html');
-const landing=file('landing.html');
+const landing=file('home.html');
 const core=file('royal-core.css');
 const studio=file('royal-studio.css');
 const broadcast=file('royal-broadcast.css');
-const landingCss=file('royal-landing.css');
+const landingCss=file('home.css');
 const sprite=file('icons.svg');
 const script=file('app.js');
 const overlayJs=file('overlay.js');
 
 test('every page loads the shared royal core before its own surface stylesheet',()=>{
-  for(const [html,surface] of [[home,'royal-studio.css'],[overlay,'royal-broadcast.css'],[landing,'royal-landing.css']]) {
+  for(const [html,surface] of [[home,'royal-studio.css'],[overlay,'royal-broadcast.css']]) {
     const coreAt=html.indexOf('href="/royal-core.css"'), surfaceAt=html.indexOf('href="/'+surface+'"');
     assert.ok(coreAt>0,'core missing');
     assert.ok(surfaceAt>coreAt,surface+' must load after core');
@@ -33,7 +33,7 @@ test('design tokens define the royal black and gold palette in one place',()=>{
 test('surface styles cover the presenter, controls, broadcast views and landing',()=>{
   for(const selector of ['.presenter-toolbar','.presenter-actions','.presenter-stage','.presenter-footer','.settings-dialog','.modes','.leaderboard']) assert.ok(studio.includes(selector),selector);
   for(const selector of ['.question-card','.choice','.signup-spotlight','.signup-member-grid','.results-screen','.podium-card','.winner-banner','.round-start-countdown','.clock-face']) assert.ok(broadcast.includes(selector),selector);
-  for(const selector of ['.site-header','.hero','.games-grid','.cta-card']) assert.ok(landingCss.includes(selector),selector);
+  for(const selector of ['.hm-card','.hm-enter','.hm-cards','.hm-error','.hm-logo']) assert.ok(landingCss.includes(selector),selector);
 });
 test('presenter controls remain connected and live stats contain no fake data',()=>{
   for(const id of ['presenterRegistration','presenterSettings','presenterNext','presenterStop','presenterFullscreen','presenterStart','presenterAudienceCount','presenterQuestionNumber'])
@@ -75,7 +75,7 @@ test('original own branding used, no impersonation or external third-party sourc
   for(const content of [core,studio,broadcast,landingCss]) assert.doesNotMatch(content,/@import|https?:\/\//);
 });
 test('every element id is unique on each page (duplicate ids break getElementById lookups)',()=>{
-  for(const [name,html] of [['index.html',home],['overlay.html',overlay],['landing.html',landing]]){
+  for(const [name,html] of [['index.html',home],['overlay.html',overlay],['home.html',landing]]){
     const ids=[...html.matchAll(/\sid="([^"]+)"/g)].map(m=>m[1]);
     const dupes=ids.filter((id,i)=>ids.indexOf(id)!==i);
     assert.deepEqual(dupes,[],name);
