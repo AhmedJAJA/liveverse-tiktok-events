@@ -8,6 +8,11 @@
   if (!body) return;
   const broadcast = body.classList.contains('broadcast');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  // Performance mode (dashboard toggle, or ?perf=1 on the OBS screen) switches the heavy layers off.
+  try { if (localStorage.getItem('sky_perf') === '1') d.documentElement.classList.add('au-perf'); } catch { /* storage blocked */ }
+  const perf = () => d.documentElement.classList.contains('au-perf');
+  const runners = new Set();
+  new MutationObserver(() => { for (const run of runners) run(); }).observe(d.documentElement, { attributes: true, attributeFilter: ['class'] });
   const fine = matchMedia('(hover: hover) and (pointer: fine)');
   const supportsPath = typeof CSS !== 'undefined' && CSS.supports?.('offset-path', 'path("M0 0H1")');
 
@@ -133,7 +138,7 @@
   const GOLDS = ['255,246,216', '241,213,140', '230,196,99', '212,175,55', '255,255,255'];
   let burstCanvas = null, burstCtx = null, burstParts = [], burstRaf = 0;
   function burst(target, opts = {}) {
-    if (reduce.matches) return;
+    if (reduce.matches || perf()) return;
     const rect = target?.getBoundingClientRect ? target.getBoundingClientRect() : null;
     const cx = opts.x ?? (rect ? rect.left + rect.width / 2 : innerWidth / 2);
     const cy = opts.y ?? (rect ? rect.top + rect.height / 2 : innerHeight / 2);
@@ -189,7 +194,8 @@
       }
     };
     const loop = () => { draw(true); raf = requestAnimationFrame(loop); };
-    const run = () => { cancelAnimationFrame(raf); raf = 0; if (on && !d.hidden && !reduce.matches) raf = requestAnimationFrame(loop); else draw(false); };
+    const run = () => { cancelAnimationFrame(raf); raf = 0; if (on && !d.hidden && !reduce.matches && !perf()) raf = requestAnimationFrame(loop); else draw(false); };
+    runners.add(run);
     new ResizeObserver(() => { size(); draw(false); }).observe(wrap);
     if (visibility) new IntersectionObserver(([e]) => { on = e.isIntersecting; run(); }).observe(host);
     d.addEventListener('visibilitychange', run);

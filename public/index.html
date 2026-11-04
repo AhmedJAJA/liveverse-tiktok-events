@@ -1,34 +1,80 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#08090B"><meta name="description" content="منصة فعاليات البث المباشر - تفاعل مع جمهور TikTok LIVE عبر الألعاب والأسئلة والتحديات."><meta property="og:title" content="SKY LIVE — استوديو الفعاليات"><meta property="og:description" content="منصة فعاليات البث المباشر - تفاعل مع جمهور TikTok LIVE عبر الألعاب والأسئلة والتحديات."><meta property="og:image" content="/sky-live.webp"><title>SKY LIVE — استوديو الفعاليات</title><link rel="icon" href="/sky-live-mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/royal-core.css"><link rel="stylesheet" href="/royal-studio.css"><link rel="stylesheet" href="/royal-luxe.css"><link rel="stylesheet" href="/aurum.css"><script defer src="/aurum.js"></script></head>
-<body class="presenter">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#08090B"><meta name="description" content="منصة فعاليات البث المباشر - تفاعل مع جمهور TikTok LIVE عبر الألعاب والأسئلة والتحديات."><meta property="og:title" content="SKY LIVE — لوحة الستريمر"><meta property="og:description" content="منصة فعاليات البث المباشر - تفاعل مع جمهور TikTok LIVE عبر الألعاب والأسئلة والتحديات."><meta property="og:image" content="/sky-live.webp"><title>SKY LIVE — لوحة الستريمر</title><link rel="icon" href="/sky-live-mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/royal-core.css"><link rel="stylesheet" href="/royal-studio.css"><link rel="stylesheet" href="/royal-luxe.css"><link rel="stylesheet" href="/aurum.css"><link rel="stylesheet" href="/royal-dash.css"><link rel="stylesheet" href="/account.css"><script defer src="/session.js"></script><script defer src="/mascot.js"></script><script defer src="/account.js"></script><script defer src="/aurum.js"></script></head>
+<body class="presenter" data-layout="panels" data-tab="stage">
 <header class="presenter-toolbar">
-  <a class="presenter-brand" href="/" aria-label="SKY LIVE — الصفحة الرئيسية"><img class="sky-studio-mark" src="/sky-live-mark.svg" alt="" width="40" height="40" decoding="async"><span class="brand-words"><strong dir="ltr">SKY LIVE</strong><small class="caps">Studio</small></span></a>
+  <a class="presenter-brand" href="/" aria-label="SKY LIVE — الصفحة الرئيسية" data-au-tip="العودة للرئيسية"><img class="sky-studio-mark" src="/sky-live-mark.svg" alt="" width="40" height="40" decoding="async"><span class="brand-words"><strong dir="ltr">SKY LIVE</strong><small class="caps">Studio</small></span></a>
   <div class="presenter-cluster" aria-label="حالة الفعالية">
     <span id="networkBadge" class="pill"><span class="status-dot"></span>وضع المعاينة</span>
     <span class="presenter-info-chip" aria-label="عدد المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b id="presenterAudienceCount" class="num">0</b><span>متسابق</span></span>
-    <span class="presenter-round-chip" aria-label="رقم السؤال"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-target"/></svg><span>السؤال</span><b id="presenterQuestionNumber" class="num">0</b></span>
+    <span class="presenter-round-chip" aria-label="رقم السؤال"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-target"/></svg><span>الجولة</span><b id="presenterQuestionNumber" class="num">0</b></span>
     <span class="presenter-keyword"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chat"/></svg><span>اكتب</span><b id="presenterKeyword">انضم</b></span>
   </div>
   <nav class="presenter-actions" aria-label="التحكم بالفعالية">
     <button type="button" id="presenterRegistration" class="deck-btn" data-tooltip="فتح أو إغلاق تسجيل المتسابقين من الشات"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-user-plus"/></svg></span><span id="presenterRegistrationLabel">فتح التسجيل</span></button>
     <button type="button" id="presenterNext" class="deck-btn" data-tooltip="سحب سؤال عشوائي جديد وبدء الجولة فورًا"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-next"/></svg></span><span>السؤال التالي</span></button>
     <button type="button" id="presenterStop" class="deck-btn end-round" data-tooltip="إيقاف الجولة الحالية وإظهار النتائج"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-stop"/></svg></span><span>إنهاء الجولة</span></button>
-    <button type="button" id="presenterSettings" class="deck-btn" data-tooltip="لوحة التحكم الكاملة ومعرض الألعاب"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-gear"/></svg></span><span>الإعدادات</span></button>
-    <button type="button" id="presenterFullscreen" class="deck-btn icon-only" aria-label="ملء الشاشة" data-tooltip="تبديل وضع ملء الشاشة"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-expand"/></svg></span></button>
+    <button type="button" id="presenterSettings" class="deck-btn" data-tooltip="معرض الألعاب وغرفة التحكم الكاملة"><span class="crest crest-sm" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-games"/></svg></span><span>الألعاب</span></button>
   </nav>
-</header>
-<main class="presenter-stage">
-  <div class="monitor">
-    <div class="monitor-label"><span class="live-dot on"></span><span class="caps">Program</span><span class="monitor-note">معاينة شاشة المشاهدين</span></div>
-    <div class="monitor-screen ticks"><iframe id="broadcastFrame" src="/overlay?embedded=1" title="شاشة البث المباشر" allow="fullscreen"></iframe></div>
+  <div class="dash-tools" role="toolbar" aria-label="أدوات اللوحة">
+    <a class="tool-btn" href="/" data-tooltip="العودة للرئيسية" aria-label="العودة للرئيسية"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-home"/></svg></a>
+    <button type="button" class="tool-btn" id="toolSeason" data-tooltip="الموسم والمكافآت" aria-label="الموسم والمكافآت"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-laurel"/></svg></button>
+    <button type="button" class="tool-btn" id="toolCharacter" data-tooltip="تخصيص الشخصية" aria-label="تخصيص الشخصية"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg></button>
+    <button type="button" class="tool-btn" id="toolUpdates" data-tooltip="التحديثات" aria-label="التحديثات"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-megaphone"/></svg></button>
+    <div class="layout-switch" role="radiogroup" aria-label="وضع العرض">
+      <button type="button" role="radio" data-layout="panels" aria-checked="true" data-tooltip="لوحات ثابتة"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-layout"/></svg><span>لوحات</span></button>
+      <button type="button" role="radio" data-layout="stage" aria-checked="false" data-tooltip="مسرح: اللعبة كبيرة والأدوات عائمة"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-expand"/></svg><span>مسرح</span></button>
+      <button type="button" role="radio" data-layout="cockpit" aria-checked="false" data-tooltip="قمرة: اللعبة والتحكم في مساحة واحدة"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gauge"/></svg><span>قمرة</span></button>
+    </div>
+    <button type="button" id="presenterFullscreen" class="tool-btn icon-only" aria-label="ملء الشاشة" data-tooltip="ملء الشاشة"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-expand"/></svg></button>
+    <button type="button" class="tool-btn" id="toolSound" aria-pressed="false" data-tooltip="الصوت" aria-label="الصوت"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-volume-off"/></svg></button>
+    <button type="button" class="tool-btn" id="toolPerf" aria-pressed="false" data-tooltip="وضع الأداء: إيقاف المؤثرات الثقيلة" aria-label="وضع الأداء"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-bolt"/></svg></button>
+    <button type="button" class="tool-btn tool-account" id="toolAccount" data-tooltip="الحساب"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user"/></svg><span id="toolAccountName">دخول</span></button>
   </div>
+</header>
+<section class="connect-bar" aria-label="ربط البث">
+  <div class="platform-switch" role="radiogroup" aria-label="المنصة">
+    <button type="button" role="radio" data-platform="tiktok" aria-checked="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-note"/></svg><span>TikTok</span></button>
+    <button type="button" role="radio" data-platform="kick" aria-checked="false"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-kick"/></svg><span>Kick</span><small>تجريبي</small></button>
+  </div>
+  <label class="cb-input"><span class="sr-only">معرّف الحساب</span><span aria-hidden="true" dir="ltr">@</span><input id="connectHandle" dir="ltr" maxlength="30" autocomplete="off" spellcheck="false" placeholder="اسم الحساب"></label>
+  <label class="cb-input cb-room" id="kickRoomWrap" hidden><span class="sr-only">رقم غرفة شات Kick (اختياري)</span><input id="kickChatroom" dir="ltr" inputmode="numeric" maxlength="12" placeholder="رقم غرفة الشات (اختياري)"></label>
+  <button type="button" class="btn btn-gold cb-btn" id="barConnect"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-plug"/></svg>اتصال</button>
+  <button type="button" class="btn btn-line cb-btn" id="barDisconnect">فصل</button>
+  <span class="pill cb-status" id="barStatus" role="status"><span class="status-dot"></span><span id="barStatusText">غير متصل</span></span>
+  <span class="cb-sep" aria-hidden="true"></span>
+  <button type="button" class="btn btn-line cb-btn" id="barDemo" data-tooltip="يضيف لاعبين تجريبيين يلعبون تلقائيًا"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-robot"/></svg>تجربة بلا بث</button>
+  <button type="button" class="btn btn-line cb-btn" id="barAdvance" data-tooltip="تقديم المؤقت إلى نهايته (للتجربة)"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-forward"/></svg>تقديم الوقت</button>
+  <p class="cb-note" id="barNote"></p>
+</section>
+<main class="presenter-stage">
+  <aside class="dash-panel players-panel" id="playersPanel" aria-labelledby="playersTitle">
+    <header class="dp-head"><h2 id="playersTitle"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg>اللاعبون <b class="num" id="playersCount">0</b></h2><button type="button" class="dp-action" id="openManage"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg>إدارة</button></header>
+    <div class="dp-list" id="playersList"><p class="dp-empty">لا يوجد لاعبون بعد — افتح التسجيل أو جرّب بلاعبين تجريبيين</p></div>
+  </aside>
+  <div class="monitor">
+    <div class="monitor-label"><span class="live-dot on"></span><span class="caps">Program</span><span class="monitor-note">معاينة شاشة المشاهدين</span><span class="monitor-viewers" id="monitorViewers"></span></div>
+    <div class="monitor-screen ticks"><iframe id="broadcastFrame" src="about:blank" title="شاشة البث المباشر" allow="fullscreen"></iframe>
+      <div class="monitor-waiting" id="monitorWaiting" hidden><img src="/covers/quiz.svg" alt="" width="120" height="120" id="waitingCover"><strong id="waitingTitle">اختر لعبة للبدء</strong><span id="waitingText">افتح معرض الألعاب، ثم افتح التسجيل ليدخل جمهورك.</span><button type="button" class="btn btn-gold" id="waitingOpen"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-games"/></svg>معرض الألعاب</button></div>
+    </div>
+  </div>
+  <aside class="dash-panel board-panel" id="boardPanel" aria-labelledby="boardTitle">
+    <header class="dp-head"><h2 id="boardTitle"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-trophy"/></svg>المتصدرون</h2><button type="button" class="dp-action" id="resetTotal"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg>إعادة الضبط</button></header>
+    <div class="dp-podium" id="boardPodium"></div>
+    <div class="dp-list" id="boardList"></div>
+  </aside>
 </main>
 <footer class="presenter-footer" id="presenterFooter">
   <button type="button" id="presenterStart" class="presenter-start btn btn-gold btn-big"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span id="presenterStartLabel">بدء اللعبة</span></button>
   <span id="presenterStatus">افتح التسجيل لاستقبال المشاركين</span>
-  <a href="/overlay" target="_blank" rel="noopener" class="presenter-output btn btn-line"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg>شاشة المشاهدين</a>
+  <a href="/overlay" target="_blank" rel="noopener" class="presenter-output btn btn-line" id="presenterOutput"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg>شاشة المشاهدين</a>
 </footer>
+<nav class="dash-tabs" aria-label="أقسام اللوحة">
+  <button type="button" data-tab="stage" aria-current="true"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg><span>الملعب</span></button>
+  <button type="button" data-tab="players"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><span>اللاعبون</span></button>
+  <button type="button" data-tab="board"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-trophy"/></svg><span>المتصدرون</span></button>
+  <button type="button" data-tab="control"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>التحكم</span></button>
+</nav>
 
 <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle">
   <header class="settings-header">
@@ -44,38 +90,110 @@
  </section>
  <div class="dashboard-grid" id="studio">
  <section class="panel main-panel">
+  <section class="catalog-intro" aria-label="الموسم والاشتراك وأبطال الجلسة">
+   <div class="ci-card ci-season"><small>الموسم</small><strong id="ciSeason">موسم الأبطال 1</strong>
+    <div class="ci-level"><span id="ciLevel">المستوى 1</span><div class="ci-bar" role="progressbar" aria-label="تقدم المستوى" aria-valuemin="0" aria-valuemax="100" id="ciBar"><i id="ciLevelFill"></i></div><small id="ciLevelText">0 / 100 نقطة</small></div></div>
+   <div class="ci-card ci-plan"><small>الاشتراك</small><strong id="ciPlan">—</strong><span id="ciPlanNote"></span></div>
+   <div class="ci-card ci-podium" aria-label="أفضل ثلاثة لاعبين"><small>أفضل ثلاثة</small><div class="ci-podium-row" id="ciPodium"></div></div>
+  </section>
   <div class="section-heading"><div><span class="eyebrow">معرض الفعاليات</span><h2>اختر فعالية البث</h2><p>اختر اللعبة، اضبط إعداداتها، ثم ابدأ الجولة.</p></div></div>
   <div class="modes" id="modes">
-   <button type="button" class="mode is-selected" data-mode="quiz" aria-pressed="true">
-     <span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-target"/></svg></span>
-     <span class="mode-copy"><span class="mode-tag-pill">ذكاء وسرعة</span><strong>تحدي الأسئلة</strong><span class="mode-desc">أربعة خيارات ومؤقت تنازلي — الأسرع يتصدر</span></span>
+   <div class="mode-card">
+    <button type="button" class="mode is-selected" data-mode="quiz" aria-pressed="true">
+     <img class="mode-cover" src="/covers/quiz.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>تحدي المعلومات</strong><span class="mode-desc">أربعة خيارات ومؤقت تنازلي — الأسرع يتصدر</span></span>
      <small class="mode-cta">الفعالية المحددة</small>
-   </button>
-   <button type="button" class="mode" data-mode="guess" aria-pressed="false">
-     <span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-bolt"/></svg></span>
-     <span class="mode-copy"><span class="mode-tag-pill">سرعة وبديهة</span><strong>خمّن الكلمة</strong><span class="mode-desc">أول إجابة صحيحة في الشات تخطف الصدارة</span></span>
+    </button>
+    <button type="button" class="mode-help" data-help="quiz" aria-label="قواعد تحدي المعلومات" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="bomb" aria-pressed="false">
+     <img class="mode-cover" src="/covers/bomb.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>القنبلة المؤقتة</strong><span class="mode-desc">مرّر القنبلة قبل الصفر؛ حاملها عند الانفجار يُقصى</span></span>
      <small class="mode-cta">العب الآن ←</small>
-   </button>
-   <button type="button" class="mode" data-mode="race" aria-pressed="false">
-     <span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-flag"/></svg></span>
-     <span class="mode-copy"><span class="mode-tag-pill">حماس جماعي</span><strong>سباق الجمهور</strong><span class="mode-desc">المسجلون يندفعون نحو خط النهاية بأوامر الشات</span></span>
+    </button>
+    <button type="button" class="mode-help" data-help="bomb" aria-label="قواعد القنبلة المؤقتة" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="bowling" aria-pressed="false">
+     <img class="mode-cover" src="/covers/bowling.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الحظ والمخاطرة</span><strong>البولينج</strong><span class="mode-desc">اختر رقمًا من 1 إلى 10 لترمي الكرة — رقم الحظ مخفي</span></span>
      <small class="mode-cta">العب الآن ←</small>
-   </button>
-   <button type="button" class="mode" data-mode="bomb" aria-pressed="false">
-     <span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-bomb"/></svg></span>
-     <span class="mode-copy"><span class="mode-tag-pill">إقصاء جماعي</span><strong>القنبلة المؤقتة</strong><span class="mode-desc">مرّر القنبلة قبل الصفر؛ حاملها عند الانفجار يُقصى</span></span>
+    </button>
+    <button type="button" class="mode-help" data-help="bowling" aria-label="قواعد البولينج" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="glass" aria-pressed="false">
+     <img class="mode-cover" src="/covers/glass.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>الجسر الزجاجي</strong><span class="mode-desc">اختر اللوح الآمن في كل خطوة؛ الخطأ يقصي المتسابق</span></span>
      <small class="mode-cta">العب الآن ←</small>
-   </button>
-   <button type="button" class="mode" data-mode="glass" aria-pressed="false">
-     <span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-games"/></svg></span>
-     <span class="mode-copy"><span class="mode-tag-pill">إقصاء وتحدي</span><strong>الجسر الزجاجي</strong><span class="mode-desc">اختر اللوح الآمن في كل خطوة؛ الخطأ يقصي المتسابق</span></span>
+    </button>
+    <button type="button" class="mode-help" data-help="glass" aria-label="قواعد الجسر الزجاجي" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="guess" aria-pressed="false">
+     <img class="mode-cover" src="/covers/guess.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>خمّن الكلمة</strong><span class="mode-desc">أول إجابة صحيحة في الشات تخطف الصدارة</span></span>
      <small class="mode-cta">العب الآن ←</small>
-   </button>
-   <button type="button" class="mode" data-mode="wheel" aria-pressed="false">
-     <span class="crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-wheel"/></svg></span>
-     <span class="mode-copy"><span class="mode-tag-pill">حظ وسحب</span><strong>عجلة الأسماء</strong><span class="mode-desc">قرعة مباشرة لاختيار الفائز من المسجلين</span></span>
+    </button>
+    <button type="button" class="mode-help" data-help="guess" aria-label="قواعد خمّن الكلمة" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="race" aria-pressed="false">
+     <img class="mode-cover" src="/covers/race.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الجماعية</span><strong>سباق الجمهور</strong><span class="mode-desc">المسجلون يندفعون نحو خط النهاية بأوامر الشات</span></span>
      <small class="mode-cta">العب الآن ←</small>
-   </button>
+    </button>
+    <button type="button" class="mode-help" data-help="race" aria-label="قواعد سباق الجمهور" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="truefalse" aria-pressed="false">
+     <img class="mode-cover" src="/covers/truefalse.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>حقيقة أم كذب</strong><span class="mode-desc">عبارة في كل جولة: صح أم خطأ؟ الأسرع يحصد نقاطًا أكثر</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="truefalse" aria-label="قواعد حقيقة أم كذب" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="higherlower" aria-pressed="false">
+     <img class="mode-cover" src="/covers/higherlower.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>أعلى أم أقل</strong><span class="mode-desc">هل الورقة التالية أعلى أم أقل من الحالية؟</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="higherlower" aria-label="قواعد أعلى أم أقل" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="redlight" aria-pressed="false">
+     <img class="mode-cover" src="/covers/redlight.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>الضوء الأحمر</strong><span class="mode-desc">تقدّم عند الأخضر وتجمّد عند الأحمر — الحركة تُقصيك</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="redlight" aria-label="قواعد الضوء الأحمر" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="wheel" aria-pressed="false">
+     <img class="mode-cover" src="/covers/wheel.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الحظ والمخاطرة</span><strong>عجلة الأسماء</strong><span class="mode-desc">قرعة مباشرة لاختيار الفائز من المسجلين</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="wheel" aria-label="قواعد عجلة الأسماء" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="minority" aria-pressed="false">
+     <img class="mode-cover" src="/covers/minority.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>الأقلية تفوز</strong><span class="mode-desc">خياران — الجهة الأقل عددًا تنجو</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="minority" aria-label="قواعد الأقلية تفوز" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="rps" aria-pressed="false">
+     <img class="mode-cover" src="/covers/rps.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>حجر ورقة مقص</strong><span class="mode-desc">تحدَّ Sky بثلاث حيوات — آخر من يبقى يفوز</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="rps" aria-label="قواعد حجر ورقة مقص" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
   </div>
 
   <section class="registration-studio block" id="registrationPanel" aria-label="تسجيل المشاركين">
@@ -104,7 +222,7 @@
    <label class="field"><span>عنوان الجولة</span><input name="title" id="gameTitle" maxlength="80" value="تحدي المعلومات" required placeholder="عنوان يظهر في شاشة البث"></label>
    <div id="questionWrap"><label class="field"><span>السؤال أو التحدي</span><input name="prompt" id="gamePrompt" maxlength="200" value="ما هي عاصمة المملكة العربية السعودية؟" placeholder="اكتب السؤال هنا"></label></div>
    <div id="optionsWrap" class="options-wrap"><span class="field-caption">الخيارات <small>اكتب الإجابات الأربع</small></span><div class="option-grid"><label><span class="opt-gem g1"><svg aria-hidden="true"><use href="/icons.svg#g-1"/></svg><b>1</b></span><input id="opt1" maxlength="80" value="الرياض" aria-label="الخيار الأول"></label><label><span class="opt-gem g2"><svg aria-hidden="true"><use href="/icons.svg#g-2"/></svg><b>2</b></span><input id="opt2" maxlength="80" value="جدة" aria-label="الخيار الثاني"></label><label><span class="opt-gem g3"><svg aria-hidden="true"><use href="/icons.svg#g-3"/></svg><b>3</b></span><input id="opt3" maxlength="80" value="الدمام" aria-label="الخيار الثالث"></label><label><span class="opt-gem g4"><svg aria-hidden="true"><use href="/icons.svg#g-4"/></svg><b>4</b></span><input id="opt4" maxlength="80" value="مكة" aria-label="الخيار الرابع"></label></div></div>
-   <div class="dual-fields"><label class="field" id="answerWrap"><span id="answerLabel">الإجابة الصحيحة</span><select id="gameAnswer"><option value="1">A — الخيار الأول</option><option value="2">B — الخيار الثاني</option><option value="3">C — الخيار الثالث</option><option value="4">D — الخيار الرابع</option></select></label><label class="field" id="durationWrap"><span>وقت الإجابة</span><select id="gameDuration"><option value="15">15 ثانية</option><option value="20">20 ثانية</option><option value="30" selected>30 ثانية</option><option value="45">45 ثانية</option><option value="60">60 ثانية</option><option value="90">90 ثانية</option><option value="120">120 ثانية</option></select></label><label class="field" id="targetWrap" hidden><span>خط النهاية (عدد الحركات)</span><input type="number" id="gameTarget" min="3" max="100" value="12"></label></div>
+   <div class="dual-fields"><label class="field" id="answerWrap"><span id="answerLabel">الإجابة الصحيحة</span><select id="gameAnswer"><option value="1">A — الخيار الأول</option><option value="2">B — الخيار الثاني</option><option value="3">C — الخيار الثالث</option><option value="4">D — الخيار الرابع</option></select></label><label class="field" id="durationWrap"><span>وقت الإجابة</span><select id="gameDuration"><option value="15">15 ثانية</option><option value="20">20 ثانية</option><option value="30" selected>30 ثانية</option><option value="45">45 ثانية</option><option value="60">60 ثانية</option><option value="90">90 ثانية</option><option value="120">120 ثانية</option></select></label><label class="field" id="targetWrap" hidden><span>خط النهاية (عدد الحركات)</span><input type="number" id="gameTarget" min="3" max="100" value="12"></label><label class="field" id="roundsWrap" hidden><span>عدد الجولات</span><input type="number" id="gameRounds" min="1" max="30" value="8"></label><label class="field" id="roundSecondsWrap" hidden><span>وقت الجولة (ثانية)</span><input type="number" id="gameRoundSeconds" min="4" max="60" value="15"></label></div>
    <div class="form-actions"><button class="button outline" type="submit"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-check"/></svg>حفظ الإعدادات</button><button id="startButton" class="button primary" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg>بدء الجولة</button><button id="stopButton" class="button outline" type="button"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-stop"/></svg>إيقاف</button><button id="drawButton" class="button accent" type="button" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-wheel"/></svg>اختيار الفائز</button></div>
   </form><div class="helper" id="instruction">أول إجابة فقط لكل مشاهد. يمكنك كتابة رقم الاختيار أو نصه.</div></div>
 
@@ -139,6 +257,70 @@
  <section class="panel activity-panel"><div class="section-heading compact"><div><span class="eyebrow">تفاعل الجمهور</span><h2>التعليقات الأخيرة</h2></div><span class="stream-tag"><span class="live-dot on"></span>مباشر</span></div><div id="chatFeed" class="feed"><div class="empty">التعليقات ستظهر هنا عند الاتصال أو المحاكاة.</div></div></section>
  <footer class="footer"><span dir="ltr">SKY LIVE STUDIO <span class="muted">© 2026</span></span><span>منصة ألعاب للبث المباشر • نسخة تجريبية مستقلة عن TikTok</span></footer>
 </main>
+</dialog>
+
+<dialog id="manageDialog" class="dash-dialog" aria-labelledby="manageTitle">
+  <header class="dd-head"><h2 id="manageTitle"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg>إدارة الفعالية</h2><button type="button" class="dialog-close" data-close aria-label="إغلاق"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-close"/></svg></button></header>
+  <div class="dd-tabs" role="tablist" aria-label="أقسام الإدارة">
+    <button type="button" role="tab" id="mgTabPlayers" aria-controls="mgPanelPlayers" aria-selected="true">اللاعبون</button>
+    <button type="button" role="tab" id="mgTabSettings" aria-controls="mgPanelSettings" aria-selected="false" tabindex="-1">الإعدادات</button>
+  </div>
+  <section role="tabpanel" id="mgPanelPlayers" aria-labelledby="mgTabPlayers" class="dd-panel">
+    <div class="dd-row"><button type="button" class="btn btn-gold" id="mgOpen"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg>فتح الانضمام</button><button type="button" class="btn btn-line" id="mgClose">إغلاق الانضمام</button><span class="pill" id="mgPhase">لم يبدأ التسجيل</span></div>
+    <form class="dd-row" id="mgAddForm"><label class="field dd-grow"><span>إضافة لاعب بالاسم</span><input id="mgAddName" maxlength="32" autocomplete="off" placeholder="اسم اللاعب"></label><button type="submit" class="btn btn-line"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg>إضافة</button></form>
+    <fieldset class="dd-fieldset"><legend>دخول المضيف في الألعاب التالية</legend>
+      <label class="dd-radio"><input type="radio" name="hostJoin" value="manual" checked> يدويًا</label>
+      <label class="dd-radio"><input type="radio" name="hostJoin" value="auto"> تلقائيًا عند فتح التسجيل</label>
+      <button type="button" class="btn btn-line" id="mgAddHost">أدخل المضيف الآن</button>
+    </fieldset>
+    <div class="dd-row"><label class="field"><span>لاعبون تجريبيون</span><input type="number" id="mgDemoCount" min="1" max="100" value="8"></label><button type="button" class="btn btn-line" id="mgDemoAdd"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-robot"/></svg>إضافة</button><label class="dd-switch"><input type="checkbox" id="mgAutoplay"> اللعب التلقائي للاعبين التجريبيين</label></div>
+    <div class="dd-players" id="mgPlayers"></div>
+  </section>
+  <section role="tabpanel" id="mgPanelSettings" aria-labelledby="mgTabSettings" class="dd-panel" hidden>
+    <form id="mgSettingsForm" class="dd-grid">
+      <label class="field"><span>كلمة الانضمام</span><input id="mgKeyword" maxlength="32" value="انضم" autocomplete="off"></label>
+      <label class="field"><span>الحد الأقصى للمتسابقين</span><input type="number" id="mgMax" min="1" max="1500" value="1500"></label>
+      <label class="field"><span>من ينضم؟</span><select id="mgAudience"><option value="all">الجميع</option><option value="followers">المتابعون فقط</option><option value="subscribers">المشتركون فقط</option></select></label>
+      <button type="submit" class="btn btn-gold"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-check"/></svg>حفظ الإعدادات</button>
+    </form>
+    <p class="dd-note">المتابعون فقط يعتمد على ما يرسله اتصال TikTok عن كل مشاهد، وKick لا يرسل حالة المتابعة.</p>
+  </section>
+</dialog>
+
+<dialog id="seasonDialog" class="dash-dialog" aria-labelledby="seasonTitle">
+  <header class="dd-head"><h2 id="seasonTitle"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-laurel"/></svg><span id="seasonName">الموسم والمكافآت</span></h2><button type="button" class="dialog-close" data-close aria-label="إغلاق"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-close"/></svg></button></header>
+  <div class="dd-panel">
+    <p class="dd-note">يحصل كل لاعب على شارة حسب نقاطه في الجلسة. الشارات تظهر في لوحة المتصدرين.</p>
+    <ol class="tiers" id="seasonTiers"></ol>
+    <h3 class="dd-sub">أبطال الجلسة</h3>
+    <div class="dd-players" id="seasonPlayers"></div>
+  </div>
+</dialog>
+
+<dialog id="characterDialog" class="dash-dialog" aria-labelledby="characterTitle">
+  <header class="dd-head"><h2 id="characterTitle"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg>تخصيص الشخصية</h2><button type="button" class="dialog-close" data-close aria-label="إغلاق"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-close"/></svg></button></header>
+  <div class="dd-panel character">
+    <div class="char-preview" id="charPreview" aria-hidden="true"></div>
+    <div class="char-options">
+      <fieldset class="dd-fieldset"><legend>لون العينين</legend><div class="swatches" id="charVisor"></div></fieldset>
+      <fieldset class="dd-fieldset"><legend>التاج</legend><div class="swatches" id="charCrown"></div></fieldset>
+      <p class="dd-note">تظهر الشخصية في شاشة البث بجانب عنوان المسابقات.</p>
+      <button type="button" class="btn btn-gold" id="charSave"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-check"/></svg>حفظ الشخصية</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="updatesDialog" class="dash-dialog" aria-labelledby="updatesTitle">
+  <header class="dd-head"><h2 id="updatesTitle"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-megaphone"/></svg>التحديثات</h2><button type="button" class="dialog-close" data-close aria-label="إغلاق"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-close"/></svg></button></header>
+  <div class="dd-panel" id="updatesList"></div>
+</dialog>
+
+<dialog id="helpDialog" class="dash-dialog" aria-labelledby="helpTitle">
+  <header class="dd-head"><h2 id="helpTitle">قواعد اللعبة</h2><button type="button" class="dialog-close" data-close aria-label="إغلاق"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-close"/></svg></button></header>
+  <div class="dd-panel help">
+    <img id="helpCover" src="/covers/quiz.svg" alt="" width="160" height="160">
+    <div><span class="mode-tag-pill" id="helpCategory"></span><p id="helpSummary"></p><ol id="helpRules"></ol><button type="button" class="btn btn-gold" id="helpPlay"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg>اختر هذه اللعبة</button></div>
+  </div>
 </dialog>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script type="module" src="/app.js"></script>

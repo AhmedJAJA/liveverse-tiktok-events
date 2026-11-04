@@ -16,6 +16,9 @@
 <link rel="stylesheet" href="/royal-luxe.css">
 <link rel="stylesheet" href="/aurum.css">
 <link rel="stylesheet" href="/sky-home.css">
+<link rel="stylesheet" href="/account.css">
+<script src="/session.js" defer></script>
+<script src="/account.js" defer></script>
 <script src="/landing.js" defer></script>
 <script src="/aurum.js" defer></script>
 </head>
@@ -48,18 +51,18 @@
  <section class="sh-hero" aria-labelledby="heroTitle">
   <div class="sh-wrap sh-hero-grid">
    <div class="sh-hero-copy">
-    <span class="sh-kicker"><i class="sh-live-dot" aria-hidden="true"></i>يدعم TikTok LIVE</span>
+    <span class="sh-kicker"><i class="sh-live-dot" aria-hidden="true"></i>يدعم <bdi dir="ltr">TikTok</bdi> و <b class="sh-kick" dir="ltr">Kick</b></span>
     <h1 id="heroTitle">حوّل بثّك المباشر<br>إلى <span class="sh-gold">بطولة</span> يلعبها<br>جمهورك من الشات</h1>
     <p class="sh-lead">يكتب المشاهد كلمة الانضمام في التعليقات، فيظهر اسمه وصورته على شاشة البث ويدخل اللعب فورًا — بلا تطبيق يثبّته ولا رابط يفتحه.</p>
     <div class="sh-cta-row">
-     <a class="sh-btn sh-btn-gold" href="/studio"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg>جرّب مجانًا</a>
+     <a class="sh-btn sh-btn-gold" href="/studio" id="heroTry"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg>جرّب مجانًا</a>
      <a class="sh-btn sh-btn-dark" href="#pricing">الأسعار</a>
      <a class="sh-btn sh-btn-dark" href="#games">استعرض الألعاب</a>
     </div>
     <dl class="sh-metrics">
-     <div><dt>لعبة جاهزة للبث</dt><dd class="num" id="heroGameCount">6</dd></div>
+     <div><dt>لعبة جاهزة للبث</dt><dd class="num" id="heroGameCount">12</dd></div>
+     <div><dt>منها ألعاب إقصاء</dt><dd class="num" id="heroElimCount">4</dd></div>
      <div><dt>متسابق في الفعالية</dt><dd><span class="num" id="heroMaxPlayers">1,500</span></dd></div>
-     <div><dt>شاشة OBS</dt><dd class="num" dir="ltr">16:9 · 9:16</dd></div>
     </dl>
    </div>
 
@@ -95,15 +98,21 @@
   <div class="sh-platforms">
    <div class="sh-platforms-head">
     <h2 id="connectTitle">اربط بثك وابدأ التفاعل</h2>
-    <p>المنصة المدعومة حاليًا، والربط من حساب TikTok الخاص بك.</p>
+    <p>اربط حسابك على TikTok أو Kick، وتصل رسائل الشات إلى اللعبة مباشرة.</p>
    </div>
    <article class="sh-platform">
     <span class="sh-platform-logo" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-note"/></svg></span>
     <div><h3>TikTok LIVE</h3><p>التعليقات، والهدايا، والإعجابات، والمتابعة تُقرأ مباشرة من البث.</p></div>
     <span class="sh-support"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-check"/></svg>مدعوم</span>
    </article>
+   <article class="sh-platform sh-platform-kick">
+    <span class="sh-platform-logo is-kick" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-kick"/></svg></span>
+    <div><h3 dir="ltr">Kick</h3><p>رسائل الشات وشارات المشتركين تُقرأ من غرفة الشات العامة. الهدايا (Kicks) غير مدعومة بعد.</p></div>
+    <span class="sh-support is-beta"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-bolt"/></svg>تجريبي</span>
+   </article>
    <form id="liveConnectForm" class="sh-connect" autocomplete="off">
-    <label class="sh-input"><span class="sr-only">اسم حساب TikTok</span><span aria-hidden="true" dir="ltr">@</span><input id="liveUsername" name="username" type="text" maxlength="30" placeholder="اسم قناتك على TikTok" dir="ltr" autocomplete="off" spellcheck="false"></label>
+    <label class="sh-select"><span class="sr-only">المنصة</span><select id="livePlatform"><option value="tiktok">TikTok</option><option value="kick">Kick (تجريبي)</option></select></label>
+    <label class="sh-input"><span class="sr-only">اسم الحساب</span><span aria-hidden="true" dir="ltr">@</span><input id="liveUsername" name="username" type="text" maxlength="30" placeholder="اسم الحساب" dir="ltr" autocomplete="off" spellcheck="false"></label>
     <button type="submit" class="sh-btn sh-btn-gold" id="liveConnectButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-plug"/></svg>اتصل بالبث</button>
     <span class="connection-pill" id="liveConnectionBadge" role="status"><i></i><span id="liveConnectionStatus">غير متصل</span></span>
    </form>
@@ -115,7 +124,7 @@
  <section class="sh-wrap sh-section-tight" id="season" aria-labelledby="seasonTitle">
   <div class="sh-live">
    <header class="sh-live-head">
-    <div><span class="sh-eyebrow"><i class="sh-live-dot" aria-hidden="true"></i>البث الجاري</span><h2 id="seasonTitle">موسم الأبطال على هذا البث</h2></div>
+    <div><span class="sh-eyebrow"><i class="sh-live-dot" aria-hidden="true"></i>البثوث الجارية • الموسم الحالي</span><h2 id="seasonTitle">ألعاب تُلعب الآن على Sky Live</h2></div>
     <p class="sh-live-sum" id="liveSummary">لا يوجد بث متصل الآن</p>
    </header>
    <div class="sh-live-body">
@@ -127,11 +136,11 @@
      </article>
      <article class="sh-live-card" id="liveCard" hidden>
       <img class="sh-live-cover" id="liveCover" src="/covers/quiz.svg" alt="" width="300" height="200" loading="lazy">
-      <div class="sh-live-top"><span class="sh-live-tag">LIVE</span><span class="sh-live-players"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b class="num" id="livePlayers">0</b></span></div>
+      <div class="sh-live-top"><span class="sh-live-tag">LIVE</span><span class="sh-top-badge" hidden>الأكثر مشاركة</span><span class="sh-live-players"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b class="num" id="livePlayers">0</b></span></div>
       <div class="sh-live-info">
        <span class="sh-ring-av" aria-hidden="true"><span id="liveInitial">S</span></span>
-       <div><strong id="liveHandle" dir="ltr">@sky</strong><span id="liveGame">تحدي المعلومات</span></div>
-       <a class="sh-btn sh-btn-gold sh-btn-sm" href="/overlay" target="_blank" rel="noopener">شاهد الشاشة</a>
+       <div><strong id="liveHandle" dir="ltr">@sky</strong><span class="sh-live-meta"><span id="livePlatformName">TikTok</span> • <span id="liveGame">تحدي المعلومات</span></span></div>
+       <a class="sh-btn sh-btn-gold sh-btn-sm" href="/overlay" target="_blank" rel="noopener" id="liveOpen">شاهد الشاشة</a>
       </div>
      </article>
     </div>
@@ -173,14 +182,20 @@
  <section class="sh-wrap sh-section" id="games" aria-labelledby="gamesTitle">
   <header class="sh-head"><span class="sh-eyebrow">الألعاب الجديدة</span><h2 id="gamesTitle">معرض ألعاب <bdi dir="ltr">Sky Live</bdi></h2><p>ألعاب مصممة للبث: إقصاء، وسرعة، وحظ — يشارك فيها الجمهور من الشات.</p></header>
   <div class="sh-gallery" id="gameGallery">
-   <a class="sh-cover" href="/event?mode=quiz"><img src="/covers/quiz.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>تحدي المعلومات</b><small>ذكاء وسرعة</small></span></a>
-   <a class="sh-cover" href="/bomb"><img src="/covers/bomb.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>القنبلة المؤقتة</b><small>إقصاء</small></span></a>
-   <a class="sh-cover" href="/event?mode=race"><img src="/covers/race.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>سباق الجمهور</b><small>جماعية</small></span></a>
-   <a class="sh-cover" href="/event?mode=glass"><img src="/covers/glass.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>الجسر الزجاجي</b><small>إقصاء</small></span></a>
-   <a class="sh-cover" href="/event?mode=guess"><img src="/covers/guess.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>خمّن الكلمة</b><small>ذكاء وسرعة</small></span></a>
-   <a class="sh-cover" href="/event?mode=wheel"><img src="/covers/wheel.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>عجلة الأسماء</b><small>حظ</small></span></a>
+   <a class="sh-cover" href="/event?mode=quiz" data-mode="quiz"><img src="/covers/quiz.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>تحدي المعلومات</b><small>الذكاء والسرعة</small></span></a>
+   <a class="sh-cover" href="/bomb" data-mode="bomb"><img src="/covers/bomb.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>القنبلة المؤقتة</b><small>الإقصاء</small></span></a>
+   <a class="sh-cover" href="/event?mode=bowling" data-mode="bowling"><img src="/covers/bowling.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>البولينج</b><small>الحظ والمخاطرة</small></span></a>
+   <a class="sh-cover" href="/event?mode=glass" data-mode="glass"><img src="/covers/glass.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>الجسر الزجاجي</b><small>الإقصاء</small></span></a>
+   <a class="sh-cover" href="/event?mode=guess" data-mode="guess"><img src="/covers/guess.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>خمّن الكلمة</b><small>الذكاء والسرعة</small></span></a>
+   <a class="sh-cover" href="/event?mode=race" data-mode="race"><img src="/covers/race.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>سباق الجمهور</b><small>الجماعية</small></span></a>
+   <a class="sh-cover" href="/event?mode=truefalse" data-mode="truefalse"><img src="/covers/truefalse.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>حقيقة أم كذب</b><small>الذكاء والسرعة</small></span></a>
+   <a class="sh-cover" href="/event?mode=higherlower" data-mode="higherlower"><img src="/covers/higherlower.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>أعلى أم أقل</b><small>الذكاء والسرعة</small></span></a>
+   <a class="sh-cover" href="/event?mode=redlight" data-mode="redlight"><img src="/covers/redlight.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>الضوء الأحمر</b><small>الإقصاء</small></span></a>
+   <a class="sh-cover" href="/event?mode=wheel" data-mode="wheel"><img src="/covers/wheel.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>عجلة الأسماء</b><small>الحظ والمخاطرة</small></span></a>
+   <a class="sh-cover" href="/event?mode=minority" data-mode="minority"><img src="/covers/minority.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>الأقلية تفوز</b><small>الذكاء والسرعة</small></span></a>
+   <a class="sh-cover" href="/event?mode=rps" data-mode="rps"><img src="/covers/rps.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>حجر ورقة مقص</b><small>الإقصاء</small></span></a>
   </div>
-  <p class="sh-gallery-more" id="allGames"><span>استكشف المزيد من الألعاب</span> — <span id="galleryCount">6 ألعاب</span> جاهزة الآن في الاستوديو، وكل لعبة جديدة تنضم للمعرض فور اكتمالها. <a href="/studio?panel=games">افتح معرض الاستوديو</a></p>
+  <p class="sh-gallery-more" id="allGames"><span>استكشف المزيد من الألعاب</span> — <span id="galleryCount">12 لعبة</span> جاهزة الآن في الاستوديو، وكل لعبة جديدة تنضم للمعرض فور اكتمالها. <a href="/studio?panel=games">افتح معرض الاستوديو</a></p>
  </section>
 
  <!-- ========== Pricing ========== -->
@@ -218,10 +233,23 @@
 <footer class="sh-footer">
  <div class="sh-wrap sh-footer-row">
   <a class="sh-brand" href="/"><img src="/sky-live-mark.svg" alt="" width="28" height="28"><b dir="ltr"><span>SKY</span> LIVE</b></a>
-  <nav aria-label="روابط التذييل"><a href="/studio">الاستوديو</a><a href="/overlay">شاشة العرض</a><button type="button" class="sh-linkbtn" id="footerLogin">دخول المشرف</button></nav>
+  <nav aria-label="روابط التذييل"><a href="/studio">لوحة الستريمر</a><a href="/draw">صفحة الرسم</a><a href="/overlay">شاشة العرض</a><button type="button" class="sh-linkbtn" id="footerAccount">الدخول</button><button type="button" class="sh-linkbtn" id="footerLogin">دخول المشرف</button></nav>
   <span>© 2026 SKY LIVE • منصة مستقلة غير تابعة لـ TikTok</span>
  </div>
 </footer>
+
+<dialog id="gameDialog" class="sh-game-dialog" aria-labelledby="gameDialogTitle">
+ <button type="button" class="sh-dialog-close" id="gameDialogClose" aria-label="إغلاق"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-close"/></svg></button>
+ <img id="gameDialogCover" src="/covers/quiz.svg" alt="" width="220" height="220">
+ <div class="sh-game-body">
+  <span class="sh-eyebrow" id="gameDialogCategory"></span>
+  <h2 id="gameDialogTitle"></h2>
+  <p id="gameDialogSummary"></p>
+  <ol id="gameDialogRules"></ol>
+  <div class="sh-cta-row"><a class="sh-btn sh-btn-gold" id="gameDialogPlay" href="/studio"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg>شغّل اللعبة</a><a class="sh-btn sh-btn-dark" id="gameDialogSetup" href="/event">صفحة الإعداد</a></div>
+  <p class="sh-note" id="gameDialogNote"></p>
+ </div>
+</dialog>
 
 <dialog id="adminDialog" class="admin-dialog" aria-labelledby="adminTitle">
  <form id="adminLoginForm" autocomplete="off">

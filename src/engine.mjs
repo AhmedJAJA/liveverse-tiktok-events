@@ -1,7 +1,13 @@
 import { randomInt } from 'node:crypto';
 import { BombGame, parsePassCommand } from './bomb.mjs';
+import { PARTY_MODES, PARTY_MIN_PLAYERS, PARTY_DEFAULTS, createPartyGame } from './party.mjs';
 
-export const MODES = ['quiz', 'guess', 'race', 'wheel', 'glass', 'bomb'];
+export const MODES = ['quiz', 'guess', 'race', 'wheel', 'glass', 'bomb', ...PARTY_MODES];
+export { PARTY_MODES };
+export const MASCOT_PRESETS = Object.freeze({
+  visor: ['#7fe3ff', '#7dffc8', '#ff8fb3', '#ffd36c', '#c9a7ff'],
+  crown: ['gold', 'silver', 'rose', 'obsidian']
+});
 const MAX_MESSAGE = 160;
 const MAX_PLAYERS = 1500;
 const MAX_ENTRIES = 500;
@@ -48,20 +54,28 @@ export class Engine {
     this.wheelEntries = new Map();
     this.lastChatAt = new Map();
     this.round = 0;
-    this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0, maxPlayers: MAX_PLAYERS, audience: 'all' };
+    this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0, maxPlayers: MAX_PLAYERS, audience: 'all', hostJoin: 'manual' };
     this.glass = { steps: 10, stepDuration: 10, step: 0, safeSide: 0, survivors: new Set(), choices: new Map(), choiceTimes: new Map() };
     this.registrationRecent = [];
     this.firstAnswers = new Map();
     this.correctAnswers = [];
     this.answerSequence = 0;
     this.status = { mode: 'quiz', active: false, title: 'تحدي المعلومات', prompt: 'ما هي عاصمة المملكة العربية السعودية؟', options: ['الرياض', 'جدة', 'الدمام', 'مكة'], answer: '1', winner: null, notice: 'جاهز للفعالية!', target: 12, duration: 30, startedAt: null, endsAt: null, submissionCount: 0, results: null, lastEvent: null, glassStep: 0, glassSteps: 10, glassRemaining: 0 };
-    this.connection = { state: 'disconnected', username: '', detail: 'لم يتم الربط' };
+    this.connection = { state: 'disconnected', username: '', detail: 'لم يتم الربط', platform: 'tiktok' };
+    this.party = null;
+    this.partyConfig = {};
+    this.simulation = { autoplay: false };
+    this.botLastAct = new Map();
+    this.seenMsgIds = new Set();
+    this.msgOrder = [];
+    this.branding = { mascot: { visor: MASCOT_PRESETS.visor[0], crown: 'gold' } };
     this.bomb = new BombGame({ now: () => this.now(), random: n => this.random(n) });
     this.demoSerial = 0;
   }
-  setConnection(state, username = '', detail = '') {
+  setConnection(state, username = '', detail = '', platform = this.connection.platform || 'tiktok') {
     const previousState = this.connection.state;
-    this.connection = { state, username: safeLine(username, 50), detail: safeLine(detail, 180) };
+    this.connection = { state, username: safeLine(username, 50), detail: safeLine(detail, 180), platform: platform === 'kick' ? 'kick' : 'tiktok' };
+    if (state === 'connected' && this.registration.phase === 'open' && this.registration.hostJoin === 'auto') this.joinHost(false);
     // First successful LIVE connection opens signups. Reconnects do not wipe a session.
     if (state === 'connected' && previousState !== 'connected' && this.registration.phase === 'idle' && this.round === 0 && !this.players.size) {
       this.openRegistration({ keyword: this.registration.keyword });
@@ -86,6 +100,10 @@ export class Engine {
       recent: this.recent,
       round: this.round,
       playerCount: this.players.size,
+      party: this.party ? this.party.snapshot() : null,
+      simulation: { ...this.simulation },
+      branding: this.branding,
+      roster: [...this.players.values()].slice(0, 300).map(p => ({ number: p.number, name: p.name, score: p.score, ...(p.avatar ? { avatar: p.avatar } : {}), ...(p.host ? { host: true } : {}), ...(p.manual ? { manual: true } : {}), ...(p.id.startsWith('demo:bot-') ? { bot: true } : {}) })),
       registration: { ...this.registration, count: this.players.size, recent: [...this.registrationRecent], participants: [...this.players.values()].slice(-100).map((p, i, tail) => ({ name: p.name, number: this.players.size - tail.length + i + 1, ...(p.avatar ? { avatar: p.avatar } : {}) })) },
       serverTime: this.now()
     };
@@ -131,8 +149,12 @@ export class Engine {
     }
     return removed;
   }
-  updateRegistration({ keyword = this.registration.keyword, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience } = {}) {
-    if (this.status.active) throw new Error('لا يمكن تعديل التسجيل أثناء الجولة');
+  updateRegistration({ keyword = this.registration.keyword, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience, hostJoin } = {}) {
+    if (hostJoin !== undefined) {
+      if (!['manual', 'auto'].includes(hostJoin)) throw new Error('خيار دخول المضيف غير صالح');
+      this.registration.hostJoin = hostJoin;
+    }
+    if (this.status.active) { if (hostJoin !== undefined) { this.emit(); return { hostJoin }; } throw new Error('لا يمكن تعديل التسجيل أثناء الجولة'); }
     const rawKeyword = String(keyword ?? '').trim();
     const clean = safeLine(rawKeyword, 32).trim();
     if (!clean || !normalizeAnswer(clean) || rawKeyword.length > 32 || /[\r\n]/.test(rawKeyword))
@@ -145,11 +167,12 @@ export class Engine {
     if (eligibleCount > maxPlayers) throw new Error('الحد أقل من عدد المتسابقين المؤهلين المسجلين');
     const removed = this.pruneForAudience(audience);
     Object.assign(this.registration, { keyword:clean, maxPlayers, audience });
+    if (this.registration.phase === 'open' && this.registration.hostJoin === 'auto') this.joinHost(false);
     this.status.notice = this.registration.phase === 'open'
       ? 'التسجيل مفتوح ' + (audience === 'followers' ? 'للمتابعين فقط' : audience === 'subscribers' ? 'للمشتركين فقط' : 'للجميع')
       : this.status.notice;
     this.emit();
-    return { phase:this.registration.phase, audience, maxPlayers, removed, remaining:this.players.size };
+    return { phase:this.registration.phase, audience, maxPlayers, removed, remaining:this.players.size, hostJoin:this.registration.hostJoin };
   }
   openRegistration({ keyword = this.registration.keyword, reset = false, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience } = {}) {
     if (this.status.active) throw new Error('أنهِ الجولة قبل فتح التسجيل');
@@ -167,9 +190,11 @@ export class Engine {
       this.firstAnswers.clear(); this.correctAnswers = [];
       this.status.results = null; this.status.winner = null; this.status.submissionCount = 0;
       this.registrationRecent = [];
+      this.party = null;
     }
     if (!reset) this.pruneForAudience(audience);
-    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience };
+    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience, hostJoin: this.registration.hostJoin || 'manual' };
+    if (this.registration.hostJoin === 'auto') this.joinHost(false);
     this.status.results = null; this.status.winner = null; this.status.endsAt = null;
     this.status.notice = `التسجيل مفتوح! اكتب ${clean} في شات البث`;
     this.status.lastEvent = null;
@@ -206,7 +231,7 @@ export class Engine {
     this.status.winner = winner;
     this.status.lastEvent = { text: this.status.notice, at: this.now(), winner };
   }
-  configure({ mode, title, prompt, options, answer, target, duration, glassSteps, glassStepDuration, bombSeconds } = {}) {
+  configure({ mode, title, prompt, options, answer, target, duration, glassSteps, glassStepDuration, bombSeconds, rounds, roundSeconds } = {}) {
     if (this.status.active) throw new Error('أنه الجولة الحالية قبل تغيير إعداداتها');
     if (bombSeconds !== undefined) this.bomb.configure({ seconds: bombSeconds });
     if (mode !== undefined && !MODES.includes(mode)) throw new Error('نمط غير معروف');
@@ -227,6 +252,21 @@ export class Engine {
       const seconds = Number(duration);
       if (!Number.isInteger(seconds) || seconds < 10 || seconds > 180) throw new Error('مدة الجولة يجب أن تكون من 10 إلى 180 ثانية');
       this.status.duration = seconds;
+    }
+    const partyMode = PARTY_MODES.includes(mode ?? this.status.mode) ? (mode ?? this.status.mode) : null;
+    if (partyMode && (rounds !== undefined || roundSeconds !== undefined)) {
+      const cfg = { ...PARTY_DEFAULTS[partyMode], ...this.partyConfig[partyMode] };
+      if (rounds !== undefined) {
+        const n = Number(rounds);
+        if (!Number.isInteger(n) || n < 1 || n > 30) throw new Error('عدد الجولات من 1 إلى 30');
+        cfg.rounds = n;
+      }
+      if (roundSeconds !== undefined) {
+        const sec = Number(roundSeconds);
+        if (!Number.isInteger(sec) || sec < 4 || sec > 60) throw new Error('وقت الجولة من 4 إلى 60 ثانية');
+        cfg.seconds = sec;
+      }
+      this.partyConfig[partyMode] = { rounds: cfg.rounds, seconds: cfg.seconds };
     }
     if (glassSteps !== undefined) {
       if (![5, 10, 15].includes(glassSteps)) throw new Error('طول الجسر يجب أن يكون 5 أو 10 أو 15 خطوة');
@@ -249,6 +289,7 @@ export class Engine {
     this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear();
     this.glass.choices.clear(); this.glass.choiceTimes.clear(); this.glass.survivors.clear(); this.glass.step = 0;
     this.status.glassStep = 0; this.status.glassRemaining = 0;
+    this.party = null;
     this.emit();
   }
   start() {
@@ -261,6 +302,11 @@ export class Engine {
       if (this.players.size < 2) throw new Error('القنبلة المؤقتة تحتاج لاعبَين مسجلَين على الأقل');
       // Fixed roster: the match keeps exactly the players registered at kick-off.
       this.bomb.start([...this.players.values()].slice(0, this.registration.maxPlayers));
+    }
+    const partyMode = PARTY_MODES.includes(this.status.mode);
+    if (partyMode) {
+      const need = PARTY_MIN_PLAYERS[this.status.mode] || 1;
+      if (this.players.size < need) throw new Error(`هذه اللعبة تحتاج ${need} متسابقين على الأقل`);
     }
     if (this.registration.phase === 'open') this.closeRegistration();
     this.round++;
@@ -280,9 +326,16 @@ export class Engine {
       this.status.glassSteps = this.glass.steps;
       this.status.endsAt = this.status.startedAt + this.glass.stepDuration * 1000;
     }
+    this.party = null;
+    if (partyMode) {
+      const cfg = { ...PARTY_DEFAULTS[this.status.mode], ...this.partyConfig[this.status.mode] };
+      this.party = createPartyGame(this.status.mode, { now: () => this.now(), random: n => this.random(n), rounds: cfg.rounds, seconds: cfg.seconds });
+      this.party.start([...this.players.values()].slice(0, this.registration.maxPlayers));
+      this.syncParty(false);
+    }
     this.status.winner = null;
     this.status.lastEvent = null;
-    this.status.notice = this.status.mode === 'bomb' ? 'القنبلة مع اللاعب #' + this.bomb.snapshot().holder.number + ' — مرّرها قبل الانفجار!' : 'بدأت الجولة! شارك الآن';
+    this.status.notice = partyMode ? 'بدأت اللعبة! شارك من التعليقات' : this.status.mode === 'bomb' ? 'القنبلة مع اللاعب #' + this.bomb.snapshot().holder.number + ' — مرّرها قبل الانفجار!' : 'بدأت الجولة! شارك الآن';
     this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear();
     if (this.status.mode === 'race') for (const id of this.players.keys()) this.raceProgress.set(id, 0);
     if (this.status.mode === 'wheel') for (const player of this.players.values()) {
@@ -296,9 +349,17 @@ export class Engine {
     if (this.status.active && this.status.mode === 'bomb') { this.bomb.end('manual'); this.finishBomb(); return; }
     if (this.status.active && this.status.mode === 'glass') { this.endGlassGame('manual'); return; }
     if (this.status.active && ['quiz', 'guess'].includes(this.status.mode)) return this.finishTimedRound('manual');
+    if (this.status.active && this.party) { this.party.end('manual'); this.finishParty(); return; }
     this.status.active = false; this.status.notice = 'الجولة متوقفة'; this.emit();
   }
   tick() {
+    if (this.simulation.autoplay && this.status.active) this.botStep();
+    if (this.status.active && this.party) {
+      const changed = this.party.tick();
+      if (this.party.finished) { this.finishParty(); return true; }
+      if (changed) { this.syncParty(); }
+      return changed;
+    }
     if (this.status.active && this.status.mode === 'bomb') {
       const changed = this.bomb.tick();
       if (this.bomb.phase === 'finished') { this.finishBomb(); return true; }
@@ -455,18 +516,30 @@ export class Engine {
     this.players.clear(); this.raceProgress.clear(); this.raceLastMove.clear(); this.wheelEntries.clear(); this.recent = [];
     this.glass.survivors.clear(); this.glass.choices.clear(); this.glass.choiceTimes.clear(); this.glass.step=0;
     this.registrationRecent = [];
+    this.party = null;
     this.registration.phase = 'idle'; this.registration.openedAt = null; this.registration.closedAt = null;
     this.status.results = null; this.status.winner = null;
     this.status.notice = 'تم تصفير الجلسة. افتح التسجيل للبدء من جديد';
     this.emit();
   }
   addScore(player, points) { player.score += points; }
-  receiveChat({ id, username, text, avatar = '', isFollower = false, isSubscriber = false }) {
+  receiveChat({ id, username, text, avatar = '', isFollower = false, isSubscriber = false, msgId = '', handle = '' }) {
     const message = safeLine(text);
-    const identity = safeLine(id, 80);
+    let identity = safeLine(id, 80);
+    // Reconnects can replay recent messages; a message id is applied at most once.
+    const mid = safeLine(msgId, 120);
+    if (mid) {
+      if (this.seenMsgIds.has(mid)) return;
+      this.seenMsgIds.add(mid); this.msgOrder.push(mid);
+      if (this.msgOrder.length > 3000) this.seenMsgIds.delete(this.msgOrder.shift());
+    }
+    // The streamer's own chat messages map to the host seat when the host joined.
+    const hostKey = this.connection.username ? 'host:' + this.connection.username.toLowerCase() : '';
+    if (handle && hostKey && 'host:' + String(handle).toLowerCase().replace(/^@/, '') === hostKey && this.players.has(hostKey)) identity = hostKey;
     if (!message || !identity) return;
     const currentTime = this.now();
-    if (this.status.active && this.status.endsAt !== null && currentTime >= this.status.endsAt) { if (this.status.mode === 'glass') this.finishGlassStep(); else this.finishTimedRound('timer'); }
+    if (this.status.active && !this.party && this.status.mode !== 'bomb' && this.status.endsAt !== null && currentTime >= this.status.endsAt) { if (this.status.mode === 'glass') this.finishGlassStep(); else this.finishTimedRound('timer'); }
+    if (this.status.active && this.party) { this.party.tick(); if (this.party.finished) this.finishParty(); }
     const dedupKey = `${identity}\u0000${message}`;
     if (currentTime - (this.lastChatAt.get(dedupKey) ?? -Infinity) < 300) return;
     this.lastChatAt.set(dedupKey, currentTime);
@@ -484,6 +557,10 @@ export class Engine {
     this.emit();
   }
   applyMessage(player, message, timestamp) {
+    if (this.party) {
+      if (this.party.input(player.id, message, timestamp)) { if (this.party.finished) this.finishParty(); else this.syncParty(false); }
+      return;
+    }
     const input = normalizeAnswer(message);
     if (this.status.mode === 'quiz') {
       // Only a recognized choice counts as an attempt; ordinary chat is ignored.
@@ -533,6 +610,118 @@ export class Engine {
     this.addScore(player, score);
     this.status.active = false;
     this.announce(`🏆 الفائز: ${player.name} (+${score} نقاط)`, { name: player.name, id: player.id, score, ...(player.avatar ? { avatar: player.avatar } : {}) });
+  }
+  /** Mirror the running party game into status (clock, prompt, counts). */
+  syncParty(emit = true) {
+    if (!this.party) return;
+    const view = this.party.snapshot();
+    this.status.endsAt = view.endsAt;
+    this.status.prompt = view.prompt || this.status.prompt;
+    this.status.submissionCount = view.submitted;
+    if (emit) this.emit();
+  }
+  /** Close a finished party game exactly once and publish its podium. */
+  finishParty() {
+    if (!this.party || !this.status.active) return false;
+    if (!this.party.finished) this.party.end('manual');
+    const rankings = this.party.rankings.slice(0, 20).map(r => {
+      const player = this.players.get(r.id);
+      if (player) this.addScore(player, r.points);
+      return { rank: r.rank, id: r.id, name: r.name, ...(r.avatar ? { avatar: r.avatar } : {}), points: r.points, detail: r.detail, totalScore: player?.score ?? r.points };
+    });
+    const winner = rankings[0] || null;
+    this.status.active = false;
+    this.status.endsAt = null;
+    this.status.winner = winner ? { id: winner.id, name: winner.name, score: winner.points, ...(winner.avatar ? { avatar: winner.avatar } : {}) } : null;
+    this.status.results = { round: this.round, completedAt: this.now(), reason: this.party.reason, totalAnswers: this.party.totalInputs,
+      correctCount: rankings.length, correctAnswer: this.party.summary() || 'انتهت اللعبة', rankings };
+    this.status.notice = winner ? `🏆 بطل ${this.status.title}: ${winner.name}` : 'انتهت اللعبة بدون فائز';
+    this.status.lastEvent = { text: this.status.notice, at: this.now(), winner: this.status.winner };
+    this.emit();
+    return true;
+  }
+  /** Host control: add a contestant by name (no chat needed). */
+  addManualPlayer({ name, host = false } = {}) {
+    if (this.status.active) throw new Error('أنهِ الجولة قبل إضافة لاعب');
+    const clean = safeLine(name, 32).replace(/^@/, '').trim();
+    if (!clean || !normalizeAnswer(clean)) throw new Error('اكتب اسم اللاعب');
+    const id = host ? 'host:' + clean.toLowerCase() : 'manual:' + normalizeAnswer(clean);
+    if (this.players.has(id)) throw new Error(host ? 'المضيف مسجل بالفعل' : 'هذا الاسم مسجل بالفعل');
+    if (this.players.size >= this.registration.maxPlayers) throw new Error('اكتمل عدد المتسابقين');
+    if (this.registration.phase === 'idle') this.openRegistration({});
+    const player = this.player(id, host ? '@' + clean : clean);
+    if (!player) throw new Error('اكتمل عدد المتسابقين');
+    player.manual = true; player.host = host; player.isFollower = true; player.isSubscriber = true;
+    this.registrationRecent.unshift({ name: player.name, joinedAt: this.now() });
+    this.registrationRecent.length = Math.min(this.registrationRecent.length, REGISTRATION_PREVIEW);
+    this.emit();
+    return { number: player.number, name: player.name };
+  }
+  /** Seat the streamer (connected account) as a contestant. */
+  joinHost(strict = true) {
+    const handle = this.connection.username;
+    if (!handle) { if (strict) throw new Error('اربط البث أولًا ليُعرف حساب المضيف'); return null; }
+    if (this.players.has('host:' + handle.toLowerCase())) { if (strict) throw new Error('المضيف مسجل بالفعل'); return null; }
+    try { return this.addManualPlayer({ name: handle, host: true }); } catch (error) { if (strict) throw error; return null; }
+  }
+  removePlayer({ number } = {}) {
+    if (this.status.active) throw new Error('لا يمكن إزالة لاعب أثناء الجولة');
+    const target = [...this.players.values()].find(p => p.number === Number(number));
+    if (!target) throw new Error('رقم اللاعب غير موجود');
+    this.players.delete(target.id); this.raceProgress.delete(target.id); this.wheelEntries.delete(target.id); this.firstAnswers.delete(target.id);
+    [...this.players.values()].forEach((p, i) => { p.number = i + 1; });
+    this.registrationRecent = this.registrationRecent.filter(r => r.name !== target.name);
+    this.emit();
+    return { removed: target.name };
+  }
+  /** Simulation: jump the running timer to its end (party phases, timed rounds, glass steps, bomb fuse). */
+  advance() {
+    if (!this.status.active) throw new Error('لا توجد جولة جارية');
+    if (this.party) { this.party.advance(); if (this.party.finished) this.finishParty(); else this.syncParty(); return true; }
+    if (this.status.mode === 'bomb') { if (this.bomb.endsAt) this.bomb.endsAt = this.now(); this.tick(); return true; }
+    if (this.status.endsAt !== null) { this.status.endsAt = this.now(); this.tick(); return true; }
+    throw new Error('هذه اللعبة لا تعتمد على مؤقت');
+  }
+  setSimulation({ autoplay } = {}) {
+    if (typeof autoplay !== 'boolean') throw new Error('قيمة المحاكاة غير صالحة');
+    this.simulation.autoplay = autoplay;
+    this.emit();
+    return { ...this.simulation };
+  }
+  /** Demo contestants act like real viewers so every rule can be tried without a stream. */
+  botStep() {
+    const t = this.now(), mode = this.status.mode;
+    const bots = [...this.players.values()].filter(p => p.id.startsWith('demo:bot-'));
+    if (!bots.length) return;
+    const pick = list => list[this.random(list.length)];
+    const party = this.party?.snapshot();
+    for (const bot of bots) {
+      if (t - (this.botLastAct.get(bot.id) ?? 0) < 900 || this.random(100) >= 12) continue;
+      this.botLastAct.set(bot.id, t);
+      let text = null;
+      if (mode === 'quiz') text = this.random(100) < 45 ? this.status.answer : String(this.random(4) + 1);
+      else if (mode === 'guess') text = this.random(100) < 25 ? this.status.answer : pick(['بيت', 'قمر', 'نجمة', 'سيارة']);
+      else if (mode === 'race') text = '!go';
+      else if (mode === 'glass') text = String(this.random(2) + 1);
+      else if (mode === 'bomb') { const b = this.bomb.snapshot(); if (b.holder && this.bomb.holder === bot.id) { const alive = (b.alive || []).filter(p => p.number !== b.holder.number); if (alive.length) text = '!مرر ' + pick(alive).number; } }
+      else if (party && party.phase === 'input') {
+        if (mode === 'rps') text = pick(['حجر', 'ورقة', 'مقص']);
+        else if (mode === 'minority') text = String(this.random(2) + 1);
+        else if (mode === 'higherlower') text = pick(['أعلى', 'أقل']);
+        else if (mode === 'truefalse') text = pick(['صح', 'خطأ']);
+        else if (mode === 'bowling') text = String(this.random(10) + 1);
+        else if (mode === 'redlight') text = party.light === 'green' || this.random(100) < 6 ? String(this.random(5) + 1) : null;
+      }
+      if (text) this.applyMessage(bot, text, t);
+      if (!this.status.active) break;
+    }
+  }
+  setBranding({ mascot } = {}) {
+    const visor = mascot?.visor, crown = mascot?.crown;
+    if (!MASCOT_PRESETS.visor.includes(visor) || !MASCOT_PRESETS.crown.includes(crown)) throw new Error('اختر لونًا من الألوان المتاحة');
+    this.branding = { mascot: { visor, crown } };
+    this.emit();
+    return this.branding;
   }
   drawWheel() {
     if (this.status.mode !== 'wheel' || !this.status.active) throw new Error('ابدأ جولة العجلة أولًا');

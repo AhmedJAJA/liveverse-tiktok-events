@@ -121,6 +121,43 @@ const covers = {
       <path d="M0 -150-22 -196h44Z" fill="#FFF6D8" stroke="#7a5f1c" stroke-width="3" transform="translate(0 -14)"/>
     </g>
     ${mascot(id, 424, 392, .62)}
+    <rect width="512" height="512" fill="url(#${id}-vig)"/>`,
+  rps: (id) => `${stage(id, { sky: ['#2a1a6e', '#130c3c', '#05051a'], glow: '#9b6bff' })}
+    ${[['#E0694B', 120, 250, -14, 'M-34 -10c0-26 16-40 34-40s34 14 34 40c0 28-16 44-34 44s-34-16-34-44Z'], ['#5B7FC9', 256, 196, 0, 'M-40 -44h80v88h-80Z'], ['#46A883', 392, 250, 14, 'M-10 -50 4 -2M10 -50 -4 -2M-22 10a14 14 0 1 0 1 0M22 10a14 14 0 1 0 1 0']].map(([c, x, y, r, d], i) => `<g transform="translate(${x} ${y}) rotate(${r})"><circle r="74" fill="${c}" opacity=".22"/><circle r="74" fill="none" stroke="url(#${id}-gold)" stroke-width="5"/><path d="${d}" fill="${i === 2 ? 'none' : '#FFF6D8'}" stroke="#FFF6D8" stroke-width="${i === 2 ? 9 : 3}" stroke-linecap="round" stroke-linejoin="round"/></g>`).join('')}
+    <g fill="#ff8fb3">${[0, 1, 2].map((i) => `<path transform="translate(${212 + i * 44} 72) scale(1.6)" d="M0 6C-6 0-10-4-6-8c2-2 5-2 6 1 1-3 4-3 6-1 4 4 0 8-6 14Z"/>`).join('')}</g>
+    ${mascot(id, 256, 380, .74)}
+    <rect width="512" height="512" fill="url(#${id}-vig)"/>`,
+  minority: (id) => `${stage(id, { sky: ['#0f4a5e', '#08243c', '#030a18'], glow: '#5ee0ff' })}
+    <path d="M256 70V440" stroke="url(#${id}-gold)" stroke-width="6" stroke-dasharray="14 12"/>
+    <g>${Array.from({ length: 14 }, (_, i) => `<circle cx="${70 + (i % 4) * 40}" cy="${170 + Math.floor(i / 4) * 52}" r="16" fill="#7a8db0" opacity=".75"/>`).join('')}</g>
+    <g>${Array.from({ length: 3 }, (_, i) => `<circle cx="${350 + i * 46}" cy="230" r="20" fill="url(#${id}-gold)"/><circle cx="${350 + i * 46}" cy="230" r="27" fill="none" stroke="#FFF1C2" stroke-opacity=".6" stroke-width="3"/>`).join('')}</g>
+    <text x="128" y="120" text-anchor="middle" font-family="DejaVu Sans,sans-serif" font-size="56" font-weight="700" fill="#9cc4ff" opacity=".8">1</text>
+    <text x="396" y="120" text-anchor="middle" font-family="DejaVu Sans,sans-serif" font-size="56" font-weight="700" fill="#FFE7A3">2</text>
+    ${mascot(id, 396, 392, .68)}
+    <rect width="512" height="512" fill="url(#${id}-vig)"/>`,
+  higherlower: (id) => `${stage(id, { sky: ['#123a8a', '#0a1a4c', '#04081c'] })}
+    ${[['K', 156, -10, .9], ['7', 300, 8, 1]].map(([v, x, r, o]) => `<g transform="translate(${x} 236) rotate(${r})" opacity="${o}"><rect x="-82" y="-118" width="164" height="236" rx="18" fill="#FFF6D8" stroke="url(#${id}-gold)" stroke-width="6"/><text x="-52" y="-72" font-family="DejaVu Sans,sans-serif" font-size="40" font-weight="700" fill="#9c1c2a">${v}</text><text x="0" y="40" text-anchor="middle" font-family="DejaVu Sans,sans-serif" font-size="110" font-weight="700" fill="#9c1c2a">${v}</text></g>`).join('')}
+    <g fill="url(#${id}-gold)"><path d="M436 120l34 46h-22v60h-24v-60h-22Z"/><path d="M436 388l34-46h-22v-60h-24v60h-22Z" opacity=".7"/></g>
+    ${mascot(id, 86, 396, .62)}
+    <rect width="512" height="512" fill="url(#${id}-vig)"/>`,
+  truefalse: (id) => `${stage(id, { sky: ['#1d2f86', '#0d1648', '#04071a'], glow: '#5b8cff' })}
+    <g transform="translate(160 214)"><circle r="96" fill="#46A883" opacity=".25"/><circle r="96" fill="none" stroke="url(#${id}-gold)" stroke-width="6"/><path d="M-44 0l30 32 58-64" fill="none" stroke="#7dffc8" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g transform="translate(352 214)"><circle r="96" fill="#E0694B" opacity=".25"/><circle r="96" fill="none" stroke="url(#${id}-gold)" stroke-width="6"/><path d="M-36-36 36 36M36-36-36 36" stroke="#ff8f8f" stroke-width="20" stroke-linecap="round"/></g>
+    <rect x="96" y="70" width="320" height="34" rx="17" fill="#0b1236" stroke="url(#${id}-gold)" stroke-width="3"/><rect x="118" y="84" width="200" height="6" rx="3" fill="#FFE7A3" opacity=".8"/>
+    ${mascot(id, 256, 392, .66)}
+    <rect width="512" height="512" fill="url(#${id}-vig)"/>`,
+  redlight: (id) => `${stage(id, { sky: ['#3a0e1e', '#1a0710', '#070206'], glow: '#ff4a5a' })}
+    <g transform="translate(372 120)"><rect x="-50" y="-30" width="100" height="232" rx="28" fill="#0d0e12" stroke="url(#${id}-gold)" stroke-width="5"/><circle cy="20" r="54" fill="#ff3b3b" opacity=".25"/><circle cy="20" r="34" fill="#ff3b3b"/><circle cy="96" r="30" fill="#3a3a3a"/><circle cy="166" r="30" fill="#204a2c"/></g>
+    <path d="M60 460h300" stroke="url(#${id}-gold)" stroke-width="6"/>
+    ${Array.from({ length: 6 }, (_, i) => `<rect x="${70 + i * 48}" y="440" width="30" height="8" rx="3" fill="#FFF1C2" opacity="${(.3 + i * .1).toFixed(1)}"/>`).join('')}
+    <g transform="translate(60 0)"><rect x="0" y="300" width="12" height="160" fill="#F6F1E7"/>${Array.from({ length: 4 }, (_, r) => Array.from({ length: 2 }, (_, c) => `<rect x="${12 + c * 14}" y="${300 + r * 14}" width="14" height="14" fill="${(r + c) % 2 ? '#0d0e12' : '#F6F1E7'}"/>`).join('')).join('')}</g>
+    ${mascot(id, 210, 370, .7)}
+    <rect width="512" height="512" fill="url(#${id}-vig)"/>`,
+  bowling: (id) => `${stage(id, { sky: ['#123a8a', '#0a1a4c', '#04081c'], glow: '#5bc8ff' })}
+    <path d="M196 120h120l120 392H76Z" fill="#2a1e0e"/><path d="M196 120h120l120 392H76Z" fill="url(#${id}-goldv)" opacity=".28"/>
+    ${[[256, 150], [236, 168], [276, 168], [216, 188], [256, 188], [296, 188]].map(([x, y]) => `<g transform="translate(${x} ${y})"><path d="M0-30c8 0 10 10 8 18-2 6 8 12 8 26 0 10-6 16-16 16S-16 24-16 14c0-14 10-20 8-26-2-8 0-18 8-18Z" fill="#FFF6D8" stroke="#7a5f1c" stroke-width="2"/><rect x="-8" y="-14" width="16" height="4" fill="#E0694B"/></g>`).join('')}
+    <g transform="translate(256 386)"><circle r="62" fill="#0d1f4a" stroke="url(#${id}-gold)" stroke-width="5"/><circle cx="-14" cy="-20" r="8" fill="#02050f"/><circle cx="12" cy="-24" r="8" fill="#02050f"/><circle cx="0" cy="2" r="8" fill="#02050f"/><path d="M-36-30a44 44 0 0 1 30-18" stroke="#fff" stroke-opacity=".5" stroke-width="6" fill="none" stroke-linecap="round"/></g>
+    ${mascot(id, 420, 392, .58)}
     <rect width="512" height="512" fill="url(#${id}-vig)"/>`
 };
 

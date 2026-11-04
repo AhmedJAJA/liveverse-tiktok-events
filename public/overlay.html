@@ -12,6 +12,8 @@
   <link rel="stylesheet" href="/royal-broadcast.css">
   <link rel="stylesheet" href="/aurum.css">
   <link rel="stylesheet" href="/royal-arena.css">
+  <script defer src="/session.js"></script>
+  <script defer src="/mascot.js"></script>
   <script defer src="/aurum.js"></script>
 </head>
 <body class="broadcast">
@@ -35,7 +37,7 @@
     <header class="top-line">
       <div class="brand-lockup"><img class="sky-overlay-mark" src="/sky-live-mark.svg" width="54" height="54" alt="" decoding="async"><span class="brand-words"><strong dir="ltr">SKY LIVE</strong><small class="caps">Royal Edition</small></span></div>
       <span class="live-pill" id="overlayLive"><i class="live-dot"></i><span id="overlayLiveText">في انتظار البداية</span></span>
-      <span class="header-caption"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-crown"/></svg>مسابقات البث المباشر</span>
+      <span class="header-caption"><span class="arena-mascot" id="arenaMascot" aria-hidden="true"></span>مسابقات البث المباشر</span>
     </header>
 
     <div class="arena-body">
@@ -58,6 +60,7 @@
           <div class="wheel-disc" aria-hidden="true"><i class="wheel-spokes"></i><span class="wheel-hub"><svg class="i"><use href="/icons.svg#i-crown"/></svg></span><i class="wheel-pointer"></i></div>
           <div class="wheel-copy"><strong id="overlayWheelCount">0 مشاركين</strong><span id="wheelEntriesPreview">أسماء المسجلين في الفعالية</span></div>
         </div>
+        <div id="partyPanel" class="party-panel" hidden aria-live="polite"></div>
         <div class="answer-callout">
           <span class="callout-hint"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chat"/></svg><span id="overlayHint">اكتب رقم الإجابة 1 – 4 في الشات</span></span>
           <span class="answer-total" id="answerTotalBox"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-bolt"/></svg>جاوب <b id="overlaySubmissions" class="num">0</b></span>

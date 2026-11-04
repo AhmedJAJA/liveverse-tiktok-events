@@ -9,14 +9,14 @@ const home = read('public/landing.html'), studio = read('public/index.html'), ap
 test('one catalogue: home gallery, studio modes and catalogue list the same working games', () => {
   const studioModes = [...studio.matchAll(/data-mode="([a-z]+)"/g)].map((m) => m[1]).sort();
   assert.deepEqual(GAMES.map((g) => g.mode).sort(), studioModes);
-  assert.ok(app.includes("['quiz','guess','race','wheel','glass','bomb'].includes(requestedMode)"));
+  assert.ok(app.includes('STUDIO_MODES.includes(requestedMode)'));
   for (const game of GAMES) {
     assert.ok(home.includes(`href="${game.href}"`), game.href);
     assert.ok(home.includes(game.title), game.title);
     assert.ok(fs.existsSync(new URL('../public' + game.cover, import.meta.url)), game.cover);
-    assert.ok(server.includes(`'${game.cover.slice(1)}'`), 'whitelisted ' + game.cover);
   }
   assert.match(server, /'\/api\/site'/);
+  assert.match(server, /GAMES\.map\(\(g\) => g\.cover\.slice\(1\)\)/, 'every catalogue cover is whitelisted');
 });
 
 test('pricing and support channel are owner settings with safe parsing', () => {
@@ -34,10 +34,11 @@ test('pricing and support channel are owner settings with safe parsing', () => {
 });
 
 test('home follows the brief structure with Sky Live identity only', () => {
-  for (const id of ['how', 'games', 'pricing', 'platforms', 'season', 'leaderboard', 'start', 'gameGallery', 'phoneSlides', 'liveCard', 'liveEmpty', 'priceMonthly', 'priceAnnual', 'heroGameCount'])
+  for (const id of ['how', 'games', 'pricing', 'platforms', 'season', 'leaderboard', 'start', 'gameGallery', 'phoneSlides', 'liveCard', 'liveEmpty', 'priceMonthly', 'priceAnnual', 'heroGameCount', 'heroElimCount', 'gameDialog', 'livePlatform'])
     assert.match(home, new RegExp('id="' + id + '"'), id);
   for (const href of ['#how', '#games', '#pricing']) assert.ok(home.includes(`href="${href}"`), href);
-  assert.doesNotMatch(home, /hudhud|هدهد|\bKick\b|كيك/);
+  assert.doesNotMatch(home, /hudhud|هدهد|Kick\.com|دعم كيك/);
+  assert.match(home, /تجريبي/); // Kick is shown as experimental
   assert.match(home, /معاينة/); // demo phone data is labelled as a preview
   const css = read('public/sky-home.css');
   for (const w of ['max-width:1200px', 'max-width:1024px', 'max-width:850px', 'max-width:560px', 'prefers-reduced-motion:reduce']) assert.ok(css.includes(w), w);

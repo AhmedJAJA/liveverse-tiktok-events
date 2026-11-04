@@ -11,6 +11,9 @@
 <link rel="stylesheet" href="/event.css">
 <link rel="stylesheet" href="/royal-luxe.css">
 <link rel="stylesheet" href="/aurum.css">
+<link rel="stylesheet" href="/account.css">
+<script defer src="/session.js"></script>
+<script defer src="/account.js"></script>
 <script defer src="/event.js"></script>
 <script defer src="/aurum.js"></script>
 </head>
@@ -42,6 +45,7 @@
       <div class="mode-art mode-art-quiz" aria-hidden="true"><div class="quiz-beams"></div><div class="quiz-stage-question">؟</div><div class="quiz-stage-buttons"><span></span><span></span><span></span></div></div>
       <div class="mode-art mode-art-guess" aria-hidden="true"><div class="guess-symbols">؟ ✦ ؟</div><div class="guess-word">خمّن!</div></div>
       <div class="mode-art mode-art-race" aria-hidden="true"><div class="race-checkers"></div><div class="race-road"></div><div class="race-motor"><i></i><i></i></div></div>
+      <img class="mode-art-cover" id="modeCoverArt" src="/covers/quiz.svg" alt="" width="512" height="512" hidden>
       <div class="mode-art mode-art-wheel" aria-hidden="true"><div class="wheel-main"><i class="wheel-pointer"></i><strong>★</strong></div></div>
       <a href="/#games" class="event-back" aria-label="الرجوع إلى الألعاب"><svg class="i"><use href="/icons.svg#i-arrow"/></svg><span>رجوع للألعاب</span></a>
       <div class="visual-shade"></div>
@@ -120,11 +124,12 @@
 <dialog class="access-dialog" id="accessDialog" aria-labelledby="accessTitle">
  <form id="accessForm" autocomplete="off">
   <div class="access-head"><h2 id="accessTitle">رمز إدارة SKY LIVE</h2><button id="closeAccess" type="button" aria-label="إغلاق"><svg class="i"><use href="/icons.svg#i-close"/></svg></button></div>
-  <p>هذه الإعدادات خاصة بمضيف البث. أدخل رمز الإدارة الموجود في إعدادات موقعك على Render.</p>
+  <p>مالك الموقع يدخل رمز الإدارة. ولكل حساب أو زائر غرفة خاصة يشغّل فيها الألعاب.</p>
   <label for="eventAdminToken">رمز الإدارة</label>
   <input id="eventAdminToken" dir="ltr" type="password" autocomplete="off" required>
   <p class="access-error" id="accessError" hidden role="alert"></p>
   <button type="submit" class="verify-access">تفعيل صلاحية الإدارة</button>
+  <button type="button" class="access-account" id="accountAccess">الدخول بحسابك أو كزائر لغرفتك الخاصة</button>
  </form>
 </dialog>
 </body>

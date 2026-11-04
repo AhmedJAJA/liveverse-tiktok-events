@@ -23,11 +23,11 @@ export class LiveBridge {
     await this.disconnect();
     const generation = ++this.generation;
     this.username = username;
-    this.engine.setConnection('connecting', username, 'جارٍ محاولة الاتصال...');
+    this.engine.setConnection('connecting', username, 'جارٍ محاولة الاتصال...', 'tiktok');
     try { await this.attempt(generation); }
     catch(err) {
       if (generation === this.generation) {
-        this.engine.setConnection('error', username, String(err?.message || err).slice(0,140));
+        this.engine.setConnection('error', username, String(err?.message || err).slice(0,140), 'tiktok');
         this.schedule(generation);
       }
       throw err;
@@ -52,41 +52,44 @@ export class LiveBridge {
       this.engine.receiveChat({ id: String(stableId), username: user.nickname || user.displayId || user.uniqueId || event.nickname || 'مشاهد', text: event.content || event.comment || '', avatar: user.avatarThumb?.urlList?.[0] || user.avatarMedium?.urlList?.[0] || user.avatarLarge?.urlList?.[0] || event.profilePictureUrl || '',
         // TikTok supplies follower/subscriber flags inconsistently; unverified users are not considered eligible for restricted events.
         isFollower: isConfirmedFollower(event),
-        isSubscriber: isConfirmedSubscriber(event) });
+        isSubscriber: isConfirmedSubscriber(event),
+        // Message id lets the engine ignore replays after a reconnect; the handle maps the streamer to the host seat.
+        msgId: String(event.common?.msgId ?? event.msgId ?? ''),
+        handle: String(user.uniqueId || user.displayId || event.uniqueId || '') });
     });
     connection.on(ControlEvent.DISCONNECTED, () => {
       if (generation !== this.generation) return;
-      this.engine.setConnection('disconnected', this.username, 'انقطع البث أو الاتصال؛ إعادة المحاولة');
+      this.engine.setConnection('disconnected', this.username, 'انقطع البث أو الاتصال؛ إعادة المحاولة', 'tiktok');
       this.schedule(generation);
     });
     connection.on(ControlEvent.ERROR, err => {
-      if (generation === this.generation) this.engine.setConnection('error', this.username, String(err?.message || err).slice(0,140));
+      if (generation === this.generation) this.engine.setConnection('error', this.username, String(err?.message || err).slice(0,140), 'tiktok');
     });
     await connection.connect();
     if (generation !== this.generation) { await connection.disconnect().catch(() => {}); return; }
-    this.engine.setConnection('connected', this.username, 'متصل بالبث المباشر');
+    this.engine.setConnection('connected', this.username, 'متصل بالبث المباشر', 'tiktok');
   }
   schedule(generation) {
     if (this.retry || generation !== this.generation) return;
     this.retry = setTimeout(async () => {
       this.retry = null;
       if (generation !== this.generation) return;
-      this.engine.setConnection('connecting', this.username, 'إعادة الاتصال...');
+      this.engine.setConnection('connecting', this.username, 'إعادة الاتصال...', 'tiktok');
       try { await this.attempt(generation); } catch(err) {
         if (generation === this.generation) {
-          this.engine.setConnection('error', this.username, String(err?.message || err).slice(0,140));
+          this.engine.setConnection('error', this.username, String(err?.message || err).slice(0,140), 'tiktok');
           this.schedule(generation);
         }
       }
     }, 20000);
     this.retry.unref?.();
   }
-  async disconnect() {
+  async disconnect(report = true) {
     this.generation++;
     clearTimeout(this.retry); this.retry = null;
     const old = this.connection; this.connection = null;
     if (old) { try { await old.disconnect(); } catch {} }
-    this.engine.setConnection('disconnected', '', 'تم الفصل');
+    if (report) this.engine.setConnection('disconnected', '', 'تم الفصل', 'tiktok');
   }
 }
 

@@ -162,3 +162,4 @@ body:not(.is-admin) .bp-control .btn:not([href]),body:not(.is-admin) .bp-control
 @media (prefers-reduced-motion:reduce){
   .bp-halo,.bp-smoke,.bp-bomb,.bp-body,.bp-led,.bp-rays{animation:none!important}
 }
+.bp-account{width:100%;margin-top:.6rem}
