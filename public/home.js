@@ -322,6 +322,22 @@
   planTabs.forEach((t) => t.addEventListener('click', () => selectPlan(t.dataset.planTab, true)));
   selectPlan('monthly', false);
 
+  /* ------------------------------------------- off-screen pause + light parallax
+     Sections that are not visible stop animating; the hero layers move with scroll and pointer
+     through CSS variables, at most once per frame, and not at all with reduced motion. */
+  if ('IntersectionObserver' in window) {
+    const watch = new IntersectionObserver((entries) => { for (const e of entries) e.target.classList.toggle('is-off', !e.isIntersecting); }, { rootMargin: '120px 0px' });
+    document.querySelectorAll('.hm-hero, .hm-sec, .hm-strip, .hm-foot').forEach((el) => watch.observe(el));
+  }
+  const hero = document.querySelector('.hm-hero');
+  if (hero && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let frame = 0, px = 0;
+    const paint = () => { frame = 0; const sy = Math.min(1, Math.max(0, scrollY / (hero.offsetHeight || 1))); hero.style.setProperty('--sy', sy.toFixed(3)); hero.style.setProperty('--px', px.toFixed(3)); };
+    const ask = () => { if (!frame) frame = requestAnimationFrame(paint); };
+    addEventListener('scroll', ask, { passive: true });
+    if (matchMedia('(pointer: fine)').matches) hero.addEventListener('pointermove', (e) => { px = (e.clientX / innerWidth - 0.5) * 2; ask(); }, { passive: true });
+  }
+
   /* ------------------------------------------------------------------- reveal */
   const items = document.querySelectorAll('[data-reveal]');
   if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {

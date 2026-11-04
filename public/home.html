@@ -58,6 +58,26 @@
 
 <main id="top">
 <section class="hm-hero" aria-labelledby="heroTitle">
+ <svg width="0" height="0" class="hm-defs" aria-hidden="true" focusable="false"><defs>
+  <radialGradient id="jbell" cx="50%" cy="35%" r="65%"><stop offset="0" stop-color="#FFE3F4" stop-opacity=".95"/><stop offset=".55" stop-color="#FF8DC7" stop-opacity=".55"/><stop offset="1" stop-color="#B05BFF" stop-opacity=".15"/></radialGradient>
+  <symbol id="jelly" viewBox="0 0 80 120"><path d="M6 44 C6 18 22 4 40 4 S74 18 74 44 C66 40 60 48 54 44 C48 40 44 48 40 44 C36 48 30 40 26 44 C20 48 14 40 6 44Z" fill="url(#jbell)"/><g fill="none" stroke="#FFB3DE" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"><path d="M18 46 C14 66 24 80 18 104"/><path d="M32 47 C30 70 38 86 32 116"/><path d="M48 47 C50 70 42 86 48 112"/><path d="M62 46 C66 66 56 80 62 100"/></g><ellipse cx="30" cy="22" rx="10" ry="6" fill="#fff" opacity=".45"/></symbol>
+  <symbol id="weed" viewBox="0 0 40 160"><path d="M20 160 C8 130 30 110 18 80 C8 56 28 36 20 0 C34 30 22 54 30 78 C40 108 22 130 26 160Z" fill="#2FD8A6" opacity=".75"/></symbol>
+ </defs></svg>
+ <div class="hm-scene" aria-hidden="true">
+  <span class="hm-beam b1"></span><span class="hm-beam b2"></span><span class="hm-beam b3"></span>
+  <span class="hm-caustic"></span>
+  <svg class="hm-jelly j1" width="80" height="120"><use href="#jelly"/></svg>
+  <svg class="hm-jelly j2" width="80" height="120"><use href="#jelly"/></svg>
+  <svg class="hm-jelly j3" width="80" height="120"><use href="#jelly"/></svg>
+  <i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i><i class="hm-dot"></i>
+  <span class="hm-reef"></span>
+  <svg class="hm-weed w1" width="40" height="160"><use href="#weed"/></svg>
+  <svg class="hm-weed w2" width="40" height="160"><use href="#weed"/></svg>
+  <svg class="hm-weed w3" width="40" height="160"><use href="#weed"/></svg>
+  <svg class="hm-weed w4" width="40" height="160"><use href="#weed"/></svg>
+ </div>
+ <div class="hm-hero-in">
+ <div class="hm-hero-copy">
  <p class="hm-kicker"><i aria-hidden="true"></i>ألعاب البث التفاعلية</p>
  <h1 class="hm-logo"><img src="/brand/sponge-256.webp" srcset="/brand/sponge-128.webp 128w, /brand/sponge-256.webp 256w, /brand/sponge-512.webp 512w" sizes="(max-width:600px) 64px, 96px" alt="" width="96" height="96"><span class="hm-word" dir="ltr"><span class="hm-lb hm-lb-back" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i><i class="x"></i></span><span class="hm-name"><b>SPONGE</b> LIVE</span><span class="hm-lb hm-lb-front" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i></span></span></h1>
  <h2 class="hm-hero-title" id="heroTitle">جمهورك يلعب<br><span class="hm-hl">من تعليقات البث.</span></h2>
@@ -72,6 +92,15 @@
   <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user-plus"></use></svg><span>انضمام تلقائي</span></li>
   <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-screen"></use></svg><span>شاشة جاهزة لـ OBS</span></li>
  </ul>
+ </div>
+ <div class="hm-stage" aria-hidden="true">
+  <span class="hm-halo"></span><span class="hm-ring"></span>
+  <figure class="hm-fan-card c1"><img src="/games/05-time-bomb-400.webp" srcset="/games/05-time-bomb-200.webp 200w, /games/05-time-bomb-400.webp 400w" sizes="(max-width:900px) 140px, 220px" width="220" height="281" alt="القنبلة الموقوتة" fetchpriority="low" decoding="async"></figure>
+  <figure class="hm-fan-card c2"><img src="/games/01-knowledge-challenge-400.webp" srcset="/games/01-knowledge-challenge-200.webp 200w, /games/01-knowledge-challenge-400.webp 400w" sizes="(max-width:900px) 140px, 220px" width="220" height="281" alt="تحدي المعرفة" fetchpriority="low" decoding="async"></figure>
+  <figure class="hm-fan-card c3"><img src="/games/09-roulette-400.webp" srcset="/games/09-roulette-200.webp 200w, /games/09-roulette-400.webp 400w" sizes="(max-width:900px) 140px, 220px" width="220" height="281" alt="الروليت" fetchpriority="low" decoding="async"></figure>
+  <span class="hm-stage-tag"><b>12</b> لعبة جاهزة</span>
+ </div>
+ </div>
 </section>
 
 <section class="hm-strip" id="games" aria-labelledby="gamesTitle">
@@ -184,7 +213,7 @@
  </div>
  <div class="hm-plans" id="planTrack">
   <article class="hm-plan hm-plan-trial" id="plan-trial" data-reveal>
-   <span class="hm-plan-mark" aria-hidden="true">🎁</span>
+   <div class="hm-plan-art" aria-hidden="true"><img class="a1" src="/games/02-guess-drawing-200.webp" srcset="/games/02-guess-drawing-200.webp 200w, /games/02-guess-drawing-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><span class="hm-plan-mark">🎁</span><i class="pop"></i><i class="pop"></i><i class="pop"></i></div>
    <h3>التجربة المجانية</h3>
    <p class="hm-plan-desc">جرّب الاستوديو كاملًا قبل أن تشترك.</p>
    <p class="hm-price"><b>0</b> ريال</p>
@@ -193,7 +222,7 @@
    <a class="hm-plan-btn" id="planTrial" href="/signup?intent=trial" data-action="trial">احصل على تجربتك المجانية</a>
   </article>
   <article class="hm-plan hm-plan-shafiq" id="plan-weekly" data-reveal>
-   <span class="hm-plan-mark" aria-hidden="true">🎷</span>
+   <div class="hm-plan-art" aria-hidden="true"><img class="a1" src="/games/03-musical-chairs-200.webp" srcset="/games/03-musical-chairs-200.webp 200w, /games/03-musical-chairs-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><span class="hm-plan-mark">🎷</span><i class="note">♪</i><i class="note">♫</i><i class="note">♪</i></div>
    <h3>شفيق العادي</h3>
    <p class="hm-plan-desc">مناسبة لبثوث الأسبوع أو لتجربة أطول.</p>
    <p class="hm-price"><b>29</b> ريال</p>
@@ -203,7 +232,7 @@
   </article>
   <article class="hm-plan hm-plan-amir" id="plan-monthly" data-reveal>
    <span class="hm-plan-tag">الأوفر لكل يوم</span>
-   <span class="hm-plan-mark" aria-hidden="true">👑</span>
+   <div class="hm-plan-art" aria-hidden="true"><img class="a2" src="/games/09-roulette-200.webp" srcset="/games/09-roulette-200.webp 200w, /games/09-roulette-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><img class="a1" src="/games/05-time-bomb-200.webp" srcset="/games/05-time-bomb-200.webp 200w, /games/05-time-bomb-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><img class="a3" src="/games/01-knowledge-challenge-200.webp" srcset="/games/01-knowledge-challenge-200.webp 200w, /games/01-knowledge-challenge-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><span class="hm-plan-mark">👑</span><i class="spark">✦</i><i class="spark">✦</i><i class="spark">✦</i><i class="spark">✦</i></div>
    <h3>أمير الهامور</h3>
    <p class="hm-plan-desc">للستريمر المستمر طوال الشهر.</p>
    <p class="hm-price"><b>44.99</b> ريال</p>
