@@ -68,6 +68,12 @@ export class LiveBridge {
     await connection.connect();
     if (generation !== this.generation) { await connection.disconnect().catch(() => {}); return; }
     this.engine.setConnection('connected', this.username, 'متصل بالبث المباشر', 'tiktok');
+    // The room info fetched while connecting names the broadcaster and links their profile picture.
+    try {
+      const owner = connection.roomInfo?.data?.owner || connection.roomInfo?.owner || {};
+      const pic = (k) => owner[k]?.url_list?.[0] || owner[k]?.urlList?.[0] || '';
+      this.engine.setStreamer({ displayName: owner.nickname || '', avatar: pic('avatar_large') || pic('avatar_medium') || pic('avatar_thumb') });
+    } catch {}
   }
   schedule(generation) {
     if (this.retry || generation !== this.generation) return;

@@ -313,7 +313,28 @@ html.menu-open{overflow:hidden}
 .hm-live-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .hm-live-game{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,214,42,.45);color:#FFE14D;font-weight:800;font-size:14px;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hm-live-count{color:var(--muted);font-size:14px}.hm-live-count b{color:var(--foam);font-size:20px}
-.hm-live a.hm-pill{width:100%}
+.hm-live-acts{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px}
+.hm-live-acts .hm-pill{width:100%;min-width:0;height:46px}
+.hm-live-watch{position:relative}
+.hm-live-watch[disabled]{grid-column:1/-1;cursor:not-allowed;opacity:.7;font-size:13.5px;white-space:normal;line-height:1.3}
+.hm-live-watch[disabled]+.hm-live-game-btn{grid-column:1/-1}
+.hm-live,.hm-live>*{min-width:0}
+.hm-live{position:relative}
+.hm-ava-wrap{position:relative;flex:none;display:grid;justify-items:center;padding-bottom:8px}
+.hm-live .hm-badge-live{position:absolute;bottom:0;left:50%;translate:-50% 0;margin:0;padding:2px 8px;font-size:11px;background:#FF3D68;color:#fff;box-shadow:0 0 0 2px #04112F,0 0 14px -2px #FF3D68}
+.hm-live .hm-badge-live i{background:#fff;box-shadow:none;width:6px;height:6px}
+.hm-live-who{flex:1 1 auto}
+.hm-live-who .hm-live-handle{display:flex;width:fit-content;max-width:100%;white-space:nowrap}
+.hm-live-handle>span{display:block;min-width:0;margin:0;padding:0;background:none;border-radius:0;overflow:hidden;text-overflow:ellipsis}
+.hm-live-handle svg{flex:none}
+.hm-live-dot{width:8px;height:8px;border-radius:50%;background:#FF3D68;box-shadow:0 0 0 3px rgba(255,61,104,.25)}
+.hm-ava{position:relative;overflow:hidden;width:64px;height:64px;background:linear-gradient(160deg,#FFE14D,#FFC21F)}
+.hm-ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.hm-ava.has-img{background:#04112F}
+.hm-ava.has-img .hm-ava-letter{visibility:hidden}
+.hm-live[data-platform=tiktok] .hm-ava{box-shadow:0 0 0 3px rgba(56,212,255,.9),0 0 0 6px rgba(255,61,104,.35),0 0 20px -2px var(--cyan)}
+.hm-live[data-platform=kick] .hm-ava{box-shadow:0 0 0 3px rgba(83,252,24,.85),0 0 20px -2px rgba(83,252,24,.6)}
+@media (max-width:420px){.hm-live-acts{grid-template-columns:minmax(0,1fr)}.hm-ava{width:56px;height:56px}.hm-live{padding:14px}.hm-live-top{gap:10px}.hm-live-who .hm-live-handle{font-size:12px;padding:3px 8px;gap:4px}}
 .hm-empty{display:grid;justify-items:center;gap:6px;padding:26px 12px;text-align:center;border-radius:22px;border:1px dashed rgba(140,232,255,.35);margin-top:14px}
 .hm-empty[hidden]{display:none}
 .hm-empty span{font-size:34px}

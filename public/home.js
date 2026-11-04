@@ -276,25 +276,50 @@
   /* ------------------------------------------- live streams (real rooms only) */
   const GAME_ICON = { tiktok: '/icons.svg#i-note', kick: '/icons.svg#i-kick' };
   function streamCard(st) {
-    const li = document.createElement('li'); li.className = 'hm-live';
-    const top = document.createElement('div'); top.className = 'hm-live-top';
-    const ava = document.createElement('span'); ava.className = 'hm-ava'; ava.setAttribute('aria-hidden', 'true'); ava.textContent = (st.username || '?').trim().charAt(0).toUpperCase();
-    const who = document.createElement('div'); who.className = 'hm-live-who';
-    const name = document.createElement('b'); name.textContent = st.username || 'بث مباشر';
-    const handle = document.createElement('span');
+    const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+    const handleName = (st.username || '').replace(/^@/, '');
+    const display = st.displayName || handleName || 'بث مباشر';
+    const platformName = st.platform === 'kick' ? 'Kick' : 'TikTok';
+    const li = mk('li', 'hm-live'); li.dataset.platform = st.platform === 'kick' ? 'kick' : 'tiktok';
+    const top = mk('div', 'hm-live-top');
+    // The broadcaster's real picture when the platform gave one; otherwise a styled initial.
+    const ava = mk('span', 'hm-ava'); ava.setAttribute('aria-hidden', 'true');
+    ava.append(mk('span', 'hm-ava-letter', Array.from(display.trim())[0]?.toUpperCase() || '؟'));
+    if (st.avatarUrl && /^https:\/\//.test(st.avatarUrl)) {
+      const img = mk('img'); img.alt = ''; img.width = 64; img.height = 64; img.decoding = 'async'; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+      img.addEventListener('load', () => ava.classList.add('has-img'), { once: true });
+      img.addEventListener('error', () => img.remove(), { once: true });
+      img.src = st.avatarUrl; ava.append(img);
+    }
+    const who = mk('div', 'hm-live-who');
+    const name = mk('b', '', display);
+    const handle = mk('span', 'hm-live-handle');
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('width', '14'); svg.setAttribute('height', '14'); svg.setAttribute('aria-hidden', 'true');
     const use = document.createElementNS('http://www.w3.org/2000/svg', 'use'); use.setAttribute('href', GAME_ICON[st.platform] || GAME_ICON.tiktok); svg.append(use);
-    handle.append(svg, document.createTextNode('@' + (st.username || '') + ' · ' + (st.platform === 'kick' ? 'Kick' : 'TikTok')));
+    handle.append(svg, mk('span', '', (handleName ? '@' + handleName + ' · ' : '') + platformName));
     who.append(name, handle);
-    const live = document.createElement('span'); live.className = 'hm-badge-live'; live.append(document.createElement('i'), document.createTextNode('LIVE'));
-    top.append(ava, who, live);
-    const bottom = document.createElement('div'); bottom.className = 'hm-live-bottom';
-    const game = document.createElement('span'); game.className = 'hm-live-game'; game.textContent = st.game || 'لعبة';
-    const count = document.createElement('span'); count.className = 'hm-live-count';
-    const n = document.createElement('b'); n.textContent = String(st.players || 0); count.append(n, document.createTextNode(' لاعب'));
+    const live = mk('span', 'hm-badge-live'); live.append(mk('i'), document.createTextNode('LIVE'));
+    const ring = mk('span', 'hm-ava-wrap'); ring.append(ava, live);
+    top.append(ring, who);
+    const bottom = mk('div', 'hm-live-bottom');
+    const game = mk('span', 'hm-live-game', st.currentGame || st.game || 'لعبة');
+    const count = mk('span', 'hm-live-count');
+    count.append(mk('b', '', String(st.players || 0)), document.createTextNode(' لاعب'));
     bottom.append(game, count);
-    const a = document.createElement('a'); a.className = 'hm-pill hm-pill-ghost'; a.href = '/play?room=' + encodeURIComponent(st.room); a.textContent = 'شاهد اللعبة';
-    li.append(top, bottom, a);
+    const acts = mk('div', 'hm-live-acts');
+    if (st.liveUrl && /^https:\/\/(www\.tiktok\.com|kick\.com)\//.test(st.liveUrl)) {
+      const watch = mk('a', 'hm-pill hm-pill-gold hm-live-watch');
+      watch.href = st.liveUrl; watch.target = '_blank'; watch.rel = 'noopener noreferrer';
+      watch.setAttribute('aria-label', 'شاهد بث ' + display + ' على ' + platformName + ' (يفتح في تبويب جديد)');
+      watch.append(mk('span', 'hm-live-dot'), document.createTextNode('شاهد البث'));
+      acts.append(watch);
+    } else {
+      const off = mk('button', 'hm-pill hm-pill-ghost hm-live-watch', 'رابط البث غير متوفر حالياً'); off.type = 'button'; off.disabled = true;
+      acts.append(off);
+    }
+    const a = mk('a', 'hm-pill hm-pill-ghost hm-live-game-btn', 'شاهد اللعبة'); a.href = '/play?room=' + encodeURIComponent(st.room);
+    acts.append(a);
+    li.append(top, bottom, acts);
     return li;
   }
   let liveTimer = 0;

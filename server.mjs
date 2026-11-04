@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
-import { Engine } from './src/engine.mjs';
+import { Engine, liveUrlFor } from './src/engine.mjs';
 import { LiveBridge } from './src/bridge.mjs';
 import { KickBridge, validKickSlug } from './src/kick.mjs';
 import { QuestionBank, loadDefaultQuestions } from './src/question-bank.mjs';
@@ -201,7 +201,7 @@ function secureHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin'); // Google Identity Services needs the origin
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com https://files.kick.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
 }
 
 async function handleAction(action, body, actor) {
@@ -628,8 +628,12 @@ function streams() {
     const s = room.engine.snapshot();
     if (s.connection.state !== 'connected') continue;
     const game = ALL_GAMES.find((g) => g.mode === s.status.mode);
-    list.push({ room: room.id, platform: s.connection.platform, username: s.connection.username, players: s.playerCount, active: !!s.status.active,
-      mode: s.status.mode, game: game?.title || s.status.title, cover: game?.cover || '/covers/quiz.svg' });
+    const who = room.engine.streamer || {};
+    const handle = String(s.connection.username || '').replace(/^@/, '');
+    list.push({ room: room.id, platform: s.connection.platform, username: handle, displayName: who.name || handle,
+      avatarUrl: who.avatar || '', liveUrl: liveUrlFor(s.connection.platform, handle),
+      players: s.playerCount, active: !!s.status.active, mode: s.status.mode,
+      currentGame: game?.title || s.status.title, game: game?.title || s.status.title, cover: game?.cover || '/covers/quiz.svg' });
   }
   list.sort((a, b) => b.players - a.players);
   if (list.length > 1 && list[0].players > 0) list[0].top = true;
