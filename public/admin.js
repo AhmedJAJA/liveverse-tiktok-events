@@ -4,7 +4,7 @@
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short' });
   const fmtDate = (iso) => (iso ? fmt.format(new Date(iso)) : '—');
-  const ACTIONS = { 'subscription-grant': 'منح اشتراك', 'subscription-extend': 'تمديد اشتراك', 'subscription-stop': 'إيقاف اشتراك', 'email-verify-manual': 'تأكيد بريد يدويًا', 'account-disable': 'إيقاف حساب', 'account-enable': 'إعادة تفعيل حساب', 'trial-code-revoke': 'إلغاء رمز تجربة', 'promo-create': 'إنشاء رمز', 'promo-revoke': 'إلغاء رمز', 'promo-update': 'تعديل رمز', 'promo-delete': 'حذف رمز' };
+  const ACTIONS = { 'subscription-grant': 'منح اشتراك', 'subscription-extend': 'تمديد اشتراك', 'subscription-stop': 'إيقاف اشتراك', 'email-verify-manual': 'تأكيد بريد يدويًا', 'account-disable': 'إيقاف حساب', 'account-enable': 'إعادة تفعيل حساب', 'trial-code-revoke': 'إلغاء رمز تجربة', 'promo-create': 'إنشاء رمز', 'promo-revoke': 'إلغاء رمز', 'promo-update': 'تعديل رمز', 'promo-delete': 'حذف رمز', 'voucher-create': 'إنشاء رموز اشتراك', 'voucher-revoke': 'إلغاء رمز اشتراك' };
   const STATUS = { active: 'فعّال', expired: 'منتهي', scheduled: 'لاحقًا', cancelled: 'موقوف', disabled: 'ملغى', used: 'مستخدم' };
   let current = null;
   const api = async (method, url, body) => {
@@ -59,6 +59,8 @@
   async function codes() {
     try {
       const d = await api('GET', '/api/manage/codes');
+      const names = { weekly: 'شفيق العادي', monthly: 'أمير الهامور' };
+      $('voucherStats').textContent = d.vouchers.length ? d.vouchers.map((v) => `${names[v.plan]}: ${v.total} رمز، مستخدم ${v.used}، ملغى ${v.revoked}`).join(' · ') : 'لا توجد رموز اشتراك بعد';
       const tb = $('codeRows'); tb.replaceChildren();
       for (const c of d.codes) row(tb, [c.hint, c.label || '—', c.uses + ' / ' + (c.maxUses || '∞'), STATUS[c.status] || c.status,
         c.status === 'active' ? button('إلغاء', async () => { try { await api('POST', '/api/manage/code-revoke', { id: c.id }); codes(); audit(); } catch (e) { err(e.message); } }, true) : '']);
@@ -70,6 +72,25 @@
       const d = await api('POST', '/api/manage/code-create', { label: f.elements.label.value, maxUses: Number(f.elements.maxUses.value), level: f.elements.level.value, expiresAt: f.elements.expiresAt.value ? new Date(f.elements.expiresAt.value).toISOString() : null });
       $('newCode').textContent = 'الرمز الجديد (يظهر مرة واحدة فقط): ' + d.code.code; $('newCode').hidden = false; f.reset(); codes(); audit();
     } catch (er) { err(er.message); }
+  });
+  let lastCodes = null;
+  $('voucherForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); const f = e.currentTarget;
+    try {
+      const d = await api('POST', '/api/manage/voucher-create', { plan: f.elements.plan.value, count: Number(f.elements.count.value), label: f.elements.label.value });
+      lastCodes = { plan: f.elements.plan.value, codes: d.codes };
+      $('voucherOut').textContent = `أُنشئ ${d.codes.length} رمز. نزّلها الآن — لا تظهر مرة أخرى.`; $('voucherOut').hidden = false; $('voucherDownload').hidden = false;
+      codes(); audit();
+    } catch (er) { err(er.message); }
+  });
+  $('voucherDownload').addEventListener('click', () => {
+    if (!lastCodes) return;
+    const csv = 'code,plan\n' + lastCodes.codes.map((c) => c + ',' + lastCodes.plan).join('\n') + '\n';
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `sponge-${lastCodes.plan}-codes.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+  $('voucherRevokeForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); const f = e.currentTarget;
+    try { await api('POST', '/api/manage/voucher-revoke', { code: f.elements.code.value.trim() }); f.reset(); codes(); audit(); } catch (er) { err(er.message); }
   });
   async function audit() {
     try {

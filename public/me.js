@@ -113,6 +113,16 @@
     const r = await api('POST', '/api/me/checkout', { plan: b.dataset.checkout });
     location.assign(r.url); // the gateway's own payment page
   }));
+  $('voucherForm').addEventListener('submit', (e) => {
+    e.preventDefault(); const f = e.currentTarget, m = $('voucherMsg'), code = f.elements.code.value.trim();
+    if (!code) { f.elements.code.focus(); return; }
+    act(f.querySelector('button'), async () => {
+      try {
+        const r = await api('POST', '/api/me/redeem', { code });
+        m.textContent = `تم تفعيل «${r.voucher.planName}» حتى ${fmtDate(r.voucher.endsAt)} ✓`; m.className = 'pg-msg is-ok'; m.hidden = false; f.reset(); await load();
+      } catch (err) { m.textContent = err.message; m.className = 'pg-msg is-err'; m.hidden = false; }
+    });
+  });
   $('editForm').addEventListener('submit', (e) => {
     e.preventDefault(); const f = e.currentTarget, msg = $('editMsg');
     act(f.querySelector('button'), async () => {
@@ -128,6 +138,7 @@
   if (params.get('verified') === '1') notice('تم تأكيد بريدك الإلكتروني ✓ يمكنك الآن الحصول على التجربة المجانية.', 'is-ok');
   else if (params.get('verified') === '0') notice('رابط التأكيد غير صالح أو منتهي. اطلب رابطًا جديدًا من هذه الصفحة.', 'is-err');
   else if (params.get('need') === 'plan') notice('الاستوديو يحتاج تجربة أو اشتراكًا فعّالًا. فعّل تجربتك المجانية أو اشترك في باقة.');
+  else if (params.get('voucher') === '1') notice('تمت إضافة الاشتراك إلى حسابك ✓ أكّد بريدك الإلكتروني لتفتح الاستوديو.', 'is-ok');
   else if (params.get('welcome') === '1') notice('أهلًا بك! حسابك جاهز ومعرّفك الدائم ظاهر بالأسفل. أكّد بريدك من الرابط المرسل إليك لتفعيل التجربة المجانية.', 'is-ok');
   const plan = params.get('plan'); if (plan === 'weekly' || plan === 'monthly') $(plan === 'weekly' ? 'planWeekly' : 'planMonthly').scrollIntoView({ block: 'center' });
   /* back from the payment page: ask the server, which asks the gateway — reaching this page proves nothing */
