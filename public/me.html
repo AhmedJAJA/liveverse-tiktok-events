@@ -9,6 +9,7 @@
 <link rel="icon" href="/brand/favicon-64.png" type="image/png">
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/pages.css">
+<script defer src="/google.js"></script>
 <script defer src="/me.js"></script>
 </head>
 <body class="hm pg">
@@ -51,9 +52,8 @@
   <section class="pg-card" id="trial" aria-labelledby="trialTitle">
    <h2 id="trialTitle">التجربة المجانية — 24 ساعة</h2>
    <p class="pg-sub" id="trialText">مرة واحدة لكل حساب. تبدأ الـ24 ساعة من لحظة التفعيل.</p>
-   <div id="trialCode" class="pg-code" hidden><code id="trialCodeValue" dir="ltr"></code><button type="button" class="pg-copy" id="copyTrial">نسخ الرمز</button></div>
    <dl class="pg-dl" id="trialTimes" hidden><dt>بدأت</dt><dd id="trialStart"></dd><dt>تنتهي / انتهت</dt><dd id="trialEnd"></dd></dl>
-   <div class="pg-row"><button type="button" class="pg-btn" id="trialClaim" hidden>احصل على تجربتك المجانية</button><button type="button" class="pg-btn" id="trialActivate" hidden>فعّل التجربة الآن</button></div>
+   <div class="pg-row"><button type="button" class="pg-btn" id="trialStart" hidden>ابدأ تجربتك المجانية الآن</button></div>
   </section>
 
   <section class="pg-card" id="plans" aria-labelledby="plansTitle">
@@ -80,6 +80,13 @@
     <p class="pg-msg" id="editMsg" role="status" hidden></p>
     <button class="pg-btn" type="submit">حفظ</button>
    </form>
+  </section>
+
+  <section class="pg-card" id="googleCard" aria-labelledby="googleTitle" hidden>
+   <h2 id="googleTitle">تسجيل الدخول باستخدام Google</h2>
+   <p class="pg-sub" id="googleText">اربط حساب Google لتدخل بضغطة واحدة. يبقى معرّفك الدائم واشتراكك كما هما.</p>
+   <div class="pg-google" id="googleBox" hidden></div>
+   <p class="pg-msg" id="googleMsg" role="status" hidden></p>
   </section>
 
   <section class="pg-card" aria-labelledby="linkedTitle">

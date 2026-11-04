@@ -18,7 +18,7 @@ const HOUR = 3_600_000;
 const TRIAL_MS = 24 * HOUR;
 const VERIFY_TTL_MS = 48 * HOUR;
 const TRIAL_CODE_TTL_MS = 30 * 24 * HOUR;
-const TRIALS_PER_NETWORK_PER_DAY = 3; // a soft signal only; never treated as proof of identity
+const TRIALS_PER_NETWORK_PER_DAY = 10; // a soft brake only (mobile networks share addresses); never treated as proof of identity
 const COMMON_PASSWORDS = new Set(['12345678', '123456789', '1234567890', 'password', 'password1', 'qwerty123', '11111111', '00000000', 'abcd1234', 'sponge123', 'spongelive']);
 
 export class PlatformError extends Error {
@@ -98,10 +98,13 @@ export class Platform {
   async init() {
     const users = (await this.pool.query('SELECT * FROM users')).rows;
     const subs = (await this.pool.query("SELECT user_id, plan, starts_at, ends_at, status FROM subscriptions WHERE status='active' AND ends_at > now()")).rows;
-    for (const u of users) this.store(u, subs.filter((s) => s.user_id === u.id));
+    const trials = new Map((await this.pool.query('SELECT user_id, activated_at, ends_at FROM trial_activations')).rows.map((t) => [t.user_id, t]));
+    const had = new Set((await this.pool.query('SELECT DISTINCT user_id FROM subscriptions')).rows.map((r) => r.user_id));
+    for (const u of users) this.store(u, subs.filter((s) => s.user_id === u.id), { trial: trials.get(u.id), hadAccess: had.has(u.id) });
   }
-  store(u, subs) {
-    const entry = { user: u, subs: subs.map((s) => ({ plan: s.plan, starts: +new Date(s.starts_at), ends: +new Date(s.ends_at), status: s.status })), loadedAt: this.now() };
+  store(u, subs, { trial = null, hadAccess = false } = {}) {
+    const entry = { user: u, subs: subs.map((s) => ({ plan: s.plan, starts: +new Date(s.starts_at), ends: +new Date(s.ends_at), status: s.status })), loadedAt: this.now(),
+      trial: trial ? { startedAt: +new Date(trial.activated_at), endsAt: +new Date(trial.ends_at) } : null, hadAccess: hadAccess || subs.length > 0 };
     this.cache.set(u.id, entry); this.byRoom.set(u.room, u.id);
     return entry;
   }
@@ -109,7 +112,9 @@ export class Platform {
     const u = (await client.query('SELECT * FROM users WHERE id=$1', [userId])).rows[0];
     if (!u) { const old = this.cache.get(userId); if (old) this.byRoom.delete(old.user.room); this.cache.delete(userId); return null; }
     const subs = (await client.query("SELECT plan, starts_at, ends_at, status FROM subscriptions WHERE user_id=$1 AND status='active' AND ends_at > now()", [userId])).rows;
-    return this.store(u, subs);
+    const trial = (await client.query('SELECT activated_at, ends_at FROM trial_activations WHERE user_id=$1', [userId])).rows[0];
+    const hadAccess = (await client.query('SELECT 1 FROM subscriptions WHERE user_id=$1 LIMIT 1', [userId])).rowCount > 0;
+    return this.store(u, subs, { trial, hadAccess });
   }
   cached(userId) {
     const e = this.cache.get(userId);
@@ -131,11 +136,19 @@ export class Platform {
     return { active: true, plan: current.plan, endsAt };
   }
   verified(userId) { return !!this.cached(userId)?.user.email_verified_at; }
+  /** Free-trial status from the server's records: available | active | expired. */
+  trialStatus(userId) {
+    const tr = this.cached(userId)?.trial;
+    if (!tr) return { status: 'available' };
+    return { status: tr.endsAt > this.now() ? 'active' : 'expired', startedAt: iso(tr.startedAt), endsAt: iso(tr.endsAt) };
+  }
+  /** Can this account start its trial right now? (one per account; e-mail proof when a mail service exists) */
+  get trialNeedsVerifiedEmail() { return process.env.TRIAL_REQUIRE_VERIFIED_EMAIL ? process.env.TRIAL_REQUIRE_VERIFIED_EMAIL === '1' : !!this.mail.configured; }
   isAdmin(userId) { const u = this.cached(userId)?.user; return !!(u && u.is_admin && u.email_verified_at && !u.disabled_at); }
 
   publicUser(u) {
     return { publicId: u.public_id, username: u.username, displayName: u.display_name, email: u.email, avatar: u.avatar, room: u.room,
-      verified: !!u.email_verified_at, isAdmin: !!u.is_admin, createdAt: iso(u.created_at) };
+      verified: !!u.email_verified_at, isAdmin: !!u.is_admin, createdAt: iso(u.created_at), googleLinked: !!u.google_sub, hasPassword: String(u.password_hash || '').startsWith('scrypt$') };
   }
 
   /* ----------------------------------------------------------- accounts */
@@ -264,6 +277,74 @@ export class Platform {
     await this.refresh(userId);
     return result;
   }
+  /**
+   * One click: start this account's 24-hour trial now. Safe against double clicks and parallel requests
+   * (the user row is locked and trial_activations.user_id is the primary key). If the trial is already
+   * running it is returned unchanged; an expired trial is never restarted.
+   */
+  async startTrial(userId, { ip = '' } = {}) {
+    if (this.trialNeedsVerifiedEmail && !this.verified(userId)) fail('أكّد بريدك الإلكتروني أو سجّل الدخول باستخدام Google لتفعيل التجربة المجانية', 403);
+    const ipHash = ip ? sha('net:' + ip) : null;
+    const out = await tx(this.pool, async (c) => {
+      await c.query('SELECT id FROM users WHERE id=$1 FOR UPDATE', [userId]);
+      const used = (await c.query('SELECT activated_at, ends_at FROM trial_activations WHERE user_id=$1', [userId])).rows[0];
+      if (used) {
+        if (+new Date(used.ends_at) > this.now()) return { started: false, already: true, startedAt: iso(used.activated_at), endsAt: iso(used.ends_at) };
+        fail('انتهت تجربتك المجانية ولا يمكن تفعيلها مرة أخرى — اختر باقة للمتابعة', 409);
+      }
+      await this.refresh(userId, c);
+      if (this.entitlement(userId).active) return { started: false, entitled: true };
+      if (ipHash) {
+        const limit = this.trialNeedsVerifiedEmail ? TRIALS_PER_NETWORK_PER_DAY : 5;
+        const n = (await c.query("SELECT count(*)::int AS n FROM trial_activations WHERE ip_hash=$1 AND activated_at > now() - interval '24 hours'", [ipHash])).rows[0].n;
+        if (n >= limit) fail('فُعّلت تجارب كثيرة من هذه الشبكة اليوم. حاول لاحقًا أو تواصل مع الدعم.', 429);
+      }
+      const t = this.now(), ends = new Date(t + TRIAL_MS);
+      await c.query('INSERT INTO trial_activations (user_id, activated_at, ends_at, ip_hash) VALUES ($1,$2,$3,$4)', [userId, new Date(t), ends, ipHash]);
+      await c.query("INSERT INTO subscriptions (user_id, plan, price_halalas, starts_at, ends_at, source) VALUES ($1,'trial',0,$2,$3,'trial')", [userId, new Date(t), ends]);
+      await c.query("UPDATE promo_codes SET active=false, code_plain=NULL WHERE user_id=$1 AND kind='trial' AND uses=0", [userId]);
+      return { started: true, startedAt: iso(t), endsAt: iso(ends) };
+    });
+    await this.refresh(userId);
+    return out;
+  }
+
+  /* ----------------------------------------------------- Google accounts */
+  async findByGoogle(sub) { return (await this.pool.query('SELECT * FROM users WHERE google_sub=$1', [sub])).rows[0] || null; }
+  async findByEmail(email) { return (await this.pool.query('SELECT id FROM users WHERE canonical_email=$1', [canonicalEmail(email)])).rows[0] || null; }
+  /** New account from a verified Google identity. The permanent ID is created once, exactly as for e-mail sign-up. */
+  async createFromGoogle(g) {
+    if (!g.email) fail('حساب Google لا يشارك بريدًا إلكترونيًا', 400);
+    const base = (canonicalEmail(g.email).split('@')[0].toLowerCase().replace(/[^a-z0-9_.]/g, '').replace(/^[._]+|[._]+$/g, '') || 'player').slice(0, 18).padEnd(3, '0');
+    const name = (g.name || base).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40).padEnd(2, '.');
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const username = attempt === 0 ? base : (base.slice(0, 18) + '_' + randomInt(100, 99999)).slice(0, 24);
+      try {
+        const u = (await this.pool.query(
+          `INSERT INTO users (public_id, username, display_name, email, canonical_email, password_hash, room, google_sub, google_linked_at, email_verified_at)
+           VALUES ($1,$2,$3,$4,$5,'!google',$6,$7,now(),$8) RETURNING *`,
+          [newPublicId(), username, name, g.email, canonicalEmail(g.email), newRoom(), g.sub, g.emailVerified ? new Date(this.now()) : null])).rows[0];
+        this.store(u, []);
+        return u;
+      } catch (err) {
+        if (err.code !== '23505') throw err;
+        if (/google_sub/.test(err.constraint || '')) return this.findByGoogle(g.sub); // created by a parallel request
+        if (/email/.test(err.constraint || '')) fail('يوجد حساب بهذا البريد. سجّل الدخول بكلمة المرور ثم اربط Google من صفحة «حسابي».', 409, { needsLink: true });
+      }
+    }
+    fail('تعذر إنشاء الحساب، حاول مرة أخرى', 500);
+  }
+  /** Link Google to the signed-in account (ownership of both is proven: the session and the Google token). */
+  async linkGoogle(userId, g) {
+    const owner = await this.findByGoogle(g.sub);
+    if (owner && owner.id !== userId) fail('حساب Google هذا مرتبط بحساب SPONGE LIVE آخر', 409);
+    const me = this.cached(userId)?.user || (await this.refresh(userId))?.user;
+    if (me.google_sub && me.google_sub !== g.sub) fail('حسابك مرتبط بحساب Google آخر', 409);
+    const sameMail = g.emailVerified && canonicalEmail(g.email) === me.canonical_email;
+    await this.pool.query('UPDATE users SET google_sub=$2, google_linked_at=COALESCE(google_linked_at, now()), email_verified_at=CASE WHEN $3 THEN COALESCE(email_verified_at, now()) ELSE email_verified_at END WHERE id=$1', [userId, g.sub, sameMail]);
+    return (await this.refresh(userId)).user;
+  }
+
   /** A code typed in the home page field: is it someone's trial code? */
   async findTrialCode(plain) {
     if (normalizeCode(plain).length < 6) return null;
@@ -419,6 +500,7 @@ export class Platform {
       payments: pays.rows.map((p) => ({ id: p.id, plan: p.plan, amount: p.amount_halalas / 100, currency: p.currency, status: p.status, createdAt: iso(p.created_at) })),
       billing: { enabled: !!this.gateway.configured, provider: this.gateway.configured ? this.gateway.name : null },
       mail: { enabled: !!this.mail.configured },
+      trialNeedsVerifiedEmail: this.trialNeedsVerifiedEmail,
     };
   }
 

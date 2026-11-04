@@ -22,7 +22,11 @@
     e.preventDefault();
     if (busy) return; // one request at a time, however many times the button is pressed
     const code = input.value.trim();
-    if (!code) { showError('أدخل الرمز الترويجي'); input.focus(); return; }
+    if (!code) {
+      // no code typed: a signed-in subscriber goes straight in; anyone else gets told what is needed
+      if (me && (me.signedIn || me.account)) { enterStudio(); return; }
+      showError('أدخل الرمز الترويجي'); input.focus(); return;
+    }
     busy = true; button.disabled = true; button.classList.add('is-busy'); showError('');
     try {
       const res = await post('/api/access/redeem', { code });
@@ -54,7 +58,7 @@
       // promo-code or owner session: offer the studio and a way out
       $('barTrial').textContent = 'الاستوديو'; $('barTrial').href = '/studio'; $('menuLogout').hidden = false;
     }
-    updateConnectGate();
+    updateConnectGate(); paintStatus();
   }).catch(() => {});
   fetch('/api/site', { cache: 'force-cache' }).then((r) => r.json()).then((site) => {
     const url = site.support?.url; if (!url) return;
@@ -128,6 +132,105 @@
     if (Date.now() < pollUntil) pollTimer = setTimeout(poll, 2500);
     else if (status.dataset.state === 'connecting') setStatus('error', 'لم يصل شات البث بعد — تأكد أن البث شغال ثم حاول مجددًا');
   }
+
+  /* ---------------------------------------------- studio & free-trial flow
+     The server decides everything (session, subscription, trial). This page only asks and shows the answer. */
+  const flow = $('flow');
+  const fmtLeft = (ms) => { const m = Math.max(0, Math.floor(ms / 60000)), h = Math.floor(m / 60); return h ? `${h} ساعة و${m % 60} دقيقة` : `${m % 60} دقيقة`; };
+  async function refreshMe() { me = await fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.json()); paintStatus(); return me; }
+  let statusTimer = 0;
+  function paintStatus() {
+    clearTimeout(statusTimer);
+    const a = me?.account, el = $('heroStatus'), text = $('heroStatusText');
+    el.dataset.state = 'trial'; el.dataset.action = 'trial';
+    if (a?.entitled) {
+      el.dataset.state = 'on'; el.dataset.action = 'studio'; el.href = '/studio';
+      text.textContent = a.plan === 'trial' ? 'تجربتك المجانية فعالة — متبقي ' + fmtLeft(new Date(a.endsAt) - Date.now()) : 'اشتراكك فعال — دخول الاستوديو';
+      statusTimer = setTimeout(paintStatus, 30_000);
+    } else if (me?.signedIn) { el.dataset.state = 'on'; el.dataset.action = 'studio'; el.href = '/studio'; text.textContent = 'أنت مسجّل الدخول — دخول الاستوديو'; }
+    else if (a && a.trial?.status !== 'available') { el.dataset.state = 'off'; el.dataset.action = 'renew'; el.href = '#plans'; text.textContent = 'انتهى اشتراكك — جدّد الآن'; }
+    else text.textContent = 'ابدأ تجربتك المجانية لمدة 24 ساعة';
+  }
+  function showFlow(kind, { intent = 'trial', message = '' } = {}) {
+    const T = {
+      auth: [intent === 'trial' ? 'ابدأ تجربتك المجانية لمدة 24 ساعة' : 'سجّل الدخول لدخول الاستوديو', intent === 'trial' ? 'سجّل الدخول أو أنشئ حسابًا مجانيًا، وتبدأ تجربتك مباشرة بعده.' : 'ادخل بحسابك المشترك، أو أنشئ حسابًا وابدأ تجربتك المجانية.', 'i-user'],
+      expired: ['انتهى اشتراكك', 'اشتراكك أو تجربتك انتهت. جدّد اشتراكك لتعود إلى الاستوديو — حسابك ومعرّفك محفوظان.', 'i-hourglass'],
+      none: ['لا يوجد اشتراك فعّال', 'فعّل تجربتك المجانية لمدة 24 ساعة، أو اختر باقة.', 'i-ticket'],
+      verify: ['أكّد بريدك أولًا', message || 'لتفعيل التجربة المجانية أكّد بريدك الإلكتروني من صفحة «حسابي»، أو سجّل الدخول باستخدام Google.', 'i-shield'],
+      error: ['تعذر إتمام الطلب', message, 'i-close'],
+      wait: ['لحظة…', '', 'i-sparkle'],
+      done: ['تم تفعيل تجربتك المجانية بنجاح', 'لديك 24 ساعة كاملة. جارٍ فتح الاستوديو…', 'i-check'],
+    }[kind];
+    $('flowTitle').textContent = T[0]; $('flowText').textContent = T[1]; $('flowText').hidden = !T[1];
+    $('flowIconUse').setAttribute('href', '/icons.svg#' + T[2]);
+    $('flowError').hidden = true;
+    $('flowAuth').hidden = kind !== 'auth';
+    $('flowPlans').hidden = !['expired', 'none'].includes(kind);
+    $('flowTrial').hidden = !(['expired', 'none'].includes(kind) && me?.account?.trial?.status === 'available');
+    $('flowWait').hidden = !['wait', 'done'].includes(kind);
+    $('flowSignup').href = '/signup?intent=' + intent; $('flowLogin').href = '/login?intent=' + intent;
+    if (kind === 'verify') { $('flowAuth').hidden = false; $('flowSignup').textContent = 'افتح صفحة «حسابي»'; $('flowSignup').href = '/account'; $('flowLogin').hidden = true; }
+    else { $('flowSignup').textContent = 'إنشاء حساب بالبريد'; $('flowLogin').hidden = false; }
+    if (flow.hidden) { lastFocusFlow = document.activeElement; flow.hidden = false; document.documentElement.classList.add('menu-open'); }
+    $('flowClose').focus();
+    if (kind === 'auth' || kind === 'verify') mountGoogle(intent);
+  }
+  let lastFocusFlow = null;
+  function hideFlow() { if (flow.hidden) return; flow.hidden = true; document.documentElement.classList.remove('menu-open'); lastFocusFlow?.focus?.(); }
+  $('flowClose').addEventListener('click', hideFlow);
+  flow.addEventListener('click', (e) => { if (e.target === flow) hideFlow(); else if (e.target.closest('a[href^="#"]')) hideFlow(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !flow.hidden) hideFlow(); });
+  let googleLoaded = null;
+  function mountGoogle(intent) {
+    googleLoaded ||= new Promise((resolve) => { const sc = document.createElement('script'); sc.src = '/google.js'; sc.onload = resolve; sc.onerror = resolve; document.head.append(sc); });
+    googleLoaded.then(async () => {
+      if (!window.SpongeGoogle) return;
+      const shown = await window.SpongeGoogle.render($('flowGoogle'), async (credential) => {
+        showFlow('wait');
+        try { await window.SpongeGoogle.signIn(credential); await refreshMe(); intent === 'trial' ? startTrial() : enterStudio(); }
+        catch (err) { showFlow('auth', { intent }); $('flowError').textContent = err.message; $('flowError').hidden = false; }
+      });
+      $('flowOr').hidden = !shown;
+    });
+  }
+  let acting = false;
+  async function enterStudio() {
+    if (acting) return; acting = true;
+    try {
+      await refreshMe();
+      if (me.signedIn) { location.assign('/studio'); return; } // a running subscription/trial, a promo code or the owner
+      if (!me.account) { showFlow('auth', { intent: 'studio' }); return; }
+      showFlow(me.account.expired || me.account.trial?.status === 'expired' ? 'expired' : 'none');
+    } catch { showFlow('error', { message: 'تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجددًا.' }); }
+    finally { acting = false; }
+  }
+  async function startTrial() {
+    if (acting) return; acting = true;
+    try {
+      await refreshMe();
+      if (!me.account) { showFlow('auth', { intent: 'trial' }); return; }
+      if (me.signedIn) { location.assign('/studio'); return; } // already has access: no new trial is created
+      showFlow('wait');
+      const r = await post('/api/me/trial-start', {});
+      if (r.ok) {
+        if (r.data.started) { showFlow('done'); setTimeout(() => location.assign('/studio'), 1400); }
+        else location.assign('/studio');
+        return;
+      }
+      if (r.status === 403) showFlow('verify', { message: r.data.error });
+      else if (r.status === 409) { await refreshMe(); showFlow('expired'); }
+      else showFlow('error', { message: r.data.error || 'تعذر تفعيل التجربة' });
+    } catch { showFlow('error', { message: 'انقطع الاتصال قبل اكتمال الطلب. لم يُفعّل شيء مرتين — حاول مرة أخرى.' }); }
+    finally { acting = false; }
+  }
+  $('flowTrial').addEventListener('click', startTrial);
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-action]'); if (!a) return;
+    const action = a.dataset.action;
+    if (action === 'renew') return; // a normal link to #plans
+    e.preventDefault(); closeMenu(false);
+    if (action === 'trial') startTrial(); else if (action === 'studio') enterStudio();
+  });
 
   /* ------------------------------------------------------------------- menu */
   const menu = $('menu'), menuBtn = $('menuButton');

@@ -385,3 +385,31 @@ html.menu-open{overflow:hidden}
 .hm-fab:focus-visible{outline:3px solid #fff;outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.hm-menu,.hm-menu-panel,.hm-badge-live i{animation:none}}
 .hm-foot{padding-bottom:max(96px,env(safe-area-inset-bottom))}
+
+/* hero status line (from the server: trial left, subscription on, or ended) */
+.hm-status{display:inline-flex;align-items:center;gap:10px;margin-top:4px;padding:9px 16px;border-radius:999px;border:1px solid rgba(59,227,139,.55);background:rgba(59,227,139,.1);color:#C9FFE2;font-weight:800;font-size:15px;text-decoration:none}
+.hm-status i{width:9px;height:9px;border-radius:50%;background:#3BE38B;box-shadow:0 0 10px #3BE38B}
+.hm-status[data-state="trial"]{border-color:rgba(255,214,42,.6);background:rgba(255,214,42,.1);color:#FFE98A}
+.hm-status[data-state="trial"] i{background:#FFD62A;box-shadow:0 0 10px #FFD62A}
+.hm-status[data-state="off"]{border-color:rgba(255,106,138,.6);background:rgba(255,106,138,.1);color:#FFC2CF}
+.hm-status[data-state="off"] i{background:var(--coral);box-shadow:none}
+.hm-status:focus-visible{outline:3px solid #fff;outline-offset:2px}
+
+/* flow dialog: sign in, trial, renewal */
+.hm-modal{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:16px;background:rgba(1,6,20,.66);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);animation:hm-fade .2s ease both}
+.hm-modal[hidden]{display:none}
+.hm-modal-card{position:relative;width:min(440px,100%);max-height:calc(100svh - 32px);overflow-y:auto;padding:28px 22px 22px;border-radius:26px;text-align:center;background:linear-gradient(160deg,rgba(14,42,104,.97),rgba(4,16,46,.98));border:1px solid rgba(140,232,255,.55);box-shadow:0 0 50px -10px rgba(56,212,255,.5),0 40px 80px -30px #000;animation:hm-in .3s var(--ease) both}
+.hm-modal-card h2{margin:0 0 8px;font-size:clamp(22px,5vw,28px);font-weight:900;line-height:1.35}
+.hm-modal-card .hm-text{margin-bottom:16px}
+.hm-modal-x{position:absolute;top:12px;inset-inline-end:12px;width:40px;height:40px}
+.hm-flow-auth,.hm-flow-plans{display:grid;gap:10px}
+.hm-flow-auth .hm-enter,.hm-flow-plans .hm-enter{display:grid;place-items:center;text-decoration:none}
+.hm-ghost-sm{height:52px;font-size:16px;width:100%;cursor:pointer}
+.hm-ghost-green{border-color:rgba(59,227,139,.6);color:#C9FFE2}
+.hm-link-sm{color:var(--aqua);font-weight:700;font-size:14px;margin-top:2px}
+.hm-google{display:grid;place-items:center;min-height:44px}
+.hm-or{display:flex;align-items:center;gap:10px;margin:2px 0;color:var(--muted);font-size:14px}
+.hm-or::before,.hm-or::after{content:"";flex:1;height:1px;background:rgba(140,232,255,.2)}
+.hm-flow-wait{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0 4px;color:var(--muted);font-weight:700}
+.hm-spinner{width:26px;height:26px;border-radius:50%;border:3px solid rgba(140,232,255,.25);border-top-color:var(--cyan);animation:hm-spin .8s linear infinite}
+@media (prefers-reduced-motion:reduce){.hm-modal,.hm-modal-card{animation:none}.hm-spinner{animation-duration:2.4s}}

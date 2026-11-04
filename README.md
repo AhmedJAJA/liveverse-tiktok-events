@@ -14,6 +14,23 @@ SKY LIVE is an Arabic interactive livestream events website with a public homepa
 - Automatic WebSocket updates, reconnect attempts and basic tests.
 - RTL / mobile-friendly dashboard with English technical labels.
 
+## v1.3 — one-click trial, smart studio button, Sign in with Google
+
+**Studio button.** «ادخل الاستوديو» asks the server (`/api/access/me`). A running subscription, trial, promo code or owner session goes straight to `/studio`. Visitors who are not signed in get a sign-in/sign-up dialog that resumes the action afterwards (`?intent=studio|trial`). An ended subscription gets a renewal dialog, plus the trial if it was never used. The studio pages, `/api/admin/*` (402 with a renewal hint) and the read-only WebSocket are all enforced on the server. If access ends while the studio is open, the round on screen is kept and a renewal banner appears.
+
+**One-click trial.** `POST /api/me/trial-start` starts the 24 hours immediately, once per account, ever.
+- The user row is locked and `trial_activations.user_id` is the primary key, so parallel clicks create one trial.
+- An active trial is returned as is. An expired one answers 409.
+- E-mail verification is required only when a mail service is configured; override with `TRIAL_REQUIRE_VERIFIED_EMAIL=1|0`.
+- Soft per-network brake: 5 trials a day without verification, 10 with it.
+
+**Google.** Set `GOOGLE_CLIENT_ID` (Google Cloud → APIs & Services → Credentials → OAuth client ID → Web application).
+- *Authorized JavaScript origins:* the site URL (e.g. `https://liveverse-tiktok-events.onrender.com`). No redirect URI is needed, because the button uses the popup flow.
+- *Verification:* the server checks the ID token's RS256 signature against Google's keys, plus `iss`, `aud`, `exp`, `iat` and a nonce bound to the browser by an HttpOnly cookie.
+- *Identity:* accounts are matched by `google_sub` only. An existing password account with the same e-mail is never merged automatically; the user signs in and links Google from «حسابي» (`/api/me/link-google`). The permanent ID never changes.
+
+**Data.** `account_access` view: trial start/expiry, trial used, plan, status, expiry, Google linked, created (UTC; the site shows Saudi time).
+
 ## v1.2 — accounts, permanent ID, free trial, subscriptions
 
 **Database.** Set `DATABASE_URL` (PostgreSQL 13+). On start the server applies `migrations/*.sql` (also `npm run migrate`). Tables: `users` (UUID key + `public_id` such as `SPG-8F42K9`, UNIQUE, protected by a trigger so it can never change), `email_tokens`, `sessions`, `promo_codes`, `trial_activations` (one row per user, ever), `subscriptions`, `payments`, `linked_accounts`, `admin_audit_logs`. Promo codes and login sessions are written through to the database, so a redeploy no longer loses them. Without `DATABASE_URL` the games and promo codes work as before and the account pages say accounts are off.

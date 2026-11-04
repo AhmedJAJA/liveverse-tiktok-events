@@ -87,3 +87,5 @@ body[data-drawer=closed] .st-drawer{display:none!important}
 .st-hero .pl-id p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .st-hero .pl-rules{flex-wrap:nowrap;overflow:hidden;max-height:36px}
 @media (max-width:760px){.st-hero{height:112px}.st-hero .pl-cover,.st-hero .pl-cover.is-art{width:72px;height:92px}.st-hero h1{font-size:24px}}
+.st-expired{position:sticky;top:0;z-index:80;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 16px;padding:12px 16px;background:linear-gradient(90deg,#5A0F24,#3A0B2C);border-bottom:1px solid rgba(255,106,138,.6);color:#FFE3EA;font-weight:800;text-align:center}
+.st-expired a{padding:8px 14px;border-radius:12px;background:#FFD62A;color:#0A1A3D;text-decoration:none;font-weight:900}

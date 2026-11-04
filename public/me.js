@@ -7,7 +7,8 @@
   const PLAN_NAMES = { trial: 'التجربة المجانية', weekly: 'شفيق العادي', monthly: 'أمير الهامور', manual: 'اشتراك من الإدارة' };
   const STATUS = { active: ['فعّال', 'is-on'], expired: ['منتهي', 'is-off'], scheduled: ['يبدأ لاحقًا', 'is-warn'], cancelled: ['موقوف', 'is-bad'] };
   const params = new URLSearchParams(location.search);
-  const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short' });
+  // stored in UTC on the server; shown in Saudi time
+  const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Riyadh' });
   const fmtDate = (iso) => (iso ? fmt.format(new Date(iso)) : '—');
   let profile = null, tick = 0;
 
@@ -50,14 +51,17 @@
     $('openStudio').hidden = !a.active; $('navStudio').hidden = $('openStudio').hidden;
     // trial
     const t = p.trial;
-    $('trialClaim').hidden = !(t.status === 'available'); $('trialActivate').hidden = t.status !== 'ready';
-    $('trialCode').hidden = t.status !== 'ready'; $('trialTimes').hidden = !['active', 'expired'].includes(t.status);
-    if (t.status === 'ready') { $('trialCodeValue').textContent = t.code; $('trialText').textContent = 'هذا رمز تجربتك الخاص بحسابك. فعّله الآن، أو انسخه وأدخله في نافذة الرمز الترويجي — تبدأ الـ24 ساعة لحظة التفعيل.'; }
-    else if (t.status === 'active') { $('trialText').textContent = 'تجربتك المجانية تعمل الآن.'; }
+    $('trialStart').hidden = !['available', 'ready'].includes(t.status) || a.active;
+    $('trialTimes').hidden = !['active', 'expired'].includes(t.status);
+    if (t.status === 'active') { $('trialText').textContent = 'تجربتك المجانية تعمل الآن.'; }
     else if (t.status === 'expired') { $('trialText').textContent = 'انتهت تجربتك المجانية ولا يمكن تفعيلها مرة أخرى. اشترك في باقة لمواصلة استخدام الاستوديو.'; }
-    else $('trialText').textContent = u.verified ? 'مرة واحدة لكل حساب. تبدأ الـ24 ساعة من لحظة التفعيل.' : 'أكّد بريدك الإلكتروني أولًا لتحصل على التجربة المجانية.';
+    else if (a.active) $('trialText').textContent = 'لديك اشتراك فعّال الآن — احتفظ بتجربتك المجانية لوقت لاحق.';
+    else $('trialText').textContent = p.trialNeedsVerifiedEmail && !u.verified ? 'أكّد بريدك الإلكتروني أو اربط Google لتفعيل التجربة المجانية.' : 'مرة واحدة لكل حساب. تبدأ الـ24 ساعة من لحظة التفعيل ولا تتوقف.';
     if (t.startedAt) { $('trialStart').textContent = fmtDate(t.startedAt); $('trialEnd').textContent = fmtDate(t.endsAt); }
-    $('trialClaim').disabled = !u.verified;
+    $('trialStart').disabled = !!(p.trialNeedsVerifiedEmail && !u.verified);
+    $('googleText').textContent = u.googleLinked ? 'حسابك مرتبط بـ Google ✓ يمكنك الدخول بضغطة واحدة.' : 'اربط حساب Google لتدخل بضغطة واحدة. يبقى معرّفك الدائم واشتراكك كما هما.';
+    if (!u.googleLinked && !googleMounted) mountGoogle(); else if (u.googleLinked) $('googleBox').hidden = true;
+    if (u.googleLinked) $('googleCard').hidden = !googleAvailable;
     // billing
     for (const b of document.querySelectorAll('[data-checkout]')) b.disabled = !p.billing.enabled || !u.verified;
     // linked accounts
@@ -100,14 +104,28 @@
     try { await fn(); } catch (e) { if (e.message !== 'login') error(e.message); } finally { button.disabled = false; }
   }
   $('copyId').addEventListener('click', (e) => copy(profile?.user.publicId || '', e.currentTarget));
-  $('copyTrial').addEventListener('click', (e) => copy(profile?.trial.code || '', e.currentTarget));
+  let googleMounted = false, googleAvailable = false;
+  function mountGoogle() {
+    googleMounted = true;
+    if (!window.SpongeGoogle) return;
+    window.SpongeGoogle.render($('googleBox'), async (credential) => {
+      const m = $('googleMsg');
+      try { await window.SpongeGoogle.signIn(credential, { link: true }); m.textContent = 'تم ربط حساب Google ✓ معرّفك الدائم لم يتغير.'; m.className = 'pg-msg is-ok'; await load(); }
+      catch (err) { m.textContent = err.message; m.className = 'pg-msg is-err'; }
+      m.hidden = false;
+    }, { text: 'continue_with' }).then((shown) => { googleAvailable = shown; $('googleCard').hidden = !shown; });
+  }
   $('resendButton').addEventListener('click', (e) => act(e.currentTarget, async () => {
     const r = await api('POST', '/api/auth/resend', {});
     if (r.already) { notice('بريدك مؤكَّد بالفعل.', 'is-ok'); return load(); }
     notice(r.sent ? 'أرسلنا رابط التأكيد إلى بريدك. افتحه خلال 48 ساعة.' : r.devLink ? 'خدمة البريد غير مهيأة (وضع التطوير). رابط التأكيد: ' + r.devLink : 'خدمة البريد غير مهيأة بعد. تواصل مع الدعم مع معرّفك ليُؤكَّد بريدك.', r.sent ? 'is-ok' : 'is-info');
   }));
-  $('trialClaim').addEventListener('click', (e) => act(e.currentTarget, async () => { await api('POST', '/api/me/trial-claim', {}); await load(); notice('رمز تجربتك جاهز. فعّله متى ما كنت مستعدًا للبث.', 'is-ok'); }));
-  $('trialActivate').addEventListener('click', (e) => act(e.currentTarget, async () => { await api('POST', '/api/me/trial-activate', {}); await load(); notice('تم تفعيل التجربة المجانية — لديك 24 ساعة. افتح الاستوديو وابدأ.', 'is-ok'); }));
+  $('trialStart').addEventListener('click', (e) => act(e.currentTarget, async () => {
+    const r = await api('POST', '/api/me/trial-start', {});
+    await load();
+    if (r.started) { notice('تم تفعيل تجربتك المجانية بنجاح ✓ جارٍ فتح الاستوديو…', 'is-ok'); setTimeout(() => location.assign('/studio'), 1400); }
+    else location.assign('/studio');
+  }));
   for (const b of document.querySelectorAll('[data-checkout]')) b.addEventListener('click', () => act(b, async () => {
     const r = await api('POST', '/api/me/checkout', { plan: b.dataset.checkout });
     location.assign(r.url); // the gateway's own payment page
@@ -136,6 +154,7 @@
   /* messages from the URL */
   if (params.get('verified') === '1') notice('تم تأكيد بريدك الإلكتروني ✓ يمكنك الآن الحصول على التجربة المجانية.', 'is-ok');
   else if (params.get('verified') === '0') notice('رابط التأكيد غير صالح أو منتهي. اطلب رابطًا جديدًا من هذه الصفحة.', 'is-err');
+  else if (params.get('verify') === 'trial') notice('لتفعيل التجربة المجانية أكّد بريدك الإلكتروني أو اربط حساب Google من هذه الصفحة.');
   else if (params.get('need') === 'plan') notice('الاستوديو يحتاج تجربة أو اشتراكًا فعّالًا. فعّل تجربتك المجانية أو اشترك في باقة.');
   else if (params.get('welcome') === '1') notice('أهلًا بك! حسابك جاهز ومعرّفك الدائم ظاهر بالأسفل. أكّد بريدك من الرابط المرسل إليك لتفعيل التجربة المجانية.', 'is-ok');
   const plan = params.get('plan'); if (plan === 'weekly' || plan === 'monthly') $(plan === 'weekly' ? 'planWeekly' : 'planMonthly').scrollIntoView({ block: 'center' });

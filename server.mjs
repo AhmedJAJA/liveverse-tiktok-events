@@ -17,6 +17,7 @@ import { createPool, migrate } from './src/db.mjs';
 import { PromoMirror, SessionMirror } from './src/persist.mjs';
 import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS } from './src/platform.mjs';
 import { createMailer, createGateway } from './src/services.mjs';
+import { GoogleVerifier } from './src/google.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, 'public');
@@ -116,6 +117,7 @@ if (pool) {
   await platform.init();
   for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
 } else console.warn('[db] DATABASE_URL is not set: games and promo codes work; accounts, trials and subscriptions are off.');
+const google = new GoogleVerifier({ clientId: process.env.GOOGLE_CLIENT_ID || '', jwksUrl: process.env.GOOGLE_JWKS_URL || undefined });
 const OPEN_SIGNUP = process.env.SKY_OPEN_SIGNUP === '1';
 const redeemIp = new RateLimiter({ limit: 8, windowMs: 10 * 60_000 });
 const redeemAll = new RateLimiter({ limit: 300, windowMs: 10 * 60_000 });
@@ -171,7 +173,8 @@ function meFor(req) {
 function accountView(userId) {
   const e = platform?.cached(userId); if (!e) return null;
   const ent = platform.entitlement(userId);
-  return { ...platform.publicUser(e.user), entitled: ent.active && !e.user.disabled_at, plan: ent.plan, planName: ent.plan ? PLATFORM_PLANS[ent.plan].name : null, endsAt: ent.endsAt ? new Date(ent.endsAt).toISOString() : null };
+  return { ...platform.publicUser(e.user), entitled: ent.active && !e.user.disabled_at, plan: ent.plan, planName: ent.plan ? PLATFORM_PLANS[ent.plan].name : null, endsAt: ent.endsAt ? new Date(ent.endsAt).toISOString() : null,
+    trial: platform.trialStatus(userId), expired: !ent.active && e.hadAccess, trialNeedsVerifiedEmail: platform.trialNeedsVerifiedEmail };
 }
 function accountSession(req) { const s = sessionOf(req); return s?.kind === 'acct' && platform?.cached(s.userId) ? s : null; }
 function sameOrigin(req) { const origin = req.headers.origin; if (!origin) return true; try { return new URL(origin).host === req.headers.host; } catch { return false; } }
@@ -184,9 +187,9 @@ async function readBody(req, limit = 16384) {
 }
 function secureHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin'); // Google Identity Services needs the origin
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data: https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
 }
 
 async function handleAction(action, body, actor) {
@@ -399,12 +402,19 @@ const platformOff = (res) => json(res, 503, { error: 'الحسابات غير م
 const pErr = (res, err) => { if (err instanceof PlatformError) return json(res, err.status, { error: err.message, ...(err.fields ? { fields: err.fields } : {}) }); throw err; };
 
 async function handleAuth(action, req, res) {
-  if (action === 'config' && req.method === 'GET') return json(res, 200, { enabled: !!platform, mail: !!platform?.mail.configured, billing: !!platform?.gateway.configured, plans: Object.values(PLATFORM_PLANS).filter((p) => p.id !== 'manual').map((p) => ({ id: p.id, name: p.name, price: p.priceHalalas / 100, duration: p.duration })) });
+  if (action === 'google' && req.method === 'GET') {
+    // A fresh nonce for Google's button, bound to this browser by an HttpOnly cookie; the ID token must carry it back.
+    if (!platform || !google.enabled) return json(res, 200, { enabled: false });
+    const nonce = randomBytes(18).toString('base64url');
+    res.setHeader('Set-Cookie', `g_nonce=${nonce}; HttpOnly; Path=/api/; SameSite=Lax; Max-Age=600${isHttps(req) ? '; Secure' : ''}`);
+    return json(res, 200, { enabled: true, clientId: google.clientId, nonce });
+  }
+  if (action === 'config' && req.method === 'GET') return json(res, 200, { enabled: !!platform, mail: !!platform?.mail.configured, billing: !!platform?.gateway.configured, google: !!(platform && google.enabled), trialNeedsVerifiedEmail: !!platform?.trialNeedsVerifiedEmail, plans: Object.values(PLATFORM_PLANS).filter((p) => p.id !== 'manual').map((p) => ({ id: p.id, name: p.name, price: p.priceHalalas / 100, duration: p.duration })) });
   if (!platform) return platformOff(res);
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   if (!sameOrigin(req)) return json(res, 403, { error: 'طلب من مصدر غير مسموح' });
   const ip = clientIp(req);
-  const body = await readBody(req, 4096).catch(() => null);
+  const body = await readBody(req, 8192).catch(() => null);
   if (!body) return json(res, 400, { error: 'طلب غير صالح' });
   try {
     if (action === 'register') {
@@ -426,6 +436,27 @@ async function handleAuth(action, req, res) {
       return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
     }
     if (action === 'logout') { const s = sessionOf(req); if (s) sessions.destroy(s.id); clearCookie(req, res); return json(res, 200, { ok: true }); }
+    if (action === 'google') {
+      // Sign in (or sign up) with Google. The account is found by Google's subject ID only.
+      if (!google.enabled) return json(res, 503, { error: 'تسجيل الدخول باستخدام Google غير مفعّل بعد' });
+      if (!loginIpLimiter.hit('g:' + ip)) return json(res, 429, { error: 'محاولات كثيرة. انتظر قليلًا ثم حاول.' });
+      let g;
+      try { g = await google.verify(String(body.credential || ''), { nonce: parseCookies(req.headers.cookie).g_nonce || '' }); }
+      catch (err) { console.warn('[google] rejected token:', err.message); return json(res, 401, { error: 'تعذر التحقق من حساب Google. حدّث الصفحة وحاول مرة أخرى.' }); }
+      const current = accountSession(req);
+      let user = await platform.findByGoogle(g.sub);
+      if (!user && current && body.link === true) user = await platform.linkGoogle(current.userId, g);
+      if (!user) {
+        if (await platform.findByEmail(g.email)) return json(res, 409, { error: 'يوجد حساب SPONGE LIVE بهذا البريد. سجّل الدخول بكلمة المرور، ثم اربط Google من صفحة «حسابي» — لا نربط الحسابات تلقائيًا بالبريد وحده.', needsLink: true });
+        user = await platform.createFromGoogle(g);
+      }
+      if (user.disabled_at) return json(res, 403, { error: 'هذا الحساب موقوف. تواصل مع الدعم.' });
+      await platform.refresh(user.id);
+      const old = sessionOf(req); if (old) sessions.destroy(old.id);
+      setSession(res, req, sessions.create('acct', { userId: user.id }), 30 * 86400);
+      const a = accountView(user.id);
+      return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
+    }
     if (action === 'resend') {
       const s = accountSession(req); if (!s) return json(res, 401, { error: 'سجّل الدخول أولًا' });
       if (!mailLimiter.hit('mail:' + s.userId)) return json(res, 429, { error: 'أُرسلت رسائل كثيرة. انتظر 30 دقيقة.' });
@@ -447,10 +478,19 @@ async function handleMe(action, req, res) {
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'طلب من مصدر غير مسموح' });
     if (!meLimiter.hit(userId)) return json(res, 429, { error: 'طلبات كثيرة، انتظر قليلًا' });
-    const body = await readBody(req, 2048).catch(() => ({}));
+    const body = await readBody(req, 8192).catch(() => ({}));
     // Only these fields can come from the browser; plan, dates, IDs and admin rights are never read from the body.
     if (action === 'update') { await platform.updateProfile(userId, { displayName: body.displayName, avatar: body.avatar }); return json(res, 200, { ok: true, account: accountView(userId) }); }
     if (action === 'trial-claim') return json(res, 200, { ok: true, trial: await platform.claimTrial(userId) });
+    if (action === 'trial-start') { const r = await platform.startTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, next: '/studio', account: accountView(userId) }); }
+    if (action === 'link-google') {
+      if (!google.enabled) return json(res, 503, { error: 'تسجيل الدخول باستخدام Google غير مفعّل بعد' });
+      let g;
+      try { g = await google.verify(String(body.credential || ''), { nonce: parseCookies(req.headers.cookie).g_nonce || '' }); }
+      catch { return json(res, 401, { error: 'تعذر التحقق من حساب Google' }); }
+      await platform.linkGoogle(userId, g);
+      return json(res, 200, { ok: true, account: accountView(userId) });
+    }
     if (action === 'trial-activate') { const r = await platform.activateTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, account: accountView(userId) }); }
     if (action === 'checkout') return json(res, 200, { ok: true, ...(await platform.checkout(userId, String(body.plan || ''))) });
     if (action === 'redeem') {
@@ -576,7 +616,7 @@ function streams() {
   return { streams: list, totalStreams: list.length, totalPlayers: list.reduce((n, s) => n + s.players, 0) };
 }
 
-const STATIC = new Set(['index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
+const STATIC = new Set(['index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),

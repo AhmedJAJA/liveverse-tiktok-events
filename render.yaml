@@ -30,6 +30,9 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      # Sign in with Google: the OAuth Web client ID from Google Cloud (not a secret). Leave empty to hide the button.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
       # Payments (Moyasar hosted invoices). Leave empty to keep checkout disabled.
       - key: MOYASAR_SECRET_KEY
         sync: false
