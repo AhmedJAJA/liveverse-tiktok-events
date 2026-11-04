@@ -84,8 +84,9 @@ export class Providers {
   constructor({ appUrl = '', fetchImpl = globalThis.fetch, now = () => Date.now(), env = process.env } = {}) {
     this.appUrl = String(appUrl).replace(/\/$/, ''); this.fetch = fetchImpl; this.now = now;
     this.cfg = {
-      tiktok: { id: env.TIKTOK_CLIENT_KEY || '', secret: env.TIKTOK_CLIENT_SECRET || '' },
-      kick: { id: env.KICK_CLIENT_ID || '', secret: env.KICK_CLIENT_SECRET || '' },
+      // Trimmed: values pasted into a dashboard often carry a stray space or newline.
+      tiktok: { id: String(env.TIKTOK_CLIENT_KEY || '').trim(), secret: String(env.TIKTOK_CLIENT_SECRET || '').trim() },
+      kick: { id: String(env.KICK_CLIENT_ID || '').trim(), secret: String(env.KICK_CLIENT_SECRET || '').trim() },
     };
     this.kickKey = null; this.kickKeyAt = 0;
   }
@@ -109,7 +110,12 @@ export class Providers {
       ? { client_key: c.id, client_secret: c.secret, code, grant_type: 'authorization_code', redirect_uri: this.redirectUri(p) }
       : { client_id: c.id, client_secret: c.secret, code, grant_type: 'authorization_code', redirect_uri: this.redirectUri(p), code_verifier: verifier };
     const r = await postForm(ENDPOINTS[p].token, fields, this.fetch);
-    if (!r.ok || r.data.error) throw new OAuthError('تعذر إكمال التفويض مع المنصة', 'token', 400);
+    if (!r.ok || r.data.error) {
+      // The provider's own error code helps tell a wrong key from an expired code; it carries no secrets.
+      const d = r.data || {}, clip = (v) => String(v ?? '').replace(/[^\w .:/-]/g, '').slice(0, 160);
+      console.warn('[oauth] ' + p + ' token exchange refused: status=' + r.status + ' error=' + clip(d.error?.code || d.error) + ' description=' + clip(d.error_description || d.error?.message || d.message) + ' log_id=' + clip(d.log_id));
+      throw new OAuthError('تعذر إكمال التفويض مع المنصة', 'token', 400);
+    }
     return tokens(r.data, now);
   }
   async refresh(p, refreshToken) {
