@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice">
+<defs>
+<linearGradient id="kelp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1FA7C9" stop-opacity=".55"/><stop offset="1" stop-color="#0A3A6B" stop-opacity=".9"/></linearGradient>
+<linearGradient id="kelp2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5B4BD6" stop-opacity=".5"/><stop offset="1" stop-color="#1B1A5C" stop-opacity=".9"/></linearGradient>
+<linearGradient id="sand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B2457"/><stop offset="1" stop-color="#040E26"/></linearGradient>
+</defs>
+<path d="M0 214c120-20 260 10 400-6s300-30 420-4 300 22 420 0 240-18 360 4v52H0Z" fill="url(#sand)"/>
+<g fill="none" stroke="url(#kelp)" stroke-width="14" stroke-linecap="round">
+<path d="M90 236c-20-40 24-60 4-100s22-64 6-102"/><path d="M128 236c18-36-20-60 0-96s-16-54 2-86"/>
+<path d="M610 236c-16-34 18-52 2-86s16-48 4-80"/><path d="M1180 236c20-44-22-66-2-108s-18-60 4-98"/>
+<path d="M1500 236c-18-30 16-48 2-78s14-40 0-70"/><path d="M1536 236c14-26-14-42 0-66"/>
+</g>
+<g fill="url(#kelp2)">
+<path d="M300 236c-6-30 10-44 24-62 6 18-2 30 12 44 10-20 30-26 40-42 2 26-12 40-6 60Z"/>
+<circle cx="318" cy="166" r="9"/><circle cx="350" cy="150" r="7"/><circle cx="378" cy="168" r="8"/>
+<path d="M900 236c-10-36 4-54 20-70 4 20-4 34 10 50 12-22 32-30 44-46 4 28-10 46-4 66Z"/>
+<circle cx="920" cy="162" r="8"/><circle cx="964" cy="150" r="7"/>
+<path d="M1330 236c-4-22 8-34 18-46 6 14 0 24 10 34 8-16 22-20 30-32 2 20-8 30-4 44Z"/>
+</g>
+<g fill="#0E2E66" opacity=".9"><ellipse cx="480" cy="230" rx="60" ry="18"/><ellipse cx="760" cy="236" rx="44" ry="14"/><ellipse cx="1060" cy="232" rx="70" ry="20"/><ellipse cx="1420" cy="238" rx="50" ry="14"/></g>
+</svg>

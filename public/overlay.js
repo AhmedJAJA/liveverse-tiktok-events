@@ -1,4 +1,4 @@
-/* SKY LIVE ARENA: read-only broadcast view. All player data uses textContent. */
+/* SPONGE LIVE ARENA: read-only broadcast view. All player data uses textContent. */
 const $ = id => document.getElementById(id);
 if (new URLSearchParams(location.search).get('embedded') === '1') document.documentElement.classList.add('embedded');
 const modeInfo = {
@@ -8,14 +8,26 @@ const modeInfo = {
   wheel: { en:'LUCKY DRAW', short:'WHEEL', ar:'عجلة المشاركين', instruction:'كل المسجلين في الفعالية داخل السحب تلقائيًا' },
   bomb: { en:'TIME BOMB', short:'BOMB', ar:'القنبلة المؤقتة', instruction:'حامل القنبلة يكتب !مرر ثم رقم اللاعب قبل الانفجار' },
   glass: { en:'GLASS BRIDGE', short:'GLASS', ar:'الجسر الزجاجي', instruction:'اكتب 1 أو 2 لاختيار اللوح الآمن — محاولة واحدة لكل خطوة' },
-  rps: { en:'ROCK PAPER SCISSORS', short:'RPS', ar:'حجر ورقة مقص', instruction:'اكتب حجر أو ورقة أو مقص — Sky يكشف اختياره بعد الوقت' },
+  rps: { en:'ROCK PAPER SCISSORS', short:'RPS', ar:'حجر ورقة مقص', instruction:'اكتب حجر أو ورقة أو مقص — بوبل يكشف اختياره بعد الوقت' },
   minority: { en:'MINORITY WINS', short:'MINORITY', ar:'الأقلية تفوز', instruction:'اكتب 1 أو 2 — الجهة الأقل عددًا تنجو' },
   higherlower: { en:'HIGHER OR LOWER', short:'HI-LO', ar:'أعلى أم أقل', instruction:'اكتب أعلى أو أقل — الورقة التالية تحسم' },
   truefalse: { en:'TRUE OR FALSE', short:'T / F', ar:'حقيقة أم كذب', instruction:'اكتب صح أو خطأ — الأسرع يحصد نقاطًا أكثر' },
   redlight: { en:'RED LIGHT', short:'RED LIGHT', ar:'الضوء الأحمر', instruction:'عند الأخضر اكتب رقمًا من 1 إلى 5 — الحركة عند الأحمر تقصيك' },
-  bowling: { en:'BOWLING', short:'BOWLING', ar:'البولينج', instruction:'اكتب رقمًا من 1 إلى 10 لترمي الكرة' }
+  bowling: { en:'BOWLING', short:'BOWLING', ar:'لعبة البولينج', instruction:'اكتب نقطة التصويب من 1 إلى 10 — الأقرب للنقطة المخفية يُسقط قوارير أكثر' },
+  drawguess: { en:'GUESS THE DRAWING', short:'DRAW', ar:'خمن الرسمة', instruction:'اكتب تخمينك في الشات — أول إجابة صحيحة تربح الجولة' },
+  chairs: { en:'MUSICAL CHAIRS', short:'CHAIRS', ar:'كراسي موسيقية', instruction:'لا تكتب أثناء الموسيقى • عند التوقف اكتب «اجلس» بسرعة' },
+  categories: { en:'LETTER & CATEGORY', short:'CATEGORIES', ar:'اسم حيوان جماد نبات', instruction:'اللاعب المختار يكتب كلمة تبدأ بالحرف خلال 15 ثانية' },
+  roles: { en:'HIDDEN ROLES', short:'ROLES', ar:'الأدوار المخفية', instruction:'افتح صفحة دورك • في النهار اكتب «صوت» ورقم اللاعب' },
+  roulette: { en:'ROULETTE', short:'ROULETTE', ar:'الروليت', instruction:'العجلة تدور وتتوقف على نتيجة يحددها الخادم بعدل' },
+  country: { en:'GUESS THE COUNTRY', short:'COUNTRY', ar:'خمن الدولة', instruction:'اكتب اسم الدولة — الإجابة المبكرة تربح نقاطًا أكثر' },
+  flag: { en:'GUESS THE FLAG', short:'FLAG', ar:'خمن العلم', instruction:'اكتب اسم الدولة صاحبة العلم في الشات' }
 };
-const PARTY = new Set(['rps','minority','higherlower','truefalse','redlight','bowling']);
+modeInfo.rps = { en:'ROCK PAPER SCISSORS', short:'RPS', ar:'حجرة ورقة مقص', instruction:'مواجهات ثنائية: اكتب حجرة أو ورقة أو مقص — يُكشف الاختياران معًا' };
+modeInfo.quiz.ar = 'تحدي المعرفة'; modeInfo.bomb.ar = 'القنبلة الموقوتة';
+const PARTY = new Set(['rps','minority','higherlower','truefalse','redlight','bowling','drawguess','chairs','categories','roles','roulette','country','flag']);
+const RPS_ICON = ['✊','✋','✌️'];
+let sketchData = '';
+const fxPlay = (name) => window.SpongeFx?.play(name);
 const params = new URLSearchParams(location.search);
 if (params.get('perf') === '1') document.documentElement.classList.add('au-perf');
 const apiPath = path => (window.SkySession ? window.SkySession.withRoom(path) : path);
@@ -100,7 +112,7 @@ function updateStandings(players) {
     list.append(row);
   });
 }
-const memberColors = ['#a96c87','#6b8d9d','#8e83ad','#9e8a58','#699787','#a87965','#7489b2'];
+const memberColors = ['#A96C87','#6B8D9D','#8E83AD','#588D9E','#699787','#A87965','#7489B2'];
 function paintAvatar(container, player) {
   const key=JSON.stringify([player?.name,player?.avatar]);
   if (container.dataset.person === key) return;
@@ -120,7 +132,7 @@ function paintAvatar(container, player) {
       img.classList.add('is-loaded');
     },{once:true});
     img.addEventListener('error',()=>{
-      console.warn('[Sky Live Media] تعذر تحميل صورة المتسابق، تم تفعيل الواجهة البديلة:',player.avatar);
+      console.warn('[SPONGE LIVE Media] تعذر تحميل صورة المتسابق، تم تفعيل الواجهة البديلة:',player.avatar);
       container.classList.remove('is-loading-avatar','has-loaded-avatar');
       container.classList.add('is-fallback-avatar');
       container.setAttribute('title',(player?.name||'متسابق')+' • الصورة غير متاحة حاليًا');
@@ -200,7 +212,7 @@ function triggerConfetti() {
   const stage = $('confettiStage');
   if (!stage) return;
   stage.replaceChildren();
-  const colors = ['#F1D58C', '#D4AF37', '#FBEBB8', '#B98A28', '#F6F1E7', '#E6C463'];
+  const colors = ['#8CD9F1', '#37B3D4', '#B8EDFB', '#2893B9', '#E7F2F6', '#63C9E6'];
   const shapes = ['leaf','diamond','spark','ribbon'];
   for (let i = 0; i < 70; i++) {
     const piece = node('i', 'confetti-piece shape-' + shapes[i % shapes.length]);
@@ -228,6 +240,18 @@ function podiumCard(p, rank) {
   card.append(avatar,node('strong','podium-name',p.name),time,points,base);
   return card;
 }
+/** Centre-stage moment for the champion: big photo, name, «الفائز بالمركز الأول», sea celebration. */
+let spotTimer=0;
+function showSpotlight(p, detail) {
+  if(!p) return;
+  const box=$('winnerSpotlight');
+  paintAvatar($('spotAvatar'),p);
+  $('spotName').textContent=p.name;
+  $('spotDetail').textContent=detail||'';
+  box.hidden=false; restartAnimation(box,'appear');
+  fxPlay('win'); triggerConfetti(); window.SpongeFx?.burst($('spotAvatar'),20);
+  clearTimeout(spotTimer); spotTimer=setTimeout(()=>{box.hidden=true;},5200);
+}
 function renderResults(status, round) {
   const results=status.results;
   const show=!!results && (['quiz','guess','glass'].includes(status.mode)||PARTY.has(status.mode));
@@ -249,7 +273,7 @@ function renderResults(status, round) {
     empty.append(icon('i-hourglass','i i-xl'),node('strong','','لم تُسجّل إجابة صحيحة هذه المرة'),node('span','','الجولة القادمة فرصتك للصدارة'));
     podium.append(empty);
   }else{
-    triggerConfetti();
+    showSpotlight(results.rankings[0], results.rankings[0].detail || (results.summary||''));
     results.rankings.slice(0,3).forEach((p,i)=>podium.append(podiumCard(p,i+1)));
     const others=results.rankings.slice(3,10);
     if(!others.length){list.append(node('div','standings-empty','بقية المراكز تظهر هنا عند مشاركة المزيد من المتسابقين'));}
@@ -533,22 +557,147 @@ function hideBomb(){
 const partyCache = { key:null };
 function hearts(n) { const box=node('span','party-hearts'); for(let i=0;i<3;i++){const h=icon('i-flame','i heart'+(i<n?' is-on':''));box.append(h);} box.setAttribute('aria-label',n+' حيوات'); return box; }
 function chip(p, extra) { const c=node('span','party-chip'); const av=node('span','member-avatar party-av'); paintAvatar(av,p); c.append(av,node('bdi','party-name',p.name)); if(extra)c.append(extra); return c; }
+/* ---------------- SPONGE LIVE game screens ---------------- */
+function banner(small, big, line, cls='') { const b=node('div','party-banner '+cls); b.append(node('small','',small),node('strong','party-big',big)); if(line)b.append(node('span','',line)); return b; }
+function bigAvatar(p, cls='') { const box=node('div','sea-hero '+cls); const av=node('span','member-avatar sea-hero-av'); paintAvatar(av,p); box.append(av,node('strong','',p.name),node('small','num','#'+p.number)); return box; }
+/** Players who just left the game slide out in a strip — the «المستبعدون» list. */
+function renderOut(panel, r) {
+  const out=(r&&(r.eliminated||(r.player&&r.how&&['night','vote'].includes(r.how)?[r.player]:null)))||null;
+  if(!out?.length) return;
+  const strip=node('div','sea-out'); strip.append(node('b','','المستبعدون'));
+  out.slice(0,12).forEach(p=>strip.append(chip(p)));
+  if((r.eliminatedCount||0)>12) strip.append(node('span','num','+'+number(r.eliminatedCount-12)));
+  panel.append(strip);
+}
+function standingsList(players) { const list=node('ol','party-standings'); (players||[]).slice(0,6).forEach((p,i)=>{const li=node('li','');li.append(node('span','num',String(i+1)),chip(p),node('b','num',number(p.points||0)));list.append(li);}); return list; }
+function wheelSvg(items, target, round, spinMs) {
+  const ns='http://www.w3.org/2000/svg', svg=document.createElementNS(ns,'svg'); svg.setAttribute('viewBox','-110 -110 220 220'); svg.setAttribute('class','sea-wheel');
+  const g=document.createElementNS(ns,'g'); g.setAttribute('class','sea-wheel-spin');
+  const n=Math.max(1,items.length), seg=360/n, colors=['#1E5BFF','#38D4FF','#7B5CFF','#FFC21A','#FF6A8A','#2FD9A0'];
+  items.forEach((p,i)=>{
+    const a0=(i*seg-90)*Math.PI/180, a1=((i+1)*seg-90)*Math.PI/180;
+    const path=document.createElementNS(ns,'path');
+    path.setAttribute('d',`M0 0 L${100*Math.cos(a0)} ${100*Math.sin(a0)} A100 100 0 ${seg>180?1:0} 1 ${100*Math.cos(a1)} ${100*Math.sin(a1)} Z`);
+    path.setAttribute('fill',colors[i%colors.length]); path.setAttribute('stroke','#020A22'); path.setAttribute('stroke-width','1.5'); g.append(path);
+    const mid=(i+.5)*seg-90, t=document.createElementNS(ns,'text');
+    t.setAttribute('transform',`rotate(${mid}) translate(60 0)`); t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','middle');
+    t.setAttribute('class','sea-wheel-label'); t.textContent=Array.from(p.name).slice(0,n>16?6:10).join(''); g.append(t);
+  });
+  const hub=document.createElementNS(ns,'circle'); hub.setAttribute('r','16'); hub.setAttribute('class','sea-wheel-hub');
+  svg.append(g,hub);
+  // The server already chose `target`; the wheel only animates to it.
+  const final=360*6+(360-(target+.5)*seg);
+  g.style.setProperty('--spin',final+'deg'); g.style.setProperty('--spin-ms',Math.max(1500,(spinMs||7000)-900)+'ms');
+  return svg;
+}
+const SEA_RENDER = {
+  drawguess(panel, party, r) {
+    const wrap=node('div','party-split sea-draw');
+    const board=node('div','sea-board'); const img=document.createElement('img'); img.id='partySketch'; img.alt='رسمة المشرف'; if(sketchData)img.src=sketchData; else img.hidden=true;
+    board.append(img, node('span','sea-board-empty',sketchData?'':'المشرف يستعد للرسم…'));
+    const side=node('div','sea-side');
+    if(party.phase==='reveal'&&r){ side.append(banner('الكلمة',r.word,r.solved?.[0]?'أول من عرفها: '+r.solved[0].name:'لم يعرفها أحد')); }
+    else { const m=node('div','sea-mask num'); Array.from(party.mask||'').forEach(ch=>m.append(node('i',ch===' '?'is-space':'',ch==='_'?'':ch))); side.append(node('small','sea-label',`${number(party.letters||0)} حروف`),m); }
+    side.append(standingsList(party.players));
+    wrap.append(board,side); panel.append(wrap);
+  },
+  chairs(panel, party, r) {
+    const ring=node('div','sea-chairs'+(party.music?' is-music':''));
+    const seats=Math.max(1,party.seats||1), players=(party.players||[]).slice(0,16);
+    for(let i=0;i<seats&&i<16;i++){ const c=node('span','sea-chair'+(i<(party.seatedCount||0)?' is-taken':'')); c.style.setProperty('--i',i); c.style.setProperty('--n',Math.min(seats,16)); c.append(icon('i-crown','i')); ring.append(c); }
+    const orbit=node('div','sea-orbit'); players.forEach((p,i)=>{const t=chip(p);t.classList.add('sea-token');if(p.seated)t.classList.add('is-seated');t.style.setProperty('--i',i);t.style.setProperty('--n',players.length);orbit.append(t);});
+    ring.append(orbit, node('strong','sea-chairs-center',party.music?'♪ الموسيقى تعمل':party.phase==='input'?'اجلس!':'—'));
+    const side=node('div','sea-side');
+    side.append(banner(party.music?'لا تكتب الآن':party.phase==='input'?'اكتب «اجلس»':'المقاعد',`${number(party.seatedCount||0)} / ${number(seats)}`,party.phase==='reveal'&&r?(r.note||`خرج ${number(r.eliminatedCount)}`):'مقاعد محجوزة'));
+    const wrap=node('div','party-split'); wrap.append(ring,side); panel.append(wrap);
+    if(party.music)window.SpongeFx?.startMusic(); else window.SpongeFx?.stopMusic();
+  },
+  categories(panel, party, r) {
+    const wrap=node('div','party-split sea-cat');
+    const card=node('div','sea-letter'); card.append(node('small','',party.category||''),node('strong','',party.letter||'؟'));
+    const side=node('div','sea-side');
+    if(party.chosen) side.append(bigAvatar(party.chosen,'is-turn'));
+    if(party.judging) side.append(banner('بانتظار حكم المشرف','«'+(party.answer||'')+'»','تُقبل تلقائيًا إذا لم يحكم المشرف'));
+    else if(party.phase==='reveal'&&r) side.append(banner(r.ok?'صحيح':'خطأ','«'+(r.answer||'—')+'»',r.why,r.ok?'is-good':'is-bad'));
+    wrap.append(card,side); panel.append(wrap);
+    const grid=node('div','party-grid'); (party.players||[]).forEach(p=>{const c=chip(p);if(!p.alive)c.classList.add('is-out');grid.append(c);}); panel.append(grid);
+  },
+  rps(panel, party, r) {
+    const grid=node('div','sea-duels');
+    const list=party.phase==='reveal'&&r?r.results:(party.duels||[]);
+    list.forEach(d=>{
+      const card=node('div','sea-duel');
+      const side=(p,winner)=>{const s=node('div','sea-duel-side'+(winner===p.id?' is-win':winner&&winner!==p.id?' is-lose':''));s.append(chip(p));
+        if(party.phase==='reveal'&&r) s.append(node('b','sea-pick',p.pick===null||p.pick===undefined?'—':RPS_ICON[p.pick])); else s.append(node('b','sea-ready',p.ready?'✓':'…')); return s;};
+      card.append(side(d.a,d.winner),node('span','sea-vs','VS'),side(d.b,d.winner));
+      if(d.note) card.append(node('small','sea-duel-note',d.note));
+      grid.append(card);
+    });
+    const more=(party.phase==='reveal'&&r?r.duels:party.duelCount)-list.length; if(more>0)grid.append(node('div','sea-duel is-more','+'+number(more)+' مواجهة'));
+    if(party.bye) panel.append(node('p','sea-bye','يتأهل مباشرة: '+party.bye.name));
+    panel.append(grid);
+  },
+  roles(panel, party, r) {
+    const head=node('div','sea-roles-head '+('is-'+(party.phase||'')));
+    head.append(node('strong','',{assign:'توزيع الأدوار',night:'🌙 الليل',day:'☀️ النهار — التصويت',reveal:'الكشف',finished:'انتهت اللعبة'}[party.phase]||''),
+      node('span','',party.phase==='assign'?`افتح ${location.host}/role واكتب الرمز في الشات • ${number(party.linked||0)} ربطوا صفحاتهم`:party.prompt||''));
+    panel.append(head);
+    if(party.phase==='reveal'&&r){
+      if(r.player) panel.append(banner(r.how==='night'?'سقط في الليل':'أخرجه التصويت',r.player.name,'كان دوره: '+r.player.roleLabel,r.player.role==='impostor'?'is-good':'is-bad'));
+      else panel.append(banner(r.how==='quiet'?'ليلة هادئة':r.how==='tie'?'تعادل في التصويت':'لا أصوات','لا أحد يخرج',''));
+    }
+    if(party.winner) panel.append(banner('النتيجة',party.winner==='citizens'?'فاز المواطنون':'فاز المخادعون','',party.winner==='citizens'?'is-good':'is-bad'));
+    const grid=node('div','party-grid sea-roles');
+    (party.players||[]).forEach(p=>{const c=chip(p,p.roleLabel?node('small','sea-role is-'+p.role,p.roleLabel):p.votes?node('b','sea-votes num',p.votes+' صوت'):node('small','num','#'+p.number));if(!p.alive)c.classList.add('is-out');grid.append(c);});
+    panel.append(grid);
+  },
+  roulette(panel, party, r) {
+    const wrap=node('div','party-split sea-roulette');
+    const stage=node('div','sea-wheel-stage'); stage.append(node('i','sea-pointer'));
+    const svg=wheelSvg(party.wheel||[],party.target||0,party.round,party.spinMs);
+    stage.append(svg);
+    if(party.phase==='input'&&!reducedMotion()) requestAnimationFrame(()=>requestAnimationFrame(()=>svg.firstChild.classList.add('is-spinning')));
+    else svg.firstChild.classList.add('is-stopped');
+    const side=node('div','sea-side');
+    if(party.phase==='reveal'&&r){ side.append(bigAvatar(r.picked,r.rule==='winner'?'is-win':'is-out')); side.append(node('strong','sea-verdict',r.rule==='winner'?'اختارته العجلة!':'خرج من اللعبة')); }
+    else side.append(banner('القاعدة',party.rule==='winner'?'اختيار فائز':'إقصاء لاعب',`${number((party.wheel||[]).length)} على العجلة`));
+    wrap.append(stage,side); panel.append(wrap);
+  },
+  country(panel, party, r) {
+    const wrap=node('div','party-split');
+    const clues=node('ol','sea-clues');
+    if(party.phase==='reveal'&&r){ const b=banner('الدولة',r.name,'العاصمة: '+r.capital); const f=document.createElement('img'); f.className='sea-flag-sm'; f.alt=''; f.src='/flags/'+r.iso+'.svg'; b.prepend(f); clues.append(b); }
+    else (party.clues||[]).forEach((c,i)=>{const li=node('li','sea-clue');li.style.setProperty('--d',(i*.12)+'s');li.append(node('b','num',String(i+1)),node('span','',c));clues.append(li);});
+    for(let i=(party.clues||[]).length;i<3&&party.phase!=='reveal';i++) clues.append(node('li','sea-clue is-locked','تلميح يظهر بعد قليل'));
+    const side=node('div','sea-side'); side.append(standingsList(party.players));
+    wrap.append(clues,side); panel.append(wrap);
+  },
+  flag(panel, party, r) {
+    const wrap=node('div','party-split');
+    const frame=node('div','sea-flag'); const iso=party.phase==='reveal'&&r?r.iso:party.flag;
+    if(iso){ const img=document.createElement('img'); img.alt='العلم'; img.src='/flags/'+iso+'.svg'; frame.append(img); }
+    if(party.phase==='reveal'&&r) frame.append(node('strong','sea-flag-name',r.name));
+    const side=node('div','sea-side'); if(party.phase==='reveal'&&r&&r.solved?.length) side.append(node('p','sea-label','أول من عرفه: '+r.solved[0].name)); side.append(standingsList(party.players));
+    wrap.append(frame,side); panel.append(wrap);
+  }
+};
 function renderParty(party, mode) {
   const panel=$('partyPanel');
   if(!party){panel.hidden=true;return;}
   panel.hidden=false;
   panel.dataset.mode=mode; panel.dataset.phase=party.phase;
-  const key=JSON.stringify([mode,party.round,party.phase,party.reveal,party.players,party.track,party.lanes,party.light,party.card,party.alive,party.out]);
+  const key=JSON.stringify([mode,party.round,party.phase,party.reveal,party.players,party.track,party.lanes,party.light,party.card,party.alive,party.out,party.duels,party.wheel&&party.round,party.clues,party.flag,party.mask,party.solved,party.chosen,party.judging,party.music,party.seatedCount,party.linked,party.winner,party.format]);
   if(key===partyCache.key)return; partyCache.key=key;
   panel.replaceChildren();
   const head=node('div','party-head');
   head.append(node('span','party-round',`الجولة ${number(party.round)} / ${number(party.rounds)}`));
-  if(['rps','minority','redlight'].includes(mode)) head.append(node('span','party-alive',`${number(party.alive)} من ${number(party.total)} في اللعبة`));
+  if(['rps','minority','redlight','chairs','categories','roles','roulette'].includes(mode)) head.append(node('span','party-alive',`${number(party.alive)} من ${number(party.total)} في اللعبة`));
   panel.append(head);
   const r=party.reveal;
+  if(SEA_RENDER[mode]&&!(mode==='rps'&&!party.duels)){ SEA_RENDER[mode](panel,party,r); renderOut(panel,r); return; }
   if(mode==='rps'){
     if(party.phase==='reveal'&&r){
-      const banner=node('div','party-banner'); banner.append(node('small','','Sky اختار'),node('strong','party-big',r.house),node('span','',r.note|| (r.eliminated?.length?`خرج ${number(r.eliminated.length)}`:`${number(r.lost)} خسروا حياة`)));
+      const banner=node('div','party-banner'); banner.append(node('small','','بوبل اختار'),node('strong','party-big',r.house),node('span','',r.note|| (r.eliminated?.length?`خرج ${number(r.eliminated.length)}`:`${number(r.lost)} خسروا حياة`)));
       panel.append(banner);
     }
     const grid=node('div','party-grid'); (party.players||[]).forEach(p=>grid.append(chip(p,hearts(p.lives)))); panel.append(grid);
@@ -664,6 +813,16 @@ function update(data) {
     $('roundStartCountdown').hidden = true;
   }
   update.previousPhase=phase;
+  // sound cues (muted with ?mute=1 or the sound switch)
+  const regCount=Number(data.registration?.count||0);
+  if(phase==='registration'&&regCount>(stateCache.lastRegCount??regCount)){fxPlay('join');window.SpongeFx?.burst($('signupLatestAvatar'),12);}
+  stateCache.lastRegCount=regCount;
+  const outKey=party?.phase==='reveal'?JSON.stringify([party.round,party.reveal?.eliminatedCount??party.reveal?.player?.number??0]):'';
+  if(outKey&&outKey!==stateCache.outKey&&(party.reveal?.eliminatedCount||party.reveal?.player))fxPlay('out');
+  stateCache.outKey=outKey;
+  if(bombMode&&data.bomb?.phase==='exploded'&&stateCache.bombPhase!=='exploded')fxPlay('boom');
+  stateCache.bombPhase=data.bomb?.phase;
+  if(!party||s.mode!=='chairs'||!party.music)window.SpongeFx?.stopMusic();
   const banner=$('winnerBanner');
   if(s.lastEvent?.winner && !s.results && !bombMode){
     if(stateCache.lastWinnerAt!==s.lastEvent.at){
@@ -671,16 +830,22 @@ function update(data) {
       $('winnerName').textContent=s.lastEvent.winner.name;
       $('winnerPoints').textContent=`+${number(s.lastEvent.winner.score||5)} نقاط`;
       paintAvatar($('winnerAvatar'),s.lastEvent.winner);
-      triggerConfetti();
+      showSpotlight(s.lastEvent.winner,'+'+number(s.lastEvent.winner.score||5)+' نقاط');
       banner.hidden=false;restartAnimation(banner,'appear');
     }
   }else banner.hidden=true;
 }
+function showSketch(data) {
+  sketchData = /^data:image\/png;base64,/.test(data) ? data : '';
+  const img=document.getElementById('partySketch'); if(!img) return;
+  if(sketchData){img.src=sketchData;img.hidden=false;img.nextElementSibling&&(img.nextElementSibling.textContent='');} else {img.removeAttribute('src');img.hidden=true;}
+}
+fetch(apiPath('/api/sketch')).then(r=>r.ok?r.json():null).then(d=>{if(d?.data)showSketch(d.data);}).catch(()=>{});
 function connect() {
   const protocol=location.protocol==='https:'?'wss':'ws';
   const ws=new WebSocket(window.SkySession?window.SkySession.wsUrl():`${protocol}://${location.host}/ws`);
   ws.addEventListener('open',()=>{$('connectionNotice').hidden=true;});
-  ws.addEventListener('message',event=>{try{const packet=JSON.parse(event.data);if(packet.type==='state')update(packet.data);}catch(error){console.warn('Invalid live data',error);}});
+  ws.addEventListener('message',event=>{try{const packet=JSON.parse(event.data);if(packet.type==='state')update(packet.data);else if(packet.type==='sketch')showSketch(packet.data?.data||'');}catch(error){console.warn('Invalid live data',error);}});
   ws.addEventListener('close',()=>{$('connectionNotice').hidden=false;setTimeout(connect,3000);});
   ws.addEventListener('error',()=>ws.close());
 }
@@ -688,7 +853,7 @@ function guardOverlayImages() {
   const onFail = img => {
     if (!img || img.dataset.fallbackApplied === '1') return;
     img.dataset.fallbackApplied = '1';
-    console.warn('[Sky Live Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:', img.currentSrc || img.src);
+    console.warn('[SPONGE LIVE Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:', img.currentSrc || img.src);
     img.alt = '';
     img.hidden = true;
     const parent = img.parentElement;
@@ -722,6 +887,11 @@ function guardOverlayImages() {
     }
   });
 }
+setInterval(()=>{
+  if(!clock.active||!clock.endsAt) return;
+  const left=Math.ceil((clock.endsAt-(Date.now()+clock.offset))/1000);
+  if(left>0&&left<=5) fxPlay('warn');
+},1000);
 guardOverlayImages();
 fetch(apiPath('/api/state')).then(res=>{if(!res.ok)throw new Error('API not available');return res.json();}).then(update).catch(()=>{$('overlayStatus').textContent='جارٍ الاتصال بالمنصة...';});
 connect();

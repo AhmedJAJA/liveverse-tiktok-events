@@ -1,4 +1,4 @@
-/* SKY LIVE — AURUM UI runtime (no dependencies, progressive enhancement).
+/* SPONGE LIVE — AURUM UI runtime (no dependencies, progressive enhancement).
    Native rebuilds of Aceternity UI effects. It only adds aria-hidden decorative
    layers and CSS variables; it never changes text, ids, values or listeners
    that the game scripts own, so every page works the same without it. */
@@ -112,13 +112,13 @@
       const dur = rand(10, 20).toFixed(2) + 's', begin = rand(0, 10).toFixed(2) + 's', y2 = (93 + rand(0, 8)).toFixed(1) + '%';
       const sweep = (attr, to) => animate ? `<animate attributeName="${attr}" values="0%;${to}" dur="${dur}" begin="${begin}" repeatCount="indefinite"/>` : '';
       return `<linearGradient id="au-bg-${i}" x1="0%" x2="0%" y1="0%" y2="0%">${sweep('x1', '100%')}${sweep('x2', '95%')}${sweep('y1', '100%')}${sweep('y2', y2)}
-        <stop stop-color="#FFF1C2" stop-opacity="0"/><stop stop-color="#FFF1C2"/><stop offset="32.5%" stop-color="#D4AF37"/><stop offset="100%" stop-color="#9C7A22" stop-opacity="0"/></linearGradient>`;
+        <stop stop-color="#C2F3FF" stop-opacity="0"/><stop stop-color="#C2F3FF"/><stop offset="32.5%" stop-color="#37B3D4"/><stop offset="100%" stop-color="#227F9C" stop-opacity="0"/></linearGradient>`;
     }).join('');
     const wrap = tpl(`<div class="au-beams${container === body ? ' is-fixed' : ''}" aria-hidden="true"><svg viewBox="0 0 696 316" preserveAspectRatio="xMidYMid slice" focusable="false">
       <path class="au-beam-base" d="${all.join('')}" stroke="url(#au-beam-fade)" stroke-opacity=".05" stroke-width=".5"/>
       ${all.map((d, i) => `<path class="au-beam" d="${d}" stroke="url(#au-bg-${i})" stroke-opacity=".4" stroke-width=".5"/>`).join('')}
       <defs>${grads}
-        <radialGradient id="au-beam-fade" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(352 34) rotate(90) scale(555 1560.62)"><stop offset=".0667" stop-color="#E6C463"/><stop offset=".2432" stop-color="#E6C463"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+        <radialGradient id="au-beam-fade" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(352 34) rotate(90) scale(555 1560.62)"><stop offset=".0667" stop-color="#63C9E6"/><stop offset=".2432" stop-color="#63C9E6"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient>
       </defs>
     </svg></div>`);
     container.prepend(wrap);

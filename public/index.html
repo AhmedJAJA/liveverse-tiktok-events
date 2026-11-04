@@ -1,9 +1,12 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#08090B"><meta name="description" content="منصة فعاليات البث المباشر - تفاعل مع جمهور TikTok LIVE عبر الألعاب والأسئلة والتحديات."><meta property="og:title" content="SKY LIVE — لوحة الستريمر"><meta property="og:description" content="منصة فعاليات البث المباشر - تفاعل مع جمهور TikTok LIVE عبر الألعاب والأسئلة والتحديات."><meta property="og:image" content="/sky-live.webp"><title>SKY LIVE — لوحة الستريمر</title><link rel="icon" href="/sky-live-mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/royal-core.css"><link rel="stylesheet" href="/royal-studio.css"><link rel="stylesheet" href="/royal-luxe.css"><link rel="stylesheet" href="/aurum.css"><link rel="stylesheet" href="/royal-dash.css"><link rel="stylesheet" href="/account.css"><script defer src="/session.js"></script><script defer src="/mascot.js"></script><script defer src="/account.js"></script><script defer src="/aurum.js"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#020A22"><meta name="description" content="منصة فعاليات البث المباشر - تفاعل مع جمهور TikTok LIVE عبر الألعاب والأسئلة والتحديات."><meta property="og:title" content="SPONGE LIVE — لوحة الستريمر"><meta property="og:description" content="منصة فعاليات البث المباشر - تفاعل مع جمهور TikTok LIVE عبر الألعاب والأسئلة والتحديات."><meta property="og:image" content="/sky-live.webp"><title>SPONGE LIVE — لوحة الستريمر</title><link rel="icon" href="/sponge-mark.svg" type="image/svg+xml"><link rel="stylesheet" href="/royal-core.css"><link rel="stylesheet" href="/royal-studio.css"><link rel="stylesheet" href="/royal-luxe.css"><link rel="stylesheet" href="/aurum.css"><link rel="stylesheet" href="/royal-dash.css"><link rel="stylesheet" href="/account.css"><script defer src="/session.js"></script><script defer src="/mascot.js"></script><script defer src="/account.js"></script><script defer src="/aurum.js"></script><link rel="stylesheet" href="/sponge.css">
+<script defer src="/sponge.js"></script>
+<script defer src="/sponge-ui.js"></script>
+</head>
 <body class="presenter" data-layout="panels" data-tab="stage">
 <header class="presenter-toolbar">
-  <a class="presenter-brand" href="/" aria-label="SKY LIVE — الصفحة الرئيسية" data-au-tip="العودة للرئيسية"><img class="sky-studio-mark" src="/sky-live-mark.svg" alt="" width="40" height="40" decoding="async"><span class="brand-words"><strong dir="ltr">SKY LIVE</strong><small class="caps">Studio</small></span></a>
+  <a class="presenter-brand" href="/" aria-label="SPONGE LIVE — الصفحة الرئيسية" data-au-tip="العودة للرئيسية"><img class="sky-studio-mark" src="/sponge-mark.svg" alt="" width="40" height="40" decoding="async"><span class="brand-words"><strong dir="ltr">SPONGE LIVE</strong><small class="caps">Studio</small></span></a>
   <div class="presenter-cluster" aria-label="حالة الفعالية">
     <span id="networkBadge" class="pill"><span class="status-dot"></span>وضع المعاينة</span>
     <span class="presenter-info-chip" aria-label="عدد المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b id="presenterAudienceCount" class="num">0</b><span>متسابق</span></span>
@@ -78,7 +81,7 @@
 
 <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle">
   <header class="settings-header">
-    <div class="settings-header-title"><span class="crest crest-lg is-live" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-gear"/></svg></span><div><small class="caps">SKY LIVE Studio</small><h2 id="settingsTitle">غرفة التحكم بالفعالية</h2></div></div>
+    <div class="settings-header-title"><span class="crest crest-lg is-live" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-gear"/></svg></span><div><small class="caps">SPONGE LIVE Studio</small><h2 id="settingsTitle">غرفة التحكم بالفعالية</h2></div></div>
     <button type="button" id="closeSettings" class="dialog-close" aria-label="إغلاق الإعدادات"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-close"/></svg></button>
   </header>
 <main class="shell">
@@ -100,37 +103,102 @@
   <div class="modes" id="modes">
    <div class="mode-card">
     <button type="button" class="mode is-selected" data-mode="quiz" aria-pressed="true">
-     <img class="mode-cover" src="/covers/quiz.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
-     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>تحدي المعلومات</strong><span class="mode-desc">أربعة خيارات ومؤقت تنازلي — الأسرع يتصدر</span></span>
+     <img class="mode-cover is-art" src="/games/01-knowledge-challenge.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>تحدي المعرفة</strong><span class="mode-desc">سؤال وأربعة خيارات ومؤقت — الأسرع يتصدر</span></span>
      <small class="mode-cta">الفعالية المحددة</small>
     </button>
-    <button type="button" class="mode-help" data-help="quiz" aria-label="قواعد تحدي المعلومات" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+    <button type="button" class="mode-help" data-help="quiz" aria-label="قواعد تحدي المعرفة" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
    <div class="mode-card">
-    <button type="button" class="mode" data-mode="bomb" aria-pressed="false">
-     <img class="mode-cover" src="/covers/bomb.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
-     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>القنبلة المؤقتة</strong><span class="mode-desc">مرّر القنبلة قبل الصفر؛ حاملها عند الانفجار يُقصى</span></span>
+    <button type="button" class="mode" data-mode="drawguess" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/02-guess-drawing.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>خمن الرسمة</strong><span class="mode-desc">المشرف يرسم كلمة سرية والجمهور يخمّن من الشات</span></span>
      <small class="mode-cta">العب الآن ←</small>
     </button>
-    <button type="button" class="mode-help" data-help="bomb" aria-label="قواعد القنبلة المؤقتة" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+    <button type="button" class="mode-help" data-help="drawguess" aria-label="قواعد خمن الرسمة" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="chairs" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/03-musical-chairs.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>كراسي موسيقية</strong><span class="mode-desc">تتوقف الموسيقى فجأة — اكتب «اجلس» قبل أن تمتلئ المقاعد</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="chairs" aria-label="قواعد كراسي موسيقية" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
    <div class="mode-card">
     <button type="button" class="mode" data-mode="bowling" aria-pressed="false">
-     <img class="mode-cover" src="/covers/bowling.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
-     <span class="mode-copy"><span class="mode-tag-pill">الحظ والمخاطرة</span><strong>البولينج</strong><span class="mode-desc">اختر رقمًا من 1 إلى 10 لترمي الكرة — رقم الحظ مخفي</span></span>
+     <img class="mode-cover is-art" src="/games/04-bowling.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الحظ والمخاطرة</span><strong>لعبة البولينج</strong><span class="mode-desc">اختر نقطة التصويب من 1 إلى 10 — كلما اقتربت من النقطة المخفية أسقطت قوارير أكثر</span></span>
      <small class="mode-cta">العب الآن ←</small>
     </button>
-    <button type="button" class="mode-help" data-help="bowling" aria-label="قواعد البولينج" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+    <button type="button" class="mode-help" data-help="bowling" aria-label="قواعد لعبة البولينج" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
    <div class="mode-card">
-    <button type="button" class="mode" data-mode="glass" aria-pressed="false">
-     <img class="mode-cover" src="/covers/glass.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
-     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>الجسر الزجاجي</strong><span class="mode-desc">اختر اللوح الآمن في كل خطوة؛ الخطأ يقصي المتسابق</span></span>
+    <button type="button" class="mode" data-mode="bomb" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/05-time-bomb.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>القنبلة الموقوتة</strong><span class="mode-desc">مرّر القنبلة قبل أن ينتهي العداد — حاملها عند الانفجار يُقصى</span></span>
      <small class="mode-cta">العب الآن ←</small>
     </button>
-    <button type="button" class="mode-help" data-help="glass" aria-label="قواعد الجسر الزجاجي" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+    <button type="button" class="mode-help" data-help="bomb" aria-label="قواعد القنبلة الموقوتة" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
    <div class="mode-card">
+    <button type="button" class="mode" data-mode="categories" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/06-categories.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>اسم حيوان جماد نبات</strong><span class="mode-desc">حرف وفئة للاعب المختار — أجب خلال 15 ثانية</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="categories" aria-label="قواعد اسم حيوان جماد نبات" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="rps" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/07-rock-paper-scissors.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>حجرة ورقة مقص</strong><span class="mode-desc">مواجهات ثنائية تُكشف معًا — الخاسر يخرج والتعادل يُعاد</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="rps" aria-label="قواعد حجرة ورقة مقص" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="roles" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/08-hidden-roles.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الجماعية</span><strong>الأدوار المخفية</strong><span class="mode-desc">أدوار سرية ومخادعون بينكم — اكشفوهم بالتصويت</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="roles" aria-label="قواعد الأدوار المخفية" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="roulette" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/09-roulette.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الحظ والمخاطرة</span><strong>الروليت</strong><span class="mode-desc">عجلة بأسماء المتسابقين تتوقف على نتيجة عادلة يحددها الخادم</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="roulette" aria-label="قواعد الروليت" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="redlight" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/10-red-light.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>الضوء الأحمر</strong><span class="mode-desc">تقدّم عند الأخضر، وتجمّد عند الأحمر — الحركة تُقصيك</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="redlight" aria-label="قواعد الضوء الأحمر" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="country" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/11-guess-country.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>خمن الدولة</strong><span class="mode-desc">ثلاثة تلميحات تظهر تباعًا — اكتب اسم الدولة</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="country" aria-label="قواعد خمن الدولة" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card">
+    <button type="button" class="mode" data-mode="flag" aria-pressed="false">
+     <img class="mode-cover is-art" src="/games/12-guess-flag.webp" alt="" width="290" height="371" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>لعبة خمن العلم</strong><span class="mode-desc">علم على الشاشة ومؤقت — أسرع إجابة تحصد أكثر</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="flag" aria-label="قواعد لعبة خمن العلم" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <p class="modes-extra-title">ألعاب إضافية</p>
+   <div class="mode-card is-extra">
     <button type="button" class="mode" data-mode="guess" aria-pressed="false">
      <img class="mode-cover" src="/covers/guess.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
      <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>خمّن الكلمة</strong><span class="mode-desc">أول إجابة صحيحة في الشات تخطف الصدارة</span></span>
@@ -138,7 +206,7 @@
     </button>
     <button type="button" class="mode-help" data-help="guess" aria-label="قواعد خمّن الكلمة" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
-   <div class="mode-card">
+   <div class="mode-card is-extra">
     <button type="button" class="mode" data-mode="race" aria-pressed="false">
      <img class="mode-cover" src="/covers/race.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
      <span class="mode-copy"><span class="mode-tag-pill">الجماعية</span><strong>سباق الجمهور</strong><span class="mode-desc">المسجلون يندفعون نحو خط النهاية بأوامر الشات</span></span>
@@ -146,15 +214,23 @@
     </button>
     <button type="button" class="mode-help" data-help="race" aria-label="قواعد سباق الجمهور" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
-   <div class="mode-card">
+   <div class="mode-card is-extra">
+    <button type="button" class="mode" data-mode="glass" aria-pressed="false">
+     <img class="mode-cover" src="/covers/glass.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>الجسر الزجاجي</strong><span class="mode-desc">اختر اللوح الآمن في كل خطوة؛ الخطأ يقصي المتسابق</span></span>
+     <small class="mode-cta">العب الآن ←</small>
+    </button>
+    <button type="button" class="mode-help" data-help="glass" aria-label="قواعد الجسر الزجاجي" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+   </div>
+   <div class="mode-card is-extra">
     <button type="button" class="mode" data-mode="truefalse" aria-pressed="false">
      <img class="mode-cover" src="/covers/truefalse.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
-     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>حقيقة أم كذب</strong><span class="mode-desc">عبارة في كل جولة: صح أم خطأ؟ الأسرع يحصد نقاطًا أكثر</span></span>
+     <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>حقيقة أم كذب</strong><span class="mode-desc">عبارة في كل جولة: صح أم خطأ؟</span></span>
      <small class="mode-cta">العب الآن ←</small>
     </button>
     <button type="button" class="mode-help" data-help="truefalse" aria-label="قواعد حقيقة أم كذب" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
-   <div class="mode-card">
+   <div class="mode-card is-extra">
     <button type="button" class="mode" data-mode="higherlower" aria-pressed="false">
      <img class="mode-cover" src="/covers/higherlower.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
      <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>أعلى أم أقل</strong><span class="mode-desc">هل الورقة التالية أعلى أم أقل من الحالية؟</span></span>
@@ -162,23 +238,7 @@
     </button>
     <button type="button" class="mode-help" data-help="higherlower" aria-label="قواعد أعلى أم أقل" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
-   <div class="mode-card">
-    <button type="button" class="mode" data-mode="redlight" aria-pressed="false">
-     <img class="mode-cover" src="/covers/redlight.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
-     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>الضوء الأحمر</strong><span class="mode-desc">تقدّم عند الأخضر وتجمّد عند الأحمر — الحركة تُقصيك</span></span>
-     <small class="mode-cta">العب الآن ←</small>
-    </button>
-    <button type="button" class="mode-help" data-help="redlight" aria-label="قواعد الضوء الأحمر" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
-   </div>
-   <div class="mode-card">
-    <button type="button" class="mode" data-mode="wheel" aria-pressed="false">
-     <img class="mode-cover" src="/covers/wheel.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
-     <span class="mode-copy"><span class="mode-tag-pill">الحظ والمخاطرة</span><strong>عجلة الأسماء</strong><span class="mode-desc">قرعة مباشرة لاختيار الفائز من المسجلين</span></span>
-     <small class="mode-cta">العب الآن ←</small>
-    </button>
-    <button type="button" class="mode-help" data-help="wheel" aria-label="قواعد عجلة الأسماء" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
-   </div>
-   <div class="mode-card">
+   <div class="mode-card is-extra">
     <button type="button" class="mode" data-mode="minority" aria-pressed="false">
      <img class="mode-cover" src="/covers/minority.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
      <span class="mode-copy"><span class="mode-tag-pill">الذكاء والسرعة</span><strong>الأقلية تفوز</strong><span class="mode-desc">خياران — الجهة الأقل عددًا تنجو</span></span>
@@ -186,13 +246,13 @@
     </button>
     <button type="button" class="mode-help" data-help="minority" aria-label="قواعد الأقلية تفوز" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
-   <div class="mode-card">
-    <button type="button" class="mode" data-mode="rps" aria-pressed="false">
-     <img class="mode-cover" src="/covers/rps.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
-     <span class="mode-copy"><span class="mode-tag-pill">الإقصاء</span><strong>حجر ورقة مقص</strong><span class="mode-desc">تحدَّ Sky بثلاث حيوات — آخر من يبقى يفوز</span></span>
+   <div class="mode-card is-extra">
+    <button type="button" class="mode" data-mode="wheel" aria-pressed="false">
+     <img class="mode-cover" src="/covers/wheel.svg" alt="" width="240" height="240" loading="lazy" decoding="async">
+     <span class="mode-copy"><span class="mode-tag-pill">الحظ والمخاطرة</span><strong>عجلة الأسماء</strong><span class="mode-desc">قرعة مباشرة لاختيار فائز واحد</span></span>
      <small class="mode-cta">العب الآن ←</small>
     </button>
-    <button type="button" class="mode-help" data-help="rps" aria-label="قواعد حجر ورقة مقص" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
+    <button type="button" class="mode-help" data-help="wheel" aria-label="قواعد عجلة الأسماء" data-au-tip="القواعد"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-question"/></svg></button>
    </div>
   </div>
 
@@ -255,7 +315,7 @@
  </aside>
  </div>
  <section class="panel activity-panel"><div class="section-heading compact"><div><span class="eyebrow">تفاعل الجمهور</span><h2>التعليقات الأخيرة</h2></div><span class="stream-tag"><span class="live-dot on"></span>مباشر</span></div><div id="chatFeed" class="feed"><div class="empty">التعليقات ستظهر هنا عند الاتصال أو المحاكاة.</div></div></section>
- <footer class="footer"><span dir="ltr">SKY LIVE STUDIO <span class="muted">© 2026</span></span><span>منصة ألعاب للبث المباشر • نسخة تجريبية مستقلة عن TikTok</span></footer>
+ <footer class="footer"><span dir="ltr">SPONGE LIVE STUDIO <span class="muted">© 2026</span></span><span>منصة ألعاب للبث المباشر • نسخة تجريبية مستقلة عن TikTok</span></footer>
 </main>
 </dialog>
 

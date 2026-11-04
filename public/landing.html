@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#08090B">
-<meta name="description" content="SKY LIVE — حوّل بث TikTok LIVE إلى بطولة يلعبها جمهورك من التعليقات">
-<meta property="og:title" content="SKY LIVE — ألعاب البث المباشر">
+<meta name="theme-color" content="#020A22">
+<meta name="description" content="SPONGE LIVE — حوّل بث TikTok LIVE إلى بطولة يلعبها جمهورك من التعليقات">
+<meta property="og:title" content="SPONGE LIVE — ألعاب البث المباشر">
 <meta property="og:description" content="حوّل بثك إلى ألعاب ومسابقات يشارك فيها الجمهور من التعليقات.">
 <meta property="og:image" content="/sky-live.webp">
-<title>SKY LIVE | ألعاب البث المباشر</title>
-<link rel="icon" href="/sky-live-mark.svg" type="image/svg+xml">
-<link rel="preload" as="image" href="/covers/quiz.svg" type="image/svg+xml">
+<title>SPONGE LIVE | ألعاب البث المباشر</title>
+<link rel="icon" href="/sponge-mark.svg" type="image/svg+xml">
+<link rel="preload" as="image" href="/games/01-knowledge-challenge.webp" type="image/webp">
 <link rel="stylesheet" href="/royal-core.css">
 <link rel="stylesheet" href="/royal-landing.css">
 <link rel="stylesheet" href="/royal-luxe.css">
@@ -21,16 +21,19 @@
 <script src="/account.js" defer></script>
 <script src="/landing.js" defer></script>
 <script src="/aurum.js" defer></script>
+<link rel="stylesheet" href="/sponge.css">
+<script defer src="/sponge.js"></script>
+<script defer src="/sponge-ui.js"></script>
 </head>
 <body class="landing sky-home-page">
 <a class="sh-skip" href="#main">تخطَّ إلى المحتوى</a>
 <header class="sh-nav" id="top">
  <div class="sh-wrap sh-nav-row">
-  <a class="sh-brand" href="/" aria-label="SKY LIVE الرئيسية">
-   <span class="sh-brand-mark img-skeleton"><img src="/sky-live-mark.svg" alt="" width="40" height="40" data-smart-img><span class="img-fallback-card" hidden>الصورة غير متاحة حاليًا</span></span>
-   <b dir="ltr"><span>SKY</span> LIVE</b>
+  <a class="sh-brand" href="/" aria-label="SPONGE LIVE الرئيسية">
+   <span class="sh-brand-mark img-skeleton"><img src="/sponge-mark.svg" alt="" width="40" height="40" data-smart-img><span class="img-fallback-card" hidden>الصورة غير متاحة حاليًا</span></span>
+   <b dir="ltr"><span>SPONGE</span> LIVE</b>
   </a>
-  <nav class="sh-links" id="navLinks" aria-label="أقسام SKY LIVE">
+  <nav class="sh-links" id="navLinks" aria-label="أقسام SPONGE LIVE">
    <a href="#how">شرح التشغيل</a>
    <a href="#games">الألعاب</a>
    <a href="#pricing">الأسعار</a>
@@ -47,6 +50,40 @@
 </header>
 
 <main id="main">
+ <!-- ========== Control deck: stream link, demo, account, players ========== -->
+ <section class="sp-deck" aria-label="التحكم بالبث">
+  <div class="sh-wrap sp-deck-row">
+   <form id="liveConnectForm" class="sh-connect sp-connect" autocomplete="off">
+    <label class="sh-select"><span class="sr-only">المنصة</span><select id="livePlatform"><option value="tiktok">TikTok</option><option value="kick">Kick (تجريبي)</option></select></label>
+    <label class="sh-input"><span class="sr-only">اسم الحساب</span><span aria-hidden="true" dir="ltr">@</span><input id="liveUsername" name="username" type="text" maxlength="30" placeholder="اسم الحساب" dir="ltr" autocomplete="off" spellcheck="false"></label>
+    <button type="submit" class="sh-btn sh-btn-gold" id="liveConnectButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-plug"/></svg>اتصل بالبث</button>
+    <span class="connection-pill" id="liveConnectionBadge" role="status"><i></i><span id="liveConnectionStatus">غير متصل</span></span>
+   </form>
+   <p class="sh-note sp-deck-note" id="connectionNote">ربط تجريبي • يمكنك تجربة الفعاليات دون الاتصال ببث فعلي.</p>
+   <a class="sh-btn sh-btn-dark sp-demo" id="demoMode" href="/play?mode=quiz&amp;demo=1" data-transition><svg class="i" aria-hidden="true"><use href="/icons.svg#i-robot"/></svg>وضع التجربة</a>
+  </div>
+ </section>
+
+ <!-- ========== Game picker (first thing under the controls) ========== -->
+ <section class="sh-wrap sp-section" id="games" aria-labelledby="gamesTitle">
+  <header class="sp-head"><h2 id="gamesTitle">اختر لعبة</h2><p>اضغط على اللعبة لتفتح شاشتها فورًا — بلا غرف ولا رموز. يكتب جمهورك «انضم» في التعليقات للدخول.</p></header>
+  <div class="sp-gallery" id="gameGallery">
+   <a class="sp-game sp-tilt" href="/play?mode=quiz" data-mode="quiz" data-transition><img src="/games/01-knowledge-challenge.webp" alt="" width="290" height="371" loading="eager" decoding="async"><span class="sr-only">تحدي المعرفة — سؤال وأربعة خيارات ومؤقت — الأسرع يتصدر</span><span class="sp-game-num num">01</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=drawguess" data-mode="drawguess" data-transition><img src="/games/02-guess-drawing.webp" alt="" width="290" height="371" loading="eager" decoding="async"><span class="sr-only">خمن الرسمة — المشرف يرسم كلمة سرية والجمهور يخمّن من الشات</span><span class="sp-game-num num">02</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=chairs" data-mode="chairs" data-transition><img src="/games/03-musical-chairs.webp" alt="" width="290" height="371" loading="eager" decoding="async"><span class="sr-only">كراسي موسيقية — تتوقف الموسيقى فجأة — اكتب «اجلس» قبل أن تمتلئ المقاعد</span><span class="sp-game-num num">03</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=bowling" data-mode="bowling" data-transition><img src="/games/04-bowling.webp" alt="" width="290" height="371" loading="eager" decoding="async"><span class="sr-only">لعبة البولينج — اختر نقطة التصويب من 1 إلى 10 — كلما اقتربت من النقطة المخفية أسقطت قوارير أكثر</span><span class="sp-game-num num">04</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=bomb" data-mode="bomb" data-transition><img src="/games/05-time-bomb.webp" alt="" width="290" height="371" loading="eager" decoding="async"><span class="sr-only">القنبلة الموقوتة — مرّر القنبلة قبل أن ينتهي العداد — حاملها عند الانفجار يُقصى</span><span class="sp-game-num num">05</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=categories" data-mode="categories" data-transition><img src="/games/06-categories.webp" alt="" width="290" height="371" loading="eager" decoding="async"><span class="sr-only">اسم حيوان جماد نبات — حرف وفئة للاعب المختار — أجب خلال 15 ثانية</span><span class="sp-game-num num">06</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=rps" data-mode="rps" data-transition><img src="/games/07-rock-paper-scissors.webp" alt="" width="290" height="371" loading="lazy" decoding="async"><span class="sr-only">حجرة ورقة مقص — مواجهات ثنائية تُكشف معًا — الخاسر يخرج والتعادل يُعاد</span><span class="sp-game-num num">07</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=roles" data-mode="roles" data-transition><img src="/games/08-hidden-roles.webp" alt="" width="290" height="371" loading="lazy" decoding="async"><span class="sr-only">الأدوار المخفية — أدوار سرية ومخادعون بينكم — اكشفوهم بالتصويت</span><span class="sp-game-num num">08</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=roulette" data-mode="roulette" data-transition><img src="/games/09-roulette.webp" alt="" width="290" height="371" loading="lazy" decoding="async"><span class="sr-only">الروليت — عجلة بأسماء المتسابقين تتوقف على نتيجة عادلة يحددها الخادم</span><span class="sp-game-num num">09</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=redlight" data-mode="redlight" data-transition><img src="/games/10-red-light.webp" alt="" width="290" height="371" loading="lazy" decoding="async"><span class="sr-only">الضوء الأحمر — تقدّم عند الأخضر، وتجمّد عند الأحمر — الحركة تُقصيك</span><span class="sp-game-num num">10</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=country" data-mode="country" data-transition><img src="/games/11-guess-country.webp" alt="" width="290" height="371" loading="lazy" decoding="async"><span class="sr-only">خمن الدولة — ثلاثة تلميحات تظهر تباعًا — اكتب اسم الدولة</span><span class="sp-game-num num">11</span></a>
+   <a class="sp-game sp-tilt" href="/play?mode=flag" data-mode="flag" data-transition><img src="/games/12-guess-flag.webp" alt="" width="290" height="371" loading="lazy" decoding="async"><span class="sr-only">لعبة خمن العلم — علم على الشاشة ومؤقت — أسرع إجابة تحصد أكثر</span><span class="sp-game-num num">12</span></a>
+  </div>
+  <p class="sh-gallery-more" id="allGames"><span>استكشف المزيد من الألعاب</span> — <span id="galleryCount">12 لعبة</span> جاهزة، وألعاب إضافية في <a href="/studio?panel=games">معرض الاستوديو</a>.</p>
+ </section>
+
  <!-- ========== Hero ========== -->
  <section class="sh-hero" aria-labelledby="heroTitle">
   <div class="sh-wrap sh-hero-grid">
@@ -68,15 +105,15 @@
 
    <div class="sh-hero-visual" aria-hidden="true">
     <div class="sh-halo"></div>
-    <img class="sh-side-card sh-side-a" src="/covers/bomb.svg" alt="" width="200" height="200" decoding="async">
-    <img class="sh-side-card sh-side-b" src="/covers/race.svg" alt="" width="200" height="200" decoding="async">
+    <img class="sh-side-card sh-side-a" src="/games/05-time-bomb.webp" alt="" width="200" height="256" decoding="async">
+    <img class="sh-side-card sh-side-b" src="/games/09-roulette.webp" alt="" width="200" height="256" decoding="async">
     <div class="sh-phone">
      <div class="sh-phone-screen">
       <div class="sh-phone-slides" id="phoneSlides">
-       <img class="is-on" src="/covers/quiz.svg" alt="" width="290" height="290" decoding="async">
-       <img src="/covers/wheel.svg" alt="" width="290" height="290" decoding="async" loading="lazy">
-       <img src="/covers/glass.svg" alt="" width="290" height="290" decoding="async" loading="lazy">
-       <img src="/covers/guess.svg" alt="" width="290" height="290" decoding="async" loading="lazy">
+       <img class="is-on" src="/games/01-knowledge-challenge.webp" alt="" width="290" height="290" decoding="async">
+       <img src="/games/02-guess-drawing.webp" alt="" width="290" height="290" decoding="async" loading="lazy">
+       <img src="/games/03-musical-chairs.webp" alt="" width="290" height="290" decoding="async" loading="lazy">
+       <img src="/games/12-guess-flag.webp" alt="" width="290" height="290" decoding="async" loading="lazy">
       </div>
       <div class="sh-phone-top"><span class="sh-live-tag">LIVE</span><span class="sh-viewers"><svg class="i"><use href="/icons.svg#i-users"/></svg><b class="num">2.4K</b></span><span class="sh-demo-tag">معاينة</span></div>
       <ol class="sh-phone-feed" id="phoneFeed">
@@ -98,7 +135,7 @@
   <div class="sh-platforms">
    <div class="sh-platforms-head">
     <h2 id="connectTitle">اربط بثك وابدأ التفاعل</h2>
-    <p>اربط حسابك على TikTok أو Kick، وتصل رسائل الشات إلى اللعبة مباشرة.</p>
+    <p>اربط حسابك على TikTok أو Kick من الشريط أعلى الصفحة، وتصل رسائل الشات إلى اللعبة مباشرة.</p>
    </div>
    <article class="sh-platform">
     <span class="sh-platform-logo" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-note"/></svg></span>
@@ -110,13 +147,6 @@
     <div><h3 dir="ltr">Kick</h3><p>رسائل الشات وشارات المشتركين تُقرأ من غرفة الشات العامة. الهدايا (Kicks) غير مدعومة بعد.</p></div>
     <span class="sh-support is-beta"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-bolt"/></svg>تجريبي</span>
    </article>
-   <form id="liveConnectForm" class="sh-connect" autocomplete="off">
-    <label class="sh-select"><span class="sr-only">المنصة</span><select id="livePlatform"><option value="tiktok">TikTok</option><option value="kick">Kick (تجريبي)</option></select></label>
-    <label class="sh-input"><span class="sr-only">اسم الحساب</span><span aria-hidden="true" dir="ltr">@</span><input id="liveUsername" name="username" type="text" maxlength="30" placeholder="اسم الحساب" dir="ltr" autocomplete="off" spellcheck="false"></label>
-    <button type="submit" class="sh-btn sh-btn-gold" id="liveConnectButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-plug"/></svg>اتصل بالبث</button>
-    <span class="connection-pill" id="liveConnectionBadge" role="status"><i></i><span id="liveConnectionStatus">غير متصل</span></span>
-   </form>
-   <p class="sh-note" id="connectionNote">ربط تجريبي • يمكنك تجربة الفعاليات دون الاتصال ببث فعلي.</p>
   </div>
  </section>
 
@@ -124,7 +154,7 @@
  <section class="sh-wrap sh-section-tight" id="season" aria-labelledby="seasonTitle">
   <div class="sh-live">
    <header class="sh-live-head">
-    <div><span class="sh-eyebrow"><i class="sh-live-dot" aria-hidden="true"></i>البثوث الجارية • الموسم الحالي</span><h2 id="seasonTitle">ألعاب تُلعب الآن على Sky Live</h2></div>
+    <div><span class="sh-eyebrow"><i class="sh-live-dot" aria-hidden="true"></i>البثوث الجارية • الموسم الحالي</span><h2 id="seasonTitle">ألعاب تُلعب الآن على SPONGE LIVE</h2></div>
     <p class="sh-live-sum" id="liveSummary">لا يوجد بث متصل الآن</p>
    </header>
    <div class="sh-live-body">
@@ -135,7 +165,7 @@
       <span>عند ربط البث تظهر هنا بطاقته وعدد اللاعبين واللعبة الحالية.</span>
      </article>
      <article class="sh-live-card" id="liveCard" hidden>
-      <img class="sh-live-cover" id="liveCover" src="/covers/quiz.svg" alt="" width="300" height="200" loading="lazy">
+      <img class="sh-live-cover" id="liveCover" src="/games/01-knowledge-challenge.webp" alt="" width="300" height="200" loading="lazy">
       <div class="sh-live-top"><span class="sh-live-tag">LIVE</span><span class="sh-top-badge" hidden>الأكثر مشاركة</span><span class="sh-live-players"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b class="num" id="livePlayers">0</b></span></div>
       <div class="sh-live-info">
        <span class="sh-ring-av" aria-hidden="true"><span id="liveInitial">S</span></span>
@@ -154,7 +184,7 @@
     </div>
    </div>
    <div class="sh-podium-wrap" id="leaderboard" aria-labelledby="leaderboardTitle">
-    <h3 id="leaderboardTitle"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-crown"/></svg>أبطال <span dir="ltr">SKY LIVE</span></h3>
+    <h3 id="leaderboardTitle"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-crown"/></svg>أبطال <span dir="ltr">SPONGE LIVE</span></h3>
     <div class="podium-grid">
      <article class="hero-player rank-two" id="leaderTwo"><span class="rank-medal">2</span><span class="player-laurel" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-laurel"/></svg></span><div class="player-avatar" id="avatarTwo"><svg class="i"><use href="/icons.svg#i-medal"/></svg></div><strong class="player-name" id="nameTwo">المركز الثاني</strong><span class="player-points"><b id="pointsTwo">0</b> نقطة</span></article>
      <article class="hero-player rank-one" id="leaderOne"><span class="rank-medal">1</span><span class="player-laurel" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-laurel"/></svg></span><div class="player-avatar" id="avatarOne"><svg class="i"><use href="/icons.svg#i-crown"/></svg></div><strong class="player-name" id="nameOne">بانتظار البطل</strong><span class="player-points"><b id="pointsOne">0</b> نقطة</span></article>
@@ -178,26 +208,6 @@
   </div>
  </section>
 
- <!-- ========== Games gallery ========== -->
- <section class="sh-wrap sh-section" id="games" aria-labelledby="gamesTitle">
-  <header class="sh-head"><span class="sh-eyebrow">الألعاب الجديدة</span><h2 id="gamesTitle">معرض ألعاب <bdi dir="ltr">Sky Live</bdi></h2><p>ألعاب مصممة للبث: إقصاء، وسرعة، وحظ — يشارك فيها الجمهور من الشات.</p></header>
-  <div class="sh-gallery" id="gameGallery">
-   <a class="sh-cover" href="/play?mode=quiz" data-mode="quiz"><img src="/covers/quiz.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>تحدي المعلومات</b><small>الذكاء والسرعة</small></span></a>
-   <a class="sh-cover" href="/play?mode=bomb" data-mode="bomb"><img src="/covers/bomb.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>القنبلة المؤقتة</b><small>الإقصاء</small></span></a>
-   <a class="sh-cover" href="/play?mode=bowling" data-mode="bowling"><img src="/covers/bowling.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>البولينج</b><small>الحظ والمخاطرة</small></span></a>
-   <a class="sh-cover" href="/play?mode=glass" data-mode="glass"><img src="/covers/glass.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>الجسر الزجاجي</b><small>الإقصاء</small></span></a>
-   <a class="sh-cover" href="/play?mode=guess" data-mode="guess"><img src="/covers/guess.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>خمّن الكلمة</b><small>الذكاء والسرعة</small></span></a>
-   <a class="sh-cover" href="/play?mode=race" data-mode="race"><img src="/covers/race.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>سباق الجمهور</b><small>الجماعية</small></span></a>
-   <a class="sh-cover" href="/play?mode=truefalse" data-mode="truefalse"><img src="/covers/truefalse.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>حقيقة أم كذب</b><small>الذكاء والسرعة</small></span></a>
-   <a class="sh-cover" href="/play?mode=higherlower" data-mode="higherlower"><img src="/covers/higherlower.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>أعلى أم أقل</b><small>الذكاء والسرعة</small></span></a>
-   <a class="sh-cover" href="/play?mode=redlight" data-mode="redlight"><img src="/covers/redlight.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>الضوء الأحمر</b><small>الإقصاء</small></span></a>
-   <a class="sh-cover" href="/play?mode=wheel" data-mode="wheel"><img src="/covers/wheel.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>عجلة الأسماء</b><small>الحظ والمخاطرة</small></span></a>
-   <a class="sh-cover" href="/play?mode=minority" data-mode="minority"><img src="/covers/minority.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>الأقلية تفوز</b><small>الذكاء والسرعة</small></span></a>
-   <a class="sh-cover" href="/play?mode=rps" data-mode="rps"><img src="/covers/rps.svg" alt="" width="180" height="180" loading="lazy"><span class="sh-cover-title"><b>حجر ورقة مقص</b><small>الإقصاء</small></span></a>
-  </div>
-  <p class="sh-gallery-more" id="allGames"><span>استكشف المزيد من الألعاب</span> — <span id="galleryCount">12 لعبة</span> جاهزة الآن في الاستوديو، وكل لعبة جديدة تنضم للمعرض فور اكتمالها. <a href="/studio?panel=games">افتح معرض الاستوديو</a></p>
- </section>
-
  <!-- ========== Pricing ========== -->
  <section class="sh-wrap sh-section" id="pricing" aria-labelledby="pricingTitle">
   <header class="sh-head"><h2 id="pricingTitle">اشتراك واحد، وكل الألعاب</h2><p>كل الألعاب وشاشة البث والاستوديو متاحة في الخطتين.</p></header>
@@ -205,7 +215,7 @@
    <article class="sh-plan">
     <h3>الشهري</h3>
     <p class="sh-price"><b class="num" id="priceMonthly">29</b> <span class="sh-cur">ريال</span><small>/ شهريًا</small></p>
-    <ul class="sh-perks"><li>جميع ألعاب <bdi dir="ltr">Sky Live</bdi></li><li>شاشة البث للأفقي والعمودي</li><li>استوديو التحكم والمتصدرين</li><li>بنك الأسئلة العربي</li></ul>
+    <ul class="sh-perks"><li>جميع ألعاب <bdi dir="ltr">SPONGE LIVE</bdi></li><li>شاشة البث للأفقي والعمودي</li><li>استوديو التحكم والمتصدرين</li><li>بنك الأسئلة العربي</li></ul>
     <a class="sh-btn sh-btn-dark sh-btn-block" id="planMonthlyCta" href="#start">اشترك شهريًا</a>
    </article>
    <article class="sh-plan is-annual">
@@ -216,7 +226,7 @@
     <a class="sh-btn sh-btn-gold sh-btn-block" id="planAnnualCta" href="#start">اشترك سنويًا</a>
    </article>
   </div>
-  <p class="sh-plans-note" id="pricingNote">يتم التفعيل بعد التواصل مع فريق Sky Live. الأسعار بالريال السعودي وقد تتغير.</p>
+  <p class="sh-plans-note" id="pricingNote">يتم التفعيل بعد التواصل مع فريق SPONGE LIVE. الأسعار بالريال السعودي وقد تتغير.</p>
  </section>
 
  <!-- ========== Final CTA ========== -->
@@ -232,9 +242,9 @@
 
 <footer class="sh-footer">
  <div class="sh-wrap sh-footer-row">
-  <a class="sh-brand" href="/"><img src="/sky-live-mark.svg" alt="" width="28" height="28"><b dir="ltr"><span>SKY</span> LIVE</b></a>
+  <a class="sh-brand" href="/"><img src="/sponge-mark.svg" alt="" width="28" height="28"><b dir="ltr"><span>SKY</span> LIVE</b></a>
   <nav aria-label="روابط التذييل"><a href="/studio">لوحة الستريمر</a><a href="/draw">صفحة الرسم</a><a href="/overlay">شاشة العرض</a><button type="button" class="sh-linkbtn" id="footerAccount">الدخول</button><button type="button" class="sh-linkbtn" id="footerLogin">دخول المشرف</button></nav>
-  <span>© 2026 SKY LIVE • منصة مستقلة غير تابعة لـ TikTok</span>
+  <span>© 2026 SPONGE LIVE • منصة مستقلة غير تابعة لـ TikTok</span>
  </div>
 </footer>
 

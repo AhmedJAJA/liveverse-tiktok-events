@@ -1,0 +1,82 @@
+/* =====================================================================
+   SPONGE LIVE — Bikini-Bottom-at-night theme layer.
+   Loaded last on every page: deep ocean background, rising bubbles (sponge.js),
+   sea-floor silhouettes, neon cyan frames like the game cards, and a bright
+   sponge-yellow primary action.
+   ===================================================================== */
+:root{
+  --sp-deep:#020A22; --sp-navy:#061A44; --sp-blue:#1E5BFF; --sp-cyan:#38D4FF; --sp-aqua:#8CE8FF; --sp-foam:#E9FBFF;
+  --sp-yellow:#FFE14D; --sp-yellow-2:#FFC21A; --sp-ink:#0A1A3D; --sp-coral:#FF6A8A; --sp-purple:#7B5CFF;
+  --sp-yellow-btn:linear-gradient(180deg,#FFF07A 0%,#FFD21F 55%,#FFB800 100%);
+  --sp-neon:0 0 0 1px rgba(56,212,255,.55),0 0 18px rgba(56,212,255,.45),0 0 42px -8px rgba(30,91,255,.7);
+  --sp-sea:radial-gradient(ellipse 80% 55% at 50% -10%,rgba(56,212,255,.22),transparent 60%),radial-gradient(ellipse 60% 40% at 85% 30%,rgba(123,92,255,.16),transparent 70%),linear-gradient(180deg,#071C4D 0%,#04112F 45%,#020A22 100%);
+  /* core tokens re-pointed at the ocean palette */
+  --obsidian:#020A22; --carbon:#061433; --graphite:#0C2050;
+  --gold:#38D4FF; --champagne:#8CE8FF; --ivory:#EAF8FF; --gold-ink:#06183D;
+  --metal:linear-gradient(135deg,#E9FBFF 0%,#8CE8FF 22%,#2F8CFF 48%,#9FEFFF 70%,#1D5FD8 100%);
+  --metal-v:linear-gradient(180deg,#F2FDFF 0%,#8CE8FF 42%,#2F8CFF 58%,#A8F0FF 100%);
+  --glow-gold:var(--sp-neon);
+  --sh-gold-btn:var(--sp-yellow-btn); --pl-gold-btn:var(--sp-yellow-btn); --pl-gold:var(--sp-yellow);
+  --font-ar:"Tajawal","Royal Latin",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+html{background:var(--sp-deep)}
+body{background:var(--sp-sea) fixed,var(--sp-deep)!important}
+body::after{content:"";position:fixed;inset:auto 0 0;height:min(26vh,240px);z-index:-1;pointer-events:none;background:url(/seafloor.svg) bottom center/cover no-repeat;opacity:.85}
+.sp-bubbles{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+html.fx-off .sp-bubbles{display:none}
+
+/* brand mark */
+.sp-brand{display:inline-flex;align-items:center;gap:10px;color:var(--sp-foam);text-decoration:none;font:900 18px/1 var(--font-latin);letter-spacing:.16em;text-shadow:0 0 14px rgba(56,212,255,.65)}
+.sp-brand img{width:34px;height:34px;filter:drop-shadow(0 0 10px rgba(56,212,255,.6))}
+.sp-brand b{color:var(--sp-yellow);text-shadow:0 0 14px rgba(255,210,31,.6)}
+
+/* primary action = sponge yellow, secondary = neon outline */
+.sh-btn-gold,.pl-btn-gold,.start-game,.primary-action,.btn-gold{background:var(--sp-yellow-btn)!important;color:var(--sp-ink)!important;border-color:rgba(255,246,168,.8)!important;box-shadow:0 0 0 1px rgba(255,210,31,.5),0 10px 30px -10px rgba(255,190,0,.75)!important}
+.sh-btn-dark,.pl-btn-line,.pl-btn-ghost{border-color:rgba(56,212,255,.45)!important}
+
+/* bubble burst around an element (join / win) */
+.sp-burst{position:absolute;left:50%;top:50%;width:var(--s);height:var(--s);margin:calc(var(--s) / -2);border-radius:50%;border:2px solid rgba(160,240,255,.9);pointer-events:none;
+  animation:sp-burst .85s cubic-bezier(.2,.8,.2,1) forwards;transform:rotate(var(--a)) translateX(0)}
+@keyframes sp-burst{to{transform:rotate(var(--a)) translateX(var(--d));opacity:0}}
+
+/* 3D tilt for interactive cards (driven by sponge-ui.js, CSS fallback is a plain lift) */
+.sp-tilt{transform-style:preserve-3d;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s}
+.sp-tilt:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px)}
+
+/* page transition into a game */
+.sp-curtain{position:fixed;inset:0;z-index:999;pointer-events:none;background:radial-gradient(circle at var(--cx,50%) var(--cy,50%),rgba(56,212,255,.35),#020A22 60%);opacity:0;transition:opacity .35s ease}
+.sp-curtain.is-on{opacity:1}
+html.fx-off .sp-curtain{display:none}
+@media (prefers-reduced-motion:reduce){.sp-burst,.sp-tilt{animation:none;transition:none}.sp-tilt:hover{transform:none}}
+
+/* ---------- home: control deck + game picker ---------- */
+.sp-deck{position:relative;z-index:5;padding:14px 0;background:linear-gradient(180deg,rgba(6,26,68,.92),rgba(4,17,47,.75));border-bottom:1px solid rgba(56,212,255,.3);box-shadow:0 10px 40px -20px rgba(56,212,255,.5)}
+.sp-deck-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.sp-connect{flex:1 1 560px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0}
+.sp-connect .sh-input{flex:1 1 220px}
+.sp-demo{flex:0 0 auto}
+.sp-deck-note{flex:1 1 100%;margin:0;color:var(--sh-text-3);font-size:13px}
+.sp-section{padding-block:34px 18px}
+.sp-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px;margin-bottom:18px}
+.sp-head h2{font-size:clamp(26px,3.6vw,38px);font-weight:900;color:var(--sp-foam);text-shadow:0 0 22px rgba(56,212,255,.55)}
+.sp-head p{color:var(--sh-text-2);max-width:60ch}
+.sp-gallery{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.sp-game{position:relative;display:block;aspect-ratio:290/371;border-radius:20px;overflow:hidden;background:#020A22;isolation:isolate;
+  box-shadow:0 0 0 1px rgba(56,212,255,.35),0 14px 30px -18px #000;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s;outline:none}
+.sp-game img{display:block;width:100%;height:100%;object-fit:contain;transition:filter .25s}
+.sp-game::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(56,212,255,0);transition:box-shadow .25s}
+.sp-game:hover,.sp-game:focus-visible{box-shadow:0 0 0 2px #38D4FF,0 0 30px rgba(56,212,255,.65),0 24px 40px -20px #000}
+.sp-game:hover img{filter:brightness(1.08) saturate(1.1)}
+.sp-game:focus-visible::after,.sp-game.is-chosen::after{box-shadow:inset 0 0 0 3px #8CE8FF}
+.sp-game:active{transform:scale(.96)!important}
+.sp-game.is-chosen{transform:scale(1.04);box-shadow:0 0 0 3px #FFD21F,0 0 50px rgba(255,210,31,.6)}
+.sp-game-num{position:absolute;top:8px;inset-inline-start:10px;padding:2px 8px;border-radius:999px;background:rgba(2,10,34,.75);color:#8CE8FF;font-size:12px;font-weight:800}
+.sp-gallery .sp-game{animation:sp-card-in .55s cubic-bezier(.2,.8,.2,1) both}
+.sp-gallery .sp-game:nth-child(n){animation-delay:calc(var(--i,0) * 40ms)}
+@keyframes sp-card-in{from{opacity:0;transform:translateY(16px) scale(.96)}}
+.sh-platforms{grid-template-areas:"head card" "head kick" "note note"!important}
+@media (max-width:1100px){.sp-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:1024px){.sh-platforms{grid-template-areas:"head" "card" "kick" "note"!important}}
+@media (max-width:640px){.sp-gallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sp-connect{flex-basis:100%}.sp-demo{flex:1 1 100%}}
+@media (max-width:340px){.sp-gallery{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.sp-gallery .sp-game{animation:none}}

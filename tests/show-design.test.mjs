@@ -22,7 +22,10 @@ test('every page loads the shared royal core before its own surface stylesheet',
   }
 });
 test('design tokens define the royal black and gold palette in one place',()=>{
-  for(const color of ['#08090B','#121316','#202126','#D4AF37','#F1D58C','#F6F1E7']) assert.ok(core.includes(color),color);
+  // SPONGE LIVE: the ocean palette lives in royal-core tokens and the sponge.css theme layer.
+  for(const color of ['#050B17','#0A132A','#102045','#37B3D4','#8CD9F1','#E7F2F6']) assert.ok(core.includes(color),color);
+  const sponge=fs.readFileSync(new URL('../public/sponge.css',import.meta.url),'utf8');
+  for(const token of ['--sp-deep','--sp-cyan','--sp-yellow','--sp-yellow-btn','--sp-neon']) assert.ok(sponge.includes(token+':'),token);
   for(const token of ['--obsidian','--carbon','--graphite','--gold','--champagne','--ivory','--metal']) assert.ok(core.includes(token+':'),token);
   // surfaces consume tokens instead of redefining the palette
   for(const css of [studio,broadcast,landingCss]) assert.doesNotMatch(css,/--gold:\s*#/);
@@ -67,8 +70,8 @@ test('mobile, accessibility and reduced motion are supported',()=>{
 });
 test('original own branding used, no impersonation or external third-party source',()=>{
   for(const content of [broadcast,studio,landingCss,home,overlay]) assert.doesNotMatch(content,/hudhudlive\.com/i);
-  assert.match(home,/SKY LIVE/);
-  assert.match(overlay,/SKY LIVE/);
+  assert.match(home,/SPONGE LIVE/);
+  assert.match(overlay,/SPONGE LIVE/);
   for(const content of [core,studio,broadcast,landingCss]) assert.doesNotMatch(content,/@import|https?:\/\//);
 });
 test('every element id is unique on each page (duplicate ids break getElementById lookups)',()=>{

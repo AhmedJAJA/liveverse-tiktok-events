@@ -1,4 +1,4 @@
-/* SKY LIVE account window (login / register / guest / recovery / profile).
+/* SPONGE LIVE account window (login / register / guest / recovery / profile).
    Classic script: window.SkyAccount.open({ tab, guest, onDone }). Needs session.js. */
 (() => {
   'use strict';
@@ -128,8 +128,8 @@
     const closeBtn = h('button', { type: 'button', class: 'acc-close', 'aria-label': 'إغلاق' }, icon('close'));
     closeBtn.addEventListener('click', close);
     const head = h('header', { class: 'acc-head' },
-      h('img', { src: '/sky-live-mark.svg', alt: '', width: '56', height: '56' }),
-      h('h2', { id: 'accTitle', dir: 'ltr', text: 'SKY LIVE' }),
+      h('img', { src: '/sponge-mark.svg', alt: '', width: '56', height: '56' }),
+      h('h2', { id: 'accTitle', dir: 'ltr', text: 'SPONGE LIVE' }),
       h('p', { text: me.user || me.guest ? 'حسابك وغرفتك الخاصة' : 'ادخل لتشغيل ألعاب البث المباشر بغرفتك الخاصة' }));
     const body = h('div', { class: 'acc-body' });
     if (me.user || me.guest) {

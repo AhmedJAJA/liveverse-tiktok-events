@@ -10,7 +10,7 @@ const studio = read('app.js');
 test('SKY LIVE approved homepage contains all nine cohesive dashboard areas',()=>{
   for(const id of ['platforms','season','tasks','tools','games','leaderboard','allGames','how','start'])
     assert.match(home,new RegExp('id="'+id+'"'),id);
-  for(const label of ['اربط بثك وابدأ التفاعل','موسم','مهام اليوم','مسار التقدم','أدوات البث','الألعاب الجديدة','تحدي المعلومات','سباق الجمهور','أبطال','استكشف المزيد من الألعاب'])
+  for(const label of ['اربط بثك وابدأ التفاعل','موسم','مهام اليوم','مسار التقدم','أدوات البث','اختر لعبة','تحدي المعرفة','القنبلة الموقوتة','أبطال','استكشف المزيد من الألعاب','وضع التجربة'])
     assert.ok(home.includes(label),label);
 });
 test('live connect form requires admin permission instead of publishing a secret',()=>{
@@ -31,7 +31,7 @@ test('champion cards and score progress are populated from real API state',()=>{
   assert.match(script,/safeAvatar\(raw\)/);
 });
 test('home game links select working studio game modes, without fake gameplay',()=>{
-  for(const mode of ['quiz','race','guess','wheel']) {
+  for(const mode of ['quiz','drawguess','roulette','flag']) {
     assert.ok(home.includes('mode='+mode),mode);
     assert.ok(studio.includes('STUDIO_MODES.includes(requestedMode)'));
     assert.match(studio,/const STUDIO_MODES = \['quiz','guess','race','wheel','glass','bomb',...PARTY_MODES\];/);
@@ -49,6 +49,6 @@ test('approved mobile visual layout, animations and accessible fallback are pres
 });
 test('TIME BOMB is listed on the homepage and in the studio game modes',()=>{
   assert.match(home,/href="\/play\?mode=bomb"/);
-  assert.match(home,/القنبلة المؤقتة/);
+  assert.match(home,/القنبلة الموقوتة/);
   assert.match(fs.readFileSync(new URL('../public/index.html',import.meta.url),'utf8'),/data-mode="bomb"/);
 });

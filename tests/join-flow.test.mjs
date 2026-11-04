@@ -91,11 +91,14 @@ test('join page: big call text, host-only controls, no room codes, safe DOM', ()
   const js = fs.readFileSync(new URL('../public/play.js', import.meta.url), 'utf8');
   const css = fs.readFileSync(new URL('../public/play.css', import.meta.url), 'utf8');
   const server = fs.readFileSync(new URL('../server.mjs', import.meta.url), 'utf8');
-  assert.match(html, /اكتب <b class="pl-word" id="joinWord">انضم<\/b> في شات البث لبدء اللعب/);
+  assert.match(html, /اكتب «<b class="pl-word" id="joinWord">انضم<\/b>» في تعليقات البث للدخول إلى اللعبة/);
   assert.match(html, /بانتظار انضمام اللاعبين/);
   for (const id of ['hostSeatButton', 'startButton', 'adminBar', 'players', 'playerCount', 'liveFrame', 'lateNote']) assert.match(html, new RegExp('id="' + id + '"'), id);
   assert.match(html, /id="adminBar" hidden/, 'controls are hidden until the page knows the viewer is the host');
-  assert.match(js, /'إلغاء مشاركتي'/); assert.match(js, /'شارك كلاعب'/);
+  assert.match(js, /'إلغاء مشاركتي'/); assert.match(js, /'دخّلني أنا'/);
+  assert.match(html, /دخّلني تلقائياً في كل لعبة/);
+  for (const id of ['regToggle', 'keywordInput', 'maxInput', 'addForm', 'autoHost', 'stopButton', 'restartButton', 'endButton', 'sketchCanvas', 'judgeTool', 'rolesTool']) assert.match(html, new RegExp('id="' + id + '"'), id);
+  for (const action of ['registration-close', 'registration-settings', 'add-player', 'remove-player', 'sketch', 'judge', 'roles-admin', 'secret']) assert.ok(js.includes("'" + action + "'"), action);
   for (const action of ['prepare', 'host-seat', 'host-unseat', 'start', 'stop', 'draw']) assert.ok(js.includes("'" + action + "'"), action);
   assert.doesNotMatch(js, /innerHTML/);
   assert.doesNotMatch(html, /رمز الغرفة|كود/);

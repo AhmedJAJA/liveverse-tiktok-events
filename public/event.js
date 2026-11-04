@@ -1,11 +1,11 @@
-/* SKY LIVE event settings and authentic chat-driven game launch. */
+/* SPONGE LIVE event settings and authentic chat-driven game launch. */
 const $ = id => document.getElementById(id);
 const GAME_MODES = Object.freeze({
  glass: {title:'الجسر الزجاجي',category:'إقصاء',description:'سؤال كل خطوة ولوحين: اكتب رقم إجابتك — واللي غلط ينكسر تحته',label:'طول اللعبة',timeLabel:'وقت القفزة',badgeUnit:'ث',lengths:{short:5,normal:10,long:15},seconds:10},
  quiz: {title:'تحدي المعلومات',category:'ذكاء',description:'سؤال وأربع إجابات: اكتب رقم الاختيار الصحيح في الشات — والأسرع يتصدر',label:'مدة الجولة',timeLabel:'وقت الإجابة',badgeUnit:'ث',lengths:{short:15,normal:30,long:60},seconds:30},
  guess: {title:'خمّن الكلمة',category:'ذكاء وسرعة',description:'شاهد التلميح وأرسل تخمينك في الشات — أول إجابة صحيحة تحصد النقاط',label:'مدة الجولة',timeLabel:'وقت التخمين',badgeUnit:'ث',lengths:{short:15,normal:30,long:60},seconds:30},
  race: {title:'سباق الجمهور',category:'سرعة',description:'متابعينك يكتبون !go في الشات ليتقدموا نحو خط النهاية — والأسرع يفوز',label:'طول السباق',timeLabel:'هدف السباق',badgeUnit:'حركة',lengths:{short:5,normal:12,long:25},seconds:0},
- rps: {title:'حجر ورقة مقص',category:'إقصاء',description:'تحدَّ Sky: اكتب حجر أو ورقة أو مقص — ثلاث حيوات وآخر باقٍ يفوز',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:8,normal:15,long:25},seconds:15,party:true},
+ rps: {title:'حجر ورقة مقص',category:'إقصاء',description:'تحدَّ بوبل: اكتب حجر أو ورقة أو مقص — ثلاث حيوات وآخر باقٍ يفوز',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:8,normal:15,long:25},seconds:15,party:true},
  minority: {title:'الأقلية تفوز',category:'ذكاء وسرعة',description:'خياران في كل جولة: اكتب 1 أو 2 — الجهة الأقل عددًا تنجو',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:6,normal:10,long:15},seconds:15,party:true},
  higherlower: {title:'أعلى أم أقل',category:'ذكاء وسرعة',description:'هل الورقة التالية أعلى أم أقل؟ اكتب إجابتك في الشات',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:5,normal:8,long:12},seconds:10,party:true},
  truefalse: {title:'حقيقة أم كذب',category:'ذكاء وسرعة',description:'عبارة في كل جولة: اكتب صح أو خطأ — الأسرع يحصد نقاطًا أكثر',label:'عدد الجولات',timeLabel:'وقت الجولة',badgeUnit:'جولة',lengths:{short:5,normal:8,long:12},seconds:15,party:true},
@@ -53,19 +53,19 @@ function createGlassBridge() {
      ];
      const points=coords.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
      const opacity=.4+row*.055;
-     surface.append(makeSvgNode('polygon',{points,fill:'url(#glassPanel)',opacity:opacity.toFixed(2),stroke:'#0d3742','stroke-width':Math.max(1,2.6-row*.13)}));
+     surface.append(makeSvgNode('polygon',{points,fill:'url(#glassPanel)',opacity:opacity.toFixed(2),stroke:'#0D3742','stroke-width':Math.max(1,2.6-row*.13)}));
      const inset=side===0 ? [left(y1)+7,center()-12] : [center()+12,right(y1)-7];
-     surface.append(makeSvgNode('line',{x1:inset[0],y1:y1+2,x2:inset[1],y2:y1+2,stroke:'#a2d1d9','stroke-width':1.1,opacity:0.3+row*.02}));
+     surface.append(makeSvgNode('line',{x1:inset[0],y1:y1+2,x2:inset[1],y2:y1+2,stroke:'#A2D1D9','stroke-width':1.1,opacity:0.3+row*.02}));
    }
  }
  // Intentionally deterministic particle positions to prevent jitter between page loads.
  for(let i=0;i<48;i++){
    const x=((i*137+37)%614)+12,y=((i*79+23)%460)+10;
    const rad=i%9===0?2.7:i%4===0?1.8:1;
-   sparks.append(makeSvgNode('circle',{cx:x,cy:y,r:rad,fill:'#b6e2e7',opacity:(.3+(i%6)*.09).toFixed(2)}));
+   sparks.append(makeSvgNode('circle',{cx:x,cy:y,r:rad,fill:'#B6E2E7',opacity:(.3+(i%6)*.09).toFixed(2)}));
  }
  const shards=[[414,265,430,271,421,293],[446,288,462,301,448,307],[473,300,488,305,479,330],[423,333,438,349,428,354],[454,355,472,363,461,380],[490,340,505,350,489,367]];
- for(const shard of shards)sparks.append(makeSvgNode('polygon',{points:shard.join(' '),fill:'#b5f3f4',opacity:'.65'}));
+ for(const shard of shards)sparks.append(makeSvgNode('polygon',{points:shard.join(' '),fill:'#B5F3F4',opacity:'.65'}));
 }
 createGlassBridge();
 
@@ -77,7 +77,7 @@ function configureVisuals() {
  $('lengthHeading').textContent=meta.label;
  $('statDurationLabel').textContent=meta.timeLabel;
  $('timeFieldName').textContent=meta.timeLabel;
- document.title=meta.title+' | SKY LIVE';
+ document.title=meta.title+' | SPONGE LIVE';
  if(game==='glass'){
   $('stepSeconds').value='10';
   $('stepSeconds').closest('.advanced-row').hidden=false;
@@ -103,12 +103,12 @@ function ensureGuessFields() {
  const info=document.createElement('span'),title=document.createElement('strong'),desc=document.createElement('small');
  title.textContent='الإجابة السرية';desc.textContent='لا تظهر للمشاركين أثناء الجولة';info.append(title,desc);
  const input=document.createElement('input');input.id='guessAnswer';input.maxLength=80;input.placeholder='الإجابة الصحيحة';input.required=true;input.dir='auto';
- input.style.cssText='max-width:130px;min-height:42px;font-size:.8rem;border:1px solid #5f8491;border-radius:11px;background:#121f36;padding:6px 8px';
+ input.style.cssText='max-width:130px;min-height:42px;font-size:.8rem;border:1px solid #5F8491;border-radius:11px;background:#121F36;padding:6px 8px';
  row.append(info,input);
  const extra=document.createElement('label');extra.className='advanced-row';
  const intro=document.createElement('span');const t=document.createElement('strong');t.textContent='التلميح الظاهر للجمهور';intro.append(t);
  const hint=document.createElement('input');hint.id='guessPrompt';hint.maxLength=200;hint.placeholder='تلميح للمشاهدين';hint.dir='auto';
- hint.style.cssText='max-width:160px;min-height:42px;font-size:.8rem;border:1px solid #5f8491;border-radius:11px;background:#121f36;padding:6px 8px';
+ hint.style.cssText='max-width:160px;min-height:42px;font-size:.8rem;border:1px solid #5F8491;border-radius:11px;background:#121F36;padding:6px 8px';
  extra.append(intro,hint);container.prepend(extra);container.prepend(row);
  $('advancedSettings').querySelector('summary small').textContent='5';
 }

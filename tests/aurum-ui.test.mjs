@@ -56,6 +56,6 @@ test('Aurum follows the original Aceternity parameters', () => {
   assert.match(js, /rand\(10, 20\)/);                   // beams: 10–20s gradient sweeps
   assert.match(js, /\.7;/);                             // glowing effect: inactive zone .7
   assert.match(css, /calc\(var\(--i,0\) \* 200ms\)/); // text generate: 0.2s stagger
-  assert.match(css, /radial-gradient\(var\(--au-mb-color,#F1D58C\) 40%,transparent 60%\)/); // moving border orb
+  assert.match(css, /radial-gradient\(var\(--au-mb-color,#8CD9F1\) 40%,transparent 60%\)/); // moving border orb
   assert.match(js, /if \(!reduce\.matches\) \{|const animate = !reduce\.matches/);
 });

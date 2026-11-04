@@ -9,7 +9,7 @@ const roster = (n) => Array.from({ length: n }, (_, i) => ({ id: 'p' + (i + 1), 
 
 test('rock paper scissors: lives, elimination, everyone-out protection, last one standing', () => {
   const c = clock();
-  const g = createPartyGame('rps', { now: c.now, random: seq(0), rounds: 20, seconds: 10, revealMs: 1000 }); // Sky always picks حجر
+  const g = createPartyGame('rps', { format: 'sky', now: c.now, random: seq(0), rounds: 20, seconds: 10, revealMs: 1000 }); // Sky always picks حجر
   g.start(roster(3));
   assert.equal(g.phase, 'input');
   assert.equal(g.input('p1', 'ورقة'), true);   // beats rock
@@ -33,7 +33,7 @@ test('rock paper scissors: lives, elimination, everyone-out protection, last one
 
 test('rock paper scissors: if every survivor would lose their last life, nobody is eliminated', () => {
   const c = clock();
-  const g = createPartyGame('rps', { now: c.now, random: seq(0), rounds: 20, seconds: 5, revealMs: 500 });
+  const g = createPartyGame('rps', { format: 'sky', now: c.now, random: seq(0), rounds: 20, seconds: 5, revealMs: 500 });
   g.start(roster(2));
   for (const p of g.roster.values()) p.lives = 1;
   c.add(5000); g.tick();                     // nobody answered: both would be out
@@ -115,11 +115,11 @@ test('engine runs every party mode end to end from chat, with server timers and 
     const e = new Engine({ now: () => t, random: (n) => 0 });
     e.configure({ mode, title: mode, rounds: 1, roundSeconds: 5 });
     e.openRegistration({ keyword: 'انضم' });
-    for (const name of ['a', 'b', 'c']) e.receiveChat({ id: name, username: name, text: 'انضم' });
+    for (const name of ['a', 'b', 'c', 'd']) e.receiveChat({ id: name, username: name, text: 'انضم' });
     e.start();
     assert.ok(e.snapshot().party, mode);
     assert.equal(e.snapshot().status.active, true);
-    for (let i = 0; i < 120 && e.status.active; i++) { t += 1000; e.tick(); }
+    for (let i = 0; i < 400 && e.status.active; i++) { t += 1000; e.tick(); }
     if (e.status.active) e.stop();
     assert.equal(e.status.active, false, mode + ' finishes');
     assert.ok(e.status.results?.rankings.length, mode + ' has a podium');

@@ -140,14 +140,14 @@ test('join page over HTTP: a guest host prepares, sits in, starts; anonymous vie
   const { base, stop } = await boot();
   try {
     const host = client(base), viewer = client(base);
-    assert.equal((await fetch(base + '/play?mode=rps')).status, 200);
+    assert.equal((await fetch(base + '/play?mode=country')).status, 200);
     for (const f of ['/play.js', '/play.css']) assert.equal((await fetch(base + f)).status, 200, f);
-    assert.equal((await viewer('POST', '/api/admin/prepare', { mode: 'rps' })).status, 401);
+    assert.equal((await viewer('POST', '/api/admin/prepare', { mode: 'country' })).status, 401);
     const g = (await host('POST', '/api/account/guest', {})).data;
     assert.equal((await host('POST', '/api/admin/prepare', { mode: 'nope' })).status, 400);
-    assert.equal((await host('POST', '/api/admin/prepare', { mode: 'rps' })).status, 200);
+    assert.equal((await host('POST', '/api/admin/prepare', { mode: 'country' })).status, 200);
     let st = (await viewer('GET', '/api/state?room=' + g.room)).data;
-    assert.equal(st.status.mode, 'rps'); assert.equal(st.registration.phase, 'open');
+    assert.equal(st.status.mode, 'country'); assert.equal(st.registration.phase, 'open');
     assert.equal((await host('POST', '/api/admin/host-seat', {})).status, 200);
     assert.equal((await host('POST', '/api/admin/host-seat', {})).status, 400, 'no double seat');
     st = (await viewer('GET', '/api/state?room=' + g.room)).data;
@@ -158,5 +158,71 @@ test('join page over HTTP: a guest host prepares, sits in, starts; anonymous vie
     assert.equal(st.status.active, true); assert.equal(st.registration.phase, 'closed');
     // the owner's main room was never touched by the guest
     assert.equal((await viewer('GET', '/api/state')).data.status.active, false);
+  } finally { stop(); }
+});
+
+test('SPONGE LIVE over HTTP: host-only game tools, private role pages, sketch sync and WebSocket resync', async () => {
+  const { base, token, stop } = await boot();
+  const H = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+  const adm = async (a, b = {}, headers = H) => { const r = await fetch(base + '/api/admin/' + a, { method: 'POST', headers, body: JSON.stringify(b) }); return { status: r.status, data: await r.json() }; };
+  try {
+    // anonymous callers can't touch any game tool
+    for (const a of ['sketch', 'judge', 'secret', 'roles-admin', 'prepare', 'host-seat', 'remove-player', 'registration-close'])
+      assert.equal((await adm(a, {}, { 'Content-Type': 'application/json' })).status, 401, a);
+    // drawguess: secret only via the host, sketch reaches every screen
+    await adm('prepare', { mode: 'drawguess' });
+    for (const n of ['a', 'b']) await adm('simulate', { username: n, text: 'انضم' });
+    assert.equal((await adm('start')).status, 200);
+    const secret = (await adm('secret')).data.secret.word;
+    const pub = await (await fetch(base + '/api/state')).text();
+    assert.ok(!pub.includes(secret), 'secret word not in the public state');
+    assert.equal((await adm('sketch', { data: 'javascript:alert(1)' })).status, 400);
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    // a reconnecting screen receives the current state and drawing straight away
+    const packets = [];
+    const ws = new WebSocket(base.replace('http', 'ws') + '/ws');
+    ws.onmessage = (e) => packets.push(JSON.parse(e.data));
+    await new Promise((r) => { ws.onopen = r; });
+    assert.equal((await adm('sketch', { data: png })).status, 200);
+    await new Promise((r) => setTimeout(r, 150));
+    assert.ok(packets.some((p) => p.type === 'state'));
+    assert.ok(packets.some((p) => p.type === 'sketch' && p.data.data === png));
+    ws.close();
+    const again = []; const ws2 = new WebSocket(base.replace('http', 'ws') + '/ws');
+    ws2.onmessage = (e) => again.push(JSON.parse(e.data));
+    await new Promise((r) => setTimeout(r, 300));
+    assert.ok(again.some((p) => p.type === 'state' && p.data.status.mode === 'drawguess' && p.data.status.active));
+    assert.ok(again.some((p) => p.type === 'sketch'), 'drawing restored after reconnect');
+    ws2.close();
+    assert.equal((await (await fetch(base + '/api/sketch')).json()).data, png);
+    await adm('simulate', { username: 'b', text: secret });
+    assert.equal((await adm('stop')).status, 200);
+    // categories judge refuses when nothing waits for a decision
+    await adm('prepare', { mode: 'categories' });
+    await adm('start');
+    assert.equal((await adm('judge', { accept: true })).status, 400);
+    await adm('stop');
+    // roles: private page links by chat code; the public state never carries roles
+    await adm('prepare', { mode: 'roles' });
+    for (const n of ['c', 'd']) await adm('simulate', { username: n, text: 'انضم' });
+    assert.equal((await adm('start')).status, 200);
+    const claim = await (await fetch(base + '/api/role/claim', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json();
+    assert.match(claim.code, /^\d{4}$/);
+    const before = await (await fetch(base + '/api/role/me', { headers: { 'X-Role-Token': claim.token } })).json();
+    assert.equal(before.linked, false);
+    await adm('simulate', { username: 'c', text: 'دوري ' + claim.code });
+    const mine = await (await fetch(base + '/api/role/me', { headers: { 'X-Role-Token': claim.token } })).json();
+    assert.equal(mine.linked, true); assert.ok(['impostor', 'detective', 'citizen'].includes(mine.role));
+    assert.doesNotMatch(await (await fetch(base + '/api/state')).text(), /"role":"(impostor|detective|citizen)"/);
+    assert.equal((await adm('roles-admin')).data.roles.length, 4);
+    assert.equal((await fetch(base + '/api/role/act', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Role-Token': 'nope' }, body: '{"number":1}' })).status, 400);
+    // every catalogue game opens its join page and every card image is served
+    const site = await (await fetch(base + '/api/site')).json();
+    assert.equal(site.games.length, 12);
+    for (const g of site.games) {
+      assert.equal((await fetch(base + g.href)).status, 200, g.href);
+      assert.equal((await fetch(base + g.cover)).headers.get('content-type'), 'image/webp', g.cover);
+      assert.equal((await fetch(base + g.art)).headers.get('content-type'), 'image/png', g.art);
+    }
   } finally { stop(); }
 });

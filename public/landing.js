@@ -1,4 +1,4 @@
-/* SKY LIVE homepage: real session scores, connection state and working studio links. */
+/* SPONGE LIVE homepage: real session scores, connection state and working studio links. */
 const byId = id => document.getElementById(id);
 const allowedAvatars = ['tiktokcdn.com','tiktokcdn-us.com','tiktokcdn-eu.com','tiktokcdn-in.com','byteoversea.com','ibytedtos.com','ibyteimg.com','muscdn.com'];
 let sessionState = null;
@@ -266,13 +266,12 @@ const plural=n=>n===1?'لعبة واحدة':n===2?'لعبتان':(n>=3&&n<=10?n+
 function renderGallery(games) {
   const box=byId('gameGallery');
   if(!box||!games.length)return;
-  const cards=games.map(game=>{
-    const a=document.createElement('a');a.className='sh-cover';a.href=game.href;a.dataset.mode=game.mode;
-    const img=document.createElement('img');img.src=game.cover;img.alt='';img.width=180;img.height=180;img.loading='lazy';img.decoding='async';
-    const title=document.createElement('span');title.className='sh-cover-title';
-    const b=document.createElement('b');b.textContent=game.title;
-    const small=document.createElement('small');small.textContent=game.categoryLabel||game.category;
-    title.append(b,small);a.append(img,title);a.title=game.summary||game.title;
+  const cards=games.map((game,i)=>{
+    const a=document.createElement('a');a.className='sp-game sp-tilt';a.href=game.href;a.dataset.mode=game.mode;a.dataset.transition='';
+    const img=document.createElement('img');img.src=game.cover;img.alt='';img.width=290;img.height=371;img.loading=i<6?'eager':'lazy';img.decoding='async';
+    const label=document.createElement('span');label.className='sr-only';label.textContent=game.title+' — '+(game.summary||'');
+    const no=document.createElement('span');no.className='sp-game-num num';no.textContent=String(i+1).padStart(2,'0');
+    a.append(img,label,no);a.title=game.title;
     return a;
   });
   box.replaceChildren(...cards);
