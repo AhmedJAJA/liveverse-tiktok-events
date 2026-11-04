@@ -143,8 +143,9 @@ function actorFor(req) {
   }
   if (s.kind === 'acct') {
     // Account sessions open the studio only while a trial or subscription is running (checked here, every request).
+    // E-mail verification gates the free trial, not access that was paid for or granted.
     const e = platform?.cached(s.userId);
-    if (!e || e.user.disabled_at || !e.user.email_verified_at || !platform.entitlement(s.userId).active) return null;
+    if (!e || e.user.disabled_at || !platform.entitlement(s.userId).active) return null;
     return { kind: 'acct', userId: s.userId, user: { displayName: e.user.display_name }, room: ensureRoom(e.user.room, 'acct', s.userId), live: true };
   }
   if (s.kind === 'guest') return { kind: 'guest', room: ensureRoom(s.room, 'guest'), live: false };
@@ -170,7 +171,7 @@ function meFor(req) {
 function accountView(userId) {
   const e = platform?.cached(userId); if (!e) return null;
   const ent = platform.entitlement(userId);
-  return { ...platform.publicUser(e.user), entitled: ent.active && !!e.user.email_verified_at && !e.user.disabled_at, plan: ent.plan, planName: ent.plan ? PLATFORM_PLANS[ent.plan].name : null, endsAt: ent.endsAt ? new Date(ent.endsAt).toISOString() : null };
+  return { ...platform.publicUser(e.user), entitled: ent.active && !e.user.disabled_at, plan: ent.plan, planName: ent.plan ? PLATFORM_PLANS[ent.plan].name : null, endsAt: ent.endsAt ? new Date(ent.endsAt).toISOString() : null };
 }
 function accountSession(req) { const s = sessionOf(req); return s?.kind === 'acct' && platform?.cached(s.userId) ? s : null; }
 function sameOrigin(req) { const origin = req.headers.origin; if (!origin) return true; try { return new URL(origin).host === req.headers.host; } catch { return false; } }
@@ -325,7 +326,7 @@ async function handleAccess(action, req, res) {
     const voucher = trial ? null : await platform.findVoucher(code);
     if (voucher && !acct) return json(res, 401, { error: 'هذا رمز اشتراك: سجّل الدخول أو أنشئ حسابًا ثم أدخله مجددًا ليُضاف الاشتراك إلى حسابك', login: true, voucher: true });
     if (voucher) {
-      try { const r = await platform.redeemVoucher(acct.userId, code); return json(res, 200, { ok: true, access: 'account', voucher: r, next: platform.verified(acct.userId) ? '/studio' : '/account?voucher=1' }); }
+      try { const r = await platform.redeemVoucher(acct.userId, code); return json(res, 200, { ok: true, access: 'account', voucher: r, next: '/studio' }); }
       catch (err) { if (err instanceof PlatformError) return json(res, err.status, { error: err.message }); throw err; }
     }
   }

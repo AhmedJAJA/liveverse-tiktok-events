@@ -47,7 +47,7 @@
     badge($('accessBadge'), a.active ? 'فعّال' : 'غير فعّال', a.active ? 'is-on' : 'is-off');
     $('accessPlan').textContent = a.active ? a.planName : 'لا يوجد اشتراك فعّال';
     $('accessEnds').textContent = a.active ? fmtDate(a.endsAt) : '—';
-    $('openStudio').hidden = !(a.active && u.verified); $('navStudio').hidden = $('openStudio').hidden;
+    $('openStudio').hidden = !a.active; $('navStudio').hidden = $('openStudio').hidden;
     // trial
     const t = p.trial;
     $('trialClaim').hidden = !(t.status === 'available'); $('trialActivate').hidden = t.status !== 'ready';
@@ -138,7 +138,6 @@
   if (params.get('verified') === '1') notice('تم تأكيد بريدك الإلكتروني ✓ يمكنك الآن الحصول على التجربة المجانية.', 'is-ok');
   else if (params.get('verified') === '0') notice('رابط التأكيد غير صالح أو منتهي. اطلب رابطًا جديدًا من هذه الصفحة.', 'is-err');
   else if (params.get('need') === 'plan') notice('الاستوديو يحتاج تجربة أو اشتراكًا فعّالًا. فعّل تجربتك المجانية أو اشترك في باقة.');
-  else if (params.get('voucher') === '1') notice('تمت إضافة الاشتراك إلى حسابك ✓ أكّد بريدك الإلكتروني لتفتح الاستوديو.', 'is-ok');
   else if (params.get('welcome') === '1') notice('أهلًا بك! حسابك جاهز ومعرّفك الدائم ظاهر بالأسفل. أكّد بريدك من الرابط المرسل إليك لتفعيل التجربة المجانية.', 'is-ok');
   const plan = params.get('plan'); if (plan === 'weekly' || plan === 'monthly') $(plan === 'weekly' ? 'planWeekly' : 'planMonthly').scrollIntoView({ block: 'center' });
   /* back from the payment page: ask the server, which asks the gateway — reaching this page proves nothing */
