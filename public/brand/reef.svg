@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B3E7A"/>
+      <stop offset=".45" stop-color="#0F2858"/>
+      <stop offset="1" stop-color="#061433"/>
+    </linearGradient>
+    <linearGradient id="rock" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A4F92"/>
+      <stop offset="1" stop-color="#0B1E48"/>
+    </linearGradient>
+    <linearGradient id="coral" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF7AA8"/>
+      <stop offset="1" stop-color="#7B2D6B"/>
+    </linearGradient>
+    <linearGradient id="weed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3BE3B0"/>
+      <stop offset="1" stop-color="#0E5F63"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="1.2"/></filter>
+  </defs>
+  <!-- far dunes -->
+  <path d="M0 170 C160 140 300 150 460 160 S760 130 920 150 1240 132 1400 148 1560 140 1600 150 V260 H0Z" fill="#0C2457" opacity=".75"/>
+  <!-- rocks -->
+  <g fill="url(#rock)" stroke="#5FD8FF" stroke-opacity=".35" stroke-width="2">
+    <path d="M70 200 C80 150 150 132 205 150 C250 120 320 140 330 196 Z"/>
+    <path d="M1180 205 C1190 160 1250 140 1300 158 C1340 135 1410 150 1420 205 Z"/>
+    <path d="M760 214 C772 184 820 172 856 186 C880 172 920 180 928 214 Z"/>
+  </g>
+  <!-- coral -->
+  <g fill="url(#coral)" opacity=".9">
+    <path d="M410 210 c-4-34 6-52 14-66 4 12 2 24-2 36 10-14 20-24 30-28-4 14-12 30-22 44 10-6 20-6 28-4-10 8-24 14-34 18Z"/>
+    <path d="M1490 212 c-2-30 6-48 12-60 4 10 2 22-2 32 8-12 18-20 26-24-4 12-10 26-18 38 8-4 16-4 24-2-8 6-20 12-30 16Z"/>
+  </g>
+  <!-- sea grass tufts -->
+  <g fill="url(#weed)" opacity=".85">
+    <path d="M560 214 c-6-40 4-70 14-92 2 30-2 60-6 92Z"/>
+    <path d="M574 214 c0-30 12-52 24-66-6 24-10 44-12 66Z"/>
+    <path d="M1010 214 c-4-36 6-62 16-80 0 28-4 54-8 80Z"/>
+    <path d="M1026 214 c2-24 12-44 22-56-4 20-8 38-10 56Z"/>
+    <path d="M240 214 c-2-26 6-46 14-58 0 20-4 40-6 58Z"/>
+  </g>
+  <!-- shells and starfish -->
+  <g fill="#FFD27A" opacity=".85">
+    <path d="M690 222 l8 -16 8 16 -16 -10 h16Z"/>
+    <path d="M1330 226 c0-10 8-16 16-16 8 0 16 6 16 16Z" fill="#FFB3C7"/>
+  </g>
+  <!-- sand -->
+  <path d="M0 205 C200 190 380 214 600 206 S1000 190 1200 204 1480 196 1600 204 V260 H0Z" fill="url(#sand)"/>
+  <path d="M0 205 C200 190 380 214 600 206 S1000 190 1200 204 1480 196 1600 204" fill="none" stroke="#8CE8FF" stroke-opacity=".35" stroke-width="2"/>
+  <!-- sand sparkles -->
+  <g fill="#BFF3FF" opacity=".5" filter="url(#soft)">
+    <circle cx="120" cy="232" r="1.6"/><circle cx="360" cy="240" r="1.4"/><circle cx="640" cy="228" r="1.8"/>
+    <circle cx="900" cy="238" r="1.3"/><circle cx="1130" cy="232" r="1.6"/><circle cx="1450" cy="240" r="1.5"/>
+  </g>
+</svg>
