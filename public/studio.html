@@ -36,13 +36,24 @@
  </div>
  <div class="st-toolbar" role="toolbar" aria-label="أدوات البث">
   <form class="st-connect" id="connectForm" autocomplete="off">
-   <label class="sr-only" for="platformSelect">المنصة</label>
-   <select id="platformSelect"><option value="tiktok">TikTok</option><option value="kick">Kick (تجريبي)</option></select>
-   <label class="st-handle"><span aria-hidden="true">@</span><span class="sr-only">اسم الحساب</span><input id="handleInput" dir="ltr" maxlength="40" placeholder="اسم حساب TikTok" spellcheck="false"></label>
-   <button type="submit" class="pl-btn pl-btn-gold st-connect-btn" id="connectButton">اتصال</button>
+   <!-- accounts: the platform accounts they signed in with (no typed names) -->
+   <div class="st-linked" id="linkedConnect" role="group" aria-label="حسابات البث المرتبطة"></div>
+   <!-- the site owner's private test room only -->
+   <div class="st-manual" id="manualConnect" hidden>
+    <label class="sr-only" for="platformSelect">المنصة</label>
+    <select id="platformSelect"><option value="tiktok">TikTok</option><option value="kick">Kick (تجريبي)</option></select>
+    <label class="st-handle"><span aria-hidden="true">@</span><span class="sr-only">اسم الحساب</span><input id="handleInput" dir="ltr" maxlength="40" placeholder="اسم حساب TikTok" spellcheck="false"></label>
+    <button type="submit" class="pl-btn pl-btn-gold st-connect-btn" id="connectButton">اتصال</button>
+   </div>
    <button type="button" class="pl-btn pl-btn-ghost" id="disconnectButton" hidden>قطع</button>
    <span class="st-status" id="connState" role="status"><i aria-hidden="true"></i><span id="connText">غير متصل</span></span>
   </form>
+  <ul class="st-chips" id="statusChips" aria-label="حالة الجلسة">
+   <li id="chipAccount" data-on="false"><span>الحساب</span><b>غير مرتبط</b></li>
+   <li id="chipStream" data-on="false"><span>البث</span><b>غير مباشر</b></li>
+   <li id="chipGame" data-on="false"><span>اللعبة</span><b>متوقفة</b></li>
+   <li id="chipPlan" data-on="false"><span>الاشتراك</span><b>…</b></li>
+  </ul>
   <div class="st-top-tools">
    <span class="st-count" title="عدد المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b id="topCount">0</b></span>
    <a class="pl-chip" id="overlayLink" href="/overlay" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg><span>شاشة OBS</span></a>
@@ -54,12 +65,6 @@
 <!-- server-decided notices: plan needed, proof of account ownership, another studio window -->
 <div class="st-notices">
  <div class="st-notice is-plan" id="planNotice" hidden role="alert"><span>تحتاج إلى اشتراك فعال لربط بثك المباشر</span><a class="st-notice-btn" href="/account#plans">عرض الاشتراكات</a></div>
- <div class="st-notice is-verify" id="verifyPanel" hidden role="status" aria-live="polite">
-  <div class="st-verify-text"><b id="verifyTitle">أثبت أن الحساب حسابك</b><span id="verifyHelp">اكتب هذا الرمز في تعليقات بثك المباشر على <span id="verifyPlatform">TikTok</span> من حسابك نفسه <bdi id="verifyHandle" dir="ltr"></bdi></span></div>
-  <code class="st-verify-code" id="verifyCode" dir="ltr"></code>
-  <button type="button" class="st-notice-btn" id="verifyCopy">نسخ الرمز</button>
-  <small class="st-verify-left" id="verifyLeft"></small>
- </div>
  <div class="st-notice is-window" id="windowBanner" hidden role="alert"><span>الاستوديو مفتوح في نافذة أخرى — التحكم هناك الآن.</span><button type="button" class="st-notice-btn" id="takeOver">التحكم من هنا</button></div>
 </div>
 

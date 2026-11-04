@@ -338,30 +338,6 @@
   $('takeOver').addEventListener('click', () => beat(true));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) beat(); });
 
-  /* ---------- proof of account ownership ---------- */
-  let verifyTimer = 0, verifyEnds = 0;
-  function showVerify(v) {
-    $('verifyPanel').hidden = false; $('verifyPanel').classList.remove('is-done');
-    $('verifyTitle').textContent = 'أثبت أن الحساب حسابك'; $('verifyHelp').hidden = false;
-    $('verifyHandle').textContent = '@' + v.handle; $('verifyPlatform').textContent = v.platform === 'kick' ? 'Kick' : 'TikTok';
-    $('verifyCode').textContent = v.code; $('verifyCopy').hidden = false; $('verifyCode').hidden = false;
-    verifyEnds = Date.parse(v.expiresAt) || Date.now() + 600_000;
-    clearInterval(verifyTimer);
-    const tick = () => { const s = Math.max(0, Math.round((verifyEnds - Date.now()) / 1000)); $('verifyLeft').textContent = s ? 'ينتهي الرمز خلال ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : 'انتهت مهلة الرمز — اربط مرة أخرى'; if (!s) clearInterval(verifyTimer); };
-    tick(); verifyTimer = setInterval(tick, 1000);
-  }
-  function paintVerify(c) {
-    if (!c || $('verifyPanel').hidden) return;
-    if (c.verified) {
-      clearInterval(verifyTimer);
-      $('verifyPanel').classList.add('is-done'); $('verifyTitle').textContent = 'تم التحقق من ملكية الحساب ✓';
-      $('verifyHelp').hidden = true; $('verifyCode').hidden = true; $('verifyCopy').hidden = true;
-      $('verifyLeft').textContent = 'حسابك موثّق الآن — لن تحتاج الرمز مرة أخرى لهذا الحساب.';
-      setTimeout(() => { $('verifyPanel').hidden = true; }, 6000);
-    } else if (!c.verifying && c.state !== 'connected' && c.state !== 'connecting') { clearInterval(verifyTimer); $('verifyPanel').hidden = true; }
-  }
-  $('verifyCopy').addEventListener('click', () => { navigator.clipboard?.writeText($('verifyCode').textContent).then(() => feedback('نُسخ الرمز — الصقه في تعليقات بثك.')).catch(() => {}); });
-
   /* ---------- data ---------- */
   let leaving = false;
   addEventListener('pagehide', () => {
@@ -502,33 +478,76 @@
   });
   try { if (localStorage.getItem('sponge_drawer') === 'closed' || innerWidth < 900) { document.body.dataset.drawer = 'closed'; $('drawerToggle').setAttribute('aria-expanded', 'false'); } } catch {}
 
-  /* ---------- stream connection ---------- */
+  /* ---------- stream connection: the account's signed-in platform accounts; typing a name is the owner's test tool only ---------- */
+  const PNAME = { tiktok: 'TikTok', kick: 'Kick' };
+  let links = { linked: {}, platforms: {}, entitled: false };
+  async function loadLinks() {
+    if (me.owner || ownerToken() || !me.account) { $('manualConnect').hidden = !(me.owner || ownerToken()); paintLinks(); return; }
+    try { links = await (await fetch('/api/me/links', { credentials: 'same-origin', cache: 'no-store' })).json(); } catch {}
+    paintLinks();
+  }
+  function paintLinks() {
+    const box = $('linkedConnect'); box.hidden = !!(me.owner || ownerToken());
+    if (box.hidden) return;
+    const c = state?.connection || {};
+    box.replaceChildren(...['tiktok', 'kick'].map((p) => {
+      const l = links.linked?.[p];
+      if (!l || l.needsReauth) {
+        const a = el('a', 'st-link-cta', l ? 'أعد ربط ' + PNAME[p] : 'اربط ' + PNAME[p]); a.href = '/account#settings';
+        a.title = l ? 'انتهى التفويض — أعد الربط من الإعدادات' : 'سجّل الدخول إلى ' + PNAME[p] + ' من الإعدادات';
+        return a;
+      }
+      const on = c.state === 'connected' && c.platform === p;
+      const b = el('button', 'st-linked-btn' + (on ? ' is-on' : '')); b.type = 'button'; b.dataset.platform = p; b.disabled = on;
+      const ava = el('span', 'st-linked-ava', (l.handle[0] || '?').toUpperCase());
+      if (l.avatar && /^https:\/\//.test(l.avatar)) { const img = el('img'); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.addEventListener('error', () => img.remove(), { once: true }); img.src = l.avatar; ava.append(img); }
+      b.append(ava, el('span', '', (on ? 'متصل · ' : 'اتصال · ') + PNAME[p]), el('bdi', 'st-linked-h', '@' + l.handle));
+      return b;
+    }));
+  }
+  $('linkedConnect').addEventListener('click', (e) => {
+    const b = e.target.closest('.st-linked-btn'); if (!b) return;
+    run(b, async () => {
+      $('planNotice').hidden = true;
+      try { await admin('connect', { platform: b.dataset.platform }); feedback('متصل ببثك على ' + PNAME[b.dataset.platform] + ' ✓'); }
+      catch (err) { if (err.code === 409 && /الإعدادات/.test(err.message)) loadLinks(); throw err; }
+    });
+  });
   $('platformSelect').addEventListener('change', () => {
     const kick = $('platformSelect').value === 'kick';
     $('handleInput').placeholder = kick ? 'اسم قناة Kick' : 'اسم حساب TikTok';
     $('kickWrap').hidden = !kick;
   });
-  $('connectForm').addEventListener('submit', (e) => { e.preventDefault(); run($('connectButton'), async () => {
+  $('connectForm').addEventListener('submit', (e) => { e.preventDefault(); if ($('manualConnect').hidden) return; run($('connectButton'), async () => {
     const username = $('handleInput').value.trim().replace(/^@/, '');
     if (!username) { $('handleInput').focus(); throw new Error('اكتب اسم الحساب'); }
     const platform = $('platformSelect').value;
-    $('planNotice').hidden = true;
-    const r = await admin('connect', { username, platform, ...(platform === 'kick' && $('kickChatroom').value ? { chatroomId: $('kickChatroom').value.trim() } : {}) });
-    if (r.verify) showVerify(r.verify); else $('verifyPanel').hidden = true;
-    feedback(r.verify ? 'متصل بالبث — بقي إثبات ملكية الحساب بالرمز' : 'تم ربط بثك الموثّق.');
+    await admin('connect', { username, platform, ...(platform === 'kick' && $('kickChatroom').value ? { chatroomId: $('kickChatroom').value.trim() } : {}) });
+    feedback('اتصال تجريبي لغرفة المالك — لا يظهر في البثوث النشطة.');
   }); });
-  $('disconnectButton').addEventListener('click', (e) => run(e.currentTarget, async () => { await admin('disconnect'); $('verifyPanel').hidden = true; clearInterval(verifyTimer); }));
+  $('disconnectButton').addEventListener('click', (e) => run(e.currentTarget, () => admin('disconnect')));
+  function chip(id, on, text) { $(id).dataset.on = String(on); $(id).querySelector('b').textContent = text; }
+  /** Four separate facts, all decided by the server: account linked, stream live, game running, plan active. */
+  function paintChips(s) {
+    const c = s?.connection || {}, linkedAny = Object.values(links.linked || {}).some((l) => l && !l.needsReauth);
+    chip('chipAccount', linkedAny, me.owner || ownerToken() ? 'غرفة المالك' : linkedAny ? 'مرتبط' : 'غير مرتبط');
+    chip('chipStream', c.state === 'connected' && !!c.liveConfirmed, c.state === 'connected' ? (c.liveConfirmed ? 'مباشر' : 'تعذر التحقق') : c.state === 'connecting' ? 'جارٍ الاتصال' : 'غير مباشر');
+    const running = !!s?.status?.active || (s?.registration?.phase === 'open' && document.body.dataset.screen === 'game');
+    chip('chipGame', running, s?.status?.active ? 'تعمل' : running ? 'بانتظار اللاعبين' : 'متوقفة');
+    const plan = me.owner || ownerToken() ? true : !!me.account?.entitled;
+    chip('chipPlan', plan, me.owner || ownerToken() ? 'المالك' : plan ? 'فعال' : 'منتهٍ');
+  }
   function paintConnection(c) {
     const st = c?.state || 'disconnected';
     $('connState').dataset.state = st;
-    $('connText').textContent = { connected: 'متصل' + (c.username ? ' @' + c.username : '') + (c.verified ? ' ✓' : c.verifying ? ' — بانتظار رمز التحقق' : ''), connecting: 'جارٍ الاتصال…', error: 'خطأ في الاتصال', disconnected: 'غير متصل' }[st] || st;
+    $('connText').textContent = { connected: 'متصل' + (c.username ? ' @' + c.username : '') + (c.verified ? ' ✓' : ''), connecting: 'جارٍ الاتصال…', error: 'خطأ في الاتصال', disconnected: 'غير متصل' }[st] || st;
     $('connState').title = c?.detail || '';
     $('sideDot').dataset.state = st;
-    paintVerify(c);
-    $('sideConn').textContent = (c?.platform === 'kick' || $('platformSelect').value === 'kick' ? 'Kick' : 'TikTok') + ' — ' + $('connText').textContent;
+    $('sideConn').textContent = (c?.platform === 'kick' ? 'Kick' : 'TikTok') + ' — ' + $('connText').textContent;
     $('disconnectButton').hidden = !['connected', 'connecting'].includes(st);
     $('connectButton').hidden = st === 'connected';
-    if (st === 'connected' && c.username && document.activeElement !== $('handleInput')) $('handleInput').value = c.username;
+    if (st === 'connected' && c.username && !$('manualConnect').hidden && document.activeElement !== $('handleInput')) $('handleInput').value = c.username;
+    paintLinks(); paintChips(state);
   }
   function paintLeaders(list) {
     $('leaders').replaceChildren(...(list || []).slice(0, 10).map((p, i) => { const li = el('li'); li.append(el('b', 'num', String(i + 1)), el('span', '', p.name), el('small', 'num', String(p.score))); return li; }));
@@ -570,7 +589,7 @@
     try { site = await (await fetch('/api/site', { cache: 'no-store' })).json(); } catch {}
     try { me = await (await fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' })).json(); if (!me.signedIn && !ownerToken()) { location.href = '/?next=' + encodeURIComponent(location.pathname + location.search); return; } } catch {}
     game = [...(site?.games || []), ...(site?.extraGames || [])].find((x) => x.mode === mode) || game;
-    paintNav(); paintGame(); paintRoom();
+    paintNav(); paintGame(); paintRoom(); loadLinks();
     if (params.has('mode')) document.body.dataset.screen = 'game';
     const s = session(); if (s) await s.ready;
     if (document.body.dataset.screen === 'game') await prepare(); // the library alone never starts a game session

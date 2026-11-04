@@ -116,7 +116,7 @@ test('accounts over HTTP: sign-up, ID, verification, trial, studio gate, payment
     const u = browser(srv.base);
     // sign up — the new sections and links are on the home page
     const home = await (await fetch(srv.base + '/')).text();
-    for (const s of ['إنشاء حساب جديد', 'تسجيل الدخول', 'تجربة مجانية لمدة 24 ساعة', 'عرض باقات الاشتراك', 'حوّل بثك المباشر إلى عالم من الألعاب!', 'كيف تبدأ؟', 'شفيق العادي', 'أمير الهامور', '44.99', 'الأسئلة الشائعة', 'href="/privacy"', 'href="/terms"']) assert.ok(home.includes(s), s);
+    for (const s of ['إنشاء حساب جديد', 'تسجيل الدخول', 'تجربة مجانية لمدة 24 ساعة', 'عرض باقات الاشتراك', 'حوّل بثك إلى لعبة.', 'اربط بثك بتسجيل الدخول الرسمي', 'كيف تبدأ؟', 'شفيق العادي', 'أمير الهامور', '44.99', 'الأسئلة الشائعة', 'href="/privacy"', 'href="/terms"']) assert.ok(home.includes(s), s);
     for (const pg of ['/signup', '/login', '/privacy', '/terms']) assert.equal((await fetch(srv.base + pg)).status, 200, pg);
     const bad = await u('POST', '/api/auth/register', { username: 'x', email: 'no', password: '1', confirm: '2' });
     assert.equal(bad.status, 400); assert.ok(bad.data.fields.username && bad.data.fields.confirm);

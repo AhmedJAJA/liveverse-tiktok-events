@@ -490,27 +490,50 @@ export class Platform {
   }
 
   /* --------------------------------------------------- linked streams */
-  /** The account this user proved to own on a platform (null when none). */
+  /** The platform account this user signed in with (null when none). Tokens stay sealed here. */
   async verifiedStream(userId, platform) {
-    const r = await this.pool.query('SELECT handle, platform_user_id, verified_at FROM linked_accounts WHERE user_id=$1 AND platform=$2 AND verified', [userId, platform]);
-    return r.rows[0] ? { handle: r.rows[0].handle, platformUserId: r.rows[0].platform_user_id, verifiedAt: iso(r.rows[0].verified_at) } : null;
+    const r = (await this.pool.query('SELECT * FROM linked_accounts WHERE user_id=$1 AND platform=$2 AND verified', [userId, platform])).rows[0];
+    return r ? { handle: r.handle, platformUserId: r.platform_user_id, displayName: r.display_name, avatar: r.avatar_url, verifiedAt: iso(r.verified_at),
+      needsReauth: r.needs_reauth, accessTokenEnc: r.access_token_enc, refreshTokenEnc: r.refresh_token_enc,
+      tokenExpiresAt: r.token_expires_at ? +r.token_expires_at : 0, refreshExpiresAt: r.refresh_expires_at ? +r.refresh_expires_at : 0 } : null;
   }
-  /** Record a proof of ownership. A newer proof for the same platform account moves it to this user
-      (whoever can post from the account controls it); the previous owner is returned so their room can be closed. */
-  async markStreamVerified(userId, platform, handle, platformUserId = null) {
-    const h = String(handle).replace(/^@/, '').slice(0, 64);
-    const pid = /^[A-Za-z0-9_-]{1,40}$/.test(String(platformUserId || '')) ? String(platformUserId) : null;
+  /** Record an official sign-in with the platform. The same platform account (by its own id) belongs to one
+      SPONGE LIVE account: a newer sign-in moves it, and the previous owner is returned so their room can be closed. */
+  async saveOAuthLink(userId, platform, { platformUserId, handle, displayName, avatar, scope, accessTokenEnc, refreshTokenEnc, expiresAt, refreshExpiresAt }) {
+    const pid = String(platformUserId || '');
+    if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(pid)) fail('معرف حساب المنصة غير صالح');
+    const h = String(handle || '').replace(/^@/, '').slice(0, 64);
+    const pic = /^https:\/\//.test(String(avatar || '')) ? String(avatar).slice(0, 1000) : null;
     return tx(this.pool, async (c) => {
-      const prev = (await c.query('SELECT user_id FROM linked_accounts WHERE platform=$1 AND lower(handle)=lower($2) AND verified AND user_id<>$3 FOR UPDATE', [platform, h, userId])).rows.map((r) => r.user_id);
-      if (prev.length) await c.query('UPDATE linked_accounts SET verified=false WHERE platform=$1 AND lower(handle)=lower($2) AND user_id<>$3', [platform, h, userId]);
-      await c.query(`INSERT INTO linked_accounts (user_id, platform, handle, verified, platform_user_id, verified_at, verify_method, last_connected_at, last_live_at)
-        VALUES ($1,$2,$3,true,$4,now(),'live-chat-code',now(),now())
-        ON CONFLICT (user_id, platform) DO UPDATE SET handle=EXCLUDED.handle, verified=true, platform_user_id=EXCLUDED.platform_user_id,
-          verified_at=now(), verify_method='live-chat-code', last_connected_at=now(), last_live_at=now()`, [userId, platform, h, pid]);
+      const prev = (await c.query('SELECT user_id FROM linked_accounts WHERE platform=$1 AND verified AND user_id<>$3 AND (platform_user_id=$2 OR ($4<>\'\' AND lower(handle)=lower($4))) FOR UPDATE', [platform, pid, userId, h])).rows.map((r) => r.user_id);
+      if (prev.length) await c.query('UPDATE linked_accounts SET verified=false, access_token_enc=NULL, refresh_token_enc=NULL WHERE platform=$1 AND user_id = ANY($2::uuid[])', [platform, prev]);
+      await c.query(`INSERT INTO linked_accounts (user_id, platform, handle, verified, platform_user_id, verified_at, verify_method, display_name, avatar_url, scopes,
+          access_token_enc, refresh_token_enc, token_expires_at, refresh_expires_at, needs_reauth)
+        VALUES ($1,$2,$3,true,$4,now(),'oauth',$5,$6,$7,$8,$9,$10,$11,false)
+        ON CONFLICT (user_id, platform) DO UPDATE SET handle=EXCLUDED.handle, verified=true, platform_user_id=EXCLUDED.platform_user_id, verified_at=now(),
+          verify_method='oauth', display_name=EXCLUDED.display_name, avatar_url=EXCLUDED.avatar_url, scopes=EXCLUDED.scopes, access_token_enc=EXCLUDED.access_token_enc,
+          refresh_token_enc=EXCLUDED.refresh_token_enc, token_expires_at=EXCLUDED.token_expires_at, refresh_expires_at=EXCLUDED.refresh_expires_at, needs_reauth=false`,
+      [userId, platform, h || pid, pid, String(displayName || '').slice(0, 80) || null, pic, String(scope || '').slice(0, 200) || null, accessTokenEnc, refreshTokenEnc,
+        expiresAt ? new Date(expiresAt) : null, refreshExpiresAt ? new Date(refreshExpiresAt) : null]);
       await c.query('INSERT INTO admin_audit_logs (actor, action, target_user_id, details) VALUES ($1,$2,$3,$4)',
-        ['system', 'stream-verified', userId, { platform, handle: h, platformUserId: pid, movedFrom: prev }]);
+        ['system', 'stream-oauth-link', userId, { platform, handle: h, platformUserId: pid, movedFrom: prev }]);
       return { previousOwners: prev };
     });
+  }
+  /** New tokens after a refresh, or a fresh profile (name, picture, username) read with the token. */
+  async updateOAuthLink(userId, platform, { accessTokenEnc, refreshTokenEnc, expiresAt, refreshExpiresAt, handle, displayName, avatar, needsReauth } = {}) {
+    const sets = [], vals = [userId, platform];
+    const add = (col, v) => { vals.push(v); sets.push(col + '=$' + vals.length); };
+    if (accessTokenEnc !== undefined) add('access_token_enc', accessTokenEnc);
+    if (refreshTokenEnc !== undefined) add('refresh_token_enc', refreshTokenEnc);
+    if (expiresAt !== undefined) add('token_expires_at', expiresAt ? new Date(expiresAt) : null);
+    if (refreshExpiresAt !== undefined) add('refresh_expires_at', refreshExpiresAt ? new Date(refreshExpiresAt) : null);
+    if (handle) add('handle', String(handle).replace(/^@/, '').slice(0, 64));
+    if (displayName !== undefined) add('display_name', String(displayName || '').slice(0, 80) || null);
+    if (avatar !== undefined) add('avatar_url', /^https:\/\//.test(String(avatar || '')) ? String(avatar).slice(0, 1000) : null);
+    if (needsReauth !== undefined) add('needs_reauth', !!needsReauth);
+    if (!sets.length) return;
+    await this.pool.query('UPDATE linked_accounts SET ' + sets.join(', ') + ' WHERE user_id=$1 AND platform=$2 AND verified', vals);
   }
   async touchStream(userId, platform) {
     await this.pool.query('UPDATE linked_accounts SET last_connected_at=now(), last_live_at=now() WHERE user_id=$1 AND platform=$2 AND verified', [userId, platform]);
@@ -569,9 +592,10 @@ export class Platform {
   }
   async unlinkStream(userId, platform) {
     if (!['tiktok', 'kick'].includes(platform)) fail('منصة غير معروفة');
-    const r = await this.pool.query('DELETE FROM linked_accounts WHERE user_id=$1 AND platform=$2 RETURNING handle', [userId, platform]);
+    // the sealed tokens are returned once so the caller can revoke them at the platform; the row (and the tokens) are gone
+    const r = await this.pool.query('DELETE FROM linked_accounts WHERE user_id=$1 AND platform=$2 RETURNING handle, access_token_enc', [userId, platform]);
     if (r.rowCount) await this.audit('system', 'stream-unlink', { target: userId, details: { platform, handle: r.rows[0].handle } });
-    return { removed: r.rowCount > 0 };
+    return { removed: r.rowCount > 0, accessTokenEnc: r.rows[0]?.access_token_enc || null };
   }
   /** Counted by the server when a verified, listed game session starts / ends. */
   async recordStreamSession(userId, mode) {
@@ -610,7 +634,7 @@ export class Platform {
     const [subs, pays, links, trial] = await Promise.all([
       this.pool.query('SELECT id, plan, price_halalas, currency, starts_at, ends_at, status, source, created_at FROM subscriptions WHERE user_id=$1 ORDER BY starts_at DESC LIMIT 50', [userId]),
       this.pool.query('SELECT id, plan, amount_halalas, currency, status, created_at, verified_at FROM payments WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20', [userId]),
-      this.pool.query('SELECT platform, handle, verified, verified_at, last_connected_at FROM linked_accounts WHERE user_id=$1', [userId]),
+      this.pool.query('SELECT platform, handle, verified, verified_at, last_connected_at, display_name, avatar_url, needs_reauth, verify_method FROM linked_accounts WHERE user_id=$1', [userId]),
       this.trialState(userId),
     ]);
     const t = this.now();
@@ -618,7 +642,8 @@ export class Platform {
       user: this.publicUser(e.user),
       access: { ...ent, planName: ent.plan ? PLANS[ent.plan].name : null, endsAt: iso(ent.endsAt), remainingMs: ent.active ? ent.endsAt - t : 0 },
       trial,
-      linked: Object.fromEntries(links.rows.map((l) => [l.platform, { handle: l.handle, verified: l.verified, verifiedAt: iso(l.verified_at), lastConnectedAt: iso(l.last_connected_at) }])),
+      // only official sign-ins count as linked; an old unverified row is reported as not linked
+      linked: Object.fromEntries(links.rows.filter((l) => l.verified && l.verify_method === 'oauth').map((l) => [l.platform, { handle: l.handle, displayName: l.display_name, avatar: l.avatar_url, verified: true, needsReauth: l.needs_reauth, verifiedAt: iso(l.verified_at), lastConnectedAt: iso(l.last_connected_at) }])),
       history: subs.rows.map((s) => ({ id: s.id, plan: s.plan, planName: PLANS[s.plan]?.name || s.plan, price: s.price_halalas / 100, currency: s.currency, startsAt: iso(s.starts_at), endsAt: iso(s.ends_at), source: s.source,
         status: s.status === 'cancelled' ? 'cancelled' : +new Date(s.ends_at) <= t ? 'expired' : +new Date(s.starts_at) > t ? 'scheduled' : 'active' })),
       payments: pays.rows.map((p) => ({ id: p.id, plan: p.plan, amount: p.amount_halalas / 100, currency: p.currency, status: p.status, createdAt: iso(p.created_at) })),

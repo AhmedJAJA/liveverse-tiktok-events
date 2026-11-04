@@ -1,34 +1,31 @@
-// Active streams are real: subscription + proven account ownership + live on the platform + studio open + a game.
-// Runs the real server against PostgreSQL and a local stand-in for Kick (channel API + Pusher chat socket), so the
-// same code paths as production are exercised: connect, ownership code in the owner's own chat, heartbeats, sweep.
+// Official platform sign-in (TikTok Login Kit, Kick OAuth 2.1 + PKCE) and the active-streams rules, end to end:
+// real server + PostgreSQL + local stand-ins for the platforms' official endpoints (tests/fake-platforms.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import http from 'node:http';
 import { createServer } from 'node:net';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
-import { fakeKick } from './fake-kick.mjs';
+import { fakePlatforms } from './fake-platforms.mjs';
 
 const ADMIN = process.env.TEST_DATABASE_URL || 'postgres://sponge@localhost:55432/postgres';
-const dbName = 'sponge_live_' + process.pid;
+const dbName = 'sponge_oauth_' + process.pid;
 const dbUrl = (() => { const u = new URL(ADMIN); u.pathname = '/' + dbName; return u.toString(); })();
 let available = false;
 try { const c = new pg.Client({ connectionString: ADMIN, connectionTimeoutMillis: 2000 }); await c.connect(); await c.query(`DROP DATABASE IF EXISTS ${dbName}`); await c.query(`CREATE DATABASE ${dbName}`); await c.end(); available = true; } catch {}
 const skip = available ? false : 'no PostgreSQL at TEST_DATABASE_URL';
 test.after(async () => { if (!available) return; const c = new pg.Client({ connectionString: ADMIN }); await c.connect(); await c.query(`DROP DATABASE IF EXISTS ${dbName} WITH (FORCE)`).catch(() => {}); await c.end(); });
 
-const OWNER = 'owner-token-for-live-tests-1';
+const OWNER = 'owner-token-for-oauth-tests-1';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function waitFor(fn, ms = 12_000, what = 'condition') { const t0 = Date.now(); for (;;) { const v = await fn(); if (v) return v; if (Date.now() - t0 > ms) throw new Error('timed out waiting for ' + what); await sleep(150); } }
 async function freePort() { const s = createServer(); s.listen(0, '127.0.0.1'); await once(s, 'listening'); const p = s.address().port; await new Promise((r) => s.close(r)); return p; }
-
 async function boot(env) {
   const port = await freePort();
-  const child = spawn(process.execPath, ['server.mjs'], { cwd: new URL('..', import.meta.url), env: { ...process.env, PORT: String(port), ADMIN_TOKEN: OWNER, NODE_ENV: 'test', SKY_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'sponge-l-')), DATABASE_URL: dbUrl, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, ['server.mjs'], { cwd: new URL('..', import.meta.url), env: { ...process.env, PORT: String(port), ADMIN_TOKEN: OWNER, NODE_ENV: 'test', SKY_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'sponge-o-')), DATABASE_URL: dbUrl, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
   let out = ''; child.stdout.on('data', (c) => (out += c)); child.stderr.on('data', (c) => (out += c));
   const t0 = Date.now(); while (!/ready on/.test(out)) { if (Date.now() - t0 > 15000 || child.exitCode !== null) throw new Error('server did not start: ' + out); await sleep(50); }
   return { base: 'http://127.0.0.1:' + port, stop: () => new Promise((r) => { child.once('exit', r); child.kill(); }) };
@@ -40,169 +37,190 @@ function browser(base, fixed = {}) {
     const res = await fetch(base + route, { method, redirect: 'manual', headers: { 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}), ...fixed, ...headers }, ...(body ? { body: JSON.stringify(body) } : {}) });
     for (const c of res.headers.getSetCookie?.() || []) { const [kv] = c.split(';'); const i = kv.indexOf('='); const k = kv.slice(0, i), v = kv.slice(i + 1); if (v) jar.set(k, v); else jar.delete(k); }
     let data = null; try { data = await res.json(); } catch {}
-    return { status: res.status, data };
+    return { status: res.status, data, location: res.headers.get('location') };
   };
+  call.jar = jar;
   return call;
 }
-async function account(base, name) {
+async function account(base, name, trial = true) {
   const b = browser(base);
   const r = await b('POST', '/api/auth/register', { username: name, email: name + '@example.com', password: 'reef2026go', confirm: 'reef2026go' });
   assert.equal(r.status, 201, JSON.stringify(r.data));
   b.publicId = r.data.account.publicId; b.room = r.data.account.room;
+  if (trial) assert.equal((await b('POST', '/api/me/trial-start', {})).data.started, true);
   return b;
+}
+/** The whole sign-in round trip: our start → the platform's page (approved as `uid`) → our callback. */
+async function signIn(fake, b, p, uid, tweak = (x) => x) {
+  const start = await b('GET', '/api/oauth/' + p + '/start');
+  if (!/\/(tiktok|kick)\/authorize\?/.test(start.location || '')) return start;
+  const { code, state, params } = fake.approve(start.location, uid);
+  const q = tweak({ code, state });
+  const cb = await b('GET', '/api/oauth/' + p + '/callback?' + new URLSearchParams(q));
+  cb.params = params;
+  return cb;
 }
 const streams = async (b) => (await b('GET', '/api/streams')).data;
 
-test('active streams: subscription, proven ownership, real LIVE, open studio and a running game — all checked on the server', { skip, timeout: 180_000 }, async () => {
-  const kick = await fakeKick();
-  kick.add('hostchan', { userId: 501 }); kick.add('otherchan', { userId: 777 }); kick.add('quietchan', { userId: 502 });
-  const srv = await boot({ KICK_API_URL: kick.api, KICK_PUSHER_URL: kick.socket, KICK_LIVE_CHECK_MS: '700', SKY_HOST_TIMEOUT_MS: '5000' });
+test('official TikTok/Kick sign-in, linked-only connections and the active-streams rules', { skip, timeout: 240_000 }, async () => {
+  const fake = await fakePlatforms();
+  fake.addKick(501, { slug: 'hostchan', name: 'Host Chan' }); fake.addKick(777, { slug: 'otherchan' });
+  fake.addTikTok('tt-open-1', { username: 'reef.host', name: 'Reef Host' });
+  const srv = await boot({ ...fake.env, KICK_LIVE_CHECK_MS: '5000', SKY_HOST_TIMEOUT_MS: '5000' });
   const pool = new pg.Pool({ connectionString: dbUrl });
   const owner = browser(srv.base, { Authorization: 'Bearer ' + OWNER });
   const anon = browser(srv.base);
   try {
-    // 1. not subscribed: no account, then an account without a trial or plan
-    let r = await anon('POST', '/api/admin/connect', { platform: 'kick', username: 'hostchan' });
-    assert.equal(r.status, 401); assert.equal(r.data.needPlan, true);
-    const free = await account(srv.base, 'free_user');
-    r = await free('POST', '/api/admin/connect', { platform: 'kick', username: 'hostchan' });
-    assert.equal(r.status, 402); assert.equal(r.data.error, 'تحتاج إلى اشتراك فعال لربط بثك المباشر'); assert.equal(r.data.needPlan, true);
+    // the settings page knows both sign-ins are offered
+    let r = await anon('GET', '/api/oauth/kick/start');
+    assert.equal(r.status, 302); assert.match(r.location, /^\/login\?next=/, 'signed out → sign in to SPONGE LIVE first');
 
-    // 2. the free trial has ended
-    const lapsed = await account(srv.base, 'lapsed_user');
-    assert.equal((await lapsed('POST', '/api/me/trial-start', {})).data.started, true);
-    await pool.query("UPDATE trial_activations SET activated_at=now()-interval '25 hours', ends_at=now()-interval '1 hour' WHERE user_id=(SELECT id FROM users WHERE public_id=$1)", [lapsed.publicId]);
-    await pool.query("UPDATE subscriptions SET starts_at=now()-interval '25 hours', ends_at=now()-interval '1 hour' WHERE user_id=(SELECT id FROM users WHERE public_id=$1)", [lapsed.publicId]);
-    await owner('POST', '/api/manage/verify', { publicId: lapsed.publicId }); // refreshes the server's view of that account
-    r = await lapsed('POST', '/api/admin/connect', { platform: 'kick', username: 'hostchan' });
-    assert.equal(r.status, 402); assert.equal(r.data.needPlan, true);
+    // 5. not subscribed: refused before any platform page is opened
+    const free = await account(srv.base, 'free_user', false);
+    r = await free('GET', '/api/oauth/kick/start');
+    assert.match(r.location, /link_error=plan/);
+    r = await free('POST', '/api/admin/connect', { platform: 'kick' });
+    assert.equal(r.status, 402); assert.equal(r.data.error, 'تحتاج إلى اشتراك فعال لربط بثك المباشر');
 
-    // host with a running trial
+    // 3. Kick: OAuth 2.1 + PKCE (S256), state checked, the official id stored, tokens sealed
     const host = await account(srv.base, 'host_user');
-    assert.equal((await host('POST', '/api/me/trial-start', {})).data.started, true);
-    const state = async () => (await anon('GET', '/api/state?room=' + host.room)).data;
+    r = await signIn(fake, host, 'kick', 501);
+    assert.match(r.location, /linked=kick/);
+    assert.equal(r.params.get('code_challenge_method'), 'S256'); assert.ok(r.params.get('code_challenge'));
+    assert.equal(r.params.get('scope'), 'user:read channel:read events:subscribe', 'no stream-key scope');
+    let row = (await pool.query("SELECT * FROM linked_accounts WHERE platform='kick'")).rows[0];
+    assert.equal(row.verified, true); assert.equal(row.verify_method, 'oauth'); assert.equal(row.platform_user_id, '501'); assert.equal(row.handle, 'hostchan');
+    assert.match(row.access_token_enc, /^v1\./); assert.doesNotMatch(row.access_token_enc + row.refresh_token_enc, /at-|rt-/, 'tokens are never stored readable');
+    const prof = (await host('GET', '/api/me/profile')).data;
+    assert.equal(prof.linked.kick.handle, 'hostchan'); assert.match(prof.linked.kick.avatar, /files\.kick\.com/);
+    assert.ok(!JSON.stringify(prof).includes('access_token') && !JSON.stringify(prof).includes('v1.'), 'no token reaches the browser');
+    assert.deepEqual(prof.platforms, { tiktok: true, kick: true, twitch: false });
 
-    // 4. an account he does not own: the code typed from his own account in someone else's chat proves nothing
+    // 2. TikTok: Login Kit, user.info.basic + user.info.profile → the real username, picture and open_id
+    r = await signIn(fake, host, 'tiktok', 'tt-open-1');
+    assert.match(r.location, /linked=tiktok/);
+    assert.equal(r.params.get('scope'), 'user.info.basic,user.info.profile');
+    const links = (await host('GET', '/api/me/links')).data;
+    assert.equal(links.linked.tiktok.handle, 'reef.host'); assert.equal(links.linked.tiktok.displayName, 'Reef Host');
+
+    // 9. a refused or tampered sign-in links nothing
+    const other = await account(srv.base, 'other_user');
+    r = await signIn(fake, other, 'kick', 777, (q) => ({ ...q, state: 'forged-state' }));
+    assert.match(r.location, /link_error=state/);
+    r = await signIn(fake, other, 'kick', 777, ({ state }) => ({ state, error: 'access_denied' }));
+    assert.match(r.location, /link_error=denied/);
+    const stolen = browser(srv.base); // another browser cannot finish someone else's sign-in
+    const start = await other('GET', '/api/oauth/kick/start');
+    const ap = fake.approve(start.location, 777);
+    assert.match((await stolen('GET', '/api/oauth/kick/callback?' + new URLSearchParams({ code: ap.code, state: ap.state }))).location, /link_error=state/);
+    assert.equal((await other('GET', '/api/me/profile')).data.linked.kick, undefined);
+
+    // 10. the studio connects with the stored official account; a typed name is ignored
     r = await host('POST', '/api/admin/connect', { platform: 'kick', username: 'otherchan' });
-    assert.equal(r.status, 200); assert.equal(r.data.verified, false); assert.match(r.data.verify.code, /^SL-[A-Z2-9]{6}$/);
-    const foreignCode = r.data.verify.code;
-    assert.equal((await state()).connection.verifying, true);
-    assert.doesNotMatch(JSON.stringify(await state()), new RegExp(foreignCode), 'the code is never in the public room state');
-    kick.say('otherchan', { id: 9001, slug: 'host_user' }, foreignCode);
-    kick.say('otherchan', { id: 9002, slug: 'viewer_a' }, 'انضم');
-    await sleep(600);
-    let s = await state();
-    assert.equal(s.connection.verified, false, 'not proven');
-    assert.equal(s.playerCount, 0, 'chat of an unproven stream never reaches a game');
-    assert.equal((await streams(anon)).totalStreams, 0);
-    assert.equal((await pool.query("SELECT count(*)::int n FROM linked_accounts WHERE verified")).rows[0].n, 0);
+    assert.equal(r.status, 200, JSON.stringify(r.data)); assert.equal(r.data.handle, 'hostchan'); assert.equal(r.data.verified, true);
+    assert.equal(fake.subscriptions.at(-1).broadcaster_user_id, 501); assert.equal(fake.subscriptions.at(-1).events[0].name, 'chat.message.sent');
+    // unsigned or forged chat webhooks are refused; signed ones reach the game
+    assert.equal((await fake.kickWebhook(srv.base, { broadcasterUserId: 501, sender: { id: 9, name: 'x', slug: 'x' }, content: 'انضم', forge: true })).status, 400);
+    const T = 'tab-host-00001';
+    await host('POST', '/api/admin/heartbeat', { tab: T, screen: 'game' });
+    await host('POST', '/api/admin/prepare', { mode: 'quiz' }, { 'X-Studio-Tab': T });
+    assert.equal((await fake.kickWebhook(srv.base, { broadcasterUserId: 501, sender: { id: 9100, name: 'Real Viewer', slug: 'real_viewer' }, content: 'انضم' })).status, 200);
 
-    // 3. his own channel: the code appears in the owner's own chat → proven, stored, and not asked again
-    r = await host('POST', '/api/admin/connect', { platform: 'kick', username: 'hostchan' });
-    assert.equal(r.data.verified, false);
-    kick.say('hostchan', { id: 501, slug: 'hostchan' }, 'my code ' + r.data.verify.code.toLowerCase());
-    await waitFor(async () => (await state()).connection.verified, 5000, 'verification');
-    const link = await waitFor(async () => { const rows = (await pool.query("SELECT handle, verified, platform_user_id, verify_method FROM linked_accounts WHERE platform='kick'")).rows; return rows.length && rows; }, 5000, 'stored proof');
-    assert.deepEqual(link, [{ handle: 'hostchan', verified: true, platform_user_id: '501', verify_method: 'live-chat-code' }]);
-    await host('POST', '/api/admin/disconnect', {});
-    r = await host('POST', '/api/admin/connect', { platform: 'kick', username: 'hostchan' });
-    assert.equal(r.data.verified, true, 'a proven account connects directly next time'); assert.equal(r.data.verify, undefined);
-    assert.equal((await host('GET', '/api/me/profile')).data?.linked?.kick?.verified ?? true, true);
-
-    // 5. linked and live, studio not open / only the games library open → not listed
-    assert.equal((await streams(anon)).totalStreams, 0);
-    const T1 = 'tab-one-000001', T2 = 'tab-two-000002';
-    const beat = (tab, screen = 'game', extra = {}) => host('POST', '/api/admin/heartbeat', { tab, screen, ...extra });
-    r = await beat(T1, 'games');
-    assert.equal(r.data.state, 'in_studio'); assert.equal(r.data.listed, false); assert.ok(r.data.reasons.includes('no-game'));
-    assert.equal((await streams(anon)).totalStreams, 0, 'being in the studio is not running a game');
-
-    // 7. a game on screen during a real LIVE → listed with the real data
-    r = await beat(T1, 'game');
-    await host('POST', '/api/admin/prepare', { mode: 'quiz' }, { 'X-Studio-Tab': T1 });
-    let list = await waitFor(async () => { const l = await streams(anon); return l.totalStreams === 1 && l; }, 4000, 'listing');
-    assert.equal(list.streams[0].username, 'hostchan'); assert.equal(list.streams[0].platform, 'kick');
-    assert.equal(list.streams[0].liveUrl, 'https://kick.com/hostchan'); assert.equal(list.streams[0].state, 'waiting');
+    // 11 + 13 + 14. listed only now: plan + official link + LIVE on Kick + studio open + a game; real picture and link
+    let list = await waitFor(async () => { const l = await streams(anon); return l.totalPlayers === 1 && l; }, 5000, 'listing with the real player');
+    assert.equal(list.streams[0].username, 'hostchan'); assert.equal(list.streams[0].liveUrl, 'https://kick.com/hostchan');
     assert.match(list.streams[0].avatarUrl, /^https:\/\/files\.kick\.com\//);
-    kick.say('hostchan', { id: 9100, slug: 'real_viewer' }, 'انضم');
-    await waitFor(async () => (await streams(anon)).totalPlayers === 1, 4000, 'a real player');
-    await host('POST', '/api/admin/demo-players', { count: 3 }, { 'X-Studio-Tab': T1 });
-    assert.equal((await streams(anon)).totalPlayers, 1, 'demo players are never counted as real players');
-    assert.equal((await waitFor(async () => (await pool.query('SELECT state, listed FROM live_sessions')).rows.find((x) => x.listed), 8000, 'live_sessions row')).state, 'waiting');
+    await host('POST', '/api/admin/demo-players', { count: 3 }, { 'X-Studio-Tab': T });
+    assert.equal((await streams(anon)).totalPlayers, 1, 'demo players are never counted');
 
-    // 11. a second studio window: one card, one controller, take-over on demand
-    r = await beat(T2, 'game');
-    assert.equal(r.data.primary, false);
-    r = await host('POST', '/api/admin/start', {}, { 'X-Studio-Tab': T2 });
-    assert.equal(r.status, 409); assert.equal(r.data.otherWindow, true);
-    assert.equal((await streams(anon)).totalStreams, 1, 'no duplicate card');
-    r = await beat(T2, 'game', { takeover: true });
-    assert.equal(r.data.primary, true);
-    assert.equal((await host('POST', '/api/admin/registration-close', {}, { 'X-Studio-Tab': T1 })).status, 409, 'the old window lost control');
-
-    // 8. the host closes the game (back to the library / registration closed) → removed
-    await beat(T2, 'games');
-    assert.equal((await streams(anon)).totalStreams, 0);
-    await beat(T2, 'game');
-    assert.equal((await streams(anon)).totalStreams, 1);
-    await host('POST', '/api/admin/registration-close', {}, { 'X-Studio-Tab': T2 });
-    assert.equal((await streams(anon)).totalStreams, 0, 'no open game, not listed');
-    await host('POST', '/api/admin/prepare', { mode: 'quiz' }, { 'X-Studio-Tab': T2 });
-    assert.equal((await streams(anon)).totalStreams, 1);
-
-    // 9. the host's studio goes away: closed window → at once; lost connection → after the short grace period
-    await beat(T2, 'game', { closing: true });
-    await beat(T1, 'game', { closing: true });
-    assert.equal((await streams(anon)).totalStreams, 0, 'closed windows');
-    await beat(T1, 'game');
-    assert.equal((await streams(anon)).totalStreams, 1);
-    await waitFor(async () => (await streams(anon)).totalStreams === 0, 9000, 'heartbeat timeout');
-
-    // 10. the LIVE stops on the platform → removed even though chat stays open
-    await beat(T1, 'game');
-    assert.equal((await streams(anon)).totalStreams, 1);
-    kick.setLive('hostchan', false);
-    await waitFor(async () => (await streams(anon)).totalStreams === 0, 5000, 'live ended');
-    assert.equal((await state()).connection.liveConfirmed, false);
-    kick.setLive('hostchan', true);
-    await waitFor(async () => { await beat(T1, 'game'); return (await streams(anon)).totalStreams === 1; }, 5000, 'live again');
-
-    // 12. forging LIVE from the browser: no request can set verified/live/listed
+    // 20. forging from the browser changes nothing
     const faker = await account(srv.base, 'faker_user');
-    await faker('POST', '/api/me/trial-start', {});
-    r = await faker('POST', '/api/admin/connect', { platform: 'kick', username: 'hostchan' }); // somebody else's channel
-    assert.equal(r.data.verified, false, 'another user cannot reuse a proven account');
-    await faker('POST', '/api/admin/simulate', { username: 'hostchan', text: r.data.verify.code });
     await faker('POST', '/api/admin/configure', { connection: { state: 'connected', verified: true }, verified: true, liveConfirmed: true });
-    r = await faker('POST', '/api/admin/heartbeat', { tab: 'fake-tab-0001', screen: 'game', listed: true, state: 'running', verified: true });
+    r = await faker('POST', '/api/admin/heartbeat', { tab: 'fake-tab-0001', screen: 'game', listed: true, verified: true });
     await faker('POST', '/api/admin/prepare', { mode: 'quiz' });
     assert.equal(r.data.listed, false); assert.ok(r.data.reasons.includes('not-verified'));
-    const fs1 = (await anon('GET', '/api/state?room=' + faker.room)).data.connection;
-    assert.equal(fs1.verified, false); assert.equal(fs1.verifying, true);
-    assert.equal((await streams(anon)).streams.filter((x) => x.room === faker.room).length, 0);
-    const ws = new WebSocket(srv.base.replace('http', 'ws') + '/ws?room=' + faker.room);
-    await new Promise((res) => ws.addEventListener('open', res)); ws.send(JSON.stringify({ type: 'state', data: { connection: { verified: true } } })); ws.close();
-    assert.equal((await streams(anon)).totalStreams, 1, 'still only the real host');
-    await faker('POST', '/api/admin/disconnect', {});
-
-    // 6. a game without a LIVE: subscribed, studio open, game running, but nothing connected
-    const quiet = await account(srv.base, 'quiet_user');
-    await quiet('POST', '/api/me/trial-start', {});
-    r = await quiet('POST', '/api/admin/heartbeat', { tab: 'quiet-tab-001', screen: 'game' });
-    await quiet('POST', '/api/admin/prepare', { mode: 'quiz' });
-    r = await quiet('POST', '/api/admin/heartbeat', { tab: 'quiet-tab-001', screen: 'game' });
-    assert.equal(r.data.listed, false); assert.ok(r.data.reasons.includes('not-live')); assert.equal(r.data.state, 'offline');
-
-    // 13. the subscription ends during the game → removed, and the stream link is closed by the server
+    r = await faker('POST', '/api/admin/connect', { platform: 'kick', username: 'hostchan' });
+    assert.equal(r.status, 409); assert.equal(r.data.error, 'اربط حسابك على Kick من «الإعدادات» أولًا');
     assert.equal((await streams(anon)).totalStreams, 1);
-    assert.equal((await owner('POST', '/api/manage/stop', { publicId: host.publicId })).status, 200);
-    assert.equal((await streams(anon)).totalStreams, 0, 'removed at once');
-    await waitFor(async () => (await state()).connection.state === 'disconnected', 8000, 'stream closed by the server');
-    assert.equal((await host('POST', '/api/admin/connect', { platform: 'kick', username: 'hostchan' })).status, 402);
 
-    // 14. the list on the home page refreshes by itself (no reload), and its cards link to the real broadcast
+    // 12. the LIVE ends on Kick → the official live check removes it
+    fake.setKickLive(501, false);
+    await waitFor(async () => (await streams(anon)).totalStreams === 0, 15000, 'live ended');
+    fake.setKickLive(501, true);
+    r = await host('POST', '/api/admin/connect', { platform: 'kick' });
+    assert.equal(r.status, 200);
+    await host('POST', '/api/admin/heartbeat', { tab: T, screen: 'game' });
+    assert.equal((await streams(anon)).totalStreams, 1);
+    // not live → the studio says so, nothing is listed
+    fake.setKickLive(501, false);
+    r = await host('POST', '/api/admin/connect', { platform: 'kick' });
+    assert.equal(r.status, 409); assert.match(r.data.error, /غير مباشر/);
+    fake.setKickLive(501, true);
+    await host('POST', '/api/admin/connect', { platform: 'kick' });
+
+    // 6. the same Kick account signed in from another SPONGE LIVE account moves there; the old room is closed
+    r = await signIn(fake, other, 'kick', 501);
+    assert.match(r.location, /linked=kick/);
+    await waitFor(async () => (await anon('GET', '/api/state?room=' + host.room)).data.connection.state === 'disconnected', 5000, 'old room closed');
+    assert.equal((await host('GET', '/api/me/profile')).data.linked.kick, undefined);
+    assert.equal((await pool.query("SELECT count(*)::int n FROM linked_accounts WHERE platform='kick' AND verified")).rows[0].n, 1);
+    r = await signIn(fake, host, 'kick', 501); // and back
+    assert.match(r.location, /linked=kick/);
+
+    // 7. after signing in again (another device) the platform links are there
+    const again = browser(srv.base);
+    assert.equal((await again('POST', '/api/auth/login', { identifier: 'host_user', password: 'reef2026go' })).status, 200);
+    const l2 = (await again('GET', '/api/me/links')).data.linked;
+    assert.equal(l2.kick.handle, 'hostchan'); assert.equal(l2.tiktok.handle, 'reef.host');
+
+    // 8. expiring tokens are refreshed on the server; a refused refresh asks for a new sign-in
+    await pool.query("UPDATE linked_accounts SET token_expires_at = now() - interval '1 minute' WHERE platform='kick'");
+    const before = fake.refreshes;
+    assert.equal((await host('POST', '/api/admin/connect', { platform: 'kick' })).status, 200);
+    assert.equal(fake.refreshes, before + 1, 'refreshed');
+    await pool.query("UPDATE linked_accounts SET token_expires_at = now() - interval '1 minute' WHERE platform='kick'");
+    fake.refuseRefresh = true;
+    r = await host('POST', '/api/admin/connect', { platform: 'kick' });
+    assert.equal(r.status, 409); assert.match(r.data.error, /أعد/);
+    assert.equal((await host('GET', '/api/me/links')).data.linked.kick.needsReauth, true);
+    fake.refuseRefresh = false;
+    assert.match((await signIn(fake, host, 'kick', 501)).location, /linked=kick/);
+    assert.equal((await host('GET', '/api/me/links')).data.linked.kick.needsReauth, false);
+
+    // 4. unlink: the connection stops, the platform token is revoked, the stored tokens are gone; account kept
+    await host('POST', '/api/admin/connect', { platform: 'kick' });
+    r = await host('POST', '/api/me/stream-unlink', { platform: 'kick' });
+    assert.equal(r.data.removed, true); assert.equal(r.data.revoked, true);
+    assert.ok(fake.revoked.some(([p]) => p === 'kick'));
+    assert.equal((await pool.query("SELECT count(*)::int n FROM linked_accounts WHERE platform='kick' AND user_id=(SELECT id FROM users WHERE public_id=$1)", [host.publicId])).rows[0].n, 0);
+    await waitFor(async () => (await anon('GET', '/api/state?room=' + host.room)).data.connection.state === 'disconnected', 5000, 'stopped');
+    assert.equal((await host('GET', '/api/me/profile')).data.user.publicId, host.publicId, 'the account and its permanent ID stay');
+    assert.equal((await host('POST', '/api/me/stream-unlink', { platform: 'tiktok' })).data.revoked, true);
+    assert.ok(fake.revoked.some(([p]) => p === 'tiktok'));
+
+    // subscription ends: no new sessions, but managing links stays possible
+    assert.match((await signIn(fake, host, 'kick', 501)).location, /linked=kick/);
+    assert.equal((await owner('POST', '/api/manage/stop', { publicId: host.publicId })).status, 200);
+    assert.equal((await host('POST', '/api/admin/connect', { platform: 'kick' })).status, 402);
+    assert.match((await host('GET', '/api/oauth/kick/start')).location, /link_error=plan/);
+    assert.equal((await host('POST', '/api/me/stream-unlink', { platform: 'kick' })).data.removed, true);
+
+    // 18 + 19. the home page stays light: one poll every 20 s, no WebSocket
     const home = fs.readFileSync(new URL('../public/home.js', import.meta.url), 'utf8');
     assert.match(home, /liveTimer = setTimeout\(loadStreams, 20_000\)/);
-    assert.match(home, /visibilitychange[^\n]*loadStreams/);
-  } finally { await pool.end(); await srv.stop(); await kick.close(); }
+    assert.doesNotMatch(home, /WebSocket/);
+  } finally { await pool.end(); await srv.stop(); await fake.close(); }
+});
+
+test('no username-based linking is left in the product', () => {
+  const pub = (f) => fs.readFileSync(new URL('../public/' + f, import.meta.url), 'utf8');
+  const server = fs.readFileSync(new URL('../server.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(server, /stream-link'|newVerifyCode|proofMatches|live-chat-code'\)/, 'no code-in-chat or typed-name proof');
+  assert.doesNotMatch(pub('me.html'), /name="handle"/, 'settings has no handle field');
+  assert.match(pub('me.html'), /href="\/api\/oauth\/tiktok\/start"/); assert.match(pub('me.html'), /href="\/api\/oauth\/kick\/start"/);
+  assert.match(pub('me.html'), /المتابعة باستخدام TikTok/); assert.match(pub('me.html'), /المتابعة باستخدام Kick/);
+  assert.doesNotMatch(pub('home.html'), /id="connectHandle"/, 'home has no handle field');
+  assert.match(pub('studio.html'), /id="linkedConnect"/);
+  // the demo wheel says it is a demo, and the chat says it is simulated
+  assert.match(pub('home.html'), /عرض توضيحي — ليس بثًا حقيقيًا/); assert.match(pub('home.html'), /محاكاة/);
 });

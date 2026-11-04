@@ -102,17 +102,16 @@ body.ds{min-height:100svh}
 .ds-plat-linked b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ds-plat-linked small{color:var(--muted)}
 .ds-plat-ava{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:50%;background:var(--yellow);color:var(--ink);font-weight:900;box-shadow:0 0 0 2px rgba(56,212,255,.7)}
-.ds-plat-form{display:grid;gap:8px}
-.ds-plat-form[hidden]{display:none}
-.ds-at{display:flex;align-items:center;gap:6px;height:48px;padding:0 12px;border-radius:14px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.6)}
-.ds-at:focus-within{border-color:#FFD62A}
-.ds-at span{color:var(--muted)}
-.ds-at input{flex:1;min-width:0;height:100%;border:0;background:transparent;color:var(--foam);font:700 16px "Tajawal",system-ui,sans-serif;outline:none}
-.ds-proof{display:grid;gap:8px;padding:12px;border-radius:16px;border:1px dashed rgba(255,214,42,.7);background:rgba(255,214,42,.06)}
-.ds-proof[hidden]{display:none}
-.ds-proof code{justify-self:start;padding:6px 12px;border-radius:10px;background:#020A22;color:#FFE14D;font:900 20px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em}
-.ds-proof p{margin:0;line-height:1.7}
-.ds-proof small{color:var(--muted)}
+.ds-plat-ava{position:relative;overflow:hidden}
+.ds-plat-ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.ds-btn.is-tiktok-btn{background:linear-gradient(90deg,#25F4EE,#5B8CFF 55%,#FE2C55);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.ds-btn.is-kick-btn{background:linear-gradient(180deg,#5CFF2A,#36D10B);color:#06210A}
+.ds-btn[data-role="signin"]{text-decoration:none;justify-content:center}
+.ds-btn[data-role="signin"][hidden]{display:none}
+.ds-btn.is-disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.4)}
+.ds-btn.is-busy{opacity:.75;pointer-events:none}
+.ds-plat-why{margin:0;color:#FFE98A;font-size:13px;font-weight:700;line-height:1.6}
+.ds-plat-why[hidden]{display:none}
 .ds-plat.is-soon{opacity:.75}
 
 /* ---------- rows, plans ---------- */

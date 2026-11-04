@@ -43,3 +43,17 @@ services:
 #   - name: sponge-db
 #     plan: basic-256mb
 #     postgresMajorVersion: "16"
+      # Official platform sign-in (README v1.5). Redirect URIs to register:
+      #   https://<site>/api/oauth/tiktok/callback   https://<site>/api/oauth/kick/callback
+      # Kick webhook URL (app settings → Webhooks): https://<site>/api/kick/webhook
+      - key: TIKTOK_CLIENT_KEY
+        sync: false
+      - key: TIKTOK_CLIENT_SECRET
+        sync: false
+      - key: KICK_CLIENT_ID
+        sync: false
+      - key: KICK_CLIENT_SECRET
+        sync: false
+      # 32 random bytes, base64 — seals platform tokens in the database. Never change it once set.
+      - key: TOKEN_ENC_KEY
+        sync: false

@@ -103,7 +103,7 @@
     // subscription
     paintPlan(p);
     // platforms
-    for (const card of document.querySelectorAll('.ds-plat[data-platform="tiktok"],.ds-plat[data-platform="kick"]')) paintPlatform(card, p.linked[card.dataset.platform], a.active);
+    for (const card of document.querySelectorAll('.ds-plat[data-platform="tiktok"],.ds-plat[data-platform="kick"]')) paintPlatform(card, p.linked[card.dataset.platform], a.active, !!p.platforms?.[card.dataset.platform]);
     // privacy
     for (const t of document.querySelectorAll('#toggles input[data-key]')) t.checked = !!p.privacy?.[t.dataset.key];
     // bag + billing
@@ -178,69 +178,36 @@
     });
   });
 
-  /* ---------- platforms: link = plan + proof of ownership in the account's own LIVE chat ---------- */
+  /* ---------- platforms: linked only by signing in with the platform (official OAuth), never by a typed name ---------- */
   const NAMES = { tiktok: 'TikTok', kick: 'Kick' };
-  const proofs = {};
-  function paintPlatform(card, link, active) {
-    const q = (r) => card.querySelector(`[data-role="${r}"]`);
-    const linked = !!link?.verified;
-    badge(q('badge'), linked ? 'مرتبط ✓' : proofs[card.dataset.platform] ? 'بانتظار الرمز' : 'غير مرتبط', linked ? 'is-on' : proofs[card.dataset.platform] ? 'is-warn' : 'is-off');
-    q('linked').hidden = !linked; q('unlink').hidden = !linked && !link;
-    q('form').hidden = linked || !!proofs[card.dataset.platform];
+  function paintPlatform(card, link, active, offered) {
+    const q = (r) => card.querySelector(`[data-role="${r}"]`), name = NAMES[card.dataset.platform];
+    const linked = !!link?.verified, stale = linked && link.needsReauth;
+    badge(q('badge'), stale ? 'يحتاج إعادة ربط' : linked ? 'مرتبط ✓' : 'غير مرتبط', stale ? 'is-warn' : linked ? 'is-on' : 'is-off');
+    q('linked').hidden = !linked; q('unlink').hidden = !linked;
+    const sign = q('signin'), why = q('why');
+    sign.hidden = linked && !stale;
+    sign.querySelector('span').textContent = stale ? 'إعادة الربط باستخدام ' + name : 'المتابعة باستخدام ' + name;
+    const blocked = !offered ? 'ربط ' + name + ' غير مفعّل على الموقع بعد — يحتاج إعداد تطبيق ' + name + ' الرسمي من مالك الموقع.' : !active ? 'تحتاج إلى اشتراك فعال أو تجربتك المجانية لربط حسابك.' : '';
+    sign.classList.toggle('is-disabled', !!blocked); sign.setAttribute('aria-disabled', String(!!blocked));
+    why.hidden = !blocked || (linked && !stale); why.textContent = blocked;
     if (linked) {
-      q('handle').textContent = '@' + link.handle; q('ava').textContent = (link.handle[0] || '?').toUpperCase();
-      q('since').textContent = 'موثّق منذ ' + fmtDate(link.verifiedAt);
-      q('text').textContent = 'حسابك موثّق — اختر ' + NAMES[card.dataset.platform] + ' عند بدء جلستك في الاستوديو.';
-    } else {
-      q('text').textContent = active ? 'اربط حساب ' + NAMES[card.dataset.platform] + ' مرة واحدة لبدء البث التفاعلي من قناتك.' : 'الربط يحتاج اشتراكًا فعالًا أو تجربتك المجانية.';
-      if (link && !link.verified) q('text').textContent += ' (ربط سابق غير موثّق: @' + link.handle + ')';
-    }
-    const btn = q('form').querySelector('button'); btn.disabled = !active; btn.title = active ? '' : 'تحتاج إلى اشتراك فعال';
+      q('handle').textContent = (link.displayName ? link.displayName + ' · ' : '') + '@' + link.handle;
+      q('avaLetter').textContent = (link.handle[0] || '?').toUpperCase();
+      q('ava').querySelector('img')?.remove();
+      if (link.avatar && /^https:\/\//.test(link.avatar)) { const img = el('img'); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.decoding = 'async'; img.addEventListener('error', () => img.remove(), { once: true }); img.src = link.avatar; q('ava').append(img); }
+      q('since').textContent = 'مرتبط رسميًا منذ ' + fmtDate(link.verifiedAt);
+      q('text').textContent = stale ? 'انتهى تفويض ' + name + ' — أعد الربط لتتمكن من الاتصال ببثك.' : 'حسابك مرتبط — اختر ' + name + ' عند بدء جلستك في الاستوديو دون كتابة أي اسم.';
+    } else q('text').textContent = 'سجّل الدخول إلى ' + name + ' ووافق على الصلاحيات مرة واحدة، ثم ابدأ جلساتك من الاستوديو.';
   }
   for (const card of document.querySelectorAll('.ds-plat[data-platform="tiktok"],.ds-plat[data-platform="kick"]')) {
     const platform = card.dataset.platform, q = (r) => card.querySelector(`[data-role="${r}"]`);
-    q('form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const handle = q('form').elements.handle.value.trim().replace(/^@/, '');
-      if (!handle) { q('form').elements.handle.focus(); return; }
-      act(q('form').querySelector('button'), async () => {
-        try {
-          const r = await api('POST', '/api/me/stream-link', { platform, username: handle });
-          if (r.verified) { toast('تم ربط ' + NAMES[platform] + ' ✓'); await load(); return; }
-          if (r.verify) startProof(card, r.verify);
-        } catch (err) {
-          q('proof').hidden = false; q('proof').replaceChildren(el('p', '', err.data?.needPlan ? 'تحتاج إلى اشتراك فعال لربط بثك المباشر.' : err.message + (/live|offline|online|بث/i.test(err.message) ? '' : ' — تأكد أن بثك المباشر شغّال الآن ثم حاول مجددًا.')));
-        }
-      });
-    });
+    q('signin').addEventListener('click', (e) => { if (q('signin').classList.contains('is-disabled')) e.preventDefault(); else q('signin').classList.add('is-busy'); });
     q('unlink').addEventListener('click', (e) => {
-      const b = e.currentTarget;
-      if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = 'اضغط مرة أخرى لتأكيد الإزالة'; setTimeout(() => { b.dataset.confirm = ''; b.textContent = 'إزالة الربط'; }, 4000); return; }
-      act(b, async () => { try { await api('POST', '/api/me/stream-unlink', { platform }); delete proofs[platform]; q('proof').hidden = true; toast('أُزيل ربط ' + NAMES[platform]); b.dataset.confirm = ''; b.textContent = 'إزالة الربط'; await load(); } catch (err) { toast(err.message, true); } });
+      const b = e.currentTarget, label = 'إلغاء ربط ' + NAMES[platform];
+      if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.textContent = 'اضغط مرة أخرى لتأكيد إلغاء الربط'; setTimeout(() => { b.dataset.confirm = ''; b.textContent = label; }, 4000); return; }
+      act(b, async () => { try { await api('POST', '/api/me/stream-unlink', { platform }); toast('أُلغي ربط ' + NAMES[platform] + ' وأُوقف الاتصال ببثه'); b.dataset.confirm = ''; b.textContent = label; await load(); } catch (err) { toast(err.message, true); } });
     });
-  }
-  function startProof(card, v) {
-    const platform = card.dataset.platform, box = card.querySelector('[data-role="proof"]');
-    proofs[platform] = v;
-    const code = el('code', '', v.code); code.dir = 'ltr';
-    const left = el('small');
-    const copyBtn = el('button', 'ds-link', 'نسخ الرمز'); copyBtn.type = 'button'; copyBtn.addEventListener('click', () => copy(v.code, copyBtn));
-    box.replaceChildren(el('p', '', 'اكتب هذا الرمز في تعليقات بثك المباشر على ' + NAMES[platform] + ' من حسابك نفسه @' + v.handle + ':'), code, copyBtn, left);
-    box.hidden = false; card.querySelector('[data-role="form"]').hidden = true;
-    badge(card.querySelector('[data-role="badge"]'), 'بانتظار الرمز', 'is-warn');
-    const ends = Date.parse(v.expiresAt);
-    const poll = async () => {
-      if (proofs[platform] !== v) return;
-      const s = Math.max(0, Math.round((ends - Date.now()) / 1000));
-      left.textContent = s ? 'ينتهي الرمز خلال ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : 'انتهت مهلة الرمز — اضغط «ربط» مرة أخرى.';
-      if (!s) { delete proofs[platform]; card.querySelector('[data-role="form"]').hidden = false; return; }
-      try {
-        const st = await fetch('/api/state?room=' + encodeURIComponent(profile.user.room), { cache: 'no-store', credentials: 'same-origin' }).then((r) => r.json());
-        if (st.connection?.verified && st.connection.platform === platform) { delete proofs[platform]; box.hidden = true; toast('تم توثيق حساب ' + NAMES[platform] + ' ✓'); await load(); return; }
-      } catch {}
-      setTimeout(poll, document.hidden ? 6000 : 2500);
-    };
-    poll();
   }
 
   /* ---------- re-authentication for sensitive changes ---------- */
@@ -369,6 +336,10 @@
   $('logoutButton').addEventListener('click', async () => { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {}); location.replace('/'); });
 
   /* ---------- messages from the URL ---------- */
+  const LINK_ERRORS = { denied: 'أُلغي التفويض — لم يُربط أي حساب.', state: 'انتهت صلاحية طلب الربط أو فُتح في متصفح آخر. حاول مرة أخرى.', plan: 'تحتاج إلى اشتراك فعال لربط بثك المباشر.', unavailable: 'هذا الربط غير مفعّل على الموقع بعد.', network: 'تعذر الوصول إلى المنصة. حاول بعد قليل.', failed: 'تعذر إكمال الربط مع المنصة. حاول مرة أخرى.', busy: 'الخادم مشغول، حاول بعد قليل.' };
+  if (params.get('linked')) notice('تم ربط ' + (params.get('linked') === 'kick' ? 'Kick' : 'TikTok') + ' رسميًا ✓', 'is-ok');
+  else if (params.get('link_error')) notice(LINK_ERRORS[params.get('link_error')] || LINK_ERRORS.failed, 'is-err');
+  if (params.get('linked') || params.get('link_error')) history.replaceState(null, '', '/account#settings');
   if (params.get('verified') === '1') notice('تم توثيق بريدك الإلكتروني ✓', 'is-ok');
   else if (params.get('verified') === '0') notice('رابط التوثيق غير صالح أو منتهي. اطلب رابطًا جديدًا من «البريد وكلمة المرور».', 'is-err');
   else if (params.get('verify') === 'trial') notice('لتفعيل التجربة المجانية وثّق بريدك الإلكتروني أو اربط حساب Google.');
