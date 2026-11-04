@@ -53,7 +53,8 @@ export class SessionMirror {
     return this.w.run('INSERT INTO sessions (key_hash, kind, data, expires_at) VALUES ($1,$2,$3,$4) ON CONFLICT (key_hash) DO UPDATE SET data=EXCLUDED.data, expires_at=EXCLUDED.expires_at', [key, kind, data, new Date(expires)]);
   }
   del(key) { return this.w.run('DELETE FROM sessions WHERE key_hash=$1', [key]); }
-  prune() { return this.w.run('DELETE FROM sessions WHERE expires_at < now()'); }
+  // at most every 6 hours: a serverless database (e.g. Neon) can then sleep while nobody uses the site
+  prune() { if (Date.now() - (this.lastPrune || 0) < 6 * 3600_000) return; this.lastPrune = Date.now(); return this.w.run('DELETE FROM sessions WHERE expires_at < now()'); }
   drain() { return this.w.drain(); }
   static async attach(pool, sessions) {
     const mirror = new SessionMirror(pool);
