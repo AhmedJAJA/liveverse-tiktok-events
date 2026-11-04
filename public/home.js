@@ -48,7 +48,6 @@
     }
     updateConnectGate();
   }).catch(() => {});
-  fetch('/api/auth/config', { cache: 'no-store' }).then((r) => r.json()).then((c) => { if (!c.billing) $('billingNote').hidden = false; }).catch(() => {});
   fetch('/api/site', { cache: 'force-cache' }).then((r) => r.json()).then((site) => {
     const url = site.support?.url; if (!url) return;
     const a = $('supportLink'); a.href = url; a.hidden = false;
