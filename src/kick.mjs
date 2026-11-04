@@ -50,6 +50,7 @@ export class KickBridge {
     const data = await res.json().catch(() => null);
     const id = Number(data?.chatroom?.id);
     if (!Number.isInteger(id) || id <= 0) throw new Error('لم يُعثر على غرفة الشات لهذه القناة');
+    this.profile = { displayName: String(data?.user?.username || ''), avatar: String(data?.user?.profile_pic || '') };
     return id;
   }
   async connect(username, { chatroomId } = {}) {
@@ -57,7 +58,7 @@ export class KickBridge {
     if (!slug) throw new Error('اسم قناة Kick غير صالح');
     await this.disconnect(false);
     const generation = ++this.generation;
-    this.slug = slug;
+    this.slug = slug; this.profile = null;
     this.engine.setConnection('connecting', slug, 'جارٍ الاتصال بشات Kick (تجريبي)…', 'kick');
     try {
       const manual = chatroomId === undefined || chatroomId === null || chatroomId === '' ? null : Number(chatroomId);
@@ -84,7 +85,9 @@ export class KickBridge {
         let packet; try { packet = JSON.parse(String(raw)); } catch { return; }
         if (packet.event === 'pusher:connection_established') ws.send(JSON.stringify({ event: 'pusher:subscribe', data: { auth: '', channel } }));
         else if (packet.event === 'pusher_internal:subscription_succeeded') {
-          this.engine.setConnection('connected', this.slug, 'متصل بشات Kick (تجريبي)', 'kick'); done();
+          this.engine.setConnection('connected', this.slug, 'متصل بشات Kick (تجريبي)', 'kick');
+          if (this.profile) this.engine.setStreamer(this.profile);
+          done();
         } else if (packet.event === 'pusher:ping') ws.send(JSON.stringify({ event: 'pusher:pong', data: {} }));
         else if (packet.event === 'pusher:error') done(new Error('رفض خادم الشات الاشتراك في القناة'));
         else if (packet.event === 'App\\Events\\ChatMessageEvent') {

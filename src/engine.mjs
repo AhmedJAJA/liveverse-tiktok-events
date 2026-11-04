@@ -24,6 +24,22 @@ export function minPlayersFor(mode) {
 }
 
 const AVATAR_HOSTS = ['tiktokcdn.com', 'tiktokcdn-us.com', 'tiktokcdn-eu.com', 'tiktokcdn-in.com', 'byteoversea.com', 'ibytedtos.com', 'ibyteimg.com', 'muscdn.com'];
+const STREAMER_HOSTS = [...AVATAR_HOSTS, 'files.kick.com'];
+/** The broadcaster's own profile picture: TikTok CDNs, or Kick's file host for Kick channels. */
+export function safeStreamerAvatar(raw) {
+  if (typeof raw !== 'string' || raw.length > 2048) return '';
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' && !url.username && !url.password && (!url.port || url.port === '443') &&
+      STREAMER_HOSTS.some(host => url.hostname === host || url.hostname.endsWith('.' + host)) ? url.href : '';
+  } catch { return ''; }
+}
+/** Public link to the broadcast itself, built only from a validated handle. */
+export function liveUrlFor(platform, username) {
+  const u = String(username || '').replace(/^@/, '');
+  if (platform === 'kick') return /^[A-Za-z0-9_-]{1,40}$/.test(u) ? 'https://kick.com/' + u.toLowerCase() : '';
+  return /^[A-Za-z0-9._]{1,40}$/.test(u) ? 'https://www.tiktok.com/@' + u + '/live' : '';
+}
 export function safeAvatarUrl(raw) {
   if (typeof raw !== 'string' || raw.length > 2048) return '';
   try {
@@ -73,6 +89,7 @@ export class Engine {
     this.answerSequence = 0;
     this.status = { mode: 'quiz', active: false, title: 'تحدي المعلومات', prompt: 'ما هي عاصمة المملكة العربية السعودية؟', options: ['الرياض', 'جدة', 'الدمام', 'مكة'], answer: '1', winner: null, notice: 'جاهز للفعالية!', target: 12, duration: 30, startedAt: null, endsAt: null, submissionCount: 0, results: null, lastEvent: null, glassStep: 0, glassSteps: 10, glassRemaining: 0 };
     this.connection = { state: 'disconnected', username: '', detail: 'لم يتم الربط', platform: 'tiktok' };
+    this.streamer = { key: '', name: '', avatar: '' };
     this.party = null;
     this.partyConfig = {};
     this.simulation = { autoplay: false };
@@ -85,6 +102,8 @@ export class Engine {
   }
   setConnection(state, username = '', detail = '', platform = this.connection.platform || 'tiktok') {
     const previousState = this.connection.state;
+    const key = (platform === 'kick' ? 'kick' : 'tiktok') + ':' + String(username || '').toLowerCase();
+    if (this.streamer?.key !== key) this.streamer = { key, name: '', avatar: '' }; // a different channel: forget the old profile
     this.connection = { state, username: safeLine(username, 50), detail: safeLine(detail, 180), platform: platform === 'kick' ? 'kick' : 'tiktok' };
     if (state === 'connected' && this.registration.phase === 'open' && this.registration.hostJoin === 'auto') this.joinHost(false);
     // First successful LIVE connection opens signups. Reconnects do not wipe a session.
@@ -93,6 +112,13 @@ export class Engine {
       return;
     }
     this.emit();
+  }
+  /** Broadcaster profile (display name + picture) read from the platform when the stream connects. */
+  setStreamer({ displayName = '', avatar = '' } = {}) {
+    if (!this.streamer) this.streamer = { key: '', name: '', avatar: '' };
+    const name = safeLine(displayName, 50), image = safeStreamerAvatar(avatar);
+    if (name) this.streamer.name = name;
+    if (image) this.streamer.avatar = image;
   }
   emit() { if (this.lazy) this.notify(); else this.notify(this.snapshot()); }
   snapshot() {
@@ -563,7 +589,9 @@ export class Engine {
     }
     // The streamer's own chat messages map to the host seat when the host joined.
     const hostKey = this.connection.username ? 'host:' + this.connection.username.toLowerCase() : '';
-    if (handle && hostKey && 'host:' + String(handle).toLowerCase().replace(/^@/, '') === hostKey && this.players.has(hostKey)) identity = hostKey;
+    const fromStreamer = handle && hostKey && 'host:' + String(handle).toLowerCase().replace(/^@/, '') === hostKey;
+    if (fromStreamer && !this.streamer?.avatar) this.setStreamer({ displayName: username, avatar }); // the streamer's own comment carries their picture
+    if (fromStreamer && this.players.has(hostKey)) identity = hostKey;
     if (!message || !identity) return;
     const currentTime = this.now();
     if (this.status.active && !this.party && this.status.mode !== 'bomb' && this.status.endsAt !== null && currentTime >= this.status.endsAt) { if (this.status.mode === 'glass') this.finishGlassStep(); else this.finishTimedRound('timer'); }
