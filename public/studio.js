@@ -329,10 +329,10 @@
     } catch { /* offline or plan ended: the server stops listing the stream by itself */ }
     beatTimer = setTimeout(() => beat(), 15_000);
   }
-  const REASONS = { 'no-subscription': 'لا يوجد اشتراك فعال', 'not-verified': 'لم تُثبت ملكية حساب البث', 'not-live': 'البث غير مباشر الآن', 'studio-closed': 'الاستوديو مغلق', 'no-game': 'شغّل لعبة ليظهر بثك' };
+  const REASONS = { 'no-subscription': 'لا يوجد اشتراك فعال', 'not-verified': 'لم تُثبت ملكية حساب البث', 'not-live': 'البث غير مباشر الآن', 'studio-closed': 'الاستوديو مغلق', 'no-game': 'شغّل لعبة ليظهر بثك', hidden: 'أخفيته من الإعدادات (الخصوصية)' };
   function paintListed(r) {
     const t = $('sideListed');
-    t.textContent = r.listed ? 'ظاهر الآن في البثوث النشطة ✓' : 'غير ظاهر في البثوث النشطة — ' + (REASONS[(r.reasons || []).find((x) => x !== 'studio-closed')] || 'غير متصل');
+    t.textContent = r.listed ? 'ظاهر الآن في البثوث النشطة ✓' : 'غير ظاهر في البثوث النشطة — ' + (REASONS[(r.reasons || []).find((x) => x !== 'studio-closed' && x !== 'hidden')] || REASONS[(r.reasons || [])[0]] || 'غير متصل');
     t.classList.toggle('is-on', !!r.listed);
   }
   $('takeOver').addEventListener('click', () => beat(true));

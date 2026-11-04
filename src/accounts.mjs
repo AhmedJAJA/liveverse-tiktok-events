@@ -152,10 +152,10 @@ export class Sessions {
    * remember=true: the session lasts `ttl` (30 days) and is renewed while it is used.
    * remember=false: a browser-session cookie, and the server forgets it after a day at most.
    */
-  create(kind, { userId = null, room = null, codeId = null, level = null, remember = true } = {}) {
+  create(kind, { userId = null, room = null, codeId = null, level = null, remember = true, device = '' } = {}) {
     if (this.map.size >= this.max) this.prune(true);
     const id = token(32), key = this.key(id), t = this.now();
-    const s = { key, kind, userId, room, codeId, level, remember: remember !== false, created: t, renewed: t, expires: t + (kind === 'guest' || remember === false ? DAY : this.ttl) };
+    const s = { key, kind, userId, room, codeId, level, remember: remember !== false, created: t, renewed: t, seen: t, device: String(device || '').slice(0, 60), expires: t + (kind === 'guest' || remember === false ? DAY : this.ttl) };
     this.map.set(key, s);
     this.save(); this.mirror?.put(s);
     return id;
@@ -178,6 +178,26 @@ export class Sessions {
     this.save(); this.mirror?.put(s);
     return true;
   }
+  /** Last use, recorded at most every 10 minutes (it is written to the database). */
+  seen(id) {
+    const s = this.map.get(this.key(id)); const t = this.now();
+    if (!s || t - (s.seen || 0) < 10 * 60_000) return;
+    s.seen = t; this.mirror?.put(s);
+  }
+  /** Fresh proof of identity for sensitive changes (password, e-mail, Google): valid for `ms`. */
+  markReauth(id, ms = 10 * 60_000) {
+    const s = this.map.get(this.key(id)); if (!s) return false;
+    s.reauthUntil = this.now() + ms; this.save(); this.mirror?.put(s); return true;
+  }
+  reauthed(id) { const s = this.map.get(this.key(id)); return !!s && (s.reauthUntil || 0) > this.now(); }
+  /** Sessions of one account (for «الأجهزة والجلسات»): short public handles only, never the cookie. */
+  listUser(userId, currentId) {
+    const cur = currentId ? this.key(currentId) : '';
+    return [...this.map.values()].filter((s) => s.userId === userId && s.kind === 'acct' && s.expires > this.now())
+      .sort((a, b) => (b.seen || b.created) - (a.seen || a.created))
+      .map((s) => ({ id: s.key.slice(0, 16), current: s.key === cur, device: s.device || '', createdAt: s.created, lastSeenAt: s.seen || s.created, remember: s.remember !== false, expiresAt: s.expires }));
+  }
+  destroyUserSession(userId, shortId) { return this.destroyWhere((s) => s.userId === userId && s.key.slice(0, 16) === shortId); }
   destroy(id) { const key = this.key(id); if (this.map.delete(key)) { this.save(); this.mirror?.del(key); } }
   destroyWhere(test) { let n = 0; for (const [k, s] of this.map) if (test(s)) { this.map.delete(k); this.mirror?.del(k); n++; } if (n) this.save(); return n; }
   destroyUser(userId) { this.destroyWhere((s) => s.userId === userId); }

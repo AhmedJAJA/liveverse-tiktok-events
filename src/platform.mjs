@@ -61,6 +61,17 @@ export async function checkPassword(pw, stored) {
 const DECOY_HASH = 'scrypt$16384$8$1$AAAAAAAAAAAAAAAAAAAAAA==$' + Buffer.alloc(64).toString('base64');
 
 /** Sign-up checks. Messages are shown next to the field they belong to. */
+/** Password rules (same as sign-up). Returns an error message or ''. */
+export function passwordProblem(p, username = '') {
+  p = String(p ?? '');
+  if (p.length < 8 || p.length > 128) return 'كلمة المرور من 8 إلى 128 حرفًا';
+  if (!/[A-Za-z\u0600-\u06FF]/.test(p) || !/\d/.test(p)) return 'استخدم حروفًا وأرقامًا معًا';
+  if (COMMON_PASSWORDS.has(p.toLowerCase()) || p.toLowerCase() === String(username).toLowerCase()) return 'كلمة المرور سهلة التخمين';
+  return '';
+}
+/** Privacy switches stored per account; anything else in a request is ignored. */
+export const PRIVACY_DEFAULTS = Object.freeze({ hideStream: false, playerStats: true, streamerStats: true, linkedAccounts: true });
+export const privacyOf = (u) => ({ ...PRIVACY_DEFAULTS, ...Object.fromEntries(Object.entries(u?.privacy || {}).filter(([k, v]) => k in PRIVACY_DEFAULTS && typeof v === 'boolean')) });
 export function validateSignup({ username, email, password, confirm } = {}) {
   const fields = {};
   const u = String(username ?? '').trim().toLowerCase();
@@ -516,6 +527,81 @@ export class Platform {
       v.currentGame || null, Math.max(0, v.players | 0), v.lastHeartbeatAt ? new Date(v.lastHeartbeatAt) : null, v.lastLiveCheckAt ? new Date(v.lastLiveCheckAt) : null, !!v.liveConfirmed]);
   }
 
+  /* ----------------------------------------------------------- settings */
+  async setPrivacy(userId, key, value) {
+    if (!(key in PRIVACY_DEFAULTS) || typeof value !== 'boolean') fail('إعداد غير معروف');
+    await this.pool.query('UPDATE users SET privacy = privacy || jsonb_build_object($2::text, $3::boolean) WHERE id=$1', [userId, key, value]);
+    return privacyOf((await this.refresh(userId)).user);
+  }
+  async checkUserPassword(userId, password) {
+    const u = (await this.pool.query('SELECT password_hash FROM users WHERE id=$1', [userId])).rows[0];
+    return checkPassword(String(password || ''), u?.password_hash || DECOY_HASH);
+  }
+  async setPassword(userId, password) {
+    const me = this.cached(userId)?.user || (await this.refresh(userId)).user;
+    const problem = passwordProblem(password, me.username);
+    if (problem) fail(problem, 400, { password: problem });
+    await this.pool.query('UPDATE users SET password_hash=$2 WHERE id=$1', [userId, await hashPassword(password)]);
+    await this.audit('system', 'password-set', { target: userId });
+    return (await this.refresh(userId)).user;
+  }
+  /** New address: unverified until its link is opened (when e-mail sending is configured). */
+  async changeEmail(userId, email) {
+    const e = String(email ?? '').trim();
+    if (!/^[^\s@]{1,64}@[^\s@]{1,190}\.[a-z]{2,24}$/i.test(e)) fail('أدخل بريدًا إلكترونيًا صحيحًا', 400, { email: 'أدخل بريدًا إلكترونيًا صحيحًا' });
+    const canonical = canonicalEmail(e);
+    const me = this.cached(userId)?.user || (await this.refresh(userId)).user;
+    if (canonical === me.canonical_email) fail('هذا هو بريدك الحالي', 400, { email: 'هذا هو بريدك الحالي' });
+    try { await this.pool.query('UPDATE users SET email=$2, canonical_email=$3, email_verified_at=NULL WHERE id=$1', [userId, e, canonical]); }
+    catch (err) { if (err.code === '23505') fail('هذا البريد مستخدم في حساب آخر', 409, { email: 'هذا البريد مستخدم في حساب آخر' }); throw err; }
+    await this.audit('system', 'email-change', { target: userId, details: { from: me.email.replace(/^(.).*(@.*)$/, '$1…$2'), to: e.replace(/^(.).*(@.*)$/, '$1…$2') } });
+    await this.refresh(userId);
+    return this.mail.configured ? this.sendVerification(userId) : { sent: false };
+  }
+  /** Google can be removed only when a password remains as a way in. */
+  async unlinkGoogle(userId) {
+    const me = (await this.refresh(userId)).user;
+    if (!me.google_sub) fail('حسابك غير مرتبط بـ Google');
+    if (!String(me.password_hash || '').startsWith('scrypt$')) fail('أضف كلمة مرور أولًا — لا يمكن إزالة آخر وسيلة لتسجيل الدخول', 409);
+    await this.pool.query('UPDATE users SET google_sub=NULL, google_linked_at=NULL WHERE id=$1', [userId]);
+    await this.audit('system', 'google-unlink', { target: userId });
+    return (await this.refresh(userId)).user;
+  }
+  async unlinkStream(userId, platform) {
+    if (!['tiktok', 'kick'].includes(platform)) fail('منصة غير معروفة');
+    const r = await this.pool.query('DELETE FROM linked_accounts WHERE user_id=$1 AND platform=$2 RETURNING handle', [userId, platform]);
+    if (r.rowCount) await this.audit('system', 'stream-unlink', { target: userId, details: { platform, handle: r.rows[0].handle } });
+    return { removed: r.rowCount > 0 };
+  }
+  /** Counted by the server when a verified, listed game session starts / ends. */
+  async recordStreamSession(userId, mode) {
+    await this.pool.query(`INSERT INTO streamer_stats (user_id, sessions, games, last_session_at) VALUES ($1, 1, jsonb_build_object($2::text, 1), now())
+      ON CONFLICT (user_id) DO UPDATE SET sessions = streamer_stats.sessions + 1, last_session_at = now(),
+        games = streamer_stats.games || jsonb_build_object($2::text, COALESCE((streamer_stats.games->>$2)::int, 0) + 1)`, [userId, String(mode).slice(0, 20)]);
+  }
+  async addStreamPlayers(userId, n) {
+    if (!(n > 0)) return;
+    await this.pool.query('UPDATE streamer_stats SET players_total = players_total + $2 WHERE user_id=$1', [userId, Math.min(100000, n | 0)]);
+  }
+  async streamerStats(userId) {
+    const r = (await this.pool.query('SELECT sessions, players_total, games, last_session_at FROM streamer_stats WHERE user_id=$1', [userId])).rows[0];
+    return r ? { sessions: r.sessions, playersTotal: r.players_total, games: r.games, lastSessionAt: iso(r.last_session_at) } : { sessions: 0, playersTotal: 0, games: {}, lastSessionAt: null };
+  }
+  /** What anyone may see about an account: the privacy switches decide, here on the server. */
+  async publicProfile(publicId) {
+    const u = (await this.pool.query('SELECT * FROM users WHERE public_id=upper($1) AND disabled_at IS NULL', [String(publicId || '').slice(0, 12)])).rows[0];
+    if (!u) return null;
+    const pv = privacyOf(u);
+    const out = { publicId: u.public_id, displayName: u.display_name, avatar: u.avatar, picture: u.picture_url || null, memberSince: iso(u.created_at) };
+    out.streamer = pv.streamerStats ? await this.streamerStats(u.id) : null;
+    if (pv.linkedAccounts) {
+      const links = (await this.pool.query('SELECT platform, handle FROM linked_accounts WHERE user_id=$1 AND verified ORDER BY platform', [u.id])).rows;
+      out.linked = links.map((l) => ({ platform: l.platform, handle: l.handle }));
+    } else out.linked = null;
+    out.player = pv.playerStats ? { available: false } : null; // viewers' game stats are not tied to accounts yet
+    return out;
+  }
+
   /* ------------------------------------------------------------ profile */
   async profile(userId) {
     const e = this.cached(userId) || await this.refresh(userId);
@@ -539,6 +625,8 @@ export class Platform {
       billing: { enabled: !!this.gateway.configured, provider: this.gateway.configured ? this.gateway.name : null },
       mail: { enabled: !!this.mail.configured },
       trialNeedsVerifiedEmail: this.trialNeedsVerifiedEmail,
+      privacy: privacyOf(e.user),
+      streamer: await this.streamerStats(userId),
     };
   }
 
