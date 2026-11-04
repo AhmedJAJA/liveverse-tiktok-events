@@ -2,7 +2,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { WebSocketServer, WebSocket } from 'ws';
 import { Engine } from './src/engine.mjs';
 import { LiveBridge } from './src/bridge.mjs';
@@ -11,6 +12,7 @@ import { QuestionBank, loadDefaultQuestions } from './src/question-bank.mjs';
 import { siteConfig, ALL_GAMES, UPDATES } from './src/catalog.mjs';
 import { AccountStore, Sessions, RateLimiter, FieldError, parseCookies, roomId, PLANS } from './src/accounts.mjs';
 import { DrawHub } from './src/draw.mjs';
+import { PromoStore, PROMO_LEVELS } from './src/promo.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, 'public');
@@ -30,17 +32,34 @@ function send(ws, value) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.st
    own permanent room and each guest a temporary demo room. */
 const questions = loadDefaultQuestions();
 const MAX_ROOMS = 80;
+const BROADCAST_MS = Math.max(40, Number(process.env.SKY_BROADCAST_MS) || 120);
 const ROOM_IDLE_MS = 3 * 60 * 60_000;
 const rooms = new Map();
 class Room {
   constructor(id, kind, ownerId = null) {
     this.id = id; this.kind = kind; this.ownerId = ownerId; this.clients = new Set(); this.touched = Date.now();
-    this.engine = new Engine({ notify: (state) => { const packet = { type: 'state', data: { ...state, viewers: this.clients.size } }; for (const ws of this.clients) send(ws, packet); } });
+    // Chat can arrive hundreds of times a second. The engine only marks the room dirty; one snapshot is
+    // built, serialised once and sent to every screen at most every BROADCAST_MS (game events are never lost:
+    // each broadcast carries the full current state).
+    this.engine = new Engine({ lazy: true, notify: () => this.scheduleBroadcast() });
+    this.flushTimer = null; this.lastFlush = 0; this.broadcasts = 0;
     this.tiktok = new LiveBridge(this.engine);
     this.kick = new KickBridge(this.engine);
     this.questionBank = new QuestionBank(questions);
   }
   view() { return { ...this.engine.snapshot(), viewers: this.clients.size }; }
+  scheduleBroadcast() {
+    if (this.flushTimer) return;
+    const wait = Math.max(0, BROADCAST_MS - (Date.now() - this.lastFlush));
+    this.flushTimer = setTimeout(() => this.flush(), wait);
+  }
+  flush() {
+    this.flushTimer = null; this.lastFlush = Date.now();
+    if (!this.clients.size) return;
+    this.broadcasts++;
+    const raw = JSON.stringify({ type: 'state', data: this.view() });
+    for (const ws of this.clients) if (ws.readyState === WebSocket.OPEN && (ws.bufferedAmount || 0) < 4_000_000) ws.send(raw);
+  }
   async disconnectAll() { await this.tiktok.disconnect(false); await this.kick.disconnect(false); this.engine.setConnection('disconnected', '', 'تم الفصل'); }
 }
 const mainRoom = new Room('main', 'main');
@@ -68,12 +87,21 @@ function publicRoom(id) {
   const key = String(id || 'main');
   if (rooms.has(key)) return rooms.get(key);
   const owner = /^u[a-z0-9]{9}$/.test(key) ? accounts.byRoom(key) : null;
-  return owner ? ensureRoom(key, 'user', owner.id) : null;
+  if (owner) return ensureRoom(key, 'user', owner.id);
+  // a promo-code room survives restarts as long as its session does (so OBS links keep working)
+  if (/^p[a-z0-9]{9}$/.test(key) && [...sessions.map.values()].some((x) => x.room === key)) return ensureRoom(key, 'promo');
+  return null;
 }
 
 /* --------------------------------------------------------------- accounts */
 const accounts = new AccountStore({ file: path.join(DATA_DIR, 'users.json') });
-const sessions = new Sessions();
+const sessions = new Sessions({ file: path.join(DATA_DIR, 'sessions.json') });
+const promos = new PromoStore({ file: path.join(DATA_DIR, 'promo-codes.json') });
+// Optional bootstrap codes from the environment (comma separated); stored hashed, never in public files.
+for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
+const OPEN_SIGNUP = process.env.SKY_OPEN_SIGNUP === '1';
+const redeemIp = new RateLimiter({ limit: 8, windowMs: 10 * 60_000 });
+const redeemAll = new RateLimiter({ limit: 300, windowMs: 10 * 60_000 });
 const authLimiter = new RateLimiter({ limit: 12, windowMs: 10 * 60_000 });
 const draw = new DrawHub();
 const isHttps = (req) => req.socket.encrypted || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
@@ -97,11 +125,18 @@ function actorFor(req) {
     return { kind: 'user', user, room: ensureRoom(user.room, 'user', user.id), live: accounts.planActive(user) };
   }
   if (s.kind === 'guest') return { kind: 'guest', room: ensureRoom(s.room, 'guest'), live: false };
+  if (s.kind === 'owner') return { kind: 'owner', room: mainRoom, live: true };
+  if (s.kind === 'promo') {
+    if (!promos.stillValid(s.codeId)) return null; // a disabled or expired code closes its sessions
+    return { kind: 'promo', room: ensureRoom(s.room, 'promo'), live: s.level === 'live', level: s.level };
+  }
   return null;
 }
 const isAuthorized = (req) => !!actorFor(req);
 function meFor(req) {
   const s = sessionOf(req);
+  if (s?.kind === 'owner') return { user: null, guest: false, owner: true, access: 'owner', room: 'main', live: true };
+  if (s?.kind === 'promo' && promos.stillValid(s.codeId)) return { user: null, guest: false, access: 'promo', level: s.level, room: s.room, live: s.level === 'live' };
   if (s?.kind === 'user') { const u = accounts.byId(s.userId); if (u) return { user: accounts.publicUser(u), guest: false, room: u.room, live: accounts.planActive(u) }; }
   if (s?.kind === 'guest') return { user: null, guest: true, room: s.room, live: false };
   return { user: null, guest: false, room: null, live: false };
@@ -201,12 +236,52 @@ async function handleAction(action, body, actor) {
     }
     // Owner-only account administration (subscriptions are activated manually after payment).
     case 'accounts': requireOwner(actor); return { ok: true, accounts: accounts.list() };
+    case 'promo-list': requireOwner(actor); return { ok: true, codes: promos.list(), levels: PROMO_LEVELS };
+    case 'promo-create': requireOwner(actor); return { ok: true, code: promos.create(body) };
+    case 'promo-update': {
+      requireOwner(actor);
+      const code = promos.update(body.id, body);
+      if (code.status !== 'active') sessions.destroyWhere((x) => x.codeId === body.id);
+      return { ok: true, code };
+    }
+    case 'promo-delete': requireOwner(actor); promos.remove(body.id); sessions.destroyWhere((x) => x.codeId === body.id); return { ok: true };
     case 'account-plan': requireOwner(actor); return { ok: true, account: accounts.setPlan(body.username, body.plan, body.days) };
     case 'account-password': requireOwner(actor); { await accounts.setPassword(body.username, body.password); const u = accounts.find(body.username); if (u) sessions.destroyUser(u.id); return { ok: true }; }
     default: throw new Error('الإجراء غير معروف');
   }
 }
 function requireOwner(actor) { if (actor.kind !== 'owner') throw Object.assign(new Error('هذا الإجراء لمالك الموقع فقط'), { status: 403 }); }
+
+/* «الدخول بالرمز الترويجي»: the server checks the code and opens a session cookie; the page never
+   decides on its own. The owner can type the ADMIN_TOKEN in the same field to open the main room. */
+async function handleAccess(action, req, res) {
+  if (action === 'me' && req.method === 'GET') { const me = meFor(req); return json(res, 200, { signedIn: !!actorFor(req), ...me }); }
+  if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+  const origin = req.headers.origin;
+  if (origin) { try { if (new URL(origin).host !== req.headers.host) return json(res, 403, { error: 'طلب من مصدر غير مسموح' }); } catch { return json(res, 403, { error: 'طلب غير صالح' }); } }
+  if (action === 'logout') {
+    const s = sessionOf(req); if (s) sessions.destroy(s.id);
+    res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isHttps(req) ? '; Secure' : ''}`);
+    return json(res, 200, { ok: true });
+  }
+  if (action !== 'redeem') return json(res, 404, { error: 'Not found' });
+  const ip = clientIp(req);
+  if (!redeemIp.hit('ip:' + ip) || !redeemAll.hit('all')) return json(res, 429, { error: 'محاولات كثيرة. انتظر 10 دقائق ثم حاول مرة أخرى.' });
+  const body = await readBody(req, 1024).catch(() => null);
+  const code = String(body?.code ?? '').trim();
+  if (!code) return json(res, 400, { error: 'أدخل الرمز الترويجي' });
+  const old = sessionOf(req);
+  if (matchesToken(code)) {
+    if (old) sessions.destroy(old.id);
+    setSession(res, req, sessions.create('owner', {}), 30 * 86400);
+    return json(res, 200, { ok: true, access: 'owner', next: '/studio' });
+  }
+  const promo = promos.redeem(code);
+  if (!promo) { await new Promise((r) => setTimeout(r, 350)); return json(res, 401, { error: 'الرمز غير صحيح أو انتهت صلاحيته' }); }
+  if (old) sessions.destroy(old.id);
+  setSession(res, req, sessions.create('promo', { room: roomId('p'), codeId: promo.id, level: promo.level }), 30 * 86400);
+  return json(res, 200, { ok: true, access: 'promo', level: promo.level, next: '/studio' });
+}
 
 async function handleAccount(action, req, res) {
   const ip = clientIp(req);
@@ -216,6 +291,7 @@ async function handleAccount(action, req, res) {
   if (origin) { try { if (new URL(origin).host !== req.headers.host) return json(res, 403, { error: 'طلب من مصدر غير مسموح' }); } catch { return json(res, 403, { error: 'طلب غير صالح' }); } }
   const body = await readBody(req).catch(() => null);
   if (!body) return json(res, 400, { error: 'طلب غير صالح' });
+  if ((action === 'register' || action === 'guest') && !OPEN_SIGNUP) return json(res, 403, { error: 'الدخول إلى الاستوديو يتم بالرمز الترويجي' });
   if (action === 'register') {
     if (!authLimiter.hit('reg:' + ip)) return json(res, 429, { error: 'محاولات كثيرة، انتظر قليلًا ثم حاول' });
     try {
@@ -311,10 +387,10 @@ function streams() {
   return { streams: list, totalStreams: list.length, totalPlayers: list.reduce((n, s) => n + s.players, 0) };
 }
 
-const STATIC = new Set(['index.html','landing.html','landing.js','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','sky-live.webp','sky-live-mark.svg','icons.svg','royal-core.css','royal-landing.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','sky-home.css','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
+const STATIC = new Set(['index.html','home.html','home.js','home.css','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
-  ...['games', 'covers', 'flags'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
+  ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt']);
 
 const server = http.createServer(async (req, res) => {
@@ -330,6 +406,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/streams' && req.method === 'GET') return json(res, 200, streams());
     if (url.pathname === '/api/sketch' && req.method === 'GET') { const room = publicRoom(url.searchParams.get('room')); return room ? json(res, 200, room.sketch || { data: '', v: 0 }) : json(res, 404, { error: 'الغرفة غير موجودة' }); }
     if (url.pathname.startsWith('/api/role/')) return await handleRole(url.pathname.slice('/api/role/'.length), url, req, res);
+    if (url.pathname.startsWith('/api/access/')) return await handleAccess(url.pathname.slice('/api/access/'.length), req, res);
     if (url.pathname.startsWith('/api/account/')) return await handleAccount(url.pathname.slice('/api/account/'.length), req, res);
     if (url.pathname.startsWith('/api/draw/')) return await handleDraw(url.pathname.slice('/api/draw/'.length), req, res);
     if (url.pathname === '/api/admin/bank' && req.method === 'GET') { const actor = actorFor(req); return actor ? json(res, 200, actor.room.questionBank.stats()) : json(res, 401, { error: 'رمز الإدارة غير صحيح' }); }
@@ -352,14 +429,60 @@ const server = http.createServer(async (req, res) => {
     }
   } catch (err) { return json(res, err.status || 500, { error: String(err.message || err).slice(0, 200) }); }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
-  const fileMap = { '/': 'landing.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'index.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/favicon.ico': 'sky-live.webp', '/apple-touch-icon.png': 'sky-live.webp', '/sky-live-cover.webp': 'sky-live.webp', '/og-image.webp': 'sky-live.webp' };
+  // Studio pages need a signed-in session (promo code, owner or account). Viewers keep /overlay and /role.
+  const STUDIO_PAGES = new Set(['/studio', '/dashboard', '/event', '/bomb', '/play']);
+  if (STUDIO_PAGES.has(url.pathname)) {
+    const viewer = url.pathname === '/play' && url.searchParams.has('room');
+    if (!viewer && !actorFor(req)) { res.writeHead(302, { Location: '/?next=' + encodeURIComponent(url.pathname + url.search), 'Cache-Control': 'no-store' }); return res.end(); }
+    if (url.pathname === '/play' && !viewer) { res.writeHead(302, { Location: '/studio' + (url.search || ''), 'Cache-Control': 'no-store' }); return res.end(); }
+  }
+  const fileMap = { '/': 'home.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/sponge-512.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });
-  const filename = path.join(root, relative);
-  try { const content = await fs.promises.readFile(filename); res.writeHead(200, { 'Content-Type': mime[path.extname(filename)] || 'application/octet-stream', 'Cache-Control': 'no-cache' }); res.end(req.method === 'HEAD' ? undefined : content); }
+  try { return await serveStatic(req, res, relative); }
   catch { json(res, 404, { error: 'Not found' }); }
 });
+/* ---------------------------------------------------------- static files
+   Files are read once, gzip-compressed once and served with an ETag. HTML pages get a content hash on
+   every local CSS/JS link (?v=…), so those files can be cached for a year and a deploy is picked up
+   immediately — an old design can never stick in a browser cache. */
+const fileCache = new Map();
+const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.svg', '.txt', '.json']);
+async function loadAsset(relative) {
+  const filename = path.join(root, relative);
+  const stat = await fs.promises.stat(filename);
+  const hit = fileCache.get(relative);
+  if (hit && hit.mtime === stat.mtimeMs) return hit;
+  let body = await fs.promises.readFile(filename);
+  const ext = path.extname(filename);
+  if (ext === '.html') {
+    let html = body.toString('utf8');
+    const refs = [...new Set([...html.matchAll(/(?:href|src)="\/([\w.-]+\.(?:css|js))"/g)].map((m) => m[1]))];
+    for (const ref of refs) { if (!STATIC.has(ref)) continue; const asset = await loadAsset(ref); html = html.split('"/' + ref + '"').join('"/' + ref + '?v=' + asset.etag.slice(1, 9) + '"'); }
+    body = Buffer.from(html);
+  }
+  const etag = '"' + createHash('sha1').update(body).digest('base64url').slice(0, 16) + '"';
+  const entry = { body, gzip: COMPRESSIBLE.has(ext) && body.length > 600 ? gzipSync(body, { level: 9 }) : null, etag, type: mime[ext] || 'application/octet-stream', ext, mtime: stat.mtimeMs };
+  fileCache.set(relative, entry);
+  return entry;
+}
+async function serveStatic(req, res, relative) {
+  const asset = await loadAsset(relative);
+  const versioned = /[?&]v=/.test(req.url);
+  const cache = asset.ext === '.html' ? 'no-cache'
+    : versioned ? 'public, max-age=31536000, immutable'
+    : ['.css', '.js'].includes(asset.ext) ? 'public, max-age=300, must-revalidate'
+    : 'public, max-age=604800';
+  const headers = { 'Content-Type': asset.type, 'Cache-Control': cache, ETag: asset.etag, Vary: 'Accept-Encoding' };
+  if (req.headers['if-none-match'] === asset.etag) { res.writeHead(304, headers); return res.end(); }
+  const useGzip = asset.gzip && /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+  const body = useGzip ? asset.gzip : asset.body;
+  if (useGzip) headers['Content-Encoding'] = 'gzip';
+  headers['Content-Length'] = body.length;
+  res.writeHead(200, headers); res.end(req.method === 'HEAD' ? undefined : body);
+}
+
 const wss = new WebSocketServer({ noServer: true, maxPayload: 2048 });
 let socketCount = 0;
 server.on('upgrade', (req, socket, head) => {

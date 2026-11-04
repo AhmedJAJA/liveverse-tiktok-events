@@ -11,3 +11,9 @@ services:
         value: production
       - key: ADMIN_TOKEN
         sync: false
+      # Comma-separated promo codes that always open the studio (kept hashed on the server).
+      # On the free plan the disk is wiped on every deploy, so codes created from the studio and
+      # login sessions are lost then; codes listed here survive. Attach a persistent disk and set
+      # SKY_DATA_DIR to its mount path to keep everything.
+      - key: SPONGE_PROMO_CODES
+        sync: false

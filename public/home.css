@@ -1,0 +1,87 @@
+/* SPONGE LIVE — entry page. One screen: logo, the promo-code window, a small strip of game cards.
+   Everything that moves animates transform/opacity only, and pauses when the tab is hidden. */
+@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-800-normal.woff2) format("woff2");font-weight:700 900;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-500-normal.woff2) format("woff2");font-weight:400 600;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-latin-700-normal.woff2) format("woff2");font-weight:400 900;font-display:swap;unicode-range:U+0000-00FF,U+2000-206F}
+:root{
+  color-scheme:dark;
+  --deep:#020A22; --navy:#061A44; --blue:#1E5BFF; --cyan:#38D4FF; --aqua:#8CE8FF; --foam:#EAF8FF; --muted:rgba(234,248,255,.72);
+  --yellow:linear-gradient(180deg,#FFF27D 0%,#FFD62A 55%,#FFB800 100%); --ink:#0A1A3D; --coral:#FF6A8A;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body.hm{min-height:100svh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;color:var(--foam);background:var(--deep);
+  font-family:"Tajawal",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[hidden]{display:none!important}
+
+/* ---------- the sea (one fixed layer, no per-frame scripting) ---------- */
+.hm-sea{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict;
+  background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(56,212,255,.26),transparent 62%),radial-gradient(ellipse 55% 40% at 88% 36%,rgba(123,92,255,.14),transparent 70%),linear-gradient(180deg,#0A2563 0%,#051640 42%,#020A22 100%)}
+.hm-glow{position:absolute;left:50%;top:44%;width:min(900px,120vw);height:min(560px,80vh);translate:-50% -50%;border-radius:50%;background:radial-gradient(closest-side,rgba(56,212,255,.20),transparent);animation:hm-breathe 8s ease-in-out infinite}
+.hm-rays{position:absolute;inset:-20% 0 auto;height:80%;background:repeating-linear-gradient(100deg,rgba(140,232,255,.06) 0 40px,transparent 40px 120px);mask:linear-gradient(180deg,#000,transparent 85%);-webkit-mask:linear-gradient(180deg,#000,transparent 85%)}
+.hm-floor{position:absolute;inset:auto 0 0;height:min(28vh,220px);background:url(/seafloor.svg) bottom center/cover no-repeat;opacity:.9}
+.hm-b{position:absolute;bottom:-40px;left:var(--x);width:var(--s);height:var(--s);border-radius:50%;border:1.5px solid rgba(160,235,255,.7);
+  background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.6) 0 18%,transparent 22%);opacity:.55;will-change:transform;animation:hm-rise var(--t) linear var(--d) infinite}
+.hm-b:nth-of-type(1){--x:8%;--s:14px;--t:19s;--d:-3s}.hm-b:nth-of-type(2){--x:22%;--s:9px;--t:24s;--d:-11s}.hm-b:nth-of-type(3){--x:38%;--s:18px;--t:17s;--d:-7s}
+.hm-b:nth-of-type(4){--x:57%;--s:11px;--t:22s;--d:-15s}.hm-b:nth-of-type(5){--x:71%;--s:16px;--t:20s;--d:-2s}.hm-b:nth-of-type(6){--x:86%;--s:10px;--t:26s;--d:-18s}.hm-b:nth-of-type(7){--x:94%;--s:20px;--t:18s;--d:-9s}
+@keyframes hm-rise{to{transform:translate3d(16px,-112vh,0)}}
+@keyframes hm-breathe{50%{opacity:.55;transform:scale(1.06)}}
+
+/* ---------- logo ---------- */
+.hm-top{display:grid;place-items:center;padding:clamp(18px,4vh,40px) 16px 0}
+.hm-logo{display:flex;align-items:center;gap:clamp(12px,2vw,20px);margin:0;animation:hm-in .8s var(--ease) both}
+.hm-logo img{width:clamp(72px,9vw,104px);height:auto;aspect-ratio:1;border-radius:28%;box-shadow:0 0 0 3px rgba(56,212,255,.75),0 0 28px rgba(56,212,255,.45),0 14px 30px -12px #000}
+.hm-logo span{font:900 clamp(34px,6.4vw,72px)/1 "Tajawal",system-ui,sans-serif;letter-spacing:.06em;color:var(--foam);text-shadow:0 0 18px rgba(56,212,255,.55),0 0 2px rgba(255,255,255,.9)}
+.hm-logo b{color:#FFE14D;text-shadow:0 0 18px rgba(255,200,40,.55),0 0 2px rgba(255,255,255,.8)}
+@keyframes hm-in{from{opacity:0;transform:translateY(-14px) scale(.96)}}
+
+/* ---------- the promo window: the focal point ---------- */
+.hm-main{display:grid;place-items:center;padding:clamp(16px,3vh,32px) 16px}
+.hm-card{position:relative;width:min(520px,100%);padding:clamp(24px,4vw,40px);border-radius:28px;text-align:center;
+  background:linear-gradient(160deg,rgba(14,42,104,.78),rgba(4,16,46,.86));border:1px solid rgba(140,232,255,.55);
+  box-shadow:0 0 0 1px rgba(56,212,255,.25),0 0 40px -6px rgba(56,212,255,.45),inset 0 1px 0 rgba(255,255,255,.12),0 30px 60px -30px #000;
+  animation:hm-in .7s var(--ease) .12s both}
+.hm-card::before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;background:linear-gradient(135deg,rgba(140,232,255,.7),transparent 35%,transparent 65%,rgba(30,91,255,.7));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;padding:1px}
+@media (min-width:900px){.hm-card{backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}}
+.hm-eyebrow{display:inline-block;padding:5px 14px;border-radius:999px;background:rgba(56,212,255,.14);border:1px solid rgba(56,212,255,.45);color:var(--aqua);font-size:14px;font-weight:800}
+.hm-card h2 bdi{white-space:nowrap}
+.hm-card h2{margin:16px 0 8px;font-size:clamp(26px,4.6vw,38px);font-weight:900;line-height:1.25}
+.hm-text{margin:0 0 22px;color:var(--muted);font-size:clamp(15px,2.2vw,18px);line-height:1.7}
+.hm-form{display:grid;gap:14px}
+.hm-field input{width:100%;height:60px;padding:0 18px;border-radius:18px;border:2px solid rgba(140,232,255,.4);background:rgba(2,10,34,.75);color:var(--foam);
+  font:800 22px/1 "Tajawal",system-ui,sans-serif;letter-spacing:.12em;text-align:center;transition:border-color .2s,box-shadow .2s}
+.hm-field input::placeholder{letter-spacing:0;font-size:17px;font-weight:600;color:rgba(234,248,255,.45)}
+.hm-field input:focus{outline:none;border-color:#FFD62A;box-shadow:0 0 0 4px rgba(255,214,42,.18)}
+.hm-field input[aria-invalid="true"]{border-color:var(--coral)}
+.hm-enter{position:relative;height:62px;border:0;border-radius:18px;background:var(--yellow);color:var(--ink);font:900 21px/1 "Tajawal",system-ui,sans-serif;cursor:pointer;
+  box-shadow:0 6px 0 #C98A00,0 16px 32px -14px rgba(255,190,0,.8);transition:transform .12s var(--ease),box-shadow .12s,filter .2s}
+.hm-enter:hover{filter:brightness(1.05)}
+.hm-enter:active{transform:translateY(4px);box-shadow:0 2px 0 #C98A00,0 8px 18px -10px rgba(255,190,0,.8)}
+.hm-enter:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.hm-enter:disabled{cursor:wait;filter:saturate(.7) brightness(.95)}
+.hm-enter.is-busy span::after{content:"";display:inline-block;width:16px;height:16px;margin-inline-start:10px;vertical-align:-2px;border-radius:50%;border:3px solid rgba(10,26,61,.3);border-top-color:var(--ink);animation:hm-spin .8s linear infinite}
+@keyframes hm-spin{to{transform:rotate(360deg)}}
+.hm-error{margin:0;padding:10px 14px;border-radius:14px;background:rgba(255,106,138,.12);border:1px solid rgba(255,106,138,.55);color:#FFD0DA;font-weight:800;font-size:15px;animation:hm-shake .35s var(--ease)}
+@keyframes hm-shake{25%{transform:translateX(6px)}75%{transform:translateX(-6px)}}
+.hm-session{margin:16px 0 0;color:var(--muted)}
+.hm-session a{color:#FFE14D;font-weight:800}
+
+/* ---------- decorative game strip (not clickable) ---------- */
+.hm-strip{min-width:0;padding:0 0 max(14px,env(safe-area-inset-bottom))}
+.hm-cards{display:flex;justify-content:center;gap:10px;margin:0 auto;padding:6px 16px 8px;list-style:none;max-width:1240px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.hm-cards::-webkit-scrollbar{display:none}
+.hm-cards li{flex:0 0 auto;scroll-snap-align:center;border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px rgba(56,212,255,.45),0 0 14px -4px rgba(56,212,255,.55);background:#020A22;pointer-events:none;user-select:none}
+.hm-cards img{display:block;width:88px;height:auto;aspect-ratio:290/371}
+@media (max-width:1100px){.hm-cards{justify-content:flex-start}}
+@media (max-width:600px){
+  .hm-cards{gap:8px}
+  .hm-cards img{width:64px}
+  .hm-card{border-radius:24px}
+  .hm-field input,.hm-enter{height:58px}
+}
+@media (max-height:620px){.hm-top{padding-top:10px}.hm-logo img{width:56px}.hm-logo span{font-size:30px}.hm-main{padding-block:8px}}
+@media (prefers-reduced-motion:reduce){.hm-b,.hm-glow,.hm-logo,.hm-card,.hm-error{animation:none}}
+html.is-hidden *,html.is-hidden *::before{animation-play-state:paused!important}

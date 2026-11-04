@@ -26,7 +26,7 @@
   window.SkySession = Object.freeze({
     ready, refresh, room, withRoom, wsUrl, explicitRoom: () => explicit,
     me: () => me,
-    hasControl: () => !!ownerToken() || !!me.user || !!me.guest,
+    hasControl: () => !!ownerToken() || !!me.user || !!me.guest || !!me.owner || me.access === 'promo',
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     ownerToken,
     async logout() { await fetch('/api/account/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {}); return refresh(); }

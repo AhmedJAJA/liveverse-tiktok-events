@@ -74,6 +74,11 @@
     }
     return box;
   }
+  // One listener for every ✕ button, however often the roster is redrawn.
+  $('players').addEventListener('click', (e) => {
+    const x = e.target.closest('.pl-remove'); if (!x) return;
+    run(x, async () => { await admin('remove-player', { number: Number(x.dataset.number) }); feedback('حُذف ' + x.dataset.name); });
+  });
   function renderRoster(list, canRemove, outIds) {
     const items = [...list].reverse(); // newest first so arrivals are visible
     let joined = 0;
@@ -91,7 +96,7 @@
       else if (p.bot) li.append(el('small', 'pl-tag is-bot', 'تجريبي'));
       if (canRemove) {
         const x = el('button', 'pl-remove', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'حذف ' + p.name);
-        x.addEventListener('click', () => run(x, async () => { await admin('remove-player', { number: p.number }); feedback('حُذف ' + p.name); }));
+        x.dataset.number = p.number; x.dataset.name = p.name; // handled by one delegated listener on the list
         li.append(x);
       }
       if (isNew) requestAnimationFrame(() => fx()?.burst(av, 10));

@@ -181,7 +181,7 @@
     const size = () => {
       const dpr = Math.min(devicePixelRatio || 1, 1.5); w = wrap.clientWidth; h = wrap.clientHeight; if (!w || !h) return;
       canvas.width = w * dpr; canvas.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      parts = Array.from({ length: Math.round(Math.min(160, (w * h) / 9000) * density) }, () => make());
+      parts = Array.from({ length: Math.round(Math.min(70, (w * h) / 16000) * density) }, () => make());
     };
     const draw = (move) => {
       ctx.clearRect(0, 0, w, h);
@@ -193,7 +193,8 @@
         else { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); }
       }
     };
-    const loop = () => { draw(true); raf = requestAnimationFrame(loop); };
+    let odd = false; // 30 fps is plenty for drifting sparkles and halves the canvas cost
+    const loop = () => { odd = !odd; if (odd) draw(true); raf = requestAnimationFrame(loop); };
     const run = () => { cancelAnimationFrame(raf); raf = 0; if (on && !d.hidden && !reduce.matches && !perf()) raf = requestAnimationFrame(loop); else draw(false); };
     runners.add(run);
     new ResizeObserver(() => { size(); draw(false); }).observe(wrap);
@@ -419,7 +420,20 @@
     tagIcons(root);
   }
   let pending = 0;
-  const mo = new MutationObserver(() => { if (!pending) pending = requestAnimationFrame(() => { pending = 0; decorate(body); }); });
+  // Only newly inserted elements are decorated — rescanning the whole page on every live update was
+  // measurable main-thread work on the broadcast screen.
+  const added = new Set();
+  const mo = new MutationObserver((list) => {
+    for (const m of list) for (const n of m.addedNodes) if (n.nodeType === 1) added.add(n);
+    if (!pending && added.size) pending = requestAnimationFrame(() => {
+      pending = 0; const nodes = [...added]; added.clear();
+      for (const n of nodes) if (n.isConnected) { decorate(n); if (n.parentElement) decorateSelf(n); }
+    });
+  });
+  function decorateSelf(el) {
+    for (const [sel, opts] of CONFIG.movingBorder) if (el.matches(sel)) movingBorder(el, opts);
+    if (el.matches(CONFIG.shimmer)) el.classList.add('au-shimmer');
+  }
 
   function init() {
     stage();

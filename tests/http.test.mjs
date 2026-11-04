@@ -18,7 +18,7 @@ test('HTTP host flow, read-only viewer, fonts and live answer summaries work tog
       const response=await fetch(base+'/api/admin/'+action,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(data)});
       assert.equal(response.status,200,action+': '+response.status);return response.json();
     };
-    for(const route of ['/','/overlay','/studio','/royal-core.css','/royal-broadcast.css','/royal-studio.css','/royal-landing.css','/icons.svg','/sky-live-mark.svg','/fonts/tajawal-arabic-800-normal.woff2','/fonts/inter-display-semibold.woff']){
+    for(const route of ['/','/overlay','/studio','/royal-core.css','/royal-broadcast.css','/royal-studio.css','/home.css','/studio.css','/icons.svg','/sponge-mark.svg','/fonts/tajawal-arabic-800-normal.woff2','/fonts/inter-display-semibold.woff']){
       const response=await fetch(base+route);assert.equal(response.status,200,route);
       if(route.endsWith('.woff2'))assert.equal(response.headers.get('content-type'),'font/woff2');
       if(route.endsWith('.woff'))assert.equal(response.headers.get('content-type'),'font/woff');

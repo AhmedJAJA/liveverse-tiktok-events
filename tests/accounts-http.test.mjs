@@ -14,7 +14,7 @@ async function boot() {
   const port = reservation.address().port; await new Promise((r) => reservation.close(r));
   const token = randomBytes(24).toString('hex');
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sky-acc-'));
-  const child = spawn(process.execPath, ['server.mjs'], { cwd: new URL('..', import.meta.url), env: { ...process.env, PORT: String(port), ADMIN_TOKEN: token, NODE_ENV: 'test', SKY_DATA_DIR: dataDir }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, ['server.mjs'], { cwd: new URL('..', import.meta.url), env: { ...process.env, PORT: String(port), ADMIN_TOKEN: token, NODE_ENV: 'test', SKY_DATA_DIR: dataDir, SKY_OPEN_SIGNUP: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
   let errors = ''; child.stderr.on('data', (c) => (errors += c));
   await Promise.race([once(child.stdout, 'data'), once(child, 'exit').then(() => { throw new Error(errors || 'exit'); }), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000).unref())]);
   const base = 'http://127.0.0.1:' + port;

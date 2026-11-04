@@ -2,7 +2,7 @@
 // HttpOnly session cookies and owner-managed subscriptions.
 // Storage is a JSON file (SKY_DATA_DIR). On hosts with an ephemeral disk the file
 // resets on redeploy — mount a persistent disk for production accounts.
-import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
+import { scrypt, randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -126,23 +126,45 @@ export class AccountStore {
   list() { return [...this.users.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, 500).map((u) => this.publicUser(u)); }
 }
 
+/** Login sessions. With a file they survive restarts and redeploys (keys are stored hashed). */
 export class Sessions {
-  constructor({ now = () => Date.now(), ttlMs = 30 * DAY, max = 20000 } = {}) { this.now = now; this.ttl = ttlMs; this.max = max; this.map = new Map(); }
-  create(kind, { userId = null, room = null } = {}) {
+  constructor({ now = () => Date.now(), ttlMs = 30 * DAY, max = 20000, file = null } = {}) {
+    this.now = now; this.ttl = ttlMs; this.max = max; this.map = new Map(); this.file = file; this.saveTimer = null;
+    if (file && fs.existsSync(file)) {
+      try { for (const s of JSON.parse(fs.readFileSync(file, 'utf8'))) if (s.expires > this.now()) this.map.set(s.key, s); }
+      catch (err) { console.error('[sessions] could not read', err.message); }
+    }
+  }
+  key(id) { return createHash('sha256').update(String(id)).digest('base64url'); }
+  save() {
+    if (!this.file) return;
+    clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => {
+      try {
+        fs.mkdirSync(path.dirname(this.file), { recursive: true });
+        const keep = [...this.map.values()].filter((s) => s.kind !== 'guest' && s.expires > this.now());
+        fs.writeFileSync(this.file + '.tmp', JSON.stringify(keep), { mode: 0o600 }); fs.renameSync(this.file + '.tmp', this.file);
+      } catch (err) { console.error('[sessions] save failed', err.message); }
+    }, 200);
+    this.saveTimer.unref?.();
+  }
+  create(kind, { userId = null, room = null, codeId = null, level = null } = {}) {
     if (this.map.size >= this.max) this.prune(true);
-    const id = token(32);
-    this.map.set(id, { id, kind, userId, room, created: this.now(), expires: this.now() + (kind === 'guest' ? DAY : this.ttl) });
+    const id = token(32), key = this.key(id);
+    this.map.set(key, { key, kind, userId, room, codeId, level, created: this.now(), expires: this.now() + (kind === 'guest' ? DAY : this.ttl) });
+    this.save();
     return id;
   }
   get(id) {
     if (typeof id !== 'string' || id.length < 20) return null;
-    const s = this.map.get(id);
+    const key = this.key(id), s = this.map.get(key);
     if (!s) return null;
-    if (s.expires <= this.now()) { this.map.delete(id); return null; }
-    return s;
+    if (s.expires <= this.now()) { this.map.delete(key); return null; }
+    return { ...s, id };
   }
-  destroy(id) { this.map.delete(id); }
-  destroyUser(userId) { for (const [k, s] of this.map) if (s.userId === userId) this.map.delete(k); }
+  destroy(id) { if (this.map.delete(this.key(id))) this.save(); }
+  destroyWhere(test) { let n = 0; for (const [k, s] of this.map) if (test(s)) { this.map.delete(k); n++; } if (n) this.save(); return n; }
+  destroyUser(userId) { this.destroyWhere((s) => s.userId === userId); }
   prune(force = false) {
     const t = this.now();
     for (const [k, s] of this.map) if (s.expires <= t) this.map.delete(k);

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020A22">
+<meta name="robots" content="noindex">
+<title>الاستوديو | SPONGE LIVE</title>
+<link rel="icon" href="/brand/favicon-64.png" type="image/png">
+<link rel="preload" href="/fonts/tajawal-arabic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/royal-core.css">
+<link rel="stylesheet" href="/play.css">
+<link rel="stylesheet" href="/sponge.css">
+<link rel="stylesheet" href="/studio.css">
+<script defer src="/session.js"></script>
+<script defer src="/sponge.js"></script>
+<script defer src="/sponge-ui.js"></script>
+<script defer src="/studio.js"></script>
+</head>
+<body class="pl-page st-page" data-category="smart" data-view="join" data-drawer="open">
+<header class="st-top">
+ <a class="sp-brand st-brand" href="/" aria-label="SPONGE LIVE"><img src="/brand/sponge-128.webp" alt="" width="34" height="34"><span dir="ltr"><b>SPONGE</b> LIVE</span></a>
+ <form class="st-connect" id="connectForm" autocomplete="off">
+  <label class="sr-only" for="platformSelect">المنصة</label>
+  <select id="platformSelect"><option value="tiktok">TikTok</option><option value="kick">Kick (تجريبي)</option></select>
+  <label class="st-handle"><span aria-hidden="true">@</span><span class="sr-only">اسم الحساب</span><input id="handleInput" dir="ltr" maxlength="40" placeholder="اسم حساب TikTok" spellcheck="false"></label>
+  <button type="submit" class="pl-btn pl-btn-gold st-connect-btn" id="connectButton">اتصال</button>
+  <button type="button" class="pl-btn pl-btn-ghost" id="disconnectButton" hidden>قطع</button>
+  <span class="st-status" id="connState" role="status"><i aria-hidden="true"></i><span id="connText">غير متصل</span></span>
+ </form>
+ <div class="st-top-tools">
+  <span class="pl-room" id="roomBadge" hidden></span>
+  <span class="st-count" title="عدد المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b id="topCount">0</b></span>
+  <a class="pl-chip" id="overlayLink" href="/overlay" target="_blank" rel="noopener"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg><span>شاشة OBS</span></a>
+  <button type="button" class="pl-chip" data-sp-toggle="sound" aria-label="الصوت"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-volume"/></svg></button>
+  <button type="button" class="pl-chip" id="drawerToggle" aria-expanded="true" aria-controls="hostPanel"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>التحكم</span></button>
+  <button type="button" class="pl-chip" id="logoutButton">خروج</button>
+ </div>
+</header>
+
+<div class="st-layout">
+ <!-- ===== game navigation ===== -->
+ <nav class="st-games" aria-label="الألعاب">
+  <ol id="gameNav"></ol>
+  <details class="st-extra"><summary>ألعاب إضافية</summary><ol id="extraNav"></ol></details>
+ </nav>
+
+ <!-- ===== the selected game ===== -->
+ <main class="st-main">
+  <section class="pl-hero st-hero" aria-labelledby="gameTitle">
+   <figure class="pl-cover is-art"><img id="gameCover" src="/games/01-knowledge-challenge-200.webp" alt="" width="200" height="256"></figure>
+   <div class="pl-id">
+    <span class="pl-cat" id="gameCategory"></span>
+    <h1 id="gameTitle">تحدي المعرفة</h1>
+    <p id="gameSummary"></p>
+    <ul class="pl-rules" id="gameRules"></ul>
+   </div>
+   <img id="backdropCover" hidden alt="">
+  </section>
+
+  <section class="pl-call" id="joinCall" aria-live="polite">
+   <p class="pl-call-main">اكتب «<b class="pl-word" id="joinWord">انضم</b>» في تعليقات البث للدخول إلى اللعبة</p>
+   <p class="pl-call-sub" id="callSub"><span class="pl-pulse" aria-hidden="true"></span><span id="callSubText">بانتظار انضمام اللاعبين</span></p>
+   <div class="pl-count"><b id="playerCount">0</b><span id="playerCountLabel">لاعب منضم</span></div>
+  </section>
+
+  <section class="pl-live" id="liveView" hidden aria-label="اللعبة الجارية">
+   <div class="pl-live-head"><span class="pl-live-tag"><i aria-hidden="true"></i>اللعبة جارية</span><p id="liveNotice"></p></div>
+   <div class="pl-frame"><iframe id="liveFrame" title="شاشة اللعبة" src="about:blank" loading="lazy"></iframe></div>
+   <p class="pl-late" id="lateNote">وصلت متأخرًا؟ اكتب <b class="pl-word-sm">انضم</b> وستدخل الجولة التالية تلقائيًا<span id="lateCount"></span></p>
+  </section>
+
+  <section class="pl-tools" id="hostTools" hidden aria-label="أدوات المشرف للعبة">
+   <div class="pl-sketch" id="sketchTool" hidden>
+    <div class="pl-sketch-head"><span>ارسم الكلمة:</span><b id="secretWord">—</b><small>لا تظهر الكلمة للمشاهدين</small></div>
+    <div class="pl-canvas"><canvas id="sketchCanvas" width="880" height="605" aria-label="لوحة رسم المشرف"></canvas></div>
+    <div class="pl-sketch-tools" role="toolbar" aria-label="أدوات الرسم"><div class="pl-palette" id="sketchPalette"></div>
+     <button type="button" class="pl-btn pl-btn-ghost" id="sketchUndo">تراجع</button><button type="button" class="pl-btn pl-btn-ghost" id="sketchClear">مسح اللوحة</button></div>
+   </div>
+   <div class="pl-judge" id="judgeTool" hidden><p>إجابة ليست في القائمة: <b id="judgeAnswer">—</b> — هل تقبلها؟</p>
+    <button type="button" class="pl-btn pl-btn-gold" id="judgeAccept">قبول</button><button type="button" class="pl-btn pl-btn-danger" id="judgeReject">رفض</button></div>
+   <div class="pl-roles" id="rolesTool" hidden><p>صفحة الدور الخاصة للاعبين: <b dir="ltr" id="roleLink">/role</b> — يكتب اللاعب الرمز الظاهر له في الشات.</p><ul id="rolesList"></ul></div>
+  </section>
+
+  <section class="pl-roster" aria-labelledby="rosterTitle">
+   <div class="pl-roster-head"><h2 id="rosterTitle">المتسابقون</h2><span class="pl-need" id="needNote"></span></div>
+   <ol class="pl-players" id="players"></ol>
+   <p class="pl-empty" id="rosterEmpty">لا يوجد لاعبون بعد — أول من يكتب «<span class="pl-word-inline">انضم</span>» يظهر هنا.</p>
+  </section>
+  <p class="pl-feedback" id="feedback" role="status" aria-live="polite"></p>
+ </main>
+
+ <!-- ===== control drawer: only the current game's settings ===== -->
+ <aside class="st-drawer" id="hostPanel" aria-label="لوحة التحكم">
+  <div class="st-tabs" role="tablist" aria-label="أقسام التحكم">
+   <button type="button" role="tab" id="tab-round" aria-controls="pane-round" aria-selected="true">الجولة</button>
+   <button type="button" role="tab" id="tab-players" aria-controls="pane-players" aria-selected="false">اللاعبون</button>
+   <button type="button" role="tab" id="tab-settings" aria-controls="pane-settings" aria-selected="false">الإعدادات</button>
+   <button type="button" role="tab" id="tab-codes" aria-controls="pane-codes" aria-selected="false" hidden>الرموز</button>
+  </div>
+  <div class="st-pane" role="tabpanel" id="pane-round" aria-labelledby="tab-round">
+   <div class="pl-row"><span id="regState">الانضمام مفتوح</span><button type="button" class="pl-btn pl-btn-line" id="regToggle">إغلاق الانضمام</button></div>
+   <label class="pl-check"><input type="checkbox" id="autoHost"><span>دخّلني تلقائياً في كل لعبة</span></label>
+   <div class="pl-row st-round-btns">
+    <button type="button" class="pl-btn pl-btn-ghost" id="stopButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-stop"/></svg><span>إيقاف الجولة</span></button>
+    <button type="button" class="pl-btn pl-btn-ghost" id="restartButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg><span>إعادة الجولة</span></button>
+    <button type="button" class="pl-btn pl-btn-danger" id="endButton"><span>إنهاء اللعبة</span></button>
+   </div>
+   <a class="pl-link" id="setupLink" href="/dashboard">لوحة الإعدادات المتقدمة</a>
+  </div>
+  <div class="st-pane" role="tabpanel" id="pane-players" aria-labelledby="tab-players" hidden>
+   <form class="pl-row" id="addForm"><label><span>إضافة لاعب يدويًا</span><input id="addName" maxlength="32" placeholder="اسم اللاعب" autocomplete="off"></label><button type="submit" class="pl-btn pl-btn-ghost">إضافة</button></form>
+   <p class="pl-hint">لحذف لاعب اضغط ✕ على بطاقته قبل بدء الجولة.</p>
+   <button type="button" class="pl-btn pl-btn-ghost" id="demoButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-robot"/></svg><span>وضع التجربة: لاعبون تجريبيون</span></button>
+   <button type="button" class="pl-btn pl-btn-ghost" id="resetButton">تصفير النقاط والمتسابقين</button>
+   <h3 class="st-sub">المتصدرون</h3>
+   <ol class="st-leaders" id="leaders"></ol>
+  </div>
+  <div class="st-pane" role="tabpanel" id="pane-settings" aria-labelledby="tab-settings" hidden>
+   <form class="pl-row" id="keywordForm"><label><span>كلمة الانضمام</span><input id="keywordInput" maxlength="32" value="انضم" autocomplete="off"></label>
+    <label><span>عدد المتسابقين</span><input id="maxInput" type="number" min="1" max="1500" value="1500" inputmode="numeric"></label>
+    <button type="submit" class="pl-btn pl-btn-ghost">حفظ</button></form>
+   <div class="pl-guess" id="guessFields" hidden>
+    <label><span>التلميح للجمهور</span><input id="guessPrompt" maxlength="200" dir="auto" placeholder="مثال: عاصمة فرنسا"></label>
+    <label><span>الإجابة السرية</span><input id="guessAnswer" maxlength="80" dir="auto" placeholder="باريس" autocomplete="off"></label>
+   </div>
+   <label class="pl-select" id="variantWrap" hidden><span id="variantLabel">القاعدة</span><select id="variantSelect"></select></label>
+   <label class="pl-select" id="roundsWrap" hidden><span>عدد الجولات</span><select id="roundsSelect"></select></label>
+   <div class="pl-row"><button type="button" class="pl-chip" data-sp-toggle="sound"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-volume"/></svg><span data-sp-label>الصوت</span></button>
+    <button type="button" class="pl-chip" data-sp-toggle="fx"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-sparkle"/></svg><span data-sp-label>المؤثرات</span></button></div>
+   <label class="pl-select" id="kickWrap" hidden><span>رقم غرفة شات Kick (اختياري)</span><input id="kickChatroom" inputmode="numeric" maxlength="12" dir="ltr"></label>
+  </div>
+  <div class="st-pane" role="tabpanel" id="pane-codes" aria-labelledby="tab-codes" hidden>
+   <form class="st-code-form" id="codeForm">
+    <label><span>الوصف</span><input id="codeLabel" maxlength="60" placeholder="مثال: ستريمر أحمد"></label>
+    <label><span>الرمز (اختياري — يُولَّد تلقائيًا)</span><input id="codeText" maxlength="32" dir="ltr" autocomplete="off"></label>
+    <label><span>عدد مرات الاستخدام (0 = بلا حد)</span><input id="codeUses" type="number" min="0" value="1"></label>
+    <label><span>تاريخ الانتهاء (اختياري)</span><input id="codeExpires" type="date"></label>
+    <label><span>مستوى الصلاحية</span><select id="codeLevel"><option value="live">استوديو كامل مع ربط البث</option><option value="demo">تجربة بلا ربط بث</option></select></label>
+    <button type="submit" class="pl-btn pl-btn-gold">إنشاء رمز</button>
+   </form>
+   <p class="st-new-code" id="newCode" hidden></p>
+   <ul class="st-codes" id="codeList"></ul>
+  </div>
+ </aside>
+</div>
+
+<!-- ===== quick bar ===== -->
+<div class="pl-admin" id="adminBar">
+ <div class="pl-admin-inner">
+  <div class="pl-admin-join" id="adminJoin">
+   <button type="button" class="pl-btn pl-btn-line" id="hostSeatButton" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg><span id="hostSeatLabel">دخّلني أنا</span></button>
+   <button type="button" class="pl-btn pl-btn-gold" id="startButton" disabled><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span id="startLabel">ابدأ اللعبة</span></button>
+  </div>
+  <div class="pl-admin-live" id="adminLive" hidden>
+   <button type="button" class="pl-btn pl-btn-gold" id="drawButton" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-wheel"/></svg><span>اسحب الفائز</span></button>
+   <button type="button" class="pl-btn pl-btn-ghost" id="advanceButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-forward"/></svg><span>التالي</span></button>
+   <button type="button" class="pl-btn pl-btn-danger" id="liveStopButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-stop"/></svg><span>إيقاف الجولة</span></button>
+  </div>
+  <div class="pl-admin-done" id="adminDone" hidden>
+   <button type="button" class="pl-btn pl-btn-gold" id="againButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg><span>جولة جديدة</span></button>
+  </div>
+ </div>
+</div>
+</body>
+</html>
