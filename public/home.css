@@ -413,3 +413,4 @@ html.menu-open{overflow:hidden}
 .hm-flow-wait{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0 4px;color:var(--muted);font-weight:700}
 .hm-spinner{width:26px;height:26px;border-radius:50%;border:3px solid rgba(140,232,255,.25);border-top-color:var(--cyan);animation:hm-spin .8s linear infinite}
 @media (prefers-reduced-motion:reduce){.hm-modal,.hm-modal-card{animation:none}.hm-spinner{animation-duration:2.4s}}
+.hm-google iframe{color-scheme:light}

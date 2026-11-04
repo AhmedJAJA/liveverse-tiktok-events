@@ -92,3 +92,4 @@ form.pg-row{align-items:flex-end}
 .pg-google{display:grid;place-items:center;min-height:44px;margin-bottom:6px}
 .pg-or{display:flex;align-items:center;gap:10px;margin:8px 0 14px;color:var(--muted);font-size:14px}
 .pg-or::before,.pg-or::after{content:"";flex:1;height:1px;background:rgba(140,232,255,.2)}
+.pg-google iframe{color-scheme:light}
