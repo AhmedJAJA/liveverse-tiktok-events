@@ -14,6 +14,22 @@ SKY LIVE is an Arabic interactive livestream events website with a public homepa
 - Automatic WebSocket updates, reconnect attempts and basic tests.
 - RTL / mobile-friendly dashboard with English technical labels.
 
+## v1.2 — accounts, permanent ID, free trial, subscriptions
+
+**Database.** Set `DATABASE_URL` (PostgreSQL 13+). On start the server applies `migrations/*.sql` (also `npm run migrate`). Tables: `users` (UUID key + `public_id` such as `SPG-8F42K9`, UNIQUE, protected by a trigger so it can never change), `email_tokens`, `sessions`, `promo_codes`, `trial_activations` (one row per user, ever), `subscriptions`, `payments`, `linked_accounts`, `admin_audit_logs`. Promo codes and login sessions are written through to the database, so a redeploy no longer loses them. Without `DATABASE_URL` the games and promo codes work as before and the account pages say accounts are off.
+
+**Accounts.** `/signup`, `/login`, `/account` («حسابي»), `/admin`, `/privacy`, `/terms`. Passwords: scrypt. Sessions: HttpOnly cookie, hashed key. Login and sign-up are rate-limited per network and per account; same-origin checks on every write. E-mail must be verified (link valid 48 h) before the trial, checkout or studio. Mail goes through Resend when `RESEND_API_KEY` and `MAIL_FROM` are set; otherwise the link is logged outside production and the admin can verify an address by hand.
+
+**Free trial (24 h).** «احصل على تجربتك المجانية» creates a single-use code bound to that account. It can be activated from the account page or typed in the home promo field while signed in. The 24 hours start at activation; `trial_activations.user_id` is the primary key, so a second trial is impossible. Abuse limits: verified e-mail, one account per canonical mailbox (Gmail dots and `+tags` removed), and a soft limit of 3 trials per network per day (a signal, never proof of identity). Expiry is checked by the server on every studio request.
+
+**Plans.** «شفيق العادي» 29 SAR / 7 days, «أمير الهامور» 44.99 SAR / one calendar month. Checkout creates a Moyasar hosted invoice (`MOYASAR_SECRET_KEY`); card data never reaches this server. A subscription is created only after the server re-reads the invoice from Moyasar and finds `paid` with the exact amount and currency, triggered by the webhook (`POST /api/billing/webhook`, checked against `MOYASAR_WEBHOOK_SECRET`) or when the buyer returns. Returning to the success page alone does nothing. A payment can activate only one subscription (unique index). Without keys, checkout answers «الدفع غير مفعّل بعد».
+
+**Admin.** `/admin` is open to the owner session (ADMIN_TOKEN) or a verified account with `is_admin = true` (set in SQL). It can search by permanent ID, view and grant/extend/stop subscriptions, verify e-mail, disable accounts, create and revoke promo codes, and read the audit log. Every change is written to `admin_audit_logs`.
+
+**Backups and restore.** `npm run db:backup` (`pg_dump -Fc`, keeps the newest 14). To restore: create an empty database, then run `pg_restore --clean --if-exists --no-owner -d $NEW_DATABASE_URL backups/sponge-….dump`, point `DATABASE_URL` at it and redeploy. Paid Render Postgres plans also have point-in-time recovery. A free Render Postgres is deleted after 30 days and has no backups, so use a paid plan for real accounts. Run one web instance: studio access is cached in memory and refreshed within 30 s.
+
+**Tests.** `tests/platform.test.mjs` runs against `TEST_DATABASE_URL` (default `postgres://sponge@localhost:55432/postgres`; it creates and drops its own database) and is skipped when no server is reachable.
+
 ## v1.1 — performance, promo-code entry, new studio
 
 **What was slow, and what changed (measured locally, Chrome, before → after):**
@@ -92,6 +108,7 @@ Free accounts and guests can play every game with demo players; **connecting a r
 **Join page `/play?mode=<game>`** (every game card links here): big call «اكتب انضم في شات البث لبدء اللعب», live roster with avatars and numbers (one seat per viewer), and host-only controls — «شارك كلاعب» / «إلغاء مشاركتي», «ابدأ اللعبة» enabled once the game minimum is reached, then end / next / draw while playing. Viewers who write the join word after kick-off wait and enter the next round automatically. Visitors without a session get a private trial room silently (no login wall); `?room=<id>` opens a read-only view. The old `/event?mode=` and `/bomb` pages remain as advanced settings.
 
 **Public stream list:** `/api/streams` lists every connected room (players, game, platform) for the home page.
+
 
 ## TIME BOMB | القنبلة المؤقتة
 

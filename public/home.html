@@ -22,8 +22,9 @@
  <i class="hm-b"></i>
 </div>
 
+<div class="hm-hero">
 <header class="hm-top">
- <h1 class="hm-logo"><img src="/brand/sponge-256.webp" srcset="/brand/sponge-128.webp 128w, /brand/sponge-256.webp 256w, /brand/sponge-512.webp 512w" sizes="(max-width:600px) 72px, 104px" alt="" width="104" height="104"><span dir="ltr"><b>SPONGE</b> LIVE</span></h1>
+ <h1 class="hm-logo"><img src="/brand/sponge-256.webp" srcset="/brand/sponge-128.webp 128w, /brand/sponge-256.webp 256w, /brand/sponge-512.webp 512w" sizes="(max-width:600px) 72px, 104px" alt="" width="104" height="104"><span class="hm-word" dir="ltr"><span class="hm-lb hm-lb-back" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i><i class="x"></i></span><span class="hm-name"><b>SPONGE</b> LIVE</span><span class="hm-lb hm-lb-front" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i></span></span></h1>
 </header>
 
 <main class="hm-main">
@@ -39,10 +40,17 @@
    <button type="submit" class="hm-enter" id="promoSubmit"><span id="promoLabel">دخول الاستوديو</span></button>
   </form>
   <p class="hm-session" id="sessionNote" hidden>أنت مسجّل الدخول. <a href="/studio">متابعة إلى الاستوديو</a></p>
+  <nav class="hm-links" aria-label="الحساب والاشتراك">
+   <a href="/signup" id="linkSignup">إنشاء حساب جديد</a>
+   <a href="/login" id="linkLogin">تسجيل الدخول</a>
+   <a href="/signup?trial=1" id="linkTrial" class="is-gold">تجربة مجانية لمدة 24 ساعة</a>
+   <a href="#plans">عرض باقات الاشتراك</a>
+  </nav>
  </section>
 </main>
 
-<footer class="hm-strip" aria-label="ألعاب SPONGE LIVE">
+<section class="hm-strip" id="games" aria-labelledby="gamesTitle">
+ <h2 class="hm-strip-title" id="gamesTitle">12 لعبة جاهزة لبثّك</h2>
  <ul class="hm-cards" id="gameStrip">
   <li><img src="/games/01-knowledge-challenge-120.webp" srcset="/games/01-knowledge-challenge-120.webp 120w, /games/01-knowledge-challenge-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="تحدي المعرفة" decoding="async"></li>
   <li><img src="/games/02-guess-drawing-120.webp" srcset="/games/02-guess-drawing-120.webp 120w, /games/02-guess-drawing-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="خمن الرسمة" decoding="async"></li>
@@ -57,6 +65,109 @@
   <li><img src="/games/11-guess-country-120.webp" srcset="/games/11-guess-country-120.webp 120w, /games/11-guess-country-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="خمن الدولة" loading="lazy" decoding="async"></li>
   <li><img src="/games/12-guess-flag-120.webp" srcset="/games/12-guess-flag-120.webp 120w, /games/12-guess-flag-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="لعبة خمن العلم" loading="lazy" decoding="async"></li>
  </ul>
+</section>
+</div>
+<div class="hm-more">
+
+<section class="hm-sec hm-connect" id="connect" aria-labelledby="connectTitle">
+ <h2 class="hm-h" id="connectTitle">حوّل بثك المباشر إلى عالم من الألعاب!</h2>
+ <p class="hm-lead">اربط بثك على TikTok أو Kick، ودع جمهورك يلعب بكتابة التعليقات.</p>
+ <div class="hm-tabs" role="tablist" aria-label="المنصة">
+  <button type="button" role="tab" id="tabTiktok" aria-controls="connectPanel" aria-selected="true" data-platform="tiktok"><span class="hm-pf hm-pf-tiktok" aria-hidden="true"><svg width="20" height="20"><use href="/icons.svg#i-note"></use></svg></span>TikTok LIVE</button>
+  <button type="button" role="tab" id="tabKick" aria-controls="connectPanel" aria-selected="false" data-platform="kick" tabindex="-1"><span class="hm-pf hm-pf-kick" aria-hidden="true"><svg width="20" height="20"><use href="/icons.svg#i-kick"></use></svg></span>Kick LIVE</button>
+ </div>
+ <form class="hm-panel" id="connectPanel" role="tabpanel" aria-labelledby="tabTiktok" data-platform="tiktok" novalidate>
+  <div class="hm-panel-head">
+   <span class="hm-pf hm-pf-lg" id="connectMark" aria-hidden="true"><svg width="30" height="30"><use id="connectIcon" href="/icons.svg#i-note"></use></svg></span>
+   <div><b id="connectName">TikTok LIVE</b><small id="connectHint">ابدأ بثك المباشر على TikTok أولًا، ثم اربطه هنا.</small></div>
+  </div>
+  <label class="hm-field hm-handle"><span class="sr-only" id="connectLabel">أدخل اسم حسابك على TikTok</span><span class="hm-at" aria-hidden="true">@</span>
+   <input id="connectHandle" name="handle" dir="ltr" maxlength="40" spellcheck="false" autocomplete="off" autocapitalize="none" placeholder="أدخل اسم حسابك على TikTok" aria-labelledby="connectLabel" aria-describedby="connectMsg">
+  </label>
+  <button type="submit" class="hm-enter hm-enter-sm" id="connectButton"><span>ربط البث المباشر</span></button>
+  <p class="hm-status" id="connectStatus" data-state="idle" role="status"><i aria-hidden="true"></i><span id="connectStateText">غير متصل</span></p>
+  <p class="hm-note" id="connectMsg">الربط متاح للحسابات التي لديها تجربة أو اشتراك فعّال. كتابة الاسم وحدها لا تثبت ملكية الحساب — الحالة تتحول إلى «متصل» فقط عند وصول شات البث فعلًا.</p>
+ </form>
+</section>
+
+<section class="hm-sec" id="why" aria-labelledby="whyTitle">
+ <h2 class="hm-h" id="whyTitle">لماذا <bdi dir="ltr">SPONGE LIVE</bdi>؟</h2>
+ <ul class="hm-grid hm-why">
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg><h3>12 لعبة تفاعلية</h3><p>من تحدي المعرفة وخمن الرسمة إلى الكراسي الموسيقية والقنبلة الموقوتة — كلها تُلعب من شات البث.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg><h3>انضمام بكلمة واحدة</h3><p>يكتب المشاهد «انضم» في الشات فيدخل اللعبة تلقائيًا، بلا رموز غرف ولا تطبيقات إضافية.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg><h3>TikTok LIVE و Kick</h3><p>اربط بثك على أي من المنصتين من نفس الاستوديو.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-screen"></use></svg><h3>شاشة جاهزة لـ OBS</h3><p>رابط شاشة عرض بمقاس 1920×1080 تضيفه كمصدر متصفح في برنامج البث.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-layout"></use></svg><h3>استوديو واحد للتحكم</h3><p>اختر اللعبة، افتح التسجيل، ابدأ الجولة وأدِر اللاعبين من لوحة واحدة.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><h3>معرّف دائم لحسابك</h3><p>كل حساب يحصل على معرّف ثابت مثل <bdi dir="ltr">SPG-8F42K9</bdi> تستخدمه للاشتراك والدعم.</p></li>
+ </ul>
+</section>
+
+<section class="hm-sec" id="start" aria-labelledby="stepsTitle">
+ <h2 class="hm-h" id="stepsTitle">كيف تبدأ؟</h2>
+ <ol class="hm-steps">
+  <li data-reveal><b>1</b><span>أنشئ حسابك مجاناً</span></li>
+  <li data-reveal><b>2</b><span>احصل على معرفك الدائم</span></li>
+  <li data-reveal><b>3</b><span>فعّل التجربة المجانية أو اشترك في باقة</span></li>
+  <li data-reveal><b>4</b><span>اربط حساب TikTok أو Kick</span></li>
+  <li data-reveal><b>5</b><span>افتح الاستوديو وابدأ اللعب</span></li>
+ </ol>
+</section>
+
+<section class="hm-sec" id="plans" aria-labelledby="plansTitle">
+ <h2 class="hm-h" id="plansTitle">باقات الاشتراك</h2>
+ <p class="hm-lead">كل الباقات تفتح الاستوديو كاملًا: جميع الألعاب، ربط TikTok أو Kick، وشاشة OBS.</p>
+ <div class="hm-plans">
+  <article class="hm-plan hm-plan-trial" data-reveal>
+   <h3>التجربة المجانية</h3>
+   <p class="hm-price"><b>0</b> ريال</p>
+   <p class="hm-dur">24 ساعة</p>
+   <ul><li>مرة واحدة لكل حساب مؤكَّد</li><li>تبدأ الـ24 ساعة من لحظة التفعيل</li><li>بلا بطاقة دفع</li></ul>
+   <a class="hm-plan-btn" id="planTrial" href="/signup?trial=1">احصل على تجربتك المجانية</a>
+  </article>
+  <article class="hm-plan hm-plan-shafiq" data-reveal>
+   <span class="hm-plan-mark" aria-hidden="true">🎷</span>
+   <h3>شفيق العادي</h3>
+   <p class="hm-price"><b>29</b> ريال</p>
+   <p class="hm-dur">7 أيام <small>≈ 4.14 ريال لليوم</small></p>
+   <ul><li>الاستوديو وجميع الألعاب</li><li>ربط بث TikTok أو Kick</li><li>شاشة OBS</li></ul>
+   <a class="hm-plan-btn" href="/account?plan=weekly#plans" data-plan="weekly">اشترك الآن</a>
+  </article>
+  <article class="hm-plan hm-plan-amir" data-reveal>
+   <span class="hm-plan-tag">الأوفر لكل يوم</span>
+   <span class="hm-plan-mark" aria-hidden="true">👑</span>
+   <h3>أمير الهامور</h3>
+   <p class="hm-price"><b>44.99</b> ريال</p>
+   <p class="hm-dur">شهر واحد <small>≈ 1.50 ريال لليوم</small></p>
+   <ul><li>الاستوديو وجميع الألعاب</li><li>ربط بث TikTok أو Kick</li><li>شاشة OBS</li></ul>
+   <a class="hm-plan-btn" href="/account?plan=monthly#plans" data-plan="monthly">اشترك الآن</a>
+  </article>
+ </div>
+ <p class="hm-note hm-center" id="billingNote" hidden>الدفع الإلكتروني قيد التفعيل حاليًا — يمكنك البدء بالتجربة المجانية الآن.</p>
+</section>
+
+<section class="hm-sec" id="faq" aria-labelledby="faqTitle">
+ <h2 class="hm-h" id="faqTitle">الأسئلة الشائعة</h2>
+ <div class="hm-faq">
+  <details><summary>كيف أحصل على التجربة المجانية؟</summary><p>أنشئ حسابًا وأكّد بريدك الإلكتروني، ثم من صفحة «حسابي» اضغط «احصل على تجربتك المجانية». يظهر لك رمز خاص بحسابك: فعّله مباشرة من الصفحة أو أدخله في نافذة الرمز الترويجي. تبدأ الـ24 ساعة من لحظة التفعيل، والتجربة مرة واحدة لكل حساب.</p></details>
+  <details><summary>هل أحتاج إلى حساب؟</summary><p>نعم للتجربة المجانية والاشتراكات، فالاشتراك يُربط بمعرّف حسابك الدائم. إذا أعطاك فريق SPONGE LIVE رمزًا ترويجيًا فيكفي إدخاله في النافذة أعلى الصفحة.</p></details>
+  <details><summary>كيف أربط بث TikTok؟</summary><p>ابدأ بثك المباشر على TikTok، ثم اكتب اسم حسابك في قسم الربط أعلاه أو في شريط الاستوديو واضغط «ربط البث المباشر». تتحول الحالة إلى «متصل» عندما تصل تعليقات البث فعلًا؛ إذا لم يكن البث شغالًا ستظهر رسالة توضح ذلك.</p></details>
+  <details><summary>هل يدعم الموقع Kick؟</summary><p>نعم. اختر Kick واكتب اسم قناتك. دعم Kick ما زال تجريبيًا، وقد تحتاج أحيانًا رقم غرفة الشات من إعدادات الاستوديو.</p></details>
+  <details><summary>كيف أعرف متى ينتهي اشتراكي؟</summary><p>صفحة «حسابي» تعرض نوع اشتراكك، تاريخ انتهائه والوقت المتبقي، وسجل اشتراكاتك السابقة.</p></details>
+  <details><summary>هل يتغير معرف حسابي؟</summary><p>لا. المعرّف (مثل <bdi dir="ltr">SPG-8F42K9</bdi>) يُنشأ مرة واحدة على الخادم ولا يتغير أبدًا، حتى لو غيّرت اسمك أو صورتك. استخدمه عند التواصل مع الدعم.</p></details>
+  <details><summary>كيف أستخدم الموقع في OBS؟</summary><p>من الاستوديو انسخ رابط «شاشة البث»، ثم أضف في OBS مصدرًا من نوع Browser (متصفح) والصق الرابط بمقاس 1920×1080. الشاشة تتحدث وحدها مع كل جولة.</p></details>
+ </div>
+</section>
+
+<footer class="hm-foot">
+ <div class="hm-foot-brand"><img src="/brand/sponge-128.webp" alt="" width="40" height="40" loading="lazy" decoding="async"><b dir="ltr">SPONGE LIVE</b></div>
+ <nav class="hm-foot-nav" aria-label="روابط الموقع">
+  <a href="#connect">ربط البث</a><a href="#why">المزايا</a><a href="#games">الألعاب</a><a href="#start">كيف تبدأ</a><a href="#faq">الأسئلة الشائعة</a>
+  <a href="/login">تسجيل الدخول</a><a href="#plans">الاشتراكات</a>
+  <a href="#" id="supportLink" hidden rel="noopener" target="_blank">الدعم</a>
+  <a href="/privacy">سياسة الخصوصية</a><a href="/terms">شروط الاستخدام</a>
+ </nav>
+ <p class="hm-copy">© <span id="year">2026</span> <bdi dir="ltr">SPONGE LIVE</bdi>. جميع الحقوق محفوظة.</p>
 </footer>
+</div>
 </body>
 </html>

@@ -1,0 +1,56 @@
+/* SPONGE LIVE — sign up / sign in. The server creates the account, its permanent ID and the session. */
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const isLogin = location.pathname === '/login';
+  const safeNext = (n) => (n && /^\/(account|studio|admin)(?:[/?#]|$)/.test(n) ? n : null);
+  const next = safeNext(params.get('next'));
+  const wantsTrial = params.get('trial') === '1';
+
+  $(isLogin ? 'tabLogin' : 'tabSignup').setAttribute('aria-current', 'page');
+  for (const a of [$('tabLogin'), $('tabSignup')]) a.href += location.search;
+  $('authTitle').textContent = isLogin ? 'تسجيل الدخول' : 'إنشاء حساب جديد';
+  document.title = $('authTitle').textContent + ' — SPONGE LIVE';
+  if (isLogin) { $('authSub').textContent = 'ادخل باسم المستخدم أو البريد الإلكتروني.'; $('signupForm').hidden = true; $('loginForm').hidden = false; }
+  if (wantsTrial) notice(isLogin ? 'سجّل الدخول ثم احصل على تجربتك المجانية من صفحة «حسابي».' : 'أنشئ حسابك وأكّد بريدك، ثم فعّل تجربتك المجانية لمدة 24 ساعة.');
+
+  function notice(text) { $('authNotice').textContent = text; $('authNotice').hidden = !text; }
+  fetch('/api/auth/config', { cache: 'no-store' }).then((r) => r.json()).then((c) => {
+    if (!c.enabled) { notice('الحسابات غير مفعّلة على هذا الخادم بعد. يمكنك الدخول بالرمز الترويجي من الصفحة الرئيسية.'); for (const b of document.querySelectorAll('.pg-form button')) b.disabled = true; }
+  }).catch(() => {});
+
+  function showFields(form, fields = {}) {
+    for (const em of form.querySelectorAll('.pg-ferr')) {
+      const msg = fields[em.dataset.for]; em.textContent = msg || ''; em.hidden = !msg;
+      form.elements[em.dataset.for]?.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    }
+    const first = Object.keys(fields)[0]; if (first) form.elements[first]?.focus();
+  }
+  function bind(form, errorEl, url, payload, after) {
+    let busy = false;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (busy) return;
+      const body = payload(form);
+      const missing = Object.fromEntries(Object.entries(body).filter(([, v]) => !v).map(([k]) => [k, 'مطلوب']));
+      if (Object.keys(missing).length) { showFields(form, missing); return; }
+      busy = true; const btn = form.querySelector('button[type="submit"]'); btn.disabled = true; errorEl.hidden = true; showFields(form, {});
+      try {
+        const res = await fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) { after(data); return; }
+        errorEl.textContent = data.error || 'تعذر إتمام الطلب'; errorEl.hidden = false;
+        if (data.fields) showFields(form, data.fields);
+      } catch { errorEl.textContent = 'تعذر الاتصال بالخادم. تحقق من الإنترنت.'; errorEl.hidden = false; }
+      finally { busy = false; btn.disabled = false; }
+    });
+  }
+  const val = (f, n) => f.elements[n].value;
+  bind($('signupForm'), $('signupError'), '/api/auth/register',
+    (f) => ({ username: val(f, 'username').trim().toLowerCase(), email: val(f, 'email').trim(), password: val(f, 'password'), confirm: val(f, 'confirm') }),
+    (d) => location.replace(d.next || '/account?welcome=1'));
+  bind($('loginForm'), $('loginError'), '/api/auth/login',
+    (f) => ({ identifier: val(f, 'identifier').trim(), password: val(f, 'password') }),
+    (d) => location.replace(next || (wantsTrial ? '/account#trial' : d.next || '/account')));
+})();

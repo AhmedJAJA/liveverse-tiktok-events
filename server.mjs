@@ -13,6 +13,10 @@ import { siteConfig, ALL_GAMES, UPDATES } from './src/catalog.mjs';
 import { AccountStore, Sessions, RateLimiter, FieldError, parseCookies, roomId, PLANS } from './src/accounts.mjs';
 import { DrawHub } from './src/draw.mjs';
 import { PromoStore, PROMO_LEVELS } from './src/promo.mjs';
+import { createPool, migrate } from './src/db.mjs';
+import { PromoMirror, SessionMirror } from './src/persist.mjs';
+import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS } from './src/platform.mjs';
+import { createMailer, createGateway } from './src/services.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, 'public');
@@ -86,6 +90,7 @@ function ensureRoom(id, kind, ownerId) {
 function publicRoom(id) {
   const key = String(id || 'main');
   if (rooms.has(key)) return rooms.get(key);
+  if (/^a[a-z0-9]{9}$/.test(key) && platform) { const u = platform.userForRoom(key); return u ? ensureRoom(key, 'acct', u.id) : null; }
   const owner = /^u[a-z0-9]{9}$/.test(key) ? accounts.byRoom(key) : null;
   if (owner) return ensureRoom(key, 'user', owner.id);
   // a promo-code room survives restarts as long as its session does (so OBS links keep working)
@@ -99,6 +104,18 @@ const sessions = new Sessions({ file: path.join(DATA_DIR, 'sessions.json') });
 const promos = new PromoStore({ file: path.join(DATA_DIR, 'promo-codes.json') });
 // Optional bootstrap codes from the environment (comma separated); stored hashed, never in public files.
 for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
+/* PostgreSQL (DATABASE_URL): accounts with permanent IDs, trials, subscriptions, payments, admin audit — and
+   the promo codes and sessions above are written through to it, so nothing depends on the host's disk. */
+const pool = createPool();
+let platform = null;
+if (pool) {
+  await migrate(pool);
+  await PromoMirror.attach(pool, promos);
+  await SessionMirror.attach(pool, sessions);
+  platform = new Platform({ pool, hashCode: (c) => promos.hash(c), mail: createMailer(), gateway: createGateway(), appUrl: process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000) });
+  await platform.init();
+  for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
+} else console.warn('[db] DATABASE_URL is not set: games and promo codes work; accounts, trials and subscriptions are off.');
 const OPEN_SIGNUP = process.env.SKY_OPEN_SIGNUP === '1';
 const redeemIp = new RateLimiter({ limit: 8, windowMs: 10 * 60_000 });
 const redeemAll = new RateLimiter({ limit: 300, windowMs: 10 * 60_000 });
@@ -124,6 +141,12 @@ function actorFor(req) {
     if (!user) return null;
     return { kind: 'user', user, room: ensureRoom(user.room, 'user', user.id), live: accounts.planActive(user) };
   }
+  if (s.kind === 'acct') {
+    // Account sessions open the studio only while a trial or subscription is running (checked here, every request).
+    const e = platform?.cached(s.userId);
+    if (!e || e.user.disabled_at || !e.user.email_verified_at || !platform.entitlement(s.userId).active) return null;
+    return { kind: 'acct', userId: s.userId, user: { displayName: e.user.display_name }, room: ensureRoom(e.user.room, 'acct', s.userId), live: true };
+  }
   if (s.kind === 'guest') return { kind: 'guest', room: ensureRoom(s.room, 'guest'), live: false };
   if (s.kind === 'owner') return { kind: 'owner', room: mainRoom, live: true };
   if (s.kind === 'promo') {
@@ -138,10 +161,19 @@ function meFor(req) {
   if (s?.kind === 'owner') return { user: null, guest: false, owner: true, access: 'owner', room: 'main', live: true };
   if (s?.kind === 'promo' && promos.stillValid(s.codeId)) return { user: null, guest: false, access: 'promo', level: s.level, room: s.room, live: s.level === 'live' };
   if (s?.kind === 'user') { const u = accounts.byId(s.userId); if (u) return { user: accounts.publicUser(u), guest: false, room: u.room, live: accounts.planActive(u) }; }
+  if (s?.kind === 'acct') { const a = accountView(s.userId); if (a) return { user: null, guest: false, access: 'account', account: a, room: a.room, live: a.entitled }; }
   if (s?.kind === 'guest') return { user: null, guest: true, room: s.room, live: false };
   return { user: null, guest: false, room: null, live: false };
 }
 
+/** What every page may know about the signed-in account (no secrets). */
+function accountView(userId) {
+  const e = platform?.cached(userId); if (!e) return null;
+  const ent = platform.entitlement(userId);
+  return { ...platform.publicUser(e.user), entitled: ent.active && !!e.user.email_verified_at && !e.user.disabled_at, plan: ent.plan, planName: ent.plan ? PLATFORM_PLANS[ent.plan].name : null, endsAt: ent.endsAt ? new Date(ent.endsAt).toISOString() : null };
+}
+function accountSession(req) { const s = sessionOf(req); return s?.kind === 'acct' && platform?.cached(s.userId) ? s : null; }
+function sameOrigin(req) { const origin = req.headers.origin; if (!origin) return true; try { return new URL(origin).host === req.headers.host; } catch { return false; } }
 function json(res, status, value) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(value)); }
 async function readBody(req, limit = 16384) {
   let size = 0, bytes = [];
@@ -216,8 +248,8 @@ async function handleAction(action, body, actor) {
     case 'draw': return { ok: true, result: engine.drawWheel() };
     case 'connect': {
       if (!actor.live) throw Object.assign(new Error(actor.kind === 'guest' ? 'ربط البث يحتاج حسابًا مشتركًا — جرّب الألعاب الآن بلاعبين تجريبيين' : 'ربط البث يحتاج اشتراكًا فعّالًا — جرّب الألعاب الآن بلاعبين تجريبيين'), { status: 403 });
-      const platform = body.platform === 'kick' ? 'kick' : 'tiktok';
-      if (platform === 'kick') {
+      const service = body.platform === 'kick' ? 'kick' : 'tiktok';
+      if (service === 'kick') {
         if (!validKickSlug(body.username)) throw new Error('اسم قناة Kick غير صالح');
         await room.tiktok.disconnect(false);
         await room.kick.connect(body.username, { chatroomId: body.chatroomId });
@@ -225,7 +257,9 @@ async function handleAction(action, body, actor) {
         await room.kick.disconnect(false);
         await room.tiktok.connect(body.username);
       }
-      return { ok: true };
+      // A typed name is not proof of ownership; only a connection that actually reached the live chat is recorded as such.
+      if (actor.kind === 'acct') await platform.linkAccount(actor.userId, service, String(body.username).replace(/^@/, ''), engine.connection.state === 'connected').catch(() => {});
+      return { ok: true, state: engine.connection.state };
     }
     case 'disconnect': await room.tiktok.disconnect(false); await room.kick.disconnect(false); engine.setConnection('disconnected', '', 'تم الفصل'); return { ok: true };
     case 'simulate': {
@@ -237,14 +271,15 @@ async function handleAction(action, body, actor) {
     // Owner-only account administration (subscriptions are activated manually after payment).
     case 'accounts': requireOwner(actor); return { ok: true, accounts: accounts.list() };
     case 'promo-list': requireOwner(actor); return { ok: true, codes: promos.list(), levels: PROMO_LEVELS };
-    case 'promo-create': requireOwner(actor); return { ok: true, code: promos.create(body) };
+    case 'promo-create': { requireOwner(actor); const code = promos.create(body); platform?.audit('owner', 'promo-create', { details: { id: code.id, label: code.label, level: code.level, maxUses: code.maxUses } }).catch(() => {}); return { ok: true, code }; }
     case 'promo-update': {
       requireOwner(actor);
       const code = promos.update(body.id, body);
       if (code.status !== 'active') sessions.destroyWhere((x) => x.codeId === body.id);
+      platform?.audit('owner', 'promo-update', { details: { id: body.id, active: code.active, status: code.status } }).catch(() => {});
       return { ok: true, code };
     }
-    case 'promo-delete': requireOwner(actor); promos.remove(body.id); sessions.destroyWhere((x) => x.codeId === body.id); return { ok: true };
+    case 'promo-delete': requireOwner(actor); promos.remove(body.id); sessions.destroyWhere((x) => x.codeId === body.id); platform?.audit('owner', 'promo-delete', { details: { id: body.id } }).catch(() => {}); return { ok: true };
     case 'account-plan': requireOwner(actor); return { ok: true, account: accounts.setPlan(body.username, body.plan, body.days) };
     case 'account-password': requireOwner(actor); { await accounts.setPassword(body.username, body.password); const u = accounts.find(body.username); if (u) sessions.destroyUser(u.id); return { ok: true }; }
     default: throw new Error('الإجراء غير معروف');
@@ -277,6 +312,16 @@ async function handleAccess(action, req, res) {
     return json(res, 200, { ok: true, access: 'owner', next: '/studio' });
   }
   const promo = promos.redeem(code);
+  if (!promo && platform) {
+    // A free-trial code: it works only for the account it was made for, while that account is signed in.
+    const trial = await platform.findTrialCode(code);
+    const acct = accountSession(req);
+    if (trial && acct && trial.user_id === acct.userId) {
+      try { await platform.activateTrial(acct.userId, { code, ip }); return json(res, 200, { ok: true, access: 'account', trial: true, next: '/studio' }); }
+      catch (err) { if (err instanceof PlatformError) return json(res, err.status, { error: err.message }); throw err; }
+    }
+    if (trial && !acct) return json(res, 401, { error: 'هذا رمز تجربة مجانية: سجّل الدخول بالحساب الذي حصل عليه ثم أدخله مجددًا', login: true });
+  }
   if (!promo) { await new Promise((r) => setTimeout(r, 350)); return json(res, 401, { error: 'الرمز غير صحيح أو انتهت صلاحيته' }); }
   if (old) sessions.destroy(old.id);
   setSession(res, req, sessions.create('promo', { room: roomId('p'), codeId: promo.id, level: promo.level }), 30 * 86400);
@@ -329,6 +374,134 @@ async function handleAccount(action, req, res) {
     return json(res, 200, { ok: true, message: 'استعادة كلمة المرور تتم عبر فريق SPONGE LIVE: تواصل معنا باسم المستخدم أو البريد المسجل وسنعيد تعيينها لك.', support });
   }
   return json(res, 404, { error: 'Not found' });
+}
+
+/* ------------------------------------------------------- platform accounts
+   /api/auth/*   sign up, sign in, sign out, resend verification
+   /api/me/*     profile, trial, checkout (signed-in account only — the account comes from the session cookie,
+                 never from the request body, so nobody can act on another account or grant themselves access)
+   /api/manage/* admin panel (owner session or a verified admin account), every change written to the audit log */
+const signupLimiter = new RateLimiter({ limit: 5, windowMs: 60 * 60_000 });
+const loginIpLimiter = new RateLimiter({ limit: 20, windowMs: 15 * 60_000 });
+const loginAcctLimiter = new RateLimiter({ limit: 8, windowMs: 15 * 60_000 });
+const mailLimiter = new RateLimiter({ limit: 3, windowMs: 30 * 60_000 });
+const meLimiter = new RateLimiter({ limit: 60, windowMs: 10 * 60_000 });
+const clearCookie = (req, res) => res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isHttps(req) ? '; Secure' : ''}`);
+const platformOff = (res) => json(res, 503, { error: 'الحسابات غير مفعّلة على هذا الخادم بعد (قاعدة البيانات غير مهيأة). يمكنك الدخول بالرمز الترويجي.', disabled: true });
+const pErr = (res, err) => { if (err instanceof PlatformError) return json(res, err.status, { error: err.message, ...(err.fields ? { fields: err.fields } : {}) }); throw err; };
+
+async function handleAuth(action, req, res) {
+  if (action === 'config' && req.method === 'GET') return json(res, 200, { enabled: !!platform, mail: !!platform?.mail.configured, billing: !!platform?.gateway.configured, plans: Object.values(PLATFORM_PLANS).filter((p) => p.id !== 'manual').map((p) => ({ id: p.id, name: p.name, price: p.priceHalalas / 100, duration: p.duration })) });
+  if (!platform) return platformOff(res);
+  if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+  if (!sameOrigin(req)) return json(res, 403, { error: 'طلب من مصدر غير مسموح' });
+  const ip = clientIp(req);
+  const body = await readBody(req, 4096).catch(() => null);
+  if (!body) return json(res, 400, { error: 'طلب غير صالح' });
+  try {
+    if (action === 'register') {
+      if (!signupLimiter.hit('ip:' + ip)) return json(res, 429, { error: 'محاولات تسجيل كثيرة من هذه الشبكة. حاول بعد ساعة.' });
+      const u = await platform.register(body, { ip });
+      const old = sessionOf(req); if (old) sessions.destroy(old.id);
+      setSession(res, req, sessions.create('acct', { userId: u.id }), 30 * 86400);
+      return json(res, 201, { ok: true, account: accountView(u.id), next: '/account?welcome=1' });
+    }
+    if (action === 'login') {
+      const id = String(body.identifier ?? body.username ?? '').trim().toLowerCase().slice(0, 254);
+      if (!id || !body.password) return json(res, 400, { error: 'أدخل اسم المستخدم أو البريد وكلمة المرور', fields: { ...(id ? {} : { identifier: 'مطلوب' }), ...(body.password ? {} : { password: 'مطلوبة' }) } });
+      if (!loginIpLimiter.hit('ip:' + ip) || !loginAcctLimiter.hit('acct:' + id)) return json(res, 429, { error: 'محاولات كثيرة. انتظر 15 دقيقة ثم حاول.' });
+      const u = await platform.login(id, String(body.password));
+      if (!u) { await new Promise((r) => setTimeout(r, 300)); return json(res, 401, { error: 'بيانات الدخول غير صحيحة', fields: { password: 'تحقق من البيانات' } }); }
+      const old = sessionOf(req); if (old) sessions.destroy(old.id);
+      setSession(res, req, sessions.create('acct', { userId: u.id }), 30 * 86400);
+      const a = accountView(u.id);
+      return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
+    }
+    if (action === 'logout') { const s = sessionOf(req); if (s) sessions.destroy(s.id); clearCookie(req, res); return json(res, 200, { ok: true }); }
+    if (action === 'resend') {
+      const s = accountSession(req); if (!s) return json(res, 401, { error: 'سجّل الدخول أولًا' });
+      if (!mailLimiter.hit('mail:' + s.userId)) return json(res, 429, { error: 'أُرسلت رسائل كثيرة. انتظر 30 دقيقة.' });
+      const r = await platform.sendVerification(s.userId);
+      return json(res, 200, { ok: true, sent: r.sent, already: !!r.already, ...(r.devLink && process.env.NODE_ENV !== 'production' ? { devLink: r.devLink } : {}) });
+    }
+  } catch (err) { return pErr(res, err); }
+  return json(res, 404, { error: 'Not found' });
+}
+
+async function handleMe(action, req, res) {
+  if (!platform) return platformOff(res);
+  const s = accountSession(req);
+  if (!s) return json(res, 401, { error: 'سجّل الدخول أولًا', login: true });
+  const userId = s.userId, ip = clientIp(req);
+  try {
+    if (action === 'profile' && req.method === 'GET') return json(res, 200, await platform.profile(userId));
+    if (action === 'payment' && req.method === 'GET') return json(res, 200, await platform.paymentStatus(userId, new URL(req.url, 'http://x').searchParams.get('id')));
+    if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+    if (!sameOrigin(req)) return json(res, 403, { error: 'طلب من مصدر غير مسموح' });
+    if (!meLimiter.hit(userId)) return json(res, 429, { error: 'طلبات كثيرة، انتظر قليلًا' });
+    const body = await readBody(req, 2048).catch(() => ({}));
+    // Only these fields can come from the browser; plan, dates, IDs and admin rights are never read from the body.
+    if (action === 'update') { await platform.updateProfile(userId, { displayName: body.displayName, avatar: body.avatar }); return json(res, 200, { ok: true, account: accountView(userId) }); }
+    if (action === 'trial-claim') return json(res, 200, { ok: true, trial: await platform.claimTrial(userId) });
+    if (action === 'trial-activate') { const r = await platform.activateTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, account: accountView(userId) }); }
+    if (action === 'checkout') return json(res, 200, { ok: true, ...(await platform.checkout(userId, String(body.plan || ''))) });
+  } catch (err) { return pErr(res, err); }
+  return json(res, 404, { error: 'Not found' });
+}
+
+/** Payment notification from the gateway. It is only a hint: the invoice is re-read from the gateway before anything is activated. */
+async function handleWebhook(req, res) {
+  if (!platform?.gateway.configured) return json(res, 404, { error: 'Not found' });
+  const body = await readBody(req, 65536).catch(() => null);
+  if (!body || !platform.gateway.checkWebhook(body.secret_token)) return json(res, 401, { error: 'unauthorized' });
+  const data = body.data || {};
+  const ref = String(data.invoice_id || (data.url && data.amount !== undefined && data.id) || '');
+  const paymentId = /^[0-9a-f-]{36}$/i.test(String(data.metadata?.payment_id || '')) ? data.metadata.payment_id : null;
+  try {
+    const r = paymentId ? await platform.confirmPayment({ paymentId }) : ref ? await platform.confirmPayment({ providerRef: ref }) : { status: 'ignored' };
+    return json(res, 200, { ok: true, status: r.status });
+  } catch (err) { console.error('[billing] webhook', err.message); return json(res, 500, { error: 'retry' }); }
+}
+
+function adminActor(req) {
+  const s = sessionOf(req);
+  const bearer = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if ((bearer && matchesToken(bearer)) || s?.kind === 'owner') return { name: 'owner' };
+  if (s?.kind === 'acct' && platform?.isAdmin(s.userId)) return { name: platform.cached(s.userId).user.public_id, userId: s.userId };
+  return null;
+}
+async function handleManage(action, req, res) {
+  if (!platform) return platformOff(res);
+  const admin = adminActor(req);
+  if (!admin) return json(res, 403, { error: 'لوحة الإدارة لمالك الموقع فقط' });
+  if (!sameOrigin(req)) return json(res, 403, { error: 'طلب من مصدر غير مسموح' });
+  const url = new URL(req.url, 'http://x'), ip = clientIp(req);
+  try {
+    if (req.method === 'GET') {
+      if (action === 'users') return json(res, 200, { users: await platform.searchUsers(url.searchParams.get('q') || ''), stats: await platform.stats() });
+      if (action === 'user') { const id = await platform.userByPublicId(url.searchParams.get('id') || ''); if (!id) return json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' }); return json(res, 200, await platform.adminUser(id)); }
+      if (action === 'audit') return json(res, 200, { log: await platform.auditLog(Number(url.searchParams.get('limit')) || 100) });
+      if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS });
+      return json(res, 404, { error: 'Not found' });
+    }
+    if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
+    const body = await readBody(req, 4096);
+    if (action === 'code-create') { const code = promos.create(body); await platform.audit(admin.name, 'promo-create', { details: { id: code.id, label: code.label, level: code.level, maxUses: code.maxUses }, ip }); return json(res, 200, { ok: true, code }); }
+    if (action === 'code-revoke') { const code = promos.update(String(body.id), { active: false }); sessions.destroyWhere((x) => x.codeId === body.id); await platform.audit(admin.name, 'promo-revoke', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, code }); }
+    const userId = await platform.userByPublicId(body.publicId || '');
+    if (!userId) return json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
+    const log = (what, details = {}) => platform.audit(admin.name, what, { target: userId, details, ip });
+    if (action === 'grant') { const r = await platform.grant(userId, body); await log('subscription-grant', { days: Number(body.days), plan: body.plan || 'manual', note: String(body.note || '').slice(0, 200) }); return json(res, 200, { ok: true, access: r }); }
+    if (action === 'extend') { const r = await platform.extend(userId, body); await log('subscription-extend', { days: Number(body.days) }); return json(res, 200, { ok: true, access: r }); }
+    if (action === 'stop') { const r = await platform.stop(userId); await log('subscription-stop', r); return json(res, 200, { ok: true, ...r }); }
+    if (action === 'verify') { await platform.setVerified(userId); await log('email-verify-manual'); return json(res, 200, { ok: true }); }
+    if (action === 'disable') { await platform.setDisabled(userId, body.disabled !== false); if (body.disabled !== false) sessions.destroyWhere((x) => x.userId === userId); await log(body.disabled !== false ? 'account-disable' : 'account-enable'); return json(res, 200, { ok: true }); }
+    if (action === 'trial-code-revoke') { const r = await platform.revokeTrialCode(userId); await log('trial-code-revoke', r); return json(res, 200, { ok: true, ...r }); }
+    return json(res, 404, { error: 'Not found' });
+  } catch (err) {
+    if (err instanceof PlatformError) return pErr(res, err);
+    return json(res, err.status || 400, { error: String(err.message || err).slice(0, 200) });
+  }
 }
 
 async function handleDraw(action, req, res) {
@@ -387,7 +560,7 @@ function streams() {
   return { streams: list, totalStreams: list.length, totalPlayers: list.reduce((n, s) => n + s.players, 0) };
 }
 
-const STATIC = new Set(['index.html','home.html','home.js','home.css','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
+const STATIC = new Set(['index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -397,7 +570,7 @@ const server = http.createServer(async (req, res) => {
   secureHeaders(res);
   let url; try { url = new URL(req.url, 'http://localhost'); } catch { return json(res, 400, { error: 'Bad URL' }); }
   try {
-    if (url.pathname === '/health') return json(res, 200, { ok: true, mode: mainRoom.engine.status.mode, rooms: rooms.size });
+    if (url.pathname === '/health') return json(res, 200, { ok: true, mode: mainRoom.engine.status.mode, rooms: rooms.size, accounts: !!platform });
     if (url.pathname === '/api/state' && req.method === 'GET') {
       const room = publicRoom(url.searchParams.get('room'));
       return room ? json(res, 200, room.view()) : json(res, 404, { error: 'الغرفة غير موجودة' });
@@ -408,6 +581,14 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/role/')) return await handleRole(url.pathname.slice('/api/role/'.length), url, req, res);
     if (url.pathname.startsWith('/api/access/')) return await handleAccess(url.pathname.slice('/api/access/'.length), req, res);
     if (url.pathname.startsWith('/api/account/')) return await handleAccount(url.pathname.slice('/api/account/'.length), req, res);
+    if (url.pathname.startsWith('/api/auth/')) return await handleAuth(url.pathname.slice('/api/auth/'.length), req, res);
+    if (url.pathname.startsWith('/api/me/')) return await handleMe(url.pathname.slice('/api/me/'.length), req, res);
+    if (url.pathname.startsWith('/api/manage/')) return await handleManage(url.pathname.slice('/api/manage/'.length), req, res);
+    if (url.pathname === '/api/billing/webhook' && req.method === 'POST') return await handleWebhook(req, res);
+    if (url.pathname === '/verify' && req.method === 'GET') {
+      const user = platform ? await platform.verifyEmail(url.searchParams.get('token') || '') : null;
+      res.writeHead(302, { Location: user ? '/account?verified=1' : '/account?verified=0', 'Cache-Control': 'no-store' }); return res.end();
+    }
     if (url.pathname.startsWith('/api/draw/')) return await handleDraw(url.pathname.slice('/api/draw/'.length), req, res);
     if (url.pathname === '/api/admin/bank' && req.method === 'GET') { const actor = actorFor(req); return actor ? json(res, 200, actor.room.questionBank.stats()) : json(res, 401, { error: 'رمز الإدارة غير صحيح' }); }
     if (url.pathname === '/api/admin/verify' && req.method === 'POST') {
@@ -415,6 +596,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, actor ? 200 : 401, { ok: !!actor, ...(actor ? { kind: actor.kind, room: actor.room.id, live: actor.live } : {}) });
     }
     if (url.pathname.startsWith('/api/admin/') && req.method === 'POST') {
+      if (!isAuthorized(req) && accountSession(req)) return json(res, 402, { error: 'اشتراكك أو تجربتك غير فعّالة الآن — فعّل التجربة أو اشترك من صفحة «حسابي»', account: true });
       if (!isAuthorized(req)) return json(res, 401, { error: 'رمز الإدارة غير صحيح' });
       const actor = actorFor(req);
       actor.room.touched = Date.now();
@@ -433,10 +615,14 @@ const server = http.createServer(async (req, res) => {
   const STUDIO_PAGES = new Set(['/studio', '/dashboard', '/event', '/bomb', '/play']);
   if (STUDIO_PAGES.has(url.pathname)) {
     const viewer = url.pathname === '/play' && url.searchParams.has('room');
+    const acct = !viewer && !actorFor(req) ? accountSession(req) : null;
+    if (acct) { res.writeHead(302, { Location: '/account?need=plan', 'Cache-Control': 'no-store' }); return res.end(); }
     if (!viewer && !actorFor(req)) { res.writeHead(302, { Location: '/?next=' + encodeURIComponent(url.pathname + url.search), 'Cache-Control': 'no-store' }); return res.end(); }
     if (url.pathname === '/play' && !viewer) { res.writeHead(302, { Location: '/studio' + (url.search || ''), 'Cache-Control': 'no-store' }); return res.end(); }
   }
-  const fileMap = { '/': 'home.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/sponge-512.webp' };
+  if (url.pathname === '/admin' && !adminActor(req)) { res.writeHead(302, { Location: '/login?next=/admin', 'Cache-Control': 'no-store' }); return res.end(); }
+  if (url.pathname === '/account' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/account' + encodeURIComponent(url.search), 'Cache-Control': 'no-store' }); return res.end(); }
+  const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/sponge-512.webp' };
   const relative = fileMap[url.pathname] || url.pathname.slice(1);
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });
@@ -512,5 +698,10 @@ const heartbeat = setInterval(() => {
 }, 30000);
 heartbeat.unref?.();
 server.listen(PORT, '0.0.0.0', () => console.log(`TikTok LIVE Events ready on http://localhost:${PORT}`));
-const shutdown = async () => { clearInterval(roundClock); clearInterval(heartbeat); for (const room of rooms.values()) await room.disconnectAll().catch(() => {}); wss.close(); server.close(); };
+const shutdown = async () => {
+  clearInterval(roundClock); clearInterval(heartbeat);
+  for (const room of rooms.values()) await room.disconnectAll().catch(() => {});
+  wss.close(); server.close(); server.closeIdleConnections?.();
+  if (pool) { await promos.mirror?.drain(); await sessions.mirror?.drain(); await pool.end().catch(() => {}); }
+};
 process.on('SIGTERM', shutdown); process.on('SIGINT', shutdown);
