@@ -706,6 +706,16 @@ async function handleOAuth(p, step, req, res, url) {
    nonce + PKCE; the account is found by Google's subject ID only. */
 const GOOGLE_MODES = new Set(['login', 'link', 'reauth']);
 const googleLimiter = new RateLimiter({ limit: 30, windowMs: 10 * 60_000 });
+/** Same e-mail, exactly, and verified by Google → the existing account (Google linked to it). If that account's e-mail
+ *  had never been confirmed, its other sessions end: whoever created it with this address no longer stays signed in. */
+async function autoLinkGoogle(g, req) {
+  const hit = await platform.linkByExactEmail(g);
+  if (!hit) return null;
+  if (!hit.wasVerified) sessions.destroyUser(hit.user.id);
+  economy?.settleReferral(hit.user.id).catch(() => {});
+  await platform.audit('user:' + hit.user.id, 'google-auto-link', { target: hit.user.id, emailWasVerified: hit.wasVerified, ip: clientIp(req) }).catch(() => {});
+  return hit.user;
+}
 const pendingGoogle = new Map(); // id -> { g, expires }: a Google identity waiting for the password of the account with its e-mail
 const safeNext = (n) => (typeof n === 'string' && /^\/(account|studio|admin|u\/|go\/|tools|event)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : '');
 async function handleGoogleOAuth(step, req, res, url) {
@@ -766,6 +776,7 @@ async function handleGoogleOAuth(step, req, res, url) {
       return go('/account?google=linked#settings');
     }
     let user = await platform.findByGoogle(g.sub), created = false;
+    if (!user) user = await autoLinkGoogle(g, req);
     if (!user) {
       if (!g.email) return fail(mode, 'no_email', next);
       if (await platform.findByEmail(g.email)) {
@@ -986,6 +997,7 @@ async function handleAuth(action, req, res) {
       const current = accountSession(req);
       let user = await platform.findByGoogle(g.sub), created = false;
       if (!user && current && body.link === true) { user = await platform.linkGoogle(current.userId, g); economy?.settleReferral(user.id).catch(() => {}); }
+      if (!user) user = await autoLinkGoogle(g, req);
       if (!user) {
         if (await platform.findByEmail(g.email)) return json(res, 409, { error: 'يوجد حساب SPONGE LIVE بهذا البريد. سجّل الدخول بكلمة المرور، ثم اربط Google من صفحة «حسابي» — لا نربط الحسابات تلقائيًا بالبريد وحده.', needsLink: true });
         user = await platform.createFromGoogle(g);

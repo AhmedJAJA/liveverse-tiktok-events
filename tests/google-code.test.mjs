@@ -165,21 +165,36 @@ test('Google code flow: state, nonce, PKCE, one account per Google identity, saf
     r = await anon('GET', '/api/oauth/google/start?mode=login&next=//evil.example');
     assert.equal(new URL(r.location).searchParams.get('state') ? true : false, true);
 
-    // 6. an e-mail account exists: Google never merges on the e-mail alone; the password proves ownership, then it links
-    const sara = browser(srv.base);
+    // 6a. the same e-mail, exactly, verified by Google: the existing account (same SPG ID), Google linked to it; its
+    //     e-mail was never confirmed, so other sessions of that account end
+    const sara = browser(srv.base), saraOther = browser(srv.base);
     r = await sara('POST', '/api/auth/register', { username: 'sara_live', email: 'sara@gmail.com', password: 'reef2026go', confirm: 'reef2026go' });
     assert.equal(r.status, 201); const saraId = r.data.account.publicId;
+    await saraOther('POST', '/api/auth/login', { identifier: 'sara_live', password: 'reef2026go' });
     await sara('POST', '/api/auth/logout', {});
     f = await googleFlow(fake, sara, { sub: 'g-600', email: 'sara@gmail.com', name: 'Sara' });
-    assert.match(f.cb.location, /google_error=link_needed/); assert.ok(sara.cookies.get('g_pending'));
+    assert.doesNotMatch(f.cb.location, /google_error/);
+    me = (await sara('GET', '/api/auth/me')).data;
+    assert.equal(me.account.publicId, saraId, 'the same account'); assert.equal(me.account.googleLinked, true); assert.equal(me.account.verified, true);
     assert.equal((await pool.query("SELECT count(*)::int n FROM users WHERE canonical_email='sara@gmail.com'")).rows[0].n, 1, 'no second account');
-    r = await sara('POST', '/api/auth/login', { identifier: 'sara@gmail.com', password: 'wrong-pass-1' });
-    assert.equal(r.status, 401);
-    r = await sara('POST', '/api/auth/login', { identifier: 'sara@gmail.com', password: 'reef2026go' });
-    assert.equal(r.data.googleLinked, true); assert.equal(r.data.account.publicId, saraId);
-    await sara('POST', '/api/auth/logout', {});
-    f = await googleFlow(fake, sara, { sub: 'g-600', email: 'sara@gmail.com' });
-    assert.equal((await sara('GET', '/api/auth/me')).data.account.publicId, saraId, 'Google now opens the same account');
+    assert.equal((await saraOther('GET', '/api/auth/me')).data.account ?? null, null, 'sessions from before end');
+    assert.equal((await sara('POST', '/api/auth/logout', {})).status, 200);
+    assert.equal((await sara('POST', '/api/auth/login', { identifier: 'sara_live', password: 'reef2026go' })).status, 200, 'the password still works');
+    // 6b. not verified by Google (or not the exact address): never merged on the e-mail; the password proves ownership
+    const hala = browser(srv.base);
+    r = await hala('POST', '/api/auth/register', { username: 'hala_live', email: 'hala@gmail.com', password: 'reef2026go', confirm: 'reef2026go' });
+    const halaId = r.data.account.publicId; await hala('POST', '/api/auth/logout', {});
+    f = await googleFlow(fake, hala, { sub: 'g-650', email: 'hala@gmail.com', email_verified: false });
+    assert.match(f.cb.location, /google_error=link_needed/); assert.ok(hala.cookies.get('g_pending'));
+    assert.equal((await pool.query("SELECT count(*)::int n FROM users WHERE canonical_email='hala@gmail.com'")).rows[0].n, 1, 'no second account');
+    assert.equal((await hala('POST', '/api/auth/login', { identifier: 'hala@gmail.com', password: 'wrong-pass-1' })).status, 401);
+    r = await hala('POST', '/api/auth/login', { identifier: 'hala@gmail.com', password: 'reef2026go' });
+    assert.equal(r.data.googleLinked, true); assert.equal(r.data.account.publicId, halaId);
+    // a different Google identity with the e-mail of an account already linked to Google: no takeover
+    const x = browser(srv.base);
+    f = await googleFlow(fake, x, { sub: 'g-666', email: 'sara@gmail.com' });
+    assert.match(f.cb.location, /google_error=link_needed/);
+    assert.equal((await pool.query("SELECT google_sub FROM users WHERE username='sara_live'")).rows[0].google_sub, 'g-600');
 
     // 7. linking from the settings: confirm first; an identity used by another account is refused
     const omar = browser(srv.base);

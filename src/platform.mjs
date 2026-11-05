@@ -423,6 +423,24 @@ export class Platform {
     }
     fail('تعذر إنشاء الحساب، حاول مرة أخرى', 500);
   }
+  /** Google sign-in with no linked account: when Google has verified the e-mail and it is exactly the e-mail of an
+   *  account not linked to any Google identity, that account is the one — Google is linked to it (same SPG ID and
+   *  data). Returns { user, wasVerified } or null (no exact match, unverified at Google, or linked elsewhere). */
+  async linkByExactEmail(g) {
+    if (!g?.emailVerified || !g.email || !g.sub) return null;
+    const email = String(g.email).trim().toLowerCase();
+    const row = (await this.pool.query('SELECT id, email_verified_at FROM users WHERE lower(email)=$1 AND google_sub IS NULL', [email])).rows;
+    if (row.length !== 1) return null;
+    try {
+      const r = await this.pool.query('UPDATE users SET google_sub=$2, google_linked_at=now(), email_verified_at=COALESCE(email_verified_at, now()) WHERE id=$1 AND google_sub IS NULL RETURNING id', [row[0].id, g.sub]);
+      if (!r.rowCount) return null;
+    } catch (err) {
+      if (/google_sub/.test(err.constraint || '')) { const u = await this.findByGoogle(g.sub); return u ? { user: u, wasVerified: true } : null; }
+      throw err;
+    }
+    return { user: (await this.refresh(row[0].id)).user, wasVerified: !!row[0].email_verified_at };
+  }
+
   /** Link Google to the signed-in account (ownership of both is proven: the session and the Google token). */
   async linkGoogle(userId, g) {
     const owner = await this.findByGoogle(g.sub);
