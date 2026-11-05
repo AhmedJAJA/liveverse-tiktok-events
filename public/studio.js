@@ -224,6 +224,37 @@
     $('gmTools').setAttribute('aria-expanded', String(document.body.dataset.drawer === 'open'));
   }
   $('gmTools').addEventListener('click', () => $('drawerToggle').click());
+  $('gmFloatTools').addEventListener('click', () => $('drawerToggle').click());
+  /* «ملء الشاشة»: only when the host asks (never forced). The browser's full screen when it is available
+     (a direct click), otherwise an expanded view inside the page; Escape or «الخروج من ملء الشاشة» leaves it. */
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  const liveHome = document.createComment('live-view'); // where the game frame lives outside full screen
+  function immersive(on) {
+    if (on) document.body.dataset.immersive = '1'; else delete document.body.dataset.immersive;
+    // the frame goes to the top of the page while in full screen (no parent can clip or offset it); the iframe keeps its game
+    const live = $('liveView');
+    if (on && live.parentNode !== document.body) { live.before(liveHome); document.body.append(live); }
+    else if (!on && liveHome.parentNode) { liveHome.replaceWith(live); }
+    $('gmFloat').hidden = !on;
+    $('gmFull').setAttribute('aria-pressed', String(on));
+    $('gmFull').lastElementChild.textContent = on ? 'الخروج من ملء الشاشة' : 'ملء الشاشة';
+    if (!on && document.body.dataset.drawer === 'open') $('drawerToggle').click();
+    requestAnimationFrame(() => dispatchEvent(new Event('resize')));
+  }
+  async function enterFull() {
+    immersive(true);
+    const root = document.documentElement, req = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (req) { try { await req.call(root, { navigationUI: 'hide' }); } catch { /* refused: the in-page view stays */ } }
+  }
+  async function leaveFull() {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (fsEl() && exit) { try { await exit.call(document); } catch {} }
+    immersive(false);
+  }
+  $('gmFull').addEventListener('click', () => (document.body.dataset.immersive ? leaveFull() : enterFull()));
+  $('gmExit').addEventListener('click', leaveFull);
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { if (!fsEl() && document.body.dataset.immersive) immersive(false); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.dataset.immersive) leaveFull(); });
   function paintHost(s, view, need) {
     const reg = s.registration || {}, active = !!s.status.active, stage = s.flow?.stage;
     const waiting = stage === 'WAITING_FOR_PLAYERS';
@@ -840,6 +871,7 @@
     if (changed && name === 'setup') { advFor = ''; if (state) paintSetup(state); }
     if (changed && name !== 'lobby') { lbFirst = true; }
     if (changed && name === 'game' && document.body.dataset.drawer === 'open') $('drawerToggle').click(); // the game gets the whole screen
+    if (changed && name !== 'game' && document.body.dataset.immersive) leaveFull();
     if (changed && name === 'lobby') { $('lbWordForm').hidden = true; $('lbWordEdit').hidden = false; $('lbWord').hidden = false; }
   }
   function openRules(m) {

@@ -1,0 +1,150 @@
+/* SPONGE LIVE — the gameplay board (/overlay: OBS, the studio preview, the viewers' page).
+   Built on the fixed 1920×1080 canvas of royal-broadcast.css (one unit: --u; a 1080×1920 portrait variant below).
+     top: the SPONGE LIVE logo, then a thin info strip (game · question n of N · players · state)
+     centre: one main card — a round timer overlapping its top edge, the question, the answers (2×2 or side by side),
+             the hint / answer count, and a time bar along the bottom edge
+   Sea decor (bubbles, light rays, reef) stays on the edges: nothing is ever drawn over the question or the answers. */
+.arena{--gx-cyan:#38D4FF;--gx-cyan-2:#8CE8FF;--gx-sun:#FFD62A;--gx-ink:#EAF8FF;--gx-navy:#061433;--gx-ok:#2FD9A0;--gx-bad:#FF5A6E;
+  background:radial-gradient(70% 55% at 50% -6%,rgba(56,212,255,.2),transparent 70%),radial-gradient(60% 40% at 50% 110%,rgba(30,91,255,.18),transparent 70%),linear-gradient(180deg,#05173F 0%,#041030 55%,#020A22 100%)}
+.arena .stage-light .fan{opacity:.22}
+.arena .stage-frame{border-color:rgba(56,212,255,.1)}
+.arena .stage-frame i{border-color:rgba(255,214,42,.55)}
+
+/* ---------- sea decor (edges only) ---------- */
+.gx-sea{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.gx-ray{position:absolute;inset:0;background:url(/brand/caustic.svg) center top/calc(var(--u)*1400) auto no-repeat;opacity:.08;mix-blend-mode:screen;animation:gx-drift 18s ease-in-out infinite alternate}
+.gx-floor{position:absolute;bottom:calc(var(--u)*-10);width:calc(var(--u)*420);height:calc(var(--u)*200);background:url(/brand/reef.svg) bottom/contain no-repeat;opacity:.38;filter:hue-rotate(-10deg) saturate(.9)}
+.gx-floor-r{right:calc(var(--u)*-60)}.gx-floor-l{left:calc(var(--u)*-60);transform:scaleX(-1)}
+.gx-bub{position:absolute;bottom:calc(var(--u)*-30);width:calc(var(--u)*14);height:calc(var(--u)*14);border-radius:50%;border:1px solid rgba(140,232,255,.55);background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.55),rgba(140,232,255,.08) 60%,transparent);animation:gx-rise 14s linear infinite}
+.gx-bub.b1{left:calc(var(--u)*46);animation-delay:-2s}.gx-bub.b2{left:calc(var(--u)*92);width:calc(var(--u)*9);height:calc(var(--u)*9);animation-delay:-8s;animation-duration:11s}
+.gx-bub.b3{left:calc(var(--u)*130);width:calc(var(--u)*20);height:calc(var(--u)*20);animation-delay:-5s;animation-duration:17s}
+.gx-bub.b4{right:calc(var(--u)*54);animation-delay:-1s;animation-duration:13s}.gx-bub.b5{right:calc(var(--u)*104);width:calc(var(--u)*10);height:calc(var(--u)*10);animation-delay:-9s}
+.gx-bub.b6{right:calc(var(--u)*140);width:calc(var(--u)*18);height:calc(var(--u)*18);animation-delay:-4s;animation-duration:16s}
+@keyframes gx-rise{0%{transform:translate(0,0);opacity:0}10%{opacity:.85}50%{transform:translate(calc(var(--u)*10),calc(var(--u)*-560))}100%{transform:translate(calc(var(--u)*-6),calc(var(--u)*-1140));opacity:0}}
+@keyframes gx-drift{to{background-position:center calc(var(--u)*40)}}
+
+/* ---------- top: logo + info strip ---------- */
+.arena .top-line.gx-head{top:calc(var(--u)*22);inset-inline:0;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:calc(var(--u)*10)}
+.gx-logo{position:relative;display:flex;align-items:center;gap:calc(var(--u)*12);overflow:hidden;padding:calc(var(--u)*4) calc(var(--u)*14);border-radius:999px}
+.gx-logo-img{width:calc(var(--u)*58);height:calc(var(--u)*58);filter:drop-shadow(0 0 calc(var(--u)*14) rgba(56,212,255,.65)) drop-shadow(0 calc(var(--u)*4) calc(var(--u)*6) rgba(0,0,0,.5))}
+.gx-word{font-family:var(--font-latin),"Tajawal",sans-serif;font-size:calc(var(--u)*34);font-weight:800;letter-spacing:.08em;color:var(--gx-ink);text-shadow:0 0 calc(var(--u)*18) rgba(56,212,255,.55)}
+.gx-word b{color:var(--gx-sun);text-shadow:0 0 calc(var(--u)*16) rgba(255,214,42,.55)}
+.gx-logo::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%) -200% 0/250% 100% no-repeat;opacity:0;pointer-events:none}
+.gx-logo.gx-shine{animation:gx-pop .7s cubic-bezier(.2,.9,.3,1.3)}
+.gx-logo.gx-shine::after{opacity:1;animation:gx-sweep 1.1s .1s ease-out forwards}
+@keyframes gx-sweep{to{background-position:150% 0}}
+@keyframes gx-pop{40%{transform:scale(1.08)}}
+.gx-strip{display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*10)}
+.arena .gx-chip{display:inline-flex;align-items:center;gap:calc(var(--u)*8);height:calc(var(--u)*40);padding:0 calc(var(--u)*18);border-radius:999px;background:rgba(4,16,46,.78);border:1px solid rgba(140,232,255,.24);color:var(--gx-ink);font-size:calc(var(--u)*19);font-weight:800;line-height:1;white-space:nowrap;box-shadow:0 0 calc(var(--u)*16) calc(var(--u)*-8) rgba(56,212,255,.6)}
+.arena .gx-chip .i{width:calc(var(--u)*20);height:calc(var(--u)*20);color:var(--gx-cyan-2)}
+.arena .gx-chip b{font-size:calc(var(--u)*20);color:#fff}
+.arena .gx-game{color:var(--gx-sun);border-color:rgba(255,214,42,.45)}
+.arena .gx-chip.round-pill{gap:calc(var(--u)*6);color:rgba(234,248,255,.75)}
+.arena .gx-chip.round-pill b{font-family:var(--font-latin);font-size:calc(var(--u)*22);line-height:1;background:none;-webkit-background-clip:initial;background-clip:initial;color:#fff}
+.arena .gx-chip.live-pill{position:static;transform:none;background:rgba(4,16,46,.78);visibility:visible}
+.arena .gx-chip.round-pill{align-items:center}
+
+/* ---------- the main card ---------- */
+.arena .arena-body{top:calc(var(--u)*250);bottom:calc(var(--u)*46);inset-inline:calc(var(--u)*190)}
+.arena .competition-zone.gx-card{position:relative;height:100%;display:flex;flex-direction:column;gap:calc(var(--u)*18);padding:calc(var(--u)*90) calc(var(--u)*40) calc(var(--u)*32);border-radius:calc(var(--u)*34);
+  background:radial-gradient(70% 40% at 50% 0%,rgba(56,212,255,.12),transparent 70%),linear-gradient(180deg,rgba(12,34,84,.78),rgba(5,16,44,.9));
+  border:1.5px solid rgba(140,232,255,.32);box-shadow:0 0 0 1px rgba(56,212,255,.06) inset,0 0 calc(var(--u)*50) calc(var(--u)*-14) rgba(56,212,255,.55),0 calc(var(--u)*40) calc(var(--u)*80) calc(var(--u)*-40) #000;backdrop-filter:blur(6px)}
+.arena .gx-card::before{content:"";position:absolute;top:-1.5px;left:50%;translate:-50% 0;width:calc(var(--u)*420);height:calc(var(--u)*3);border-radius:99px;background:linear-gradient(90deg,transparent,var(--gx-sun),transparent);opacity:.75}
+.gx-glint{position:absolute;width:calc(var(--u)*16);height:calc(var(--u)*16);background:#fff;clip-path:polygon(50% 0,60% 40%,100% 50%,60% 60%,50% 100%,40% 60%,0 50%,40% 40%);filter:drop-shadow(0 0 calc(var(--u)*6) var(--gx-cyan));animation:gx-twinkle 3.4s ease-in-out infinite;pointer-events:none}
+.gx-glint-a{top:calc(var(--u)*-8);right:calc(var(--u)*60)}.gx-glint-b{bottom:calc(var(--u)*-8);left:calc(var(--u)*90);animation-delay:-1.7s}
+@keyframes gx-twinkle{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1)}}
+.arena .gx-card>*{min-height:0}
+
+/* round timer overlapping the card's top edge */
+.arena .gx-card .zone-intro{position:absolute;top:calc(var(--u)*-68);left:50%;translate:-50% 0;z-index:3;display:block}
+.arena .gx-card .clock-face{--timer-angle:360deg;--ring:var(--gx-cyan);width:calc(var(--u)*142);height:calc(var(--u)*142);
+  background:conic-gradient(var(--ring) var(--timer-angle),rgba(140,232,255,.12) var(--timer-angle));box-shadow:0 0 calc(var(--u)*30) calc(var(--u)*-4) var(--ring),0 calc(var(--u)*10) calc(var(--u)*24) rgba(0,0,0,.55);transition:background .2s linear,box-shadow .3s}
+.arena .gx-card .clock-face::before{inset:calc(var(--u)*8);background:radial-gradient(circle at 50% 30%,#0E2A5E,#040F2C 75%);box-shadow:inset 0 0 0 1px rgba(140,232,255,.25)}
+.arena .gx-card .clock-face strong{font-size:calc(var(--u)*58);font-weight:700;color:#fff;text-shadow:0 0 calc(var(--u)*14) var(--ring)}
+.arena .gx-card .clock-face small{color:var(--gx-cyan-2);letter-spacing:.35em}
+.arena .gx-card .clock-panel.is-warn .clock-face{--ring:var(--gx-sun)}
+.arena .gx-card .clock-panel.urgent .clock-face{--ring:var(--gx-bad);background:conic-gradient(var(--ring) var(--timer-angle),rgba(255,90,110,.14) var(--timer-angle));animation:gx-beat .9s ease-in-out infinite}
+.arena .gx-card .clock-panel.urgent .clock-face strong{color:#FFE1E5}
+@keyframes gx-beat{50%{transform:scale(1.07);box-shadow:0 0 calc(var(--u)*46) calc(var(--u)*2) rgba(255,90,110,.6),0 calc(var(--u)*10) calc(var(--u)*24) rgba(0,0,0,.55)}}
+.arena .gx-card:has(.question-card.question-enter) .clock-panel{animation:gx-drop .8s .1s cubic-bezier(.2,.9,.3,1.25) both}
+@keyframes gx-drop{from{opacity:0;transform:translateY(calc(var(--u)*-80)) scale(.7)}to{opacity:1;transform:none}}
+
+/* the question: sized by its text, centred, never cut (overlay.js shrinks long text to fit) */
+.arena .gx-card .question-card{flex:0 1 auto;min-height:calc(var(--u)*150);max-height:calc(var(--u)*290);padding:calc(var(--u)*26) calc(var(--u)*70);border-radius:calc(var(--u)*24);
+  background:linear-gradient(180deg,#0B2152,#071637) padding-box;border:1px solid rgba(140,232,255,.42);box-shadow:0 0 calc(var(--u)*30) calc(var(--u)*-12) rgba(56,212,255,.7),inset 0 1px 0 rgba(255,255,255,.06)}
+.arena .gx-card .question-card::after{display:none}
+.arena .gx-card .question-crest{display:none}
+.arena .gx-card .question-main{font-size:calc(var(--u)*56);font-weight:900;line-height:1.35;color:#fff;text-shadow:0 calc(var(--u)*2) calc(var(--u)*10) rgba(0,0,0,.35)}
+.arena .gx-card .question-main.is-long{font-size:calc(var(--u)*46)}.arena .gx-card .question-main.is-very-long{font-size:calc(var(--u)*38)}
+
+/* the answers: equal cards, a numbered badge each, calm colours per option */
+.arena .gx-card .choices-grid{flex:1 1 auto;grid-auto-rows:minmax(0,1fr);gap:calc(var(--u)*18);min-height:calc(var(--u)*200)}
+.arena .gx-card .choice{--c:#2F7BFF;height:auto;min-height:calc(var(--u)*100);grid-template-columns:calc(var(--u)*78) minmax(0,1fr) auto;gap:calc(var(--u)*18);padding:0 calc(var(--u)*22);border-radius:calc(var(--u)*24);
+  background:radial-gradient(90% 120% at 100% 0%,color-mix(in srgb,var(--c) 24%,transparent),transparent 60%),linear-gradient(180deg,#0B1E4A,#071434) padding-box;
+  border:1.5px solid color-mix(in srgb,var(--c) 55%,transparent);box-shadow:0 0 calc(var(--u)*26) calc(var(--u)*-12) var(--c),inset 0 1px 0 rgba(255,255,255,.05);transition:opacity .4s,filter .4s,transform .4s,border-color .3s,box-shadow .3s}
+.arena .gx-card .choice:nth-child(1){--c:#2F7BFF}.arena .gx-card .choice:nth-child(2){--c:#8B5CF6}.arena .gx-card .choice:nth-child(3){--c:#19C4A6}.arena .gx-card .choice:nth-child(4){--c:#4FC3F7}
+.arena .gx-card .choice-index{width:calc(var(--u)*72);height:calc(var(--u)*72);clip-path:none;border-radius:calc(var(--u)*20);background:linear-gradient(160deg,color-mix(in srgb,var(--c) 85%,#fff 15%),color-mix(in srgb,var(--c) 70%,#000 30%));box-shadow:0 0 calc(var(--u)*18) calc(var(--u)*-4) var(--c),inset 0 calc(var(--u)*2) 0 rgba(255,255,255,.35)}
+.arena .gx-card .choice-index::before{display:none}
+.arena .gx-card .choice-gem{width:calc(var(--u)*20);height:calc(var(--u)*20);top:calc(var(--u)*6);right:calc(var(--u)*6);color:#fff;opacity:.55;filter:none}
+.arena .gx-card .choice-num{font-size:calc(var(--u)*36);font-weight:800;color:#fff;transform:none!important}
+.arena .gx-card .choice-label{justify-content:center;text-align:center;font-size:calc(var(--u)*42);font-weight:900;color:#fff}
+.arena .gx-card .choice-label.is-long{font-size:calc(var(--u)*34)}.arena .gx-card .choice-label.is-very-long{font-size:calc(var(--u)*27)}
+.arena .gx-card .choice-mark{min-width:calc(var(--u)*78);justify-content:flex-end}
+.arena .gx-card .choice-count{min-width:calc(var(--u)*58);padding:calc(var(--u)*4) calc(var(--u)*12);border-radius:999px;background:rgba(2,10,34,.6);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);font-size:calc(var(--u)*28);color:#fff}
+.arena .gx-card .choice-vote-bar{height:calc(var(--u)*5);background:linear-gradient(270deg,#fff,var(--c));box-shadow:0 0 calc(var(--u)*12) var(--c)}
+.arena .gx-card .vote-avatar{box-shadow:0 0 0 calc(var(--u)*3) #0A1A3D}
+.arena .gx-card .choice.choice-voted{animation:gx-flash .5s ease-out}
+@keyframes gx-flash{40%{border-color:#fff;box-shadow:0 0 calc(var(--u)*40) calc(var(--u)*-6) var(--c)}}
+/* the reveal: the right answer in green, the others dimmed */
+.arena .gx-card .choice.is-correct{--c:var(--gx-ok);border-color:var(--gx-ok);background:radial-gradient(90% 120% at 100% 0%,rgba(47,217,160,.35),transparent 60%),linear-gradient(180deg,#0C3A3A,#062226) padding-box;
+  box-shadow:0 0 0 calc(var(--u)*3) rgba(47,217,160,.35),0 0 calc(var(--u)*50) calc(var(--u)*-6) var(--gx-ok);transform:scale(1.02);animation:gx-pop .6s cubic-bezier(.2,.9,.3,1.3)}
+.arena .gx-card .choice.is-dim{opacity:.35;filter:saturate(.35)}
+.arena[data-phase=waiting] .gx-card .choice{filter:saturate(.7) brightness(.85)}
+
+/* hint · reveal · answer count */
+.arena .gx-card .answer-callout{flex:none;min-height:calc(var(--u)*52)}
+.arena .gx-card .callout-hint{font-size:calc(var(--u)*22);color:rgba(234,248,255,.78)}
+.arena .gx-card .callout-hint .i,.arena .gx-card .answer-total .i{color:var(--gx-sun)}
+.arena .gx-card .answer-total{height:calc(var(--u)*50);background:rgba(2,10,34,.66) padding-box;border:1px solid rgba(140,232,255,.28)}
+.arena .gx-card .answer-total b{color:#fff}
+.gx-reveal{display:inline-flex;align-items:center;gap:calc(var(--u)*10);padding:calc(var(--u)*8) calc(var(--u)*20);border-radius:999px;background:rgba(47,217,160,.16);border:1px solid rgba(47,217,160,.6);color:#D2FFF0;font-size:calc(var(--u)*22);font-weight:800;animation:gx-pop .5s cubic-bezier(.2,.9,.3,1.3)}
+.gx-reveal .i{width:calc(var(--u)*24);height:calc(var(--u)*24);color:var(--gx-ok)}
+.gx-reveal[hidden]{display:none}
+.arena[data-phase=reveal] .callout-hint{display:none}
+/* the time bar along the card's bottom edge */
+.gx-progress{position:absolute;inset-inline:calc(var(--u)*34);bottom:calc(var(--u)*12);height:calc(var(--u)*6);border-radius:99px;background:rgba(140,232,255,.1);overflow:hidden}
+.gx-progress span{position:absolute;inset-block:0;right:0;width:0;border-radius:inherit;background:linear-gradient(270deg,var(--gx-cyan),var(--gx-sun));box-shadow:0 0 calc(var(--u)*14) var(--gx-cyan);transition:width .2s linear}
+.arena .gx-card:has(.clock-panel.urgent) .gx-progress span{background:linear-gradient(270deg,#FF8A9A,var(--gx-bad))}
+
+/* minutes:seconds (party games) in the same ring */
+.arena .gx-card .clock-face strong.is-wide{font-size:calc(var(--u)*38);letter-spacing:-.02em}
+/* party games with standings under the choices: compact answer row, the standings get the rest */
+.arena:is([data-mode=rps],[data-mode=minority],[data-mode=higherlower],[data-mode=truefalse]) .gx-card .choices-grid{flex:0 0 auto;min-height:0;grid-auto-rows:calc(var(--u)*150)}
+/* other games keep their own panels inside the same card */
+.arena .gx-card :is(.race-panel,.wheel-panel,.party-panel){flex:1 1 auto;min-height:0}
+.arena[data-mode=wheel] .gx-card .zone-intro,.arena[data-mode=race] .gx-card .zone-intro{display:none}
+
+/* results: the final screen of a series */
+.results-screen.is-final .results-heading h2{color:var(--gx-sun,#FFD62A)}
+.podium-card .fr-av{margin-inline:auto}
+.podium-card .fr-plate.podium-name{display:flex;justify-content:center;margin-inline:auto;font-size:inherit}
+
+/* ---------- portrait 9:16 (phones, vertical streams) ---------- */
+@media (max-aspect-ratio:4/5){
+  .arena .top-line.gx-head{top:calc(var(--u)*40);gap:calc(var(--u)*14)}
+  .gx-logo-img{width:calc(var(--u)*70);height:calc(var(--u)*70)}.gx-word{font-size:calc(var(--u)*42)}
+  .gx-strip{flex-wrap:wrap;max-width:calc(var(--u)*1000)}
+  .arena .gx-chip{height:calc(var(--u)*50);font-size:calc(var(--u)*24)}
+  .arena .arena-body{top:calc(var(--u)*330);bottom:calc(var(--u)*60);inset-inline:calc(var(--u)*40)}
+  .arena .competition-zone.gx-card{padding:calc(var(--u)*100) calc(var(--u)*28) calc(var(--u)*36);gap:calc(var(--u)*20)}
+  .arena .gx-card .zone-intro{top:calc(var(--u)*-84)}
+  .arena .gx-card .clock-face{width:calc(var(--u)*164);height:calc(var(--u)*164)}
+  .arena .gx-card .clock-face strong{font-size:calc(var(--u)*66)}
+  .arena .gx-card .question-card{max-height:calc(var(--u)*460);padding:calc(var(--u)*34) calc(var(--u)*34)}
+  .arena .gx-card .question-main{font-size:calc(var(--u)*64)}
+  .arena .gx-card .choices-grid{grid-template-columns:1fr}
+  .arena .gx-card .choice{min-height:calc(var(--u)*130)}
+  .arena .gx-card .choice-label{font-size:calc(var(--u)*46)}
+  .gx-floor{width:calc(var(--u)*360)}
+}
+@media (prefers-reduced-motion:reduce){.gx-bub,.gx-ray,.gx-glint,.gx-logo.gx-shine,.gx-logo.gx-shine::after,.arena .gx-card .clock-panel,.arena .gx-card .clock-face,.arena .gx-card .choice{animation:none!important}}

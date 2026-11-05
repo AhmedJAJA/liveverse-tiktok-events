@@ -16,8 +16,11 @@
   <script defer src="/mascot.js"></script>
   <script defer src="/aurum.js"></script>
 <link rel="stylesheet" href="/sponge.css">
+<link rel="stylesheet" href="/frames.css">
+<link rel="stylesheet" href="/game-ui.css">
 <script defer src="/sponge.js"></script>
 <script defer src="/sponge-ui.js"></script>
+<script defer src="/frames.js"></script>
 </head>
 <body class="broadcast">
   <main class="arena" id="arena" data-mode="quiz" data-phase="waiting">
@@ -37,21 +40,30 @@
       </div>
     </div>
 
-    <header class="top-line">
-      <div class="brand-lockup"><img class="sky-overlay-mark" src="/sponge-mark.svg" width="54" height="54" alt="" decoding="async"><span class="brand-words"><strong dir="ltr">SPONGE LIVE</strong><small class="caps">Bikini Bottom</small></span></div>
-      <span class="live-pill" id="overlayLive"><i class="live-dot"></i><span id="overlayLiveText">في انتظار البداية</span></span>
-      <span class="header-caption"><span class="arena-mascot" id="arenaMascot" aria-hidden="true"></span>مسابقات البث المباشر</span>
+    <!-- sea decor on the edges only (never over the question or the answers) -->
+    <div class="gx-sea" aria-hidden="true"><i class="gx-ray"></i><i class="gx-floor gx-floor-r"></i><i class="gx-floor gx-floor-l"></i>
+      <i class="gx-bub b1"></i><i class="gx-bub b2"></i><i class="gx-bub b3"></i><i class="gx-bub b4"></i><i class="gx-bub b5"></i><i class="gx-bub b6"></i></div>
+
+    <header class="top-line gx-head">
+      <div class="brand-lockup gx-logo" id="gxLogo"><img class="gx-logo-img" src="/brand/sponge-128.webp" width="64" height="64" alt="" decoding="async"><span class="gx-word" dir="ltr"><b>SPONGE</b> LIVE</span></div>
+      <div class="gx-strip" aria-label="معلومات الجولة">
+        <span class="gx-chip gx-game" id="gxGame">تحدي المعرفة</span>
+        <span class="gx-chip round-pill" id="overlayRound">السؤال <b>1</b></span>
+        <span class="gx-chip"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b class="num" id="gxPlayers">0</b><span>متسابق</span></span>
+        <span class="gx-chip live-pill" id="overlayLive"><i class="live-dot"></i><span id="overlayLiveText">في انتظار البداية</span></span>
+      </div>
+      <span class="header-caption" hidden><span class="arena-mascot" id="arenaMascot" aria-hidden="true"></span>مسابقات البث المباشر</span>
     </header>
 
     <div class="arena-body">
-      <section class="competition-zone" aria-label="السؤال والخيارات">
+      <section class="competition-zone gx-card" aria-label="السؤال والخيارات">
+        <i class="gx-glint gx-glint-a" aria-hidden="true"></i><i class="gx-glint gx-glint-b" aria-hidden="true"></i>
         <div class="zone-intro">
-          <span class="round-pill" id="overlayRound">السؤال <b>1</b></span>
-          <div class="quiz-progress-dots" id="quizProgressDots" aria-label="تقدم المسابقة"></div>
           <div class="clock-panel" id="overlayTimer">
             <div class="clock-face" id="timerFace" role="timer" aria-label="الوقت المتبقي بالثواني"><strong id="overlaySeconds">30</strong><small class="caps">sec</small></div>
             <span class="sr-only" id="clockStatus">في انتظار البداية</span>
           </div>
+          <div class="quiz-progress-dots" id="quizProgressDots" aria-label="تقدم المسابقة" hidden></div>
         </div>
         <div class="question-card" id="questionCard">
           <span class="question-crest" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-question"/></svg></span>
@@ -66,8 +78,10 @@
         <div id="partyPanel" class="party-panel" hidden aria-live="polite"></div>
         <div class="answer-callout">
           <span class="callout-hint"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-chat"/></svg><span id="overlayHint">اكتب رقم الإجابة 1 – 4 في الشات</span></span>
+          <span class="gx-reveal" id="gxReveal" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-check"/></svg><span id="gxRevealText"></span></span>
           <span class="answer-total" id="answerTotalBox"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-bolt"/></svg>جاوب <b id="overlaySubmissions" class="num">0</b></span>
         </div>
+        <div class="gx-progress" aria-hidden="true"><span id="topProgress"></span></div>
       </section>
     </div>
 
@@ -227,7 +241,7 @@
     </div>
 
     <div class="connection-notice" id="connectionNotice" hidden role="status"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-signal"/></svg>انقطع الاتصال، نحاول الرجوع للبث…</div>
-    <div hidden><span id="topProgress"></span><span id="modeTag"></span><span id="questionMode"></span><span id="questionLabel"></span><span id="stageTag"></span><span id="overlayTitle"></span><span id="overlayPlayers"></span><span id="overlayStatus"></span><span id="footerDetail"></span><span id="footerRound"></span><div id="overlayStandings"></div></div>
+    <div hidden><span id="modeTag"></span><span id="questionMode"></span><span id="questionLabel"></span><span id="stageTag"></span><span id="overlayTitle"></span><span id="overlayPlayers"></span><span id="overlayStatus"></span><span id="footerDetail"></span><span id="footerRound"></span><div id="overlayStandings"></div></div>
   </main>
   <script type="module" src="/overlay.js"></script>
 </body>
