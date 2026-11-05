@@ -109,6 +109,14 @@
    <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الأسبوع</th><th>الجائزة</th><th>المركز</th><th>الفائز</th><th>الاستلام</th></tr></thead><tbody id="awardRows"></tbody></table></div>
   </section>
 
+  <section class="pg-card pg-span" aria-labelledby="reportsTitle">
+   <h2 id="reportsTitle">بلاغات المستخدمين</h2>
+   <p class="pg-sub">بلاغات «المجتمع». صاحب الحساب لا يعرف من أبلغ عنه. لإيقاف حساب افتح ملفه من «الحسابات» بالمعرف.</p>
+   <div class="pg-row"><label class="pg-field"><span>الحالة</span><select id="reportStatus"><option value="open">جديدة</option><option value="reviewed">تمت المراجعة</option><option value="dismissed">مرفوضة</option></select></label></div>
+   <p class="pg-msg" id="reportMsg" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>الحساب المُبلَّغ عنه</th><th>السبب</th><th>التفاصيل</th><th>المُبلِّغ</th><th>الإجراء</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+  </section>
+
   <section class="pg-card" aria-labelledby="auditTitle">
    <h2 id="auditTitle">سجل عمليات الإدارة</h2>
    <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>المنفّذ</th><th>العملية</th><th>الحساب</th></tr></thead><tbody id="auditRows"></tbody></table></div>

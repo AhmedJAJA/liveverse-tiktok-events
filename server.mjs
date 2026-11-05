@@ -648,6 +648,7 @@ const loginIpLimiter = new RateLimiter({ limit: 20, windowMs: 15 * 60_000 });
 const loginAcctLimiter = new RateLimiter({ limit: 8, windowMs: 15 * 60_000 });
 const mailLimiter = new RateLimiter({ limit: 3, windowMs: 30 * 60_000 });
 const meLimiter = new RateLimiter({ limit: 60, windowMs: 10 * 60_000 });
+const findLimiter = new RateLimiter({ limit: 20, windowMs: 60_000 });
 const clearCookie = (req, res) => res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isHttps(req) ? '; Secure' : ''}`);
 const platformOff = (res) => json(res, 503, { error: 'الحسابات غير مفعّلة على هذا الخادم بعد (قاعدة البيانات غير مهيأة). يمكنك الدخول بالرمز الترويجي.', disabled: true });
 const pErr = (res, err) => { if (err instanceof PlatformError) return json(res, err.status, { error: err.message, ...(err.fields ? { fields: err.fields } : {}) }); throw err; };
@@ -739,6 +740,12 @@ async function handleMe(action, req, res) {
       const p = await platform.profile(userId);
       return json(res, 200, { linked: p.linked, platforms: { tiktok: linkableNow('tiktok'), kick: linkableNow('kick'), twitch: false }, entitled: platform.entitlement(userId).active });
     }
+    if (action === 'friends' && req.method === 'GET') return json(res, 200, await platform.community(userId));
+    if (action === 'find' && req.method === 'GET') {
+      if (!findLimiter.hit('find:' + userId)) return json(res, 429, { error: 'بحث كثير — انتظر دقيقة' });
+      const m = await platform.findMember(userId, new URL(req.url, 'http://x').searchParams.get('id'));
+      return m ? json(res, 200, { member: m }) : json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
+    }
     if (action === 'sessions' && req.method === 'GET') return json(res, 200, { sessions: sessions.listUser(userId, s.id).map((x) => ({ ...x, createdAt: new Date(x.createdAt).toISOString(), lastSeenAt: new Date(x.lastSeenAt).toISOString(), expiresAt: new Date(x.expiresAt).toISOString() })), reauthed: sessions.reauthed(s.id) });
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
     if (!sameOrigin(req)) return json(res, 403, { error: 'طلب من مصدر غير مسموح' });
@@ -748,6 +755,14 @@ async function handleMe(action, req, res) {
     if (action === 'update') { await platform.updateProfile(userId, { displayName: body.displayName, avatar: body.avatar }); return json(res, 200, { ok: true, account: accountView(userId) }); }
     /* ---- «الإعدادات» ---- */
     if (action === 'privacy') return json(res, 200, { ok: true, privacy: await platform.setPrivacy(userId, String(body.key || ''), body.value) });
+    /* ---- «المجتمع» (the other account is named only by its SPG ID; who I am comes from the session) ---- */
+    if (action === 'friend-request') return json(res, 200, { ok: true, ...(await platform.friendRequest(userId, body.id)) });
+    if (action === 'friend-accept') return json(res, 200, { ok: true, ...(await platform.friendRespond(userId, body.id, true)) });
+    if (action === 'friend-decline') return json(res, 200, { ok: true, ...(await platform.friendRespond(userId, body.id, false)) });
+    if (action === 'friend-remove') return json(res, 200, { ok: true, ...(await platform.friendRemove(userId, body.id)) });
+    if (action === 'block') return json(res, 200, { ok: true, ...(await platform.block(userId, body.id)) });
+    if (action === 'unblock') return json(res, 200, { ok: true, ...(await platform.unblock(userId, body.id)) });
+    if (action === 'report') return json(res, 200, await platform.report(userId, body.id, String(body.reason || ''), body.note));
     if (action === 'sessions-revoke') {
       if (body.others !== true && sessions.key(s.id).slice(0, 16) === String(body.id)) return json(res, 400, { error: 'لإنهاء هذه الجلسة استخدم «تسجيل الخروج»' });
       const n = body.others === true ? sessions.destroyWhere((x) => x.userId === userId && x.key !== sessions.key(s.id)) : sessions.destroyUserSession(userId, String(body.id || ''));
@@ -843,6 +858,7 @@ async function handleManage(action, req, res) {
       if (action === 'audit') return json(res, 200, { log: await platform.auditLog(Number(url.searchParams.get('limit')) || 100) });
       if (action === 'partners') return json(res, 200, { partners: await platform.partners({ all: true }) });
       if (action === 'prizes') return json(res, 200, await platform.listPrizes());
+      if (action === 'reports') return json(res, 200, { reports: await platform.listReports(url.searchParams.get('status') || 'open') });
       if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
       return json(res, 404, { error: 'Not found' });
     }
@@ -851,6 +867,7 @@ async function handleManage(action, req, res) {
     if (action === 'partner-save') { const partners = await platform.savePartner(body); await platform.audit(admin.name, 'partner-save', { details: { name: String(body.name || '').slice(0, 40) }, ip }); return json(res, 200, { ok: true, partners }); }
     if (action === 'partner-delete') { const partners = await platform.deletePartner(body.id); await platform.audit(admin.name, 'partner-delete', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, partners }); }
     if (action === 'prize-save') { const r = await platform.savePrize(body); await platform.audit(admin.name, 'prize-save', { details: { title: String(body.title || '').slice(0, 80) }, ip }); return json(res, 200, { ok: true, ...r }); }
+    if (action === 'report-status') { const r = await platform.setReportStatus(body.id, String(body.status || '')); await platform.audit(admin.name, 'report-status', { details: { id: body.id, status: body.status }, ip }); return json(res, 200, r); }
     if (action === 'award-status') { const r = await platform.setAwardStatus(body.id, String(body.status || '')); await platform.audit(admin.name, 'award-status', { details: { id: body.id, status: body.status }, ip }); return json(res, 200, { ok: true, ...r }); }
     if (action === 'code-create') { const code = promos.create(body); await platform.audit(admin.name, 'promo-create', { details: { id: code.id, label: code.label, level: code.level, maxUses: code.maxUses }, ip }); return json(res, 200, { ok: true, code }); }
     if (action === 'voucher-create') { const codes = await platform.createVouchers(String(body.plan), body.count, { label: body.label, createdBy: admin.name }); await platform.audit(admin.name, 'voucher-create', { details: { plan: body.plan, count: codes.length, label: String(body.label || '').slice(0, 60) }, ip }); return json(res, 200, { ok: true, codes }); }
@@ -1018,7 +1035,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/site' && req.method === 'GET') return json(res, 200, { ...siteConfig(), updates: UPDATES, plans: PLANS, gameSettings: settingsSchema(), joinWords: JOIN_WORD_SUGGESTIONS, lateJoinModes: LATE_JOIN_MODES });
     if (url.pathname.startsWith('/api/u/') && req.method === 'GET') {
       if (!platform) return json(res, 404, { error: 'غير موجود' });
-      const p = await platform.publicProfile(decodeURIComponent(url.pathname.slice(7)));
+      const p = await platform.publicProfile(decodeURIComponent(url.pathname.slice(7)), accountSession(req)?.userId || null);
       return p ? json(res, 200, p) : json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
     }
     if (url.pathname === '/api/streams' && req.method === 'GET') return json(res, 200, streams());

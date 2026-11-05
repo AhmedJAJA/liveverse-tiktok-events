@@ -70,7 +70,9 @@ export function passwordProblem(p, username = '') {
   return '';
 }
 /** Privacy switches stored per account; anything else in a request is ignored. */
-export const PRIVACY_DEFAULTS = Object.freeze({ hideStream: false, playerStats: true, streamerStats: true, linkedAccounts: true });
+export const PRIVACY_DEFAULTS = Object.freeze({ hideStream: false, playerStats: true, streamerStats: true, linkedAccounts: true, friendRequests: true, friendCount: true });
+export const REPORT_REASONS = Object.freeze({ spam: 'إزعاج أو رسائل مزعجة', abuse: 'إساءة أو تنمّر', impersonation: 'انتحال شخصية', inappropriate: 'محتوى غير لائق', other: 'سبب آخر' });
+const MAX_FRIENDS = 500, MAX_PENDING_OUT = 50;
 export const privacyOf = (u) => ({ ...PRIVACY_DEFAULTS, ...Object.fromEntries(Object.entries(u?.privacy || {}).filter(([k, v]) => k in PRIVACY_DEFAULTS && typeof v === 'boolean')) });
 export function validateSignup({ username, email, password, confirm } = {}) {
   const fields = {};
@@ -834,11 +836,15 @@ export class Platform {
     return r ? { sessions: r.sessions, playersTotal: r.players_total, games: r.games, lastSessionAt: iso(r.last_session_at) } : { sessions: 0, playersTotal: 0, games: {}, lastSessionAt: null };
   }
   /** What anyone may see about an account: the privacy switches decide, here on the server. */
-  async publicProfile(publicId) {
+  async publicProfile(publicId, viewerId = null) {
     const u = (await this.pool.query('SELECT * FROM users WHERE public_id=upper($1) AND disabled_at IS NULL', [String(publicId || '').slice(0, 12)])).rows[0];
     if (!u) return null;
+    // someone who blocked the viewer is simply not found by them
+    if (viewerId && viewerId !== u.id && (await this.pool.query('SELECT 1 FROM user_blocks WHERE blocker=$1 AND blocked=$2', [u.id, viewerId])).rowCount) return null;
     const pv = privacyOf(u);
     const out = { publicId: u.public_id, displayName: u.display_name, avatar: u.avatar, picture: u.picture_url || null, memberSince: iso(u.created_at) };
+    out.friendsCount = pv.friendCount ? Number((await this.pool.query(`SELECT count(*)::int n FROM friendships WHERE status='accepted' AND (user_a=$1 OR user_b=$1)`, [u.id])).rows[0].n) : null;
+    if (viewerId) out.relation = viewerId === u.id ? 'self' : await this.relation(viewerId, u.id, pv);
     out.streamer = pv.streamerStats ? await this.streamerStats(u.id) : null;
     if (pv.linkedAccounts) {
       const links = (await this.pool.query('SELECT platform, handle FROM linked_accounts WHERE user_id=$1 AND verified ORDER BY platform', [u.id])).rows;
@@ -846,6 +852,122 @@ export class Platform {
     } else out.linked = null;
     out.player = pv.playerStats ? { available: false } : null; // viewers' game stats are not tied to accounts yet
     return out;
+  }
+
+  /* ------------------------------------------------------------ «المجتمع»: friends, blocks, reports */
+  // Accounts are found only by their exact permanent SPG ID — there is no browsing or name search, so nobody can be listed.
+  async userRowByPublicId(publicId) {
+    const id = String(publicId || '').trim().toUpperCase();
+    if (!/^SPG-[A-HJ-NP-Z2-9]{6}$/.test(id)) fail('اكتب المعرف كاملًا بهذا الشكل: SPG-XXXXXX', 400);
+    return (await this.pool.query('SELECT id, public_id, display_name, avatar, picture_url, privacy FROM users WHERE public_id=$1 AND disabled_at IS NULL', [id])).rows[0] || null;
+  }
+  /** none | friends | outgoing | incoming | blocked (I blocked them) | unavailable (they don't take requests) */
+  async relation(me, other, otherPrivacy) {
+    if ((await this.pool.query('SELECT 1 FROM user_blocks WHERE blocker=$1 AND blocked=$2', [me, other])).rowCount) return 'blocked';
+    const [a, b] = me < other ? [me, other] : [other, me];
+    const f = (await this.pool.query('SELECT status, requested_by FROM friendships WHERE user_a=$1 AND user_b=$2', [a, b])).rows[0];
+    if (f) return f.status === 'accepted' ? 'friends' : f.requested_by === me ? 'outgoing' : 'incoming';
+    return (otherPrivacy || PRIVACY_DEFAULTS).friendRequests ? 'none' : 'unavailable';
+  }
+  async findMember(me, publicId) {
+    const u = await this.userRowByPublicId(publicId);
+    if (!u || (await this.pool.query('SELECT 1 FROM user_blocks WHERE blocker=$1 AND blocked=$2', [u.id, me])).rowCount) return null;
+    return { ...this.memberCard(u), relation: u.id === me ? 'self' : await this.relation(me, u.id, privacyOf(u)) };
+  }
+  memberCard(u, since) { return { publicId: u.public_id, displayName: u.display_name, avatar: u.avatar, picture: u.picture_url || null, ...(since ? { since: iso(since) } : {}) }; }
+  async friendTarget(me, publicId) {
+    const u = await this.userRowByPublicId(publicId);
+    if (!u) fail('لا يوجد حساب بهذا المعرف', 404);
+    if (u.id === me) fail('لا يمكنك تنفيذ هذا على حسابك', 400);
+    return u;
+  }
+  async friendRequest(me, publicId) {
+    const u = await this.friendTarget(me, publicId);
+    const blocked = (await this.pool.query('SELECT blocker FROM user_blocks WHERE (blocker=$1 AND blocked=$2) OR (blocker=$2 AND blocked=$1)', [me, u.id])).rows;
+    if (blocked.some((r) => r.blocker === me)) fail('ألغِ حظر هذا الحساب أولًا', 409);
+    if (blocked.length) fail('لا يوجد حساب بهذا المعرف', 404);
+    const [a, b] = me < u.id ? [me, u.id] : [u.id, me];
+    const row = (await this.pool.query('SELECT status, requested_by FROM friendships WHERE user_a=$1 AND user_b=$2', [a, b])).rows[0];
+    if (row?.status === 'accepted') fail('أنتما صديقان بالفعل', 409);
+    if (row && row.requested_by === me) fail('أرسلت طلبًا لهذا الحساب وينتظر الرد', 409);
+    if (row) return this.friendRespond(me, publicId, true); // they already asked me: sending back means yes
+    if (!privacyOf(u).friendRequests) fail('هذا الحساب لا يستقبل طلبات صداقة', 403);
+    const counts = (await this.pool.query(`SELECT count(*) FILTER (WHERE status='accepted')::int friends, count(*) FILTER (WHERE status='pending' AND requested_by=$1)::int pending
+      FROM friendships WHERE user_a=$1 OR user_b=$1`, [me])).rows[0];
+    if (counts.friends >= MAX_FRIENDS) fail(`وصلت للحد الأعلى (${MAX_FRIENDS} صديق)`, 409);
+    if (counts.pending >= MAX_PENDING_OUT) fail(`لديك ${MAX_PENDING_OUT} طلبًا بانتظار الرد — انتظر الردود أو ألغِ بعضها`, 409);
+    await this.pool.query('INSERT INTO friendships (user_a, user_b, requested_by) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [a, b, me]);
+    return { relation: 'outgoing' };
+  }
+  async friendRespond(me, publicId, accept) {
+    const u = await this.friendTarget(me, publicId);
+    const [a, b] = me < u.id ? [me, u.id] : [u.id, me];
+    if (accept) {
+      const r = await this.pool.query(`UPDATE friendships SET status='accepted', accepted_at=now() WHERE user_a=$1 AND user_b=$2 AND status='pending' AND requested_by=$3`, [a, b, u.id]);
+      if (!r.rowCount) fail('لا يوجد طلب صداقة من هذا الحساب', 404);
+      return { relation: 'friends' };
+    }
+    const r = await this.pool.query(`DELETE FROM friendships WHERE user_a=$1 AND user_b=$2 AND status='pending' AND requested_by=$3`, [a, b, u.id]);
+    if (!r.rowCount) fail('لا يوجد طلب صداقة من هذا الحساب', 404);
+    return { relation: privacyOf(u).friendRequests ? 'none' : 'unavailable' };
+  }
+  /** Cancels my pending request, or ends a friendship. */
+  async friendRemove(me, publicId) {
+    const u = await this.friendTarget(me, publicId);
+    const [a, b] = me < u.id ? [me, u.id] : [u.id, me];
+    const r = await this.pool.query(`DELETE FROM friendships WHERE user_a=$1 AND user_b=$2 AND (status='accepted' OR requested_by=$3)`, [a, b, me]);
+    if (!r.rowCount) fail('لا توجد صداقة أو طلب لإلغائه', 404);
+    return { relation: privacyOf(u).friendRequests ? 'none' : 'unavailable' };
+  }
+  async block(me, publicId) {
+    const u = await this.friendTarget(me, publicId);
+    const [a, b] = me < u.id ? [me, u.id] : [u.id, me];
+    await this.pool.query('DELETE FROM friendships WHERE user_a=$1 AND user_b=$2', [a, b]);
+    await this.pool.query('INSERT INTO user_blocks (blocker, blocked) VALUES ($1,$2) ON CONFLICT DO NOTHING', [me, u.id]);
+    return { relation: 'blocked' };
+  }
+  async unblock(me, publicId) {
+    const u = await this.friendTarget(me, publicId);
+    await this.pool.query('DELETE FROM user_blocks WHERE blocker=$1 AND blocked=$2', [me, u.id]);
+    return { relation: await this.relation(me, u.id, privacyOf(u)) };
+  }
+  async report(me, publicId, reason, note) {
+    const u = await this.friendTarget(me, publicId);
+    if (!(reason in REPORT_REASONS)) fail('اختر سبب البلاغ', 400);
+    const text = String(note || '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 300);
+    const recent = (await this.pool.query(`SELECT 1 FROM user_reports WHERE reporter=$1 AND target=$2 AND created_at > now() - interval '1 day'`, [me, u.id])).rowCount;
+    if (recent) fail('أرسلت بلاغًا عن هذا الحساب خلال آخر 24 ساعة، والإدارة تراجعه', 429);
+    const today = (await this.pool.query(`SELECT count(*)::int n FROM user_reports WHERE reporter=$1 AND created_at > now() - interval '1 day'`, [me])).rows[0].n;
+    if (today >= 10) fail('وصلت للحد اليومي من البلاغات', 429);
+    await this.pool.query('INSERT INTO user_reports (reporter, target, reason, note) VALUES ($1,$2,$3,$4)', [me, u.id, reason, text]);
+    return { ok: true };
+  }
+  async community(me) {
+    const [fr, bl] = await Promise.all([
+      this.pool.query(`SELECT f.status, f.requested_by, f.created_at, f.accepted_at, u.id, u.public_id, u.display_name, u.avatar, u.picture_url
+        FROM friendships f JOIN users u ON u.id = CASE WHEN f.user_a=$1 THEN f.user_b ELSE f.user_a END
+        WHERE (f.user_a=$1 OR f.user_b=$1) AND u.disabled_at IS NULL ORDER BY COALESCE(f.accepted_at, f.created_at) DESC`, [me]),
+      this.pool.query(`SELECT b.created_at, u.public_id, u.display_name, u.avatar, u.picture_url FROM user_blocks b JOIN users u ON u.id=b.blocked WHERE b.blocker=$1 ORDER BY b.created_at DESC`, [me]),
+    ]);
+    const out = { friends: [], incoming: [], outgoing: [], blocked: bl.rows.map((r) => this.memberCard(r, r.created_at)), limits: { friends: MAX_FRIENDS, pending: MAX_PENDING_OUT } };
+    for (const r of fr.rows) {
+      if (r.status === 'accepted') out.friends.push(this.memberCard(r, r.accepted_at));
+      else (r.requested_by === me ? out.outgoing : out.incoming).push(this.memberCard(r, r.created_at));
+    }
+    return out;
+  }
+  async listReports(status = 'open') {
+    const st = ['open', 'reviewed', 'dismissed'].includes(status) ? status : 'open';
+    const r = await this.pool.query(`SELECT r.id, r.reason, r.note, r.status, r.created_at, a.public_id reporter, b.public_id target, b.display_name target_name,
+        (SELECT count(*)::int FROM user_reports x WHERE x.target = r.target) total
+      FROM user_reports r JOIN users a ON a.id=r.reporter JOIN users b ON b.id=r.target WHERE r.status=$1 ORDER BY r.created_at DESC LIMIT 200`, [st]);
+    return r.rows.map((x) => ({ id: x.id, reason: x.reason, reasonText: REPORT_REASONS[x.reason], note: x.note, status: x.status, createdAt: iso(x.created_at), reporter: x.reporter, target: x.target, targetName: x.target_name, total: x.total }));
+  }
+  async setReportStatus(id, status) {
+    if (!['open', 'reviewed', 'dismissed'].includes(status)) fail('حالة غير معروفة', 400);
+    const r = await this.pool.query('UPDATE user_reports SET status=$2, updated_at=now() WHERE id=$1', [Number(id), status]);
+    if (!r.rowCount) fail('البلاغ غير موجود', 404);
+    return { ok: true };
   }
 
   /* ------------------------------------------------------------ profile */

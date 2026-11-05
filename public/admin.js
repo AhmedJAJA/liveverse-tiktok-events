@@ -156,4 +156,23 @@
     catch (er) { pmsg('prizeMsg', er.message, false); }
   });
   api('GET', '/api/manage/prizes').then(paintPrizes).catch(() => {});
+
+  /* بلاغات المستخدمين */
+  const RSTATUS = { open: 'جديد', reviewed: 'تمت المراجعة', dismissed: 'مرفوض' };
+  const fmtR = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Riyadh' });
+  async function loadReports() {
+    const tb = $('reportRows');
+    try {
+      const d = await api('GET', '/api/manage/reports?status=' + $('reportStatus').value); tb.replaceChildren();
+      if (!d.reports.length) row(tb, ['لا توجد بلاغات بهذه الحالة']);
+      for (const r of d.reports) {
+        const sel = document.createElement('select');
+        for (const [v, t] of Object.entries(RSTATUS)) { const o = new Option(t, v); o.selected = v === r.status; sel.append(o); }
+        sel.addEventListener('change', () => api('POST', '/api/manage/report-status', { id: r.id, status: sel.value }).then(loadReports).catch((e) => pmsg('reportMsg', e.message, false)));
+        row(tb, [fmtR.format(new Date(r.createdAt)), r.targetName + ' · ' + r.target + (r.total > 1 ? ` (${r.total} بلاغات)` : ''), r.reasonText, r.note || '—', r.reporter, sel]);
+      }
+    } catch (e) { pmsg('reportMsg', e.message, false); }
+  }
+  $('reportStatus').addEventListener('change', loadReports);
+  loadReports();
 })();
