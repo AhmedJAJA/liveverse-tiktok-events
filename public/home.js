@@ -70,6 +70,12 @@
     const a = $('supportLink'); a.href = url; a.hidden = false;
   }).catch(() => {});
   $('year').textContent = String(new Date().getFullYear());
+  /* the sponge mark: a tap or click squeezes it and lets out a burst of bubbles (CSS animation, no timers left running) */
+  const sponge = $('heroSponge');
+  if (sponge) {
+    sponge.addEventListener('pointerdown', () => { sponge.classList.remove('is-squish'); void sponge.offsetWidth; sponge.classList.add('is-squish'); });
+    sponge.querySelector('img').addEventListener('animationend', (e) => { if (e.animationName === 'hm-sp-squish') sponge.classList.remove('is-squish'); });
+  }
 
   /* ------------------------------------------------------- hero: demo wheel + simulated chat
      An illustration only (no stream, no server): the real game's results are decided on the server. */

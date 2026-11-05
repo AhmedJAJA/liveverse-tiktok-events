@@ -323,7 +323,7 @@ body.ds{min-height:100svh}
 .bl-methods small{grid-column:1 / -1;color:var(--muted);line-height:1.7}
 .rc-paper{padding:20px;border-radius:16px;background:#F7FBFF;color:#0A1834}
 .rc-head{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:900;color:#0A1834}
-.rc-head img{border-radius:12px}
+.rc-head img{object-fit:contain}
 .rc-paper h2{margin:14px 0 10px;font-size:18px;color:#0A1834}
 .rc-dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin:0;padding:12px 0;border-block:1px dashed #9DB2D6}
 .rc-dl dt{color:#4A5C80;font-weight:700}

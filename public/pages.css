@@ -2,7 +2,8 @@
 body.pg{min-height:100svh}
 .pg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(1120px,100%);margin:0 auto;padding:18px 16px}
 .pg-brand{display:inline-flex;align-items:center;gap:10px;color:var(--foam);text-decoration:none;font-weight:900;font-size:20px}
-.pg-brand img{border-radius:12px;box-shadow:0 0 0 2px rgba(56,212,255,.7)}
+.pg-brand img{object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,214,42,.5)) drop-shadow(0 2px 3px rgba(0,0,0,.45));transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.pg-brand:hover img{transform:rotate(-8deg) scale(1.08)}
 .pg-brand b{color:var(--sun-soft)}
 .pg-nav{display:flex;flex-wrap:wrap;gap:8px 16px}
 .pg-nav a,.pg-linkbtn{color:var(--aqua);font-weight:800;text-decoration:none;background:none;border:0;padding:4px 0;font:inherit;font-weight:800;cursor:pointer}

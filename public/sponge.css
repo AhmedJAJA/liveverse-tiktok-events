@@ -35,7 +35,7 @@ html.is-hidden *,html.is-hidden *::before,html.is-hidden *::after{animation-play
 
 /* brand mark */
 .sp-brand{display:inline-flex;align-items:center;gap:10px;color:var(--sp-foam);text-decoration:none;font:900 18px/1 var(--font-latin);letter-spacing:.16em;text-shadow:0 0 14px rgba(56,212,255,.65)}
-.sp-brand img{width:34px;height:34px;filter:drop-shadow(0 0 10px rgba(56,212,255,.6))}
+.sp-brand img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 7px rgba(255,214,42,.55)) drop-shadow(0 0 12px rgba(56,212,255,.45))}
 .sp-brand b{color:var(--sp-yellow);text-shadow:0 0 14px rgba(255,210,31,.6)}
 
 /* primary action = sponge yellow, secondary = neon outline */
