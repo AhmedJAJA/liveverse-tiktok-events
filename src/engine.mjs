@@ -283,7 +283,7 @@ export class Engine {
   admitWaiting() {
     if (this.registration.phase !== 'open' || !this.waiting.size) return 0;
     let added = 0;
-    for (const [id, w] of this.waiting) { if (this.register(id, w.name, w.avatar, w, false)) added++; }
+    for (const [id, w] of this.waiting) { if (this.register(id, w.name, w.avatar, w, false)) { added++; this.noteHandle(id, w.handle); } }
     this.waiting.clear();
     return added;
   }
@@ -308,6 +308,12 @@ export class Engine {
     this.registrationRecent.length = Math.min(this.registrationRecent.length, REGISTRATION_PREVIEW);
     if (notify) this.emit();
     return true;
+  }
+  /** The viewer's public platform handle: lets a SPONGE LIVE account that linked the same platform account see its own stats. */
+  noteHandle(id, handle) {
+    const h = String(handle || '').replace(/^@/, '').toLowerCase();
+    const p = this.players.get(id);
+    if (p && /^[a-z0-9_.]{1,40}$/.test(h)) p.handle = h;
   }
   registerLate(id, name, avatar, who) {
     const phase = this.registration.phase;
@@ -662,11 +668,11 @@ export class Engine {
     if (this.recent.length > KEEP_CHAT) this.recent.length = KEEP_CHAT;
     // Joining the TikTok room does NOT enroll the viewer. Only the chosen chat word does.
     if (this.registration.phase === 'open') {
-      if (this.hasValidJoinWord(message)) this.register(identity, name, avatar, {isFollower,isSubscriber});
+      if (this.hasValidJoinWord(message) && this.register(identity, name, avatar, {isFollower,isSubscriber})) this.noteHandle(identity, handle);
     } else if (this.registration.phase === 'closed' && this.status.active && this.registration.lateJoin === 'open' && LATE_JOIN.includes(this.status.mode) && !this.players.has(identity) && this.hasValidJoinWord(message)) {
-      this.registerLate(identity, name, avatar, { isFollower, isSubscriber }); // «مفتوح دائمًا»: joins the running round
+      if (this.registerLate(identity, name, avatar, { isFollower, isSubscriber })) this.noteHandle(identity, handle); // «مفتوح دائمًا»: joins the running round
     } else if (this.registration.phase === 'closed' && !this.players.has(identity) && this.hasValidJoinWord(message)) {
-      if (!this.waiting.has(identity) && this.waiting.size < MAX_WAITING) this.waiting.set(identity, { name, avatar, isFollower, isSubscriber });
+      if (!this.waiting.has(identity) && this.waiting.size < MAX_WAITING) this.waiting.set(identity, { name, avatar, isFollower, isSubscriber, handle });
     } else if (this.registration.phase === 'closed' && this.status.active && this.players.has(identity)) {
       const player = this.player(identity, name, avatar);
       if (player) this.applyMessage(player, message, currentTime);

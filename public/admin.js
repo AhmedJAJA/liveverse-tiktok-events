@@ -4,7 +4,7 @@
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short' });
   const fmtDate = (iso) => (iso ? fmt.format(new Date(iso)) : '—');
-  const ACTIONS = { 'subscription-grant': 'منح اشتراك', 'subscription-extend': 'تمديد اشتراك', 'subscription-stop': 'إيقاف اشتراك', 'email-verify-manual': 'تأكيد بريد يدويًا', 'account-disable': 'إيقاف حساب', 'account-enable': 'إعادة تفعيل حساب', 'trial-code-revoke': 'إلغاء رمز تجربة', 'promo-create': 'إنشاء رمز', 'promo-revoke': 'إلغاء رمز', 'promo-update': 'تعديل رمز', 'promo-delete': 'حذف رمز', 'voucher-create': 'إنشاء رموز اشتراك', 'voucher-revoke': 'إلغاء رمز اشتراك' };
+  const ACTIONS = { 'subscription-grant': 'منح اشتراك', 'subscription-extend': 'تمديد اشتراك', 'subscription-stop': 'إيقاف اشتراك', 'email-verify-manual': 'تأكيد بريد يدويًا', 'account-disable': 'إيقاف حساب', 'account-enable': 'إعادة تفعيل حساب', 'trial-code-revoke': 'إلغاء رمز تجربة', 'promo-create': 'إنشاء رمز', 'promo-revoke': 'إلغاء رمز', 'promo-update': 'تعديل رمز', 'promo-delete': 'حذف رمز', 'voucher-create': 'إنشاء رموز اشتراك', 'voucher-revoke': 'إلغاء رمز اشتراك', 'partner-save': 'حفظ شريك', 'partner-delete': 'حذف شريك', 'prize-save': 'حفظ جائزة', 'award-status': 'تحديث استلام جائزة' };
   const STATUS = { active: 'فعّال', expired: 'منتهي', scheduled: 'لاحقًا', cancelled: 'موقوف', disabled: 'ملغى', used: 'مستخدم' };
   let current = null;
   const api = async (method, url, body) => {
@@ -100,4 +100,60 @@
     } catch (e) { err(e.message); }
   }
   users(); codes(); audit();
+
+  /* «شركاء النجاح» */
+  const pmsg = (id, t, ok = true) => { const m = $(id); m.textContent = t; m.className = 'pg-msg ' + (ok ? 'is-ok' : 'is-err'); m.hidden = !t; };
+  let partnerList = [];
+  function paintPartners(list) {
+    partnerList = list; const tb = $('partnerRows'); tb.replaceChildren();
+    if (!list.length) row(tb, ['لا يوجد شركاء بعد']);
+    for (const p of list) row(tb, [String(p.sort), p.name + (p.official ? ' ✓' : ''), '@' + p.handle + ' · ' + (p.platform === 'kick' ? 'Kick' : 'TikTok'), p.active ? 'ظاهر' : 'مخفي',
+      (() => { const box = document.createElement('span'); box.append(button('تعديل', () => editPartner(p)), button(p.active ? 'إخفاء' : 'إظهار', () => savePartner({ ...p, active: !p.active, photo: undefined })), button('حذف', () => { if (confirmDelete(p)) api('POST', '/api/manage/partner-delete', { id: p.id }).then((d) => paintPartners(d.partners)).catch((e) => pmsg('partnerMsg', e.message, false)); }, true)); return box; })()]);
+  }
+  // a second click on «حذف» within 4 s confirms (no browser dialogs)
+  let armed = null;
+  function confirmDelete(p) { if (armed === p.id) { armed = null; return true; } armed = p.id; pmsg('partnerMsg', 'اضغط «حذف» مرة أخرى لتأكيد حذف ' + p.name, false); setTimeout(() => { if (armed === p.id) armed = null; }, 4000); return false; }
+  function editPartner(p) {
+    const f = $('partnerForm');
+    f.id.value = p.id; f.name.value = p.name; f.handle.value = p.handle; f.platform.value = p.platform; f.description.value = p.description || ''; f.sort.value = p.sort; f.active.checked = p.active; f.official.checked = p.official;
+    f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  async function savePartner(body) {
+    try { const d = await api('POST', '/api/manage/partner-save', body); paintPartners(d.partners); pmsg('partnerMsg', 'تم الحفظ'); return true; }
+    catch (e) { pmsg('partnerMsg', e.message, false); return false; }
+  }
+  const readFile = (file) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(file); });
+  $('partnerForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); const f = e.target;
+    const file = f.photo.files[0];
+    if (file && file.size > 400_000) { pmsg('partnerMsg', 'حجم الصورة أكبر من 400 كيلوبايت', false); return; }
+    const body = { id: f.id.value ? Number(f.id.value) : undefined, name: f.name.value, handle: f.handle.value, platform: f.platform.value, description: f.description.value, sort: Number(f.sort.value || 0), active: f.active.checked, official: f.official.checked, photo: file ? await readFile(file) : undefined };
+    if (await savePartner(body)) { f.reset(); f.id.value = ''; }
+  });
+  $('partnerForm').addEventListener('reset', () => { $('partnerForm').id.value = ''; });
+  api('GET', '/api/manage/partners').then((d) => paintPartners(d.partners)).catch(() => {});
+
+  /* جوائز المتصدرين */
+  const BOARD = { players: 'اللاعبون', streamers: 'الستريمرز' }, METRIC = { wins: 'الانتصارات', entries: 'المشاركات', hours: 'الساعات', players: 'اللاعبون', sessions: 'الجلسات', rounds: 'الجولات' };
+  const AWARD = { pending: 'بانتظار التسليم', delivered: 'سُلّمت', void: 'ملغاة' };
+  function paintPrizes(d) {
+    const tb = $('prizeRows'); tb.replaceChildren();
+    if (!d.prizes.length) row(tb, ['لا توجد جوائز معلنة — لن تظهر «عليها جوائز» في الصفحة الرئيسية']);
+    for (const p of d.prizes) row(tb, [p.title + (p.active ? '' : ' (متوقفة)'), BOARD[p.board] + ' · ' + METRIC[p.metric], p.rankFrom === p.rankTo ? String(p.rankFrom) : p.rankFrom + '–' + p.rankTo, p.startsOn + (p.endsOn ? ' → ' + p.endsOn : ' →'),
+      button(p.active ? 'إيقاف' : 'تفعيل', () => api('POST', '/api/manage/prize-save', { ...p, active: !p.active }).then(paintPrizes).catch((e) => pmsg('prizeMsg', e.message, false)))]);
+    const ab = $('awardRows'); ab.replaceChildren();
+    if (!d.awards.length) row(ab, ['لا يوجد فائزون مسجلون بعد']);
+    for (const a of d.awards) {
+      const sel = document.createElement('select');
+      for (const [v, t] of Object.entries(AWARD)) { const o = new Option(t, v); o.selected = v === a.status; sel.append(o); }
+      sel.addEventListener('change', () => api('POST', '/api/manage/award-status', { id: a.id, status: sel.value }).then(paintPrizes).catch((e) => pmsg('prizeMsg', e.message, false)));
+      row(ab, [a.weekStart, a.title, String(a.rank), (a.winner.name || '') + (a.winner.publicId ? ' · ' + a.winner.publicId : a.winner.handle ? ' · @' + a.winner.handle : ''), sel]);
+    }
+  }
+  $('prizeForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); const f = e.target;
+    try { paintPrizes(await api('POST', '/api/manage/prize-save', { board: f.board.value, metric: f.metric.value, rankFrom: Number(f.rankFrom.value), rankTo: Number(f.rankTo.value), title: f.title.value, conditions: f.conditions.value, startsOn: f.startsOn.value || undefined, endsOn: f.endsOn.value || undefined })); f.reset(); pmsg('prizeMsg', 'أُضيفت الجائزة'); }
+    catch (er) { pmsg('prizeMsg', er.message, false); }
+  });
+  api('GET', '/api/manage/prizes').then(paintPrizes).catch(() => {});
 })();

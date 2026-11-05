@@ -88,6 +88,20 @@ export function validateSignup({ username, email, password, confirm } = {}) {
 }
 
 const iso = (d) => (d ? new Date(d).toISOString() : null);
+const MIN_ROUND_MS = 15_000, MAX_ROUND_S = 3600;
+/** A partner photo the owner uploaded: PNG, JPEG or WebP (checked by its bytes), at most 400 KB. */
+function parsePhoto(dataUrl) {
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+=*)$/.exec(String(dataUrl || ''));
+  if (!m) fail('الصورة يجب أن تكون PNG أو JPEG أو WebP');
+  const buf = Buffer.from(m[2], 'base64');
+  if (buf.length > 400_000) fail('حجم الصورة أكبر من 400 كيلوبايت');
+  const type = buf[0] === 0x89 && buf[1] === 0x50 ? 'image/png' : buf[0] === 0xff && buf[1] === 0xd8 ? 'image/jpeg' : buf.slice(0, 4).toString() === 'RIFF' && buf.slice(8, 12).toString() === 'WEBP' ? 'image/webp' : null;
+  if (type !== m[1]) fail('ملف الصورة غير صالح');
+  return { buf, type };
+}
+/** Leaderboard columns (SQL over weekly_player_stats p / the streamer subquery). */
+const PLAYER_METRICS = { wins: 'p.wins', entries: 'p.entries', hours: 'p.seconds' };
+const STREAMER_METRICS = { hours: 'minutes', players: 'uniq', sessions: 'sessions', rounds: 'rounds' };
 /** The leaderboard week: Sunday 00:00 to the next Sunday 00:00, Riyadh time (UTC+3, no daylight saving). */
 export function weekOf(now) {
   const RIYADH = 3 * 3600_000, DAY = 86400_000;
@@ -104,7 +118,8 @@ export class Platform {
    * @param {{send(m:object):Promise<object>, configured:boolean}} o.mail
    * @param {{createInvoice(o:object):Promise<object>, fetchInvoice(id:string):Promise<object>, configured:boolean, name:string}} o.gateway
    */
-  constructor({ pool, hashCode, mail, gateway, appUrl = '', now = () => Date.now() }) {
+  constructor({ pool, hashCode, mail, gateway, appUrl = '', now = () => Date.now(), minRoundMs = MIN_ROUND_MS }) {
+    this.minRoundMs = minRoundMs;
     this.pool = pool; this.hashCode = hashCode; this.mail = mail; this.gateway = gateway; this.appUrl = appUrl.replace(/\/$/, ''); this.now = now;
     this.cache = new Map();   // user id → { user, subs, loadedAt }
     this.byRoom = new Map();  // room → user id
@@ -615,21 +630,39 @@ export class Platform {
     await this.pool.query('UPDATE streamer_stats SET players_total = players_total + $2 WHERE user_id=$1', [userId, Math.min(100000, n | 0)]);
   }
   /* ------------------------------------------------------------ weekly leaderboard */
-  /** One finished game in a real session: every real participant gets an entry, the winner a win. */
-  async recordGameResult({ platform, winnerId = null, participants = [] }) {
-    if (!['tiktok', 'kick'].includes(platform) || !participants.length) return;
+  /** One finished round in a real, listed session.
+      Rules: a round shorter than 15 s counts for nobody; a player's time is the round's length (max 60 min),
+      and time already counted for that player in a simultaneous round of another stream is not counted again —
+      a fully overlapping round gives no entry and no win either. */
+  async recordGameResult({ platform, winnerId = null, participants = [], startedAt = null, endedAt = null, streamerId = null }) {
+    if (!['tiktok', 'kick'].includes(platform) || !participants.length) return { counted: false };
+    const end = Number(endedAt) || this.now(), start = Number(startedAt) || end - 60_000;
+    if (end - start < this.minRoundMs) return { counted: false, reason: 'short' };
     const week = weekOf(this.now()).start;
     const list = participants.slice(0, 500).map((p) => ({
       id: String(p.id).slice(0, 80), name: String(p.name || 'مشاهد').slice(0, 40),
       avatar: /^https:\/\//.test(p.avatar || '') ? String(p.avatar).slice(0, 500) : null,
+      handle: /^[A-Za-z0-9_.]{1,40}$/.test(String(p.handle || '').replace(/^@/, '')) ? String(p.handle).replace(/^@/, '').toLowerCase() : null,
     }));
-    await this.pool.query(`INSERT INTO weekly_player_stats (week_start, platform, player_id, name, avatar, wins, entries)
-      SELECT $1::date, $2, x.id, x.name, x.avatar, CASE WHEN x.id = $3 THEN 1 ELSE 0 END, 1
-        FROM jsonb_to_recordset($4::jsonb) AS x(id text, name text, avatar text)
+    // seconds of this round not yet counted for the player (another stream may have covered part of it)
+    const fresh = `LEAST(${MAX_ROUND_S}, GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp($6::bigint / 1000.0) - GREATEST(to_timestamp($5::bigint / 1000.0), COALESCE(weekly_player_stats.last_until, '-infinity'::timestamptz))))))::int`;
+    await this.pool.query(`INSERT INTO weekly_player_stats (week_start, platform, player_id, name, avatar, handle, wins, entries, seconds, last_until)
+      SELECT $1::date, $2, x.id, x.name, x.avatar, x.handle, CASE WHEN x.id = $3 THEN 1 ELSE 0 END, 1, LEAST(${MAX_ROUND_S}, ($6::bigint - $5::bigint) / 1000)::int, to_timestamp($6::bigint / 1000.0)
+        FROM jsonb_to_recordset($4::jsonb) AS x(id text, name text, avatar text, handle text)
       ON CONFLICT (week_start, platform, player_id) DO UPDATE SET
-        wins = weekly_player_stats.wins + EXCLUDED.wins, entries = weekly_player_stats.entries + 1,
-        name = EXCLUDED.name, avatar = COALESCE(EXCLUDED.avatar, weekly_player_stats.avatar), updated_at = now()`,
-    [week, platform, winnerId == null ? null : String(winnerId), JSON.stringify(list)]);
+        wins = weekly_player_stats.wins + CASE WHEN ${fresh} > 0 THEN EXCLUDED.wins ELSE 0 END,
+        entries = weekly_player_stats.entries + CASE WHEN ${fresh} > 0 THEN 1 ELSE 0 END,
+        seconds = weekly_player_stats.seconds + ${fresh},
+        last_until = GREATEST(COALESCE(weekly_player_stats.last_until, EXCLUDED.last_until), EXCLUDED.last_until),
+        name = EXCLUDED.name, avatar = COALESCE(EXCLUDED.avatar, weekly_player_stats.avatar), handle = COALESCE(EXCLUDED.handle, weekly_player_stats.handle), updated_at = now()`,
+    [week, platform, winnerId == null ? null : String(winnerId), JSON.stringify(list), start, end]);
+    if (streamerId) {
+      await this.pool.query(`INSERT INTO weekly_streamer_stats (week_start, user_id, rounds) VALUES ($1, $2, 1)
+        ON CONFLICT (week_start, user_id) DO UPDATE SET rounds = weekly_streamer_stats.rounds + 1`, [week, streamerId]);
+      await this.pool.query(`INSERT INTO weekly_streamer_players (week_start, user_id, platform, player_id)
+        SELECT $1, $2, $3, x.id FROM jsonb_to_recordset($4::jsonb) AS x(id text) ON CONFLICT DO NOTHING`, [week, streamerId, platform, JSON.stringify(list)]);
+    }
+    return { counted: true };
   }
   /** Streamer side of the week: a session started, players reached, minutes played (all counted by the server). */
   async addWeeklyStreamer(userId, { sessions = 0, players = 0, minutes = 0 }) {
@@ -639,36 +672,152 @@ export class Platform {
         players = weekly_streamer_stats.players + $4, minutes = weekly_streamer_stats.minutes + $5`,
     [weekOf(this.now()).start, userId, sessions | 0, Math.min(100000, players | 0), Math.min(10080, minutes | 0)]);
   }
-  /** Top five of the current week. Streamers who turned off their statistics are left out. */
-  async leaderboard(board, metric) {
+  /** Top five of a week. Accounts that hid their statistics are left out; a player shows an SPG ID only when
+      their platform account is linked to a SPONGE LIVE account that allows it. */
+  async leaderboard(board, metric, { week = weekOf(this.now()).start } = {}) {
     const w = weekOf(this.now());
-    if (board === 'players') {
-      const col = metric === 'entries' ? 'entries' : 'wins', other = col === 'wins' ? 'entries' : 'wins';
-      const rows = (await this.pool.query(`SELECT platform, name, avatar, wins, entries FROM weekly_player_stats
-        WHERE week_start=$1 AND ${col} > 0 ORDER BY ${col} DESC, ${other} DESC, updated_at ASC LIMIT 5`, [w.start])).rows;
-      return { board, metric: col, weekStart: w.start, endsAt: w.endsAt, rows: rows.map((r, i) => ({ rank: i + 1, platform: r.platform, name: r.name, avatar: r.avatar, wins: r.wins, entries: r.entries })) };
+    const out = { board: board === 'streamers' ? 'streamers' : 'players', weekStart: week, endsAt: w.endsAt, current: week === w.start };
+    if (out.board === 'players') {
+      const col = PLAYER_METRICS[metric] ? metric : 'wins';
+      out.metric = col;
+      const order = { wins: 'p.wins DESC, p.entries DESC', entries: 'p.entries DESC, p.wins DESC', hours: 'p.seconds DESC, p.entries DESC' }[col];
+      const rows = (await this.pool.query(`SELECT p.platform, p.name, p.avatar, p.handle, p.wins, p.entries, p.seconds, u.public_id, u.picture_url
+        FROM weekly_player_stats p
+        LEFT JOIN linked_accounts la ON la.verified AND la.platform = p.platform AND p.handle IS NOT NULL AND lower(la.handle) = p.handle
+        LEFT JOIN users u ON u.id = la.user_id AND u.disabled_at IS NULL AND COALESCE((u.privacy->>'playerStats')::boolean, true)
+        WHERE p.week_start=$1 AND ${PLAYER_METRICS[col]} > 0 ORDER BY ${order}, p.updated_at ASC LIMIT 5`, [week])).rows;
+      out.rows = rows.map((r, i) => ({ rank: i + 1, platform: r.platform, name: r.name, avatar: r.avatar, handle: r.handle, publicId: r.public_id || null,
+        wins: r.wins, entries: r.entries, hours: Math.round(r.seconds / 360) / 10 }));
+    } else {
+      const col = STREAMER_METRICS[metric] ? metric : 'hours';
+      out.metric = col;
+      const rows = (await this.pool.query(`SELECT * FROM (SELECT u.public_id, u.display_name, u.avatar, u.picture_url, s.sessions, s.minutes, s.rounds,
+          (SELECT count(*)::int FROM weekly_streamer_players x WHERE x.week_start = s.week_start AND x.user_id = s.user_id) AS uniq,
+          (SELECT la.handle FROM linked_accounts la WHERE la.user_id = u.id AND la.verified ORDER BY la.platform LIMIT 1) AS handle
+        FROM weekly_streamer_stats s JOIN users u ON u.id = s.user_id
+        WHERE s.week_start=$1 AND u.disabled_at IS NULL AND COALESCE((u.privacy->>'streamerStats')::boolean, true)) t
+        WHERE ${STREAMER_METRICS[col]} > 0 ORDER BY ${STREAMER_METRICS[col]} DESC, sessions DESC LIMIT 5`, [week])).rows;
+      out.rows = rows.map((r, i) => ({ rank: i + 1, publicId: r.public_id, name: r.display_name, avatar: r.avatar, picture: r.picture_url || null, handle: r.handle || null,
+        sessions: r.sessions, players: r.uniq, rounds: r.rounds, hours: Math.round(r.minutes / 6) / 10 }));
     }
-    const col = metric === 'players' ? 'players' : metric === 'sessions' ? 'sessions' : 'minutes';
-    const rows = (await this.pool.query(`SELECT u.public_id, u.display_name, u.avatar, u.picture_url, s.sessions, s.players, s.minutes
-      FROM weekly_streamer_stats s JOIN users u ON u.id = s.user_id
-      WHERE s.week_start=$1 AND s.${col} > 0 AND u.disabled_at IS NULL AND COALESCE((u.privacy->>'streamerStats')::boolean, true)
-      ORDER BY s.${col} DESC, s.sessions DESC LIMIT 5`, [w.start])).rows;
-    return { board: 'streamers', metric: col, weekStart: w.start, endsAt: w.endsAt, rows: rows.map((r, i) => ({ rank: i + 1, publicId: r.public_id, name: r.display_name, avatar: r.avatar, picture: r.picture_url || null, sessions: r.sessions, players: r.players, hours: Math.round(r.minutes / 6) / 10 })) };
+    out.prizes = await this.prizesFor(out.board, out.metric, week);
+    return out;
   }
-  /** Where one streamer (by SPG ID) stands this week, if their statistics are public. */
-  async leaderboardFind(publicId, metric) {
-    const w = weekOf(this.now());
-    const col = metric === 'players' ? 'players' : metric === 'sessions' ? 'sessions' : 'minutes';
-    const r = (await this.pool.query(`SELECT u.public_id, u.display_name, u.avatar, u.picture_url, s.sessions, s.players, s.minutes,
-        (SELECT count(*) FROM weekly_streamer_stats o JOIN users ou ON ou.id = o.user_id WHERE o.week_start=$1 AND o.${col} > s.${col}
-           AND COALESCE((ou.privacy->>'streamerStats')::boolean, true)) + 1 AS rank
-      FROM users u LEFT JOIN weekly_streamer_stats s ON s.user_id = u.id AND s.week_start=$1
-      WHERE u.public_id = upper($2) AND u.disabled_at IS NULL AND COALESCE((u.privacy->>'streamerStats')::boolean, true)`, [w.start, String(publicId || '').slice(0, 12)])).rows[0];
-    if (!r) return null;
-    const played = r.sessions != null && r[col] > 0;
-    return { publicId: r.public_id, name: r.display_name, avatar: r.avatar, picture: r.picture_url || null, rank: played ? Number(r.rank) : null,
-      sessions: r.sessions || 0, players: r.players || 0, hours: Math.round((r.minutes || 0) / 6) / 10 };
+  /** Where one account (by SPG ID) stands this week, as a streamer and — through its linked platform accounts — as a player. */
+  async leaderboardFind(publicId, metric, board = 'streamers') {
+    const w = weekOf(this.now()).start;
+    const u = (await this.pool.query(`SELECT id, public_id, display_name, avatar, picture_url, privacy FROM users WHERE public_id = upper($1) AND disabled_at IS NULL`, [String(publicId || '').slice(0, 12)])).rows[0];
+    if (!u) return null;
+    const pv = privacyOf(u);
+    const base = { publicId: u.public_id, name: u.display_name, avatar: u.avatar, picture: u.picture_url || null };
+    if (board === 'players') {
+      if (!pv.playerStats) return null;
+      const col = PLAYER_METRICS[metric] ? metric : 'wins', expr = PLAYER_METRICS[col];
+      const r = (await this.pool.query(`WITH mine AS (
+          SELECT p.* FROM weekly_player_stats p JOIN linked_accounts la ON la.verified AND la.user_id = $2 AND la.platform = p.platform AND lower(la.handle) = p.handle
+          WHERE p.week_start = $1)
+        SELECT COALESCE(sum(wins),0)::int wins, COALESCE(sum(entries),0)::int entries, COALESCE(sum(seconds),0)::int seconds,
+          (SELECT count(*) FROM weekly_player_stats o WHERE o.week_start = $1 AND ${expr.replace(/p\./g, 'o.')} > (SELECT COALESCE(max(${expr}),0) FROM mine p))::int + 1 AS rank,
+          (SELECT COALESCE(max(${expr}),0) FROM mine p) AS best FROM mine`, [w, u.id])).rows[0];
+      return { ...base, kind: 'player', rank: r.best > 0 ? r.rank : null, wins: r.wins, entries: r.entries, hours: Math.round(r.seconds / 360) / 10 };
+    }
+    if (!pv.streamerStats) return null;
+    const col = STREAMER_METRICS[metric] ? metric : 'hours', expr = STREAMER_METRICS[col];
+    const all = (await this.pool.query(`SELECT user_id, sessions, minutes, rounds,
+        (SELECT count(*)::int FROM weekly_streamer_players x WHERE x.week_start = s.week_start AND x.user_id = s.user_id) AS uniq
+      FROM weekly_streamer_stats s JOIN users ou ON ou.id = s.user_id WHERE s.week_start = $1 AND COALESCE((ou.privacy->>'streamerStats')::boolean, true)`, [w])).rows;
+    const val = (r) => ({ hours: r.minutes, players: r.uniq, sessions: r.sessions, rounds: r.rounds }[col]);
+    const mine = all.find((r) => r.user_id === u.id);
+    const rank = mine && val(mine) > 0 ? all.filter((r) => val(r) > val(mine)).length + 1 : null;
+    void expr;
+    return { ...base, kind: 'streamer', rank, sessions: mine?.sessions || 0, players: mine?.uniq || 0, rounds: mine?.rounds || 0, hours: Math.round((mine?.minutes || 0) / 6) / 10 };
   }
+  /* ---- prizes: shown only when the owner has announced real ones ---- */
+  async prizesFor(board, metric, week) {
+    return (await this.pool.query(`SELECT id, rank_from, rank_to, title, conditions FROM leaderboard_prizes
+      WHERE active AND board = $1 AND metric = $2 AND starts_on <= $3 AND (ends_on IS NULL OR ends_on >= $3) ORDER BY rank_from`, [board, metric, week])).rows
+      .map((r) => ({ id: r.id, rankFrom: r.rank_from, rankTo: r.rank_to, title: r.title, conditions: r.conditions }));
+  }
+  async listPrizes() {
+    const prizes = (await this.pool.query('SELECT *, starts_on::text AS starts, ends_on::text AS ends FROM leaderboard_prizes ORDER BY active DESC, starts_on DESC, id DESC LIMIT 100')).rows;
+    const awards = (await this.pool.query('SELECT a.*, a.week_start::text AS week, p.title FROM leaderboard_awards a JOIN leaderboard_prizes p ON p.id = a.prize_id ORDER BY a.week_start DESC, a.rank LIMIT 200')).rows;
+    return { prizes: prizes.map((p) => ({ id: p.id, board: p.board, metric: p.metric, rankFrom: p.rank_from, rankTo: p.rank_to, title: p.title, conditions: p.conditions, startsOn: p.starts, endsOn: p.ends || null, active: p.active })),
+      awards: awards.map((a) => ({ id: a.id, weekStart: a.week, title: a.title, rank: a.rank, winner: a.winner, status: a.status })) };
+  }
+  async savePrize(input = {}) {
+    const board = input.board === 'streamers' ? 'streamers' : 'players';
+    const metric = (board === 'players' ? PLAYER_METRICS : STREAMER_METRICS)[input.metric] ? input.metric : fail('اختر نوع الترتيب');
+    const from = Number(input.rankFrom), to = Number(input.rankTo ?? input.rankFrom);
+    if (!(from >= 1 && from <= 5 && to >= from && to <= 5)) fail('المراكز من 1 إلى 5');
+    const title = String(input.title || '').trim().slice(0, 80); if (!title) fail('اكتب الجائزة');
+    const starts = /^\d{4}-\d{2}-\d{2}$/.test(input.startsOn || '') ? input.startsOn : weekOf(this.now()).start;
+    const ends = /^\d{4}-\d{2}-\d{2}$/.test(input.endsOn || '') ? input.endsOn : null;
+    const vals = [board, metric, from, to, title, String(input.conditions || '').trim().slice(0, 300), starts, ends, input.active !== false];
+    if (input.id) await this.pool.query('UPDATE leaderboard_prizes SET board=$1, metric=$2, rank_from=$3, rank_to=$4, title=$5, conditions=$6, starts_on=$7, ends_on=$8, active=$9 WHERE id=$10', [...vals, Number(input.id)]);
+    else await this.pool.query('INSERT INTO leaderboard_prizes (board, metric, rank_from, rank_to, title, conditions, starts_on, ends_on, active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)', vals);
+    await this.audit('system', 'prize-save', { details: { title } });
+    return this.listPrizes();
+  }
+  async setAwardStatus(id, status) {
+    if (!['pending', 'delivered', 'void'].includes(status)) fail('حالة غير صالحة');
+    await this.pool.query('UPDATE leaderboard_awards SET status=$2, updated_at=now() WHERE id=$1', [Number(id), status]);
+    return this.listPrizes();
+  }
+  /** When a week ends: freeze its top five per board and metric, and record who won the announced prizes. Idempotent. */
+  async closeWeeks() {
+    const current = weekOf(this.now()).start;
+    const weeks = (await this.pool.query(`SELECT DISTINCT week_start::text AS week FROM (SELECT week_start FROM weekly_player_stats UNION SELECT week_start FROM weekly_streamer_stats) w
+      WHERE week_start < $1 AND NOT EXISTS (SELECT 1 FROM leaderboard_archive a WHERE a.week_start = w.week_start) ORDER BY 1 LIMIT 8`, [current])).rows;
+    for (const { week } of weeks) {
+      for (const [board, metrics] of [['players', PLAYER_METRICS], ['streamers', STREAMER_METRICS]]) for (const metric of Object.keys(metrics)) {
+        const lb = await this.leaderboard(board, metric, { week });
+        await this.pool.query('INSERT INTO leaderboard_archive (week_start, board, metric, rows) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', [week, board, metric, JSON.stringify(lb.rows)]);
+        for (const prize of lb.prizes) for (const row of lb.rows.filter((r) => r.rank >= prize.rankFrom && r.rank <= prize.rankTo)) {
+          await this.pool.query('INSERT INTO leaderboard_awards (week_start, prize_id, rank, winner) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING',
+            [week, prize.id, row.rank, JSON.stringify({ name: row.name, publicId: row.publicId || null, handle: row.handle || null, platform: row.platform || null })]);
+        }
+      }
+    }
+    return weeks.length;
+  }
+  /** A closed week as it was frozen (or computed, if it was never archived). */
+  async archivedBoard(week, board, metric) {
+    const r = (await this.pool.query('SELECT rows FROM leaderboard_archive WHERE week_start=$1 AND board=$2 AND metric=$3', [week, board, metric])).rows[0];
+    if (!r) return this.leaderboard(board, metric, { week });
+    return { board, metric, weekStart: week, current: false, archived: true, rows: r.rows, prizes: await this.prizesFor(board, metric, week) };
+  }
+
+  /* ------------------------------------------------------------ «شركاء النجاح» */
+  async partners({ all = false } = {}) {
+    const rows = (await this.pool.query(`SELECT id, name, handle, platform, description, photo IS NOT NULL AS has_photo, photo_v, sort, active, official, user_id
+      FROM partners ${all ? '' : 'WHERE active'} ORDER BY sort, id LIMIT 60`)).rows;
+    return rows.map((p) => ({ id: p.id, name: p.name, handle: p.handle, platform: p.platform, description: p.description, official: p.official,
+      url: p.platform === 'kick' ? 'https://kick.com/' + p.handle : 'https://www.tiktok.com/@' + p.handle,
+      photo: p.has_photo ? '/api/partners/' + p.id + '/photo?v=' + p.photo_v : null, ...(all ? { sort: p.sort, active: p.active, linked: !!p.user_id } : {}) }));
+  }
+  async savePartner(input = {}) {
+    const name = String(input.name || '').trim().slice(0, 40); if (!name) fail('اكتب اسم الشريك');
+    const handle = String(input.handle || '').trim().replace(/^@/, ''); if (!/^[A-Za-z0-9_.]{1,40}$/.test(handle)) fail('اسم الحساب غير صالح');
+    const platform = input.platform === 'kick' ? 'kick' : 'tiktok';
+    const description = String(input.description || '').trim().slice(0, 120);
+    const sort = Number.isInteger(Number(input.sort)) ? Number(input.sort) : 0;
+    // «شريك رسمي» only for a partner whose platform account is linked (officially signed in) to a SPONGE LIVE account
+    const owner = (await this.pool.query('SELECT user_id FROM linked_accounts WHERE verified AND platform=$1 AND lower(handle)=lower($2)', [platform, handle])).rows[0]?.user_id || null;
+    if (input.official && !owner) fail('شارة «شريك رسمي» تحتاج أن يربط الشريك حسابه على المنصة رسميًا بحساب SPONGE LIVE');
+    const photo = input.photo ? parsePhoto(input.photo) : null; // checked before anything is written
+    const vals = [name, handle, platform, description, sort, input.active !== false, !!input.official && !!owner, owner];
+    let id = Number(input.id) || null;
+    if (id) await this.pool.query('UPDATE partners SET name=$1, handle=$2, platform=$3, description=$4, sort=$5, active=$6, official=$7, user_id=$8, updated_at=now() WHERE id=$9', [...vals, id]);
+    else id = (await this.pool.query('INSERT INTO partners (name, handle, platform, description, sort, active, official, user_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id', vals)).rows[0].id;
+    if (photo) await this.pool.query('UPDATE partners SET photo=$2, photo_type=$3, photo_v=photo_v+1, updated_at=now() WHERE id=$1', [id, photo.buf, photo.type]);
+    await this.audit('system', 'partner-save', { details: { id, name } });
+    return this.partners({ all: true });
+  }
+  async partnerPhoto(id) {
+    const r = (await this.pool.query('SELECT photo, photo_type FROM partners WHERE id=$1 AND active AND photo IS NOT NULL', [Number(id) || 0])).rows[0];
+    return r ? { data: r.photo, type: r.photo_type } : null;
+  }
+  async deletePartner(id) { await this.pool.query('DELETE FROM partners WHERE id=$1', [Number(id)]); await this.audit('system', 'partner-delete', { details: { id } }); return this.partners({ all: true }); }
   async streamerStats(userId) {
     const r = (await this.pool.query('SELECT sessions, players_total, games, last_session_at FROM streamer_stats WHERE user_id=$1', [userId])).rows[0];
     return r ? { sessions: r.sessions, playersTotal: r.players_total, games: r.games, lastSessionAt: iso(r.last_session_at) } : { sessions: 0, playersTotal: 0, games: {}, lastSessionAt: null };
