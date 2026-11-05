@@ -8,7 +8,7 @@
   const STATUS = { active: ['فعّال', 'is-on'], expired: ['منتهي', 'is-off'], scheduled: ['يبدأ لاحقًا', 'is-warn'], cancelled: ['موقوف', 'is-bad'] };
   const PAY = { paid: ['مدفوعة ✓', 'is-on'], pending: ['بانتظار التأكيد', 'is-warn'], failed: ['فشلت', 'is-bad'], expired: ['منتهية', 'is-off'], refunded: ['مستردة', 'is-off'] };
   const SOURCE = { trial: 'تجربة مجانية', voucher: 'كود اشتراك', payment: 'دفع إلكتروني', admin: 'الإدارة', manual: 'الإدارة' };
-  const SECTIONS = ['settings', 'profile', 'bag', 'skins', 'wallet', 'billing', 'community', 'challenge'];
+  const SECTIONS = ['settings', 'profile', 'bag', 'skins', 'wheel', 'wallet', 'billing', 'community', 'challenge'];
   const params = new URLSearchParams(location.search);
   const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Riyadh' });
   const fmtDate = (iso) => (iso ? fmt.format(new Date(iso)) : '—');
@@ -50,12 +50,13 @@
     if (!SECTIONS.includes(sec)) sec = 'settings';
     document.body.dataset.sec = sec;
     for (const s of document.querySelectorAll('.ds-sec')) s.hidden = s.dataset.sec !== sec;
-    const navSec = sec === 'billing' ? 'settings' : sec === 'skins' ? 'bag' : sec;
+    const navSec = sec === 'billing' ? 'settings' : sec === 'skins' || sec === 'wheel' ? 'bag' : sec;
     for (const a of document.querySelectorAll('.ds-nav a[data-sec]')) { if (a.dataset.sec === navSec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
     closeMenu();
     if (sec === 'settings') loadSessions();
     if (sec === 'community') loadCommunity();
     if (sec === 'wallet') loadWallet();
+    if (sec === 'wheel') window.SpongeWheel?.open(); else window.SpongeWheel?.close();
     syncViewers(sec);
   }
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SECTIONS.includes(h)) { show(h); scrollTo({ top: 0 }); } else if (document.getElementById(h)) { show('settings'); document.getElementById(h).scrollIntoView({ block: 'start' }); } });

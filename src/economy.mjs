@@ -3,13 +3,17 @@
    wallet row locked, and every movement has a unique idempotency key (wallet_transactions UNIQUE), so a
    refresh, a second tab, a replayed request or a restart can never pay or charge twice.
    Time comes from PostgreSQL's clock (now()), never from the browser. */
-import { createHash } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import { tx } from './db.mjs';
 
 export const DAILY_REWARD = 200;
 export const DAILY_EVERY_HOURS = 24;
 export const REFERRAL_REWARD = 50;
 export const REFERRAL_CAP = 10;
+/* «عجلة السكنات» — published odds in basis points (10000 = 100%). Spins use earned coins only: random
+   prizes are never bought with money (see the notes shown next to the wheel). */
+export const WHEEL_DEFAULT = Object.freeze({ odds: { common: 5500, rare: 2700, epic: 1200, legendary: 500, mythic: 100 }, cost1: 100, cost10: 900 });
+const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic'];
 
 export class EconomyError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 const fail = (m, s) => { throw new EconomyError(m, s); };
@@ -175,6 +179,119 @@ export class Economy {
       await c.query(`INSERT INTO user_skins (user_id, skin_id, source) VALUES ($1,$2,'buy')`, [userId, skin.id]);
     });
     return { ok: true, skin: skin.id, price };
+  }
+
+  /* ---------------------------------------------------------------- «عجلة السكنات»
+     The server alone draws the prizes (crypto randomInt), stores them with a snapshot of the odds, takes the
+     coins and adds the skins — all in one transaction — and only then returns the result for the animation.
+     A rarity with no skin in the wheel is left out and the others are re-weighted; the shown odds say so. */
+  async wheelConfig(c = this.pool) {
+    const r = (await c.query(`SELECT value, version FROM economy_settings WHERE key='wheel'`)).rows[0];
+    const v = r?.value || WHEEL_DEFAULT;
+    return { odds: { ...WHEEL_DEFAULT.odds, ...(v.odds || {}) }, cost1: v.cost1 || WHEEL_DEFAULT.cost1, cost10: v.cost10 || WHEEL_DEFAULT.cost10, version: r?.version || 0 };
+  }
+  /** The odds that apply right now: rarities without skins in the wheel are dropped and the rest scaled to 100%. */
+  async effectiveOdds(c = this.pool) {
+    const cfg = await this.wheelConfig(c), p = this.platform; await p.catalog();
+    const pool = p.skinCatalog.wheelPool(), byRarity = {};
+    for (const s of pool) (byRarity[s.rarity] ||= []).push(s);
+    const live = RARITY_ORDER.filter((r) => byRarity[r]?.length && cfg.odds[r] > 0);
+    const total = live.reduce((n, r) => n + cfg.odds[r], 0);
+    const odds = {}; let acc = 0;
+    live.forEach((r, i) => { const bp = i === live.length - 1 ? 10000 - acc : Math.round((cfg.odds[r] * 10000) / total); odds[r] = bp; acc += bp; });
+    return { ...cfg, odds, configured: cfg.odds, pool: Object.fromEntries(live.map((r) => [r, byRarity[r].map((s) => s.id)])) };
+  }
+  draw(eff) {
+    let roll = randomInt(10000), rarity = null;
+    for (const r of RARITY_ORDER) { const bp = eff.odds[r] || 0; if (roll < bp) { rarity = r; break; } roll -= bp; }
+    const ids = eff.pool[rarity];
+    return { rarity, skinId: ids[randomInt(ids.length)] };
+  }
+  async wheel(userId) {
+    const eff = await this.effectiveOdds(), p = this.platform;
+    const spins = (await this.pool.query(`SELECT s.id, s.count, s.cost, s.created_at, json_agg(json_build_object('skin', r.skin_id, 'rarity', r.rarity, 'duplicate', r.duplicate) ORDER BY r.idx) results
+      FROM wheel_spins s JOIN wheel_rewards r ON r.spin_id=s.id WHERE s.user_id=$1 GROUP BY s.id ORDER BY s.id DESC LIMIT 10`, [userId])).rows;
+    const w = await this.wallet(userId);
+    return {
+      cost1: eff.cost1, cost10: eff.cost10, earned: w.earned, balance: w.balance, version: eff.version,
+      odds: Object.fromEntries(Object.entries(eff.odds).map(([r, bp]) => [r, bp / 100])),
+      pool: Object.fromEntries(Object.entries(eff.pool).map(([r, ids]) => [r, ids.map((id) => { const s = p.skinCatalog.byId(id); return { id, name: s.name, thumb: s.thumb }; })])),
+      recent: spins.map((s) => ({ id: s.id, count: s.count, cost: s.cost, at: iso(s.created_at), results: s.results })),
+    };
+  }
+  async spin(userId, count, key) {
+    const n = Number(count);
+    if (n !== 1 && n !== 10) fail('اختر لفة واحدة أو 10 لفات');
+    if (!/^[A-Za-z0-9_-]{8,64}$/.test(String(key || ''))) fail('طلب غير صالح');
+    const p = this.platform;
+    const out = await tx(this.pool, async (c) => {
+      await this.lock(c, userId); // one spin of an account at a time
+      const done = (await c.query('SELECT id FROM wheel_spins WHERE user_id=$1 AND idem_key=$2', [userId, key])).rows[0];
+      if (done) return { id: done.id, replay: true };
+      const eff = await this.effectiveOdds(c);
+      if (!Object.keys(eff.pool).length) fail('العجلة متوقفة مؤقتًا', 503);
+      const cost = n === 10 ? eff.cost10 : eff.cost1;
+      const w = (await c.query('SELECT earned FROM wallets WHERE user_id=$1', [userId])).rows[0];
+      if (Number(w.earned) < cost) fail(`تحتاج ${cost} عملة مكتسبة — رصيدك المكتسب ${Number(w.earned)}`, 402);
+      const spin = (await c.query('INSERT INTO wheel_spins (user_id, idem_key, count, cost, odds, odds_version) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+        [userId, key, n, cost, { odds: eff.odds, configured: eff.configured, pool: eff.pool }, eff.version])).rows[0];
+      await this.move(c, userId, { amount: -cost, bucket: 'earned', kind: 'spin', ref: 'spin:' + spin.id, note: n === 10 ? '10 لفات' : 'لفة واحدة' });
+      for (let i = 0; i < n; i++) {
+        const d = this.draw(eff);
+        const ins = (await c.query(`INSERT INTO user_skins (user_id, skin_id, source) VALUES ($1,$2,'wheel')
+          ON CONFLICT (user_id, skin_id) DO UPDATE SET copies = user_skins.copies + 1 RETURNING (xmax = 0) AS fresh`, [userId, d.skinId])).rows[0];
+        const isDefault = p.skinCatalog.byId(d.skinId)?.default;
+        await c.query('INSERT INTO wheel_rewards (spin_id, idx, skin_id, rarity, duplicate) VALUES ($1,$2,$3,$4,$5)', [spin.id, i, d.skinId, d.rarity, !ins.fresh || !!isDefault]);
+      }
+      return { id: spin.id, replay: false };
+    });
+    return { ...(await this.spinResult(userId, out.id)), replay: out.replay };
+  }
+  async spinResult(userId, spinId) {
+    const s = (await this.pool.query('SELECT id, count, cost, created_at FROM wheel_spins WHERE id=$1 AND user_id=$2', [spinId, userId])).rows[0];
+    if (!s) fail('لا توجد عملية بهذا المعرف', 404);
+    const p = this.platform; await p.catalog();
+    const rows = (await this.pool.query('SELECT idx, skin_id, rarity, duplicate FROM wheel_rewards WHERE spin_id=$1 ORDER BY idx', [s.id])).rows;
+    const w = await this.wallet(userId);
+    return {
+      spin: s.id, count: s.count, cost: s.cost, at: iso(s.created_at), earned: w.earned, balance: w.balance,
+      results: rows.map((r) => { const sk = p.skinCatalog.anyById(r.skin_id); return { idx: r.idx, rarity: r.rarity, duplicate: r.duplicate, skin: sk ? { id: sk.id, name: sk.name, thumb: sk.thumb, model: sk.model, accent: sk.accent, rarity: sk.rarity } : { id: r.skin_id } }; }),
+    };
+  }
+  async spinByKey(userId, key) {
+    const r = (await this.pool.query('SELECT id FROM wheel_spins WHERE user_id=$1 AND idem_key=$2', [userId, String(key || '')])).rows[0];
+    return r ? this.spinResult(userId, r.id) : null;
+  }
+  /** Owner: new odds (basis points, must total exactly 10000), versioned and logged with a reason. */
+  async setWheelOdds(odds, { cost1, cost10, actor, reason }) {
+    const why = String(reason || '').trim(); if (why.length < 5) fail('سبب التعديل مطلوب');
+    const clean = {}; let sum = 0;
+    for (const r of RARITY_ORDER) { const v = Math.round(Number(odds?.[r]) * 100); if (!Number.isInteger(v) || v < 0 || v > 10000) fail('نسبة غير صالحة: ' + r); clean[r] = v; sum += v; }
+    if (sum !== 10000) fail(`مجموع النسب يجب أن يكون 100% (الحالي ${(sum / 100).toFixed(2)}%)`);
+    const c1 = Number(cost1 ?? WHEEL_DEFAULT.cost1), c10 = Number(cost10 ?? WHEEL_DEFAULT.cost10);
+    if (!Number.isInteger(c1) || c1 < 1 || !Number.isInteger(c10) || c10 < 1) fail('تكلفة غير صالحة');
+    await this.pool.query(`INSERT INTO economy_settings (key, value, updated_by) VALUES ('wheel', $1, $2)
+      ON CONFLICT (key) DO UPDATE SET value=$1, version=economy_settings.version+1, updated_by=$2, updated_at=now()`, [{ odds: clean, cost1: c1, cost10: c10 }, String(actor).slice(0, 60)]);
+    await this.log(actor, 'wheel-odds', null, why, { odds: clean, cost1: c1, cost10: c10 });
+    return this.wheelConfig();
+  }
+  /** Owner: what the current odds produce over n draws (nothing is saved or charged). */
+  async simulate(n = 100000) {
+    const eff = await this.effectiveOdds(), N = Math.min(1_000_000, Math.max(100, Number(n) || 100000)), hits = {};
+    for (let i = 0; i < N; i++) { const d = this.draw(eff); hits[d.rarity] = (hits[d.rarity] || 0) + 1; }
+    return { n: N, expected: Object.fromEntries(Object.entries(eff.odds).map(([r, bp]) => [r, bp / 100])), observed: Object.fromEntries(Object.entries(hits).map(([r, h]) => [r, Math.round((h / N) * 10000) / 100])) };
+  }
+  async wheelReport() {
+    const [dist, spins] = await Promise.all([
+      this.pool.query('SELECT rarity, count(*)::int n, sum(CASE WHEN duplicate THEN 1 ELSE 0 END)::int dups FROM wheel_rewards GROUP BY rarity'),
+      this.pool.query(`SELECT s.id, s.count, s.cost, s.created_at, u.public_id FROM wheel_spins s JOIN users u ON u.id=s.user_id ORDER BY s.id DESC LIMIT 100`),
+    ]);
+    const total = dist.rows.reduce((n, r) => n + r.n, 0);
+    return {
+      config: await this.effectiveOdds(), totalPrizes: total,
+      distribution: dist.rows.map((r) => ({ rarity: r.rarity, n: r.n, pct: total ? Math.round((r.n / total) * 10000) / 100 : 0, duplicates: r.dups })),
+      spins: spins.rows.map((s) => ({ id: s.id, count: s.count, cost: s.cost, at: iso(s.created_at), publicId: s.public_id })),
+    };
   }
 
   /* ---------------------------------------------------------------- owner tools */
