@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020A22">
+<title>مكتبة الألعاب — سبونج لايف</title>
+<meta name="description" content="مكتبة ألعاب سبونج لايف: ألعاب تفاعلية مجانية للبث المباشر على TikTok وKick — اختر لعبة واضبط إعداداتها وابدأ.">
+<link rel="icon" href="/brand/favicon-64.png" type="image/png">
+<link rel="preload" href="/fonts/tajawal-arabic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/home.css">
+<link rel="stylesheet" href="/pages.css">
+<link rel="stylesheet" href="/games.css">
+<link rel="stylesheet" href="/bottom-nav.css">
+<script defer src="/games.js"></script>
+<script defer src="/bottom-nav.js"></script>
+</head>
+<body class="hm pg gl">
+<div class="gl-sky" aria-hidden="true"><i class="gl-orb o1"></i><i class="gl-orb o2"></i><i class="gl-dots"></i></div>
+
+<header class="gl-top">
+ <a class="pg-brand" href="/"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
+ <nav class="gl-nav" aria-label="روابط الموقع">
+  <a href="/">الرئيسية</a><a href="/games" aria-current="page">الألعاب</a><a href="/#live">البثوث النشطة</a><a href="/#leaders">المتصدرون</a><a href="/#store">المتجر</a>
+ </nav>
+ <a class="gl-account" id="accountLink" href="/login?next=%2Fgames">تسجيل الدخول</a>
+</header>
+
+<main class="gl-main" id="top">
+ <section class="gl-hero" aria-labelledby="libTitle">
+  <p class="gl-pill"><i aria-hidden="true"></i><span id="heroPill">كل الألعاب مجانية — اختر لعبة وابدأ</span></p>
+  <h1 id="libTitle">مكتبة الألعاب</h1>
+  <p class="gl-lead">اختر لعبة، اضبط إعداداتها، وافتح غرفة الانتظار — جمهورك ينضم من تعليقات البث ويلعب معك مباشرة.</p>
+ </section>
+
+ <section class="gl-live" aria-labelledby="liveTitle">
+  <span class="gl-live-ic" aria-hidden="true"><svg width="22" height="22"><use href="/icons.svg#i-live"/></svg></span>
+  <div><h2 id="liveTitle">اتصل بالبث</h2><p id="liveText">اربط حساب TikTok أو Kick مرة واحدة، وكل لعبة تتصل ببثك من صفحتها.</p></div>
+  <a class="gl-btn gl-btn-ghost" id="liveLink" href="/account#settings">ربط المنصات</a>
+ </section>
+
+ <section class="gl-updates" aria-labelledby="updTitle" id="updates" hidden>
+  <div class="gl-sec-head"><span class="gl-sec-ic" aria-hidden="true"><svg width="20" height="20"><use href="/icons.svg#i-sparkle"/></svg></span><div><h2 id="updTitle">آخر التحديثات</h2><p>أحدث الألعاب والتحسينات في سبونج لايف.</p></div></div>
+  <div class="gl-upd-list" id="updateList"></div>
+ </section>
+
+ <section class="gl-library" aria-labelledby="gridTitle">
+  <div class="gl-lib-head">
+   <h2 id="gridTitle" class="sr-only">كل الألعاب</h2>
+   <div class="gl-filters" role="tablist" aria-label="تصنيف الألعاب" id="filters">
+    <button type="button" role="tab" aria-selected="true" data-filter="all">الكل</button>
+    <button type="button" role="tab" aria-selected="false" data-filter="smart">الذكاء والكلمات</button>
+    <button type="button" role="tab" aria-selected="false" data-filter="elimination">التحديات</button>
+    <button type="button" role="tab" aria-selected="false" data-filter="luck">الحظ</button>
+    <button type="button" role="tab" aria-selected="false" data-filter="group">الألعاب الجماعية</button>
+    <button type="button" role="tab" aria-selected="false" data-filter="new">الألعاب الجديدة</button>
+   </div>
+   <p class="gl-count" id="gameCount" aria-live="polite"></p>
+  </div>
+  <ul class="gl-grid" id="gameGrid"></ul>
+  <p class="gl-empty" id="gridEmpty" hidden>لا توجد ألعاب في هذا التصنيف حاليًا.</p>
+ </section>
+</main>
+
+<footer class="gl-foot"><p>© <span id="year">2026</span> سبونج لايف — <a href="/terms">شروط الاستخدام</a> · <a href="/privacy">الخصوصية</a> · <a href="/guide/games">دليل الألعاب</a></p></footer>
+</body>
+</html>

@@ -128,7 +128,7 @@ test('accounts over HTTP: sign-up, ID, verification, free games, no subscription
     assert.equal((await browser(srv.base)('GET', '/account')).status, 302, 'account page needs a session');
     // every game is free from the first minute: a game page and the game API open, no trial to claim
     assert.equal((await u('GET', '/game/quiz')).status, 200);
-    assert.equal((await u('GET', '/studio')).location, '/#games');
+    assert.equal((await u('GET', '/studio')).location, '/games');
     assert.equal((await u('POST', '/api/admin/prepare', { mode: 'quiz' })).status, 200);
     assert.equal((await u('POST', '/api/me/trial-claim', {})).status, 410);
     // verify through the link sent by e-mail (dev mode returns it)
@@ -146,7 +146,7 @@ test('accounts over HTTP: sign-up, ID, verification, free games, no subscription
     assert.equal((await u('GET', '/api/me/profile')).status, 401);
     assert.equal((await u('POST', '/api/auth/login', { identifier: 'streamer_1', password: 'wrong-pass1' })).status, 401);
     const li = await u('POST', '/api/auth/login', { identifier: 'Streamer@Example.com', password: 'reef2026go' });
-    assert.equal(li.status, 200); assert.equal(li.data.account.publicId, id); assert.equal(li.data.next, '/#games');
+    assert.equal(li.status, 200); assert.equal(li.data.account.publicId, id); assert.equal(li.data.next, '/games');
     assert.equal((await u('POST', '/api/admin/prepare', { mode: 'flag' })).status, 200);
     const me = (await u('GET', '/api/access/me')).data; assert.equal(me.account.publicId, id); assert.match(me.room, /^a[a-z0-9]{9}$/);
     assert.equal((await fetch(srv.base + '/api/state?room=' + me.room)).status, 200, 'the account room has a public OBS state');

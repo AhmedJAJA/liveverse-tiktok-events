@@ -231,7 +231,7 @@ test('SPONGE LIVE over HTTP: host-only game tools, private role pages, sketch sy
     assert.equal((await fetch(base + '/api/role/act', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Role-Token': 'nope' }, body: '{"number":1}' })).status, 400);
     // every catalogue game opens its join page and every card image is served
     const site = await (await fetch(base + '/api/site')).json();
-    assert.equal(site.games.length, 14);
+    assert.equal(site.games.length, 15);
     for (const g of site.games) {
       assert.equal((await fetch(base + g.href)).status, 200, g.href);
       assert.equal((await fetch(base + g.cover)).headers.get('content-type'), 'image/webp', g.cover);

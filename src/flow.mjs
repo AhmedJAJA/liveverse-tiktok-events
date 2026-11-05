@@ -51,7 +51,7 @@ export class GameFlow {
     this.engine = engine; this.games = games; this.now = now; this.onChange = onChange;
     this.nav = 'GAME_LIBRARY'; this.mode = null; this.sessionId = null; this.trial = false;
     this.settings = {};          // mode -> saved advanced settings (kept for the room's lifetime)
-    this.join = { keyword: 'انضم', lateJoin: 'click', autoOpen: true };
+    this.join = { keyword: 'انضم', lateJoin: 'click', autoOpen: true, audience: 'all' };
     this.version = 1;            // configuration version: a stale keyword change from another window is refused
     this.lobby = null;           // the authoritative lobby (null before the first «ابدأ اللعبة»)
     this.updatedAt = now();
@@ -113,6 +113,11 @@ export class GameFlow {
       this.join.lateJoin = join.lateJoin;
     }
     if (join.autoOpen !== undefined) this.join.autoOpen = join.autoOpen === true;
+    if (join.audience !== undefined) {
+      if (!['all', 'followers'].includes(join.audience)) fail('خيار «المسموح لهم» غير صالح');
+      this.join.audience = join.audience;
+      if (this.engine.registration.phase === 'open') this.engine.updateRegistration({ audience: this.engineAudience() });
+    }
     if (join.keyword !== undefined) this.setKeyword(join.keyword);
     this.version++; this.touch();
   }
@@ -177,10 +182,16 @@ export class GameFlow {
     this.go(s === 'PREPARING_LOBBY' ? 'cancel' : 'endSession');
     this.nav = 'GAME_SETUP'; this.touch();
   }
+  /** «المتابعون فقط» is enforced only on a live TikTok connection (TikTok reports follow status; Kick does not,
+      and demo players have none) — elsewhere everyone is accepted, as the settings page says. */
+  engineAudience() {
+    const c = this.engine.connection || {};
+    return this.join.audience === 'followers' && c.state === 'connected' && c.platform === 'tiktok' && !this.lobby?.demo ? 'followers' : 'all';
+  }
   openEngine() {
-    const e = this.engine;
-    if (e.registration.phase === 'open') { if (e.registration.keyword !== this.join.keyword) e.updateRegistration({ keyword: this.join.keyword }); }
-    else e.openRegistration({ keyword: this.join.keyword });
+    const e = this.engine, audience = this.engineAudience();
+    if (e.registration.phase === 'open') { if (e.registration.keyword !== this.join.keyword || e.registration.audience !== audience) e.updateRegistration({ keyword: this.join.keyword, audience }); }
+    else e.openRegistration({ keyword: this.join.keyword, audience });
   }
   closeEngine() {
     const e = this.engine;
@@ -321,7 +332,7 @@ export class GameFlow {
     this.mode = g.mode; this.sessionId = saved.sessionId || randomUUID(); this.nav = 'GAME_SETUP';
     if (saved.settings) try { this.settings[g.mode] = validateSettings(g.mode, saved.settings, defaultSettings(g.mode)); } catch {}
     try { this.join.keyword = cleanJoinWord(saved.join?.keyword ?? 'انضم'); } catch {}
-    this.join.lateJoin = saved.join?.lateJoin === 'open' ? 'open' : 'click'; this.join.autoOpen = saved.join?.autoOpen !== false;
+    this.join.lateJoin = saved.join?.lateJoin === 'open' ? 'open' : 'click'; this.join.autoOpen = saved.join?.autoOpen !== false; this.join.audience = saved.join?.audience === 'followers' ? 'followers' : 'all';
     this.version = Math.max(1, Number(saved.version) || 1) + 1;
     e.configure({ mode: g.mode, title: g.title });
     e.registration.keyword = this.join.keyword;

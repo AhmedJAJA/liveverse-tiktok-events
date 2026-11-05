@@ -121,7 +121,7 @@
       h('p', { class: 'acc-plan' + (u?.planActive ? ' is-active' : ''), text: plan }),
       h('label', { class: 'acc-obs-label', for: 'acc-obs', text: 'رابط شاشة البث الخاصة بك (OBS)' }),
       h('div', { class: 'acc-obs' }, h('input', { id: 'acc-obs', value: obs, readonly: true, dir: 'ltr' }), copy),
-      h('a', { class: 'acc-submit', href: '/#games', text: 'اختر لعبة' }),
+      h('a', { class: 'acc-submit', href: '/games', text: 'اختر لعبة' }),
       logout);
   }
   function build(me) {

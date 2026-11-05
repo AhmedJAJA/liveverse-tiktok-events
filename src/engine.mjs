@@ -6,6 +6,8 @@ import { ALL_GAMES as GAMES } from './catalog.mjs';
 import { CATEGORY_WORDS } from './word-banks.mjs';
 const botWord = (category, letter) => (CATEGORY_WORDS[category] || []).find(w => normalizeAnswer(w).replace(/^ال/, '').startsWith(normalizeAnswer(letter)));
 
+/** «سلسلة الكلمات»: the «نقاط الفوز» counter steps (10 → 100 by 5). */
+export const CHAIN_TARGETS = Array.from({ length: 19 }, (_, i) => 10 + i * 5);
 export const MODES = ['quiz', 'guess', 'race', 'wheel', 'glass', 'bomb', ...PARTY_MODES];
 export { PARTY_MODES };
 export const MASCOT_PRESETS = Object.freeze({
@@ -363,7 +365,7 @@ export class Engine {
     const partyMode = PARTY_MODES.includes(mode ?? this.status.mode) ? (mode ?? this.status.mode) : null;
     if (partyMode && variant !== undefined) {
       // Per-game rule switches, validated against a fixed list.
-      const allowed = { rps: { format: ['duel', 'sky'] }, roulette: { rule: ['eliminate', 'winner'] }, categories: { scoring: ['elimination', 'points'] }, drawguess: { winners: [1, 2, 3] }, outsider: { category: ['random', ...Object.keys(OUTSIDER_WORDS)] } }[partyMode] || {};
+      const allowed = { rps: { format: ['duel', 'sky'] }, roulette: { rule: ['eliminate', 'winner'] }, categories: { scoring: ['elimination', 'points'] }, chain: { target: CHAIN_TARGETS, order: ['ordered', 'random'], alternate: [true, false], review: [true, false], sounds: [true, false] }, drawguess: { winners: [1, 2, 3] }, outsider: { category: ['random', ...Object.keys(OUTSIDER_WORDS)] } }[partyMode] || {};
       const clean = {};
       for (const [k, v] of Object.entries(variant || {})) { if (!allowed[k]?.includes(v)) throw new Error('خيار غير صالح لهذه اللعبة'); clean[k] = v; }
       this.partyConfig[partyMode] = { ...this.partyConfig[partyMode], ...clean };
@@ -873,7 +875,7 @@ export class Engine {
   /* ---- private game helpers (host-only or player-private; never part of the public snapshot) ---- */
   requireParty(mode) { if (!this.party || this.status.mode !== mode || !this.status.active) throw new Error('هذه اللعبة ليست جارية'); return this.party; }
   partySecret() { return this.status.active && this.party?.secret ? this.party.secret() : null; }
-  judgeAnswer(accept) { const g = this.requireParty('categories'); if (!g.judge(accept)) throw new Error('لا توجد إجابة بانتظار الحكم'); this.syncParty(); return true; }
+  judgeAnswer(accept) { const g = this.requireParty(this.status.mode === 'chain' ? 'chain' : 'categories'); if (!g.judge(accept)) throw new Error('لا توجد إجابة بانتظار الحكم'); this.syncParty(); return true; }
   // the private page serves both secret-role games: «الأدوار المخفية» and «برا السالفة»
   get secretMode() { return this.status.mode === 'outsider' ? 'outsider' : 'roles'; }
   rolesClaim() { return this.requireParty(this.secretMode).claim(); }
@@ -900,6 +902,7 @@ export class Engine {
         if (mode === 'rps') text = pick(['حجرة', 'ورقة', 'مقص']);
         else if (mode === 'drawguess') text = this.random(100) < 20 && this.party.word ? this.party.word : pick(['بيت', 'قمر', 'شجرة', 'سمكة', 'نجمة']);
         else if (mode === 'chairs') text = 'اجلس';
+        else if (mode === 'chain') { if (this.random(100) < 30) text = this.random(100) < 80 ? (this.party.botWord?.() || 'لا أعرف') : pick(['بيت', 'قمر', 'سيارة']); }
         else if (mode === 'categories') { if (this.party.chosen === bot.id) text = this.random(100) < 75 ? (botWord(this.party.category, this.party.letter) || 'لا أعرف') : 'لا أعرف'; }
         else if (mode === 'roles') { if (party.phase === 'day') { const others = party.players.filter(x => x.alive && x.number !== bot.number); if (others.length) text = 'صوت ' + pick(others).number; } }
         else if (mode === 'country' || mode === 'flag') text = this.random(100) < 18 && this.party.country ? this.party.country.name : pick(['مصر', 'فرنسا', 'اليابان', 'البرازيل', 'كندا']);

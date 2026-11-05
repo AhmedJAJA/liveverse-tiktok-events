@@ -58,7 +58,7 @@ test('/go/<section>: the games list for everyone (all free), account sections or
   const { base, stop } = await boot();
   try {
     const guest = browser(base);
-    assert.equal((await guest('GET', '/go/studio')).location, '/#games');
+    assert.equal((await guest('GET', '/go/studio')).location, '/games');
     assert.equal((await guest('GET', '/go/profile')).location, '/login?next=%2Faccount%23profile');
     assert.equal((await guest('GET', '/go/community')).location, '/login?next=%2Faccount%23community');
     assert.equal((await guest('GET', '/go/nope')).status, 404);
@@ -69,7 +69,7 @@ test('/go/<section>: the games list for everyone (all free), account sections or
     assert.equal(reg.status, 201);
     const publicId = reg.data.account.publicId;
     // signed in: every game is free → the games list; sections open directly
-    assert.equal((await b('GET', '/go/studio')).location, '/#games');
+    assert.equal((await b('GET', '/go/studio')).location, '/games');
     for (const s of ['profile', 'community', 'bag', 'challenge']) assert.equal((await b('GET', '/go/' + s)).location, '/account#' + s);
     // no trial is created any more (nothing to start), and a game opens directly for a new account
     assert.equal((await b('POST', '/api/me/trial-start', {})).data.started, false);

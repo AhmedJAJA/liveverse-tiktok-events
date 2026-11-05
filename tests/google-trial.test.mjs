@@ -101,7 +101,7 @@ test('free access for every account (no trial, no studio gate), Google sign-in a
     assert.equal(reg.status, 201);
     const id = reg.data.account.publicId;
     assert.equal(reg.data.account.entitled, true);
-    assert.equal((await a('GET', '/studio')).location, '/#games', 'no separate studio');
+    assert.equal((await a('GET', '/studio')).location, '/games', 'no separate studio');
     assert.equal((await a('GET', '/game/quiz')).status, 200, 'a game opens directly');
     // 7: pressing the old «trial» button many times creates nothing
     const clicks = await Promise.all(Array.from({ length: 6 }, () => a('POST', '/api/me/trial-start', {})));
@@ -111,7 +111,7 @@ test('free access for every account (no trial, no studio gate), Google sign-in a
     // 10: another device signs in to the same account: same free access
     const phone = browser(srv.base);
     const li = await phone('POST', '/api/auth/login', { identifier: 'trial.fan@example.com', password: 'reef2026go' });
-    assert.equal(li.data.next, '/#games'); assert.equal(li.data.account.entitled, true);
+    assert.equal(li.data.next, '/games'); assert.equal(li.data.account.entitled, true);
     // 11: a request dropped mid-way, then retried: still nothing created
     const ctl = new AbortController();
     const cookie = [...phone.cookies].map(([k, v]) => k + '=' + v).join('; ');
@@ -140,7 +140,7 @@ test('free access for every account (no trial, no studio gate), Google sign-in a
     assert.equal((await g('GET', '/game/flag')).status, 200, 'plays straight away');
     // 6: signing in with Google again (another device) finds the same account, never a duplicate
     const g2 = await googleSignIn(browser(srv.base), { sub: 'google-sub-777', email: 'new.player@gmail.com' });
-    assert.equal(g2.data.account.publicId, gid); assert.equal(g2.data.next, '/#games');
+    assert.equal(g2.data.account.publicId, gid); assert.equal(g2.data.next, '/games');
     // forged nonce / token for another site are refused
     const nb = browser(srv.base); await nb('GET', '/api/auth/google');
     assert.equal((await nb('POST', '/api/auth/google', { credential: idToken({ sub: 'x', email: 'x@gmail.com', nonce: 'guessed' }) })).status, 401);

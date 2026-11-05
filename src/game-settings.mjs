@@ -8,6 +8,8 @@ const secs = (list) => list.map((n) => [n, n < 60 ? n + ' ثانية' : n === 60
 const nums = (list, unit, tags = {}) => list.map((n) => [n, n + ' ' + unit + (tags[n] ? ' — ' + tags[n] : '')]);
 const f = (key, label, options, def, hint = '') => ({ key, label, options, default: def, ...(hint ? { hint } : {}) });
 
+/* «سلسلة الكلمات»: fields carry a `control` (counter / segment / toggle) and a `group` (match / rules) for the settings cards. */
+const onOff = [[true, 'تشغيل'], [false, 'إيقاف']];
 const roundsField = (list, def, unit = 'جولات', tags) => f('rounds', 'عدد الجولات', nums(list, unit, tags), def);
 const secondsField = (list, def, label = 'وقت كل جولة', hint) => f('seconds', label, secs(list), def, hint);
 
@@ -55,6 +57,14 @@ export const GAME_SETTINGS = Object.freeze({
   country: [roundsField([5, 8, 12], 8, 'دول'), secondsField([20, 30, 45, 60], 30, 'وقت كل دولة')],
   flag: [roundsField([5, 10, 15], 10, 'أعلام'), secondsField([10, 15, 20, 30], 15, 'وقت كل علم')],
   tug: [roundsField([3, 5], 3, 'شدّات', { 3: 'أفضل من 3', 5: 'أفضل من 5' }), secondsField([30, 40, 60], 40, 'وقت كل شدّة')],
+  chain: [
+    { ...f('target', 'نقاط الفوز', Array.from({ length: 19 }, (_, i) => 10 + i * 5).map((n) => [n, n + ' نقطة']), 30, 'أول لاعب يوصل لهذا العدد يفوز بالمباراة'), control: 'counter', step: 5, group: 'match' },
+    { ...f('seconds', 'وقت الإجابة (ثانية)', [[15, '15'], [20, '20'], [25, '25']], 20, 'إذا انتهى الوقت بلا إجابة صحيحة تتغير الكلمة والفئة'), control: 'segment', group: 'match' },
+    { ...f('order', 'ترتيب الفئات', [['ordered', 'بالترتيب'], ['random', 'عشوائي']], 'ordered', 'حيوانات، دول، أسماء، فواكه وخضار، أشياء، مدن'), control: 'segment', group: 'match' },
+    { ...f('alternate', 'منع الإجابة مرتين ورا بعض', onOff, true, 'اللاعب اللي جاوب ما تنقبل إجابته الجاية إلا بعد ما يجاوب لاعب غيره — عشان ما يسيطر لاعب واحد على السلسلة'), control: 'toggle', group: 'rules' },
+    { ...f('review', 'مراجعة المشرف للكلمات غير المعروفة', onOff, true, 'كلمة صحيحة الحرف وليست في قائمة الكلمات تظهر لك لتقبلها أو ترفضها أثناء الدور'), control: 'toggle', group: 'rules' },
+    { ...f('sounds', 'الأصوات', onOff, true, 'مؤثرات الإجابة الصحيحة والخاطئة وانتهاء الوقت على شاشة البث'), control: 'toggle', group: 'rules' },
+  ],
   outsider: [
     f('category', 'فئة الكلمة', [['random', 'عشوائية'], ...Object.keys(OUTSIDER_WORDS).map((k) => [k, k])], 'random'),
     secondsField([60, 90, 120, 180], 90, 'وقت التلميح قبل التصويت'),
@@ -84,7 +94,7 @@ export function validateSettings(mode, input = {}, base = defaultSettings(mode))
 }
 /** Public description for the studio (labels, options, defaults). */
 export function settingsSchema() {
-  return Object.fromEntries(Object.entries(GAME_SETTINGS).map(([m, fields]) => [m, fields.map((x) => ({ key: x.key, label: x.label, options: x.options.map(([value, label]) => ({ value, label })), default: x.default, hint: x.hint || '' }))]));
+  return Object.fromEntries(Object.entries(GAME_SETTINGS).map(([m, fields]) => [m, fields.map((x) => ({ key: x.key, label: x.label, options: x.options.map(([value, label]) => ({ value, label })), default: x.default, hint: x.hint || '', control: x.control || 'options', group: x.group || 'match', ...(x.step ? { step: x.step } : {}) }))]));
 }
 /** Apply saved settings to the engine before the round starts. */
 export function applySettings(engine, mode, s) {
@@ -98,7 +108,7 @@ export function applySettings(engine, mode, s) {
     case 'wheel': break;
     default: {
       const variant = {};
-      for (const k of ['format', 'rule', 'scoring', 'winners', 'category']) if (v[k] !== undefined) variant[k] = v[k];
+      for (const k of ['format', 'rule', 'scoring', 'winners', 'category', 'target', 'order', 'alternate', 'review', 'sounds']) if (v[k] !== undefined) variant[k] = v[k];
       engine.configure({ ...(v.rounds !== undefined ? { rounds: v.rounds } : {}), ...(v.seconds !== undefined ? { roundSeconds: v.seconds } : {}), ...(Object.keys(variant).length ? { variant } : {}) });
     }
   }
