@@ -1,4 +1,4 @@
-/* SPONGE LIVE — 3D skin viewer (three.js r170, self-hosted under /vendor/three).
+/* سبونج لايف — 3D skin viewer (three.js r170, self-hosted under /vendor/three).
    One viewer = one WebGL canvas and one model at a time. three.js itself is only downloaded the first time a
    viewer is mounted, and nothing renders while the viewer is off-screen or the tab is hidden, so phones stay
    cool. Drag to turn the character all the way round, pinch / wheel / buttons to zoom.

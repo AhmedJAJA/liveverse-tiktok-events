@@ -1,4 +1,4 @@
-// SPONGE LIVE — promo codes that open the studio.
+// سبونج لايف — promo codes that open the studio.
 // Codes are stored only as salted SHA-256 hashes; the plain code is shown once, when it is created.
 // Each code has a use limit (0 = unlimited), an optional expiry, an on/off switch and an access level:
 //   live — full studio including connecting a real TikTok/Kick stream

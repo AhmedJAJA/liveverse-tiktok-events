@@ -1,4 +1,4 @@
-/* SKY LIVE event setup, based on the approved full-height mobile reference.
+/* سبونج لايف event setup, based on the approved full-height mobile reference.
  * Independent original artwork and accessible controls; no screenshot used as a background. */
 :root{color-scheme:dark;--event-bg:#050B1D;--event-panel:#11162C;--event-teal:#70D6E4;--event-gold:#62D5FF;--event-soft:#D1D1DE}
 body.event-page{background:radial-gradient(ellipse 80% 35% at 72% 28%,rgba(28,76,101,.23),transparent 65%),radial-gradient(ellipse 90% 45% at 50% 68%,rgba(19,44,75,.14),transparent 70%),#070B20;font-family:var(--font-ar);color:#F9F7FF;font-weight:800;margin:0;min-width:300px;overflow-x:hidden}

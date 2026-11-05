@@ -1,4 +1,4 @@
-/* SPONGE LIVE — "Bubble" (بوبل), the house mascot (same drawing as the game covers).
+/* سبونج لايف — "Bubble" (بوبل), the house mascot (same drawing as the game covers).
    SkyMascot.svg({ visor, crown }) returns an SVG string built only from the fixed presets. */
 (() => {
   'use strict';

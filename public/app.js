@@ -154,7 +154,7 @@ function replaceBrokenImageWithSvg(img) {
   if (!img || img.dataset.fallbackApplied === '1') return;
   img.dataset.fallbackApplied = '1';
   const src = img.currentSrc || img.src || '';
-  if (src) console.warn('[SPONGE LIVE Media] تعذر تحميل الصورة، تم تفعيل أيقونة SVG البديلة:', src);
+  if (src) console.warn('[سبونج لايف Media] تعذر تحميل الصورة، تم تفعيل أيقونة SVG البديلة:', src);
   img.alt = '';
   img.hidden = true;
   const box = img.parentElement;

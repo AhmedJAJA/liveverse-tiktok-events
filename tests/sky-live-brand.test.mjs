@@ -13,10 +13,10 @@ test('the official SPONGE LIVE image is shipped in light WebP/PNG sizes and the 
   assert.ok(!fs.existsSync(new URL('../public/sky-live.webp',import.meta.url)));
   assert.ok(!fs.existsSync(new URL('../public/sky-live-mark.svg',import.meta.url)));
 });
-test('public pages are branded SPONGE LIVE without the former identity',()=>{
+test('public pages are branded «سبونج لايف» without the former identity',()=>{
   for(const name of files){
     const html=publicFile(name);
-    assert.match(html,/SPONGE LIVE/,name);
+    assert.match(html,/سبونج لايف/,name); assert.doesNotMatch(html,/SPONGE LIVE/,name);
     assert.doesNotMatch(html,/SKY LIVE|Royal Edition|ROYAL EDITION|LIVEVERSE|sky-live/i,name);
   }
 });

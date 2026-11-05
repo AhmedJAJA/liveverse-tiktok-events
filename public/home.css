@@ -1,4 +1,4 @@
-/* SPONGE LIVE — entry page. First screen: logo, the promo-code window, a strip of game cards; below it the
+/* سبونج لايف — entry page. First screen: logo, the promo-code window, a strip of game cards; below it the
    connect, features, steps, plans and FAQ sections (rendered lazily with content-visibility).
    Everything that moves animates transform/opacity only, and pauses when the tab is hidden. */
 @font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-800-normal.woff2) format("woff2");font-weight:700 900;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
@@ -42,7 +42,7 @@ body.hm{color:var(--foam);background:var(--deep);font-family:"Tajawal",system-ui
 /* ---------- logo ---------- */
 .hm-logo{display:flex;align-items:center;gap:clamp(12px,2vw,20px);margin:0;animation:hm-in .8s var(--ease) both}
 .hm-logo img{width:clamp(72px,9vw,104px);height:auto;aspect-ratio:1;border-radius:28%;box-shadow:0 0 0 3px rgba(56,212,255,.75),0 0 28px rgba(56,212,255,.45),0 14px 30px -12px #000}
-.hm-logo span{font:900 clamp(32px,6vw,64px)/1 "Tajawal",system-ui,sans-serif;letter-spacing:.06em;color:var(--foam);text-shadow:0 0 18px rgba(56,212,255,.55),0 0 2px rgba(255,255,255,.9)}
+.hm-logo span{font:900 clamp(32px,6vw,64px)/1 "Tajawal",system-ui,sans-serif;letter-spacing:0;color:var(--foam);text-shadow:0 0 18px rgba(56,212,255,.55),0 0 2px rgba(255,255,255,.9)}
 .hm-logo b{color:#FFE14D;text-shadow:0 0 18px rgba(255,200,40,.55),0 0 2px rgba(255,255,255,.8)}
 @keyframes hm-in{from{opacity:0;transform:translateY(-14px) scale(.96)}}
 /* bubbles around the name: a layer behind the letters, and a few that pass in front of the edges only,

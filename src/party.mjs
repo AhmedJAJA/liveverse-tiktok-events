@@ -1,4 +1,4 @@
-// SKY LIVE — round-based chat games.
+// سبونج لايف — round-based chat games.
 // Each game is server-authoritative: the server owns every timer, accepts one input
 // per player per round, ignores eliminated players and stale input, and produces
 // a final ranking. The Engine wires them to chat, scoring and the broadcast screen.

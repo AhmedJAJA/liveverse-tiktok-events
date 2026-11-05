@@ -1,4 +1,4 @@
-// SPONGE LIVE — rules for the Bikini Bottom game set (no UI here, so every rule is testable).
+// سبونج لايف — rules for the Bikini Bottom game set (no UI here, so every rule is testable).
 //
 //   drawguess   خمن الرسمة            — the host draws a secret word; first correct chat guess scores
 //   chairs      كراسي موسيقية         — music plays, stops, the first to write «اجلس» take the seats

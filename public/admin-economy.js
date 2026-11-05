@@ -1,4 +1,4 @@
-/* SPONGE LIVE — owner panel: Sponge Coins economy (balances, coin orders, the skin wheel, skins, invitations).
+/* سبونج لايف — owner panel: Sponge Coins economy (balances, coin orders, the skin wheel, skins, invitations).
    Every change goes through the server, which validates it and records who did it and why. */
 (() => {
   'use strict';

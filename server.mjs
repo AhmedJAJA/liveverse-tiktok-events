@@ -117,7 +117,7 @@ class Room {
     this.persistTimer.unref?.();
   }
   view() { return { ...this.engine.snapshot(), flow: this.flow.snapshot(), frames: this.frameView(), connRetry: this.engine.connection.platform === 'tiktok' && this.engine.connection.state !== 'connected' ? this.tiktok.retryState() : null, tools: this.tools.snapshot(), roomCode: this.joinCode && roomCodes.get(this.joinCode) === this.id ? this.joinCode : null, viewers: this.clients.size, skins: this.skinView() }; }
-  /** Equipped skins of players whose TikTok / Kick account is officially linked to a SPONGE LIVE account.
+  /** Equipped skins of players whose TikTok / Kick account is officially linked to a سبونج لايف account.
       Read from a shared 60-second cache, so building the state never waits on the database. */
   skinView() {
     const where = this.engine.connection.platform;
@@ -139,7 +139,7 @@ class Room {
     }
     return out;
   }
-  /** Name frames of players whose TikTok / Kick account is linked to a SPONGE LIVE account that equipped one
+  /** Name frames of players whose TikTok / Kick account is linked to a سبونج لايف account that equipped one
       (guests get none — nothing is invented). Same 60-second shared cache as the skins. */
   frameView() {
     const where = this.engine.connection.platform;
@@ -546,7 +546,7 @@ async function handleAction(action, body, actor) {
     default: throw new Error('الإجراء غير معروف');
   }
 }
-/** Linking a LIVE needs a running trial or subscription on a SPONGE LIVE account (or the site owner). */
+/** Linking a LIVE needs a running trial or subscription on a سبونج لايف account (or the site owner). */
 function requireStreamAccess(actor) {
   if (actor.kind === 'owner') return;
   if (actor.kind === 'acct' && platform?.entitlement(actor.userId).active) return;
@@ -693,7 +693,7 @@ async function handleOAuth(p, step, req, res, url) {
     if (p === 'tiktok' && t.platformUserId && t.platformUserId !== who.platformUserId) throw new OAuthError('mismatch', 'userinfo');
     const { previousOwners } = await platform.saveOAuthLink(s.userId, p, { platformUserId: who.platformUserId, handle: who.handle, displayName: who.displayName, avatar: who.avatar,
       scope: t.scope, accessTokenEnc: tokenBox.seal(t.accessToken), refreshTokenEnc: tokenBox.seal(t.refreshToken), expiresAt: t.expiresAt, refreshExpiresAt: t.refreshExpiresAt });
-    for (const r of rooms.values()) if (previousOwners.includes(r.ownerId) && r.engine.connection.platform === p) r.revokeStream('ارتبط هذا الحساب بحساب SPONGE LIVE آخر');
+    for (const r of rooms.values()) if (previousOwners.includes(r.ownerId) && r.engine.connection.platform === p) r.revokeStream('ارتبط هذا الحساب بحساب سبونج لايف آخر');
     return back('linked=' + p);
   } catch (err) {
     console.warn('[oauth]', p, err.code || '', String(err.message).slice(0, 120));
@@ -914,7 +914,7 @@ async function handleAccount(action, req, res) {
   if (action === 'forgot') {
     // No email service is configured: recovery goes through the support channel, never by revealing whether an account exists.
     const support = siteConfig().support;
-    return json(res, 200, { ok: true, message: 'استعادة كلمة المرور تتم عبر فريق SPONGE LIVE: تواصل معنا باسم المستخدم أو البريد المسجل وسنعيد تعيينها لك.', support });
+    return json(res, 200, { ok: true, message: 'استعادة كلمة المرور تتم عبر فريق سبونج لايف: تواصل معنا باسم المستخدم أو البريد المسجل وسنعيد تعيينها لك.', support });
   }
   return json(res, 404, { error: 'Not found' });
 }
@@ -999,7 +999,7 @@ async function handleAuth(action, req, res) {
       if (!user && current && body.link === true) { user = await platform.linkGoogle(current.userId, g); economy?.settleReferral(user.id).catch(() => {}); }
       if (!user) user = await autoLinkGoogle(g, req);
       if (!user) {
-        if (await platform.findByEmail(g.email)) return json(res, 409, { error: 'يوجد حساب SPONGE LIVE بهذا البريد. سجّل الدخول بكلمة المرور، ثم اربط Google من صفحة «حسابي» — لا نربط الحسابات تلقائيًا بالبريد وحده.', needsLink: true });
+        if (await platform.findByEmail(g.email)) return json(res, 409, { error: 'يوجد حساب سبونج لايف بهذا البريد. سجّل الدخول بكلمة المرور، ثم اربط Google من صفحة «حسابي» — لا نربط الحسابات تلقائيًا بالبريد وحده.', needsLink: true });
         user = await platform.createFromGoogle(g);
         created = true;
       }
@@ -1595,7 +1595,7 @@ const heartbeat = setInterval(() => {
   evictIdleRooms(); sessions.prune(); draw.cleanup();
 }, 30000);
 heartbeat.unref?.();
-server.listen(PORT, '0.0.0.0', () => console.log(`TikTok LIVE Events ready on http://localhost:${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`سبونج لايف ready on http://localhost:${PORT}`));
 const shutdown = async () => {
   clearInterval(roundClock); clearInterval(heartbeat); clearInterval(liveSweep); clearInterval(weekCloser);
   for (const room of rooms.values()) await room.disconnectAll().catch(() => {});

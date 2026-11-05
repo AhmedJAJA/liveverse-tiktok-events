@@ -1,4 +1,4 @@
-/* SPONGE LIVE — AURUM UI runtime (no dependencies, progressive enhancement).
+/* سبونج لايف — AURUM UI runtime (no dependencies, progressive enhancement).
    Native rebuilds of Aceternity UI effects. It only adds aria-hidden decorative
    layers and CSS variables; it never changes text, ids, values or listeners
    that the game scripts own, so every page works the same without it. */

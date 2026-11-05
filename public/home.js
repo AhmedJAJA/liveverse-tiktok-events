@@ -1,4 +1,4 @@
-/* SPONGE LIVE — entry page. The server checks the promo code and opens a session; this page only sends it.
+/* سبونج لايف — entry page. The server checks the promo code and opens a session; this page only sends it.
    Below the window: platform tabs and a real stream connection (through the studio API, status read by
    light polling — no live socket on this page), scroll reveal, and links that follow the visitor's account. */
 (() => {

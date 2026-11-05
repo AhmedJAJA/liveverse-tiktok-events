@@ -1,4 +1,4 @@
-// SPONGE LIVE — per-game «الإعدادات المتقدمة»: each game lists only the options its own rules use.
+// سبونج لايف — per-game «الإعدادات المتقدمة»: each game lists only the options its own rules use.
 // The studio draws the option buttons from this schema; the server validates every value against it
 // and applies the result to the real game when «بدء الجولة الآن» is pressed.
 import { CATEGORIES as QUIZ_CATEGORIES } from './question-bank.mjs';

@@ -1,4 +1,4 @@
-// SPONGE LIVE — word lists for «خمن الرسمة» and «اسم حيوان جماد نبات إنسان».
+// سبونج لايف — word lists for «خمن الرسمة» and «اسم حيوان جماد نبات إنسان».
 // Answers are compared after Arabic normalisation (hamza/taa marbuta/alif maqsura, «ال»).
 
 /** Easy-to-draw words with accepted spellings. */

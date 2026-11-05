@@ -1,4 +1,4 @@
-/* SPONGE LIVE — OBS overlay for one stream tool (?tool=countdown|draw|wall). Read-only; all text via textContent. */
+/* سبونج لايف — OBS overlay for one stream tool (?tool=countdown|draw|wall). Read-only; all text via textContent. */
 (() => {
   'use strict';
   const stage = document.getElementById('stage');
@@ -8,7 +8,7 @@
   const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); const m = Math.floor(s / 60); return (m >= 60 ? Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') : String(m).padStart(2, '0')) + ':' + String(s % 60).padStart(2, '0'); };
   function ava(p) { const a = el('span', 'ov-ava'); a.append(el('span', '', Array.from(p.name || '؟')[0])); if (p.avatar && /^https:\/\//.test(p.avatar)) { const i = el('img'); i.alt = ''; i.referrerPolicy = 'no-referrer'; i.addEventListener('error', () => i.remove(), { once: true }); i.src = p.avatar; a.append(i); } return a; }
   function face(p, note) { const li = el('li', 'ov-face'); li.append(ava(p), el('bdi', '', p.name)); if (note) li.append(el('small', '', note)); return li; }
-  const brand = () => { const b = el('span', 'ov-brand'); b.append(el('b', '', 'SPONGE'), document.createTextNode(' LIVE')); return b; };
+  const brand = () => { const b = el('span', 'ov-brand'); b.append(el('b', '', 'سبونج'), document.createTextNode(' لايف')); return b; };
   function render() {
     if (!tools) return;
     const now = Date.now() + offset;

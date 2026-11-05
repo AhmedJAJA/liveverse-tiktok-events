@@ -1,4 +1,4 @@
-// SPONGE LIVE — the launch flow of a game session, kept on the server (the studio only draws it).
+// سبونج لايف — the launch flow of a game session, kept on the server (the studio only draws it).
 //
 // Two layers:
 //  • navigation (the host's screens): GAME_LIBRARY → GAME_SETUP — nothing runs on the server here;

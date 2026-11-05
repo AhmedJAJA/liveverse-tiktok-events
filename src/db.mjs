@@ -1,4 +1,4 @@
-// SPONGE LIVE — PostgreSQL connection and migrations.
+// سبونج لايف — PostgreSQL connection and migrations.
 // The database is optional for the games themselves; accounts, trials and subscriptions need it.
 import fs from 'node:fs';
 import path from 'node:path';

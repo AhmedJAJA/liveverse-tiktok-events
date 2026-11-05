@@ -6,7 +6,7 @@
 .bp-back .i{transform:scaleX(-1)}
 .bp-back:hover{color:#FFFFFF}
 .bp-brand{display:flex;align-items:center;gap:.55rem;margin-inline:auto;text-decoration:none}
-.bp-brand b{font-family:var(--font-latin);font-weight:600;letter-spacing:.2em;font-size:.9rem}
+.bp-brand b{font-family:"Tajawal",system-ui,sans-serif;font-weight:600;letter-spacing:0;font-size:.9rem}
 .bp-auth{display:inline-flex;align-items:center;gap:.5rem;height:2.4rem;padding:0 1rem;border-radius:999px;border:1px solid var(--fire-line);background:rgba(20,10,8,.7);color:var(--ash);font-weight:700;font-size:.85rem}
 .bp-auth .live-dot.on{background:#4FB38D;box-shadow:0 0 10px rgba(79,179,141,.7)}
 

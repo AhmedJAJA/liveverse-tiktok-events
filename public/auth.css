@@ -1,4 +1,4 @@
-/* SPONGE LIVE — sign in / sign up / password reset. Deep-sea background, one card, a promotional side on
+/* سبونج لايف — sign in / sign up / password reset. Deep-sea background, one card, a promotional side on
    wide screens. CSS transforms only; motion stops with prefers-reduced-motion. */
 body.au{min-height:100dvh;background:radial-gradient(70% 55% at 85% 0%,rgba(30,91,255,.32),transparent 70%),radial-gradient(60% 50% at 10% 100%,rgba(56,212,255,.18),transparent 70%),linear-gradient(180deg,#05173F 0%,#031033 55%,#020A22 100%)}
 .au-sea{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
@@ -14,7 +14,7 @@ body.au{min-height:100dvh;background:radial-gradient(70% 55% at 85% 0%,rgba(30,9
 .au-card{display:grid;gap:14px;padding:28px 26px 24px;border-radius:28px;background:linear-gradient(180deg,rgba(10,30,76,.82),rgba(4,16,46,.9));border:1px solid rgba(140,232,255,.26);
   box-shadow:0 0 0 1px rgba(56,212,255,.06) inset,0 30px 70px -30px #000,0 0 60px -30px rgba(56,212,255,.7);backdrop-filter:blur(10px);animation:au-in .6s cubic-bezier(.2,.8,.2,1) both}
 @keyframes au-in{from{opacity:0;transform:translateY(18px) scale(.98)}}
-.au-brand{display:inline-flex;align-items:center;gap:10px;justify-self:center;color:#EAF8FF;text-decoration:none;font:900 24px/1 "Tajawal",system-ui,sans-serif;letter-spacing:.05em}
+.au-brand{display:inline-flex;align-items:center;gap:10px;justify-self:center;color:#EAF8FF;text-decoration:none;font:900 24px/1 "Tajawal",system-ui,sans-serif;letter-spacing:0}
 .au-brand img{width:56px;height:56px;filter:drop-shadow(0 0 16px rgba(56,212,255,.6))}
 .au-brand b{color:#FFE14D;text-shadow:0 0 16px rgba(255,214,42,.5)}
 .au-card h1{margin:2px 0 0;text-align:center;font-size:clamp(23px,4.6vw,28px);font-weight:900;line-height:1.3}

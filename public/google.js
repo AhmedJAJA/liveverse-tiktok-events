@@ -1,4 +1,4 @@
-/* SPONGE LIVE — «المتابعة باستخدام Google».
+/* سبونج لايف — «المتابعة باستخدام Google».
    When the server has Google's code flow configured (client secret on the server only), the button is our own, built
    to Google's branding rules (white, the official four-colour G): a click sends the whole page to Google and back to
    /api/oauth/google/callback, where the server checks everything and opens the session. Otherwise Google's own
@@ -80,10 +80,10 @@
     unavailable: 'تسجيل الدخول باستخدام Google غير مفعّل على الموقع بعد.',
     no_email: 'حساب Google لا يشارك بريدًا إلكترونيًا — اسمح بمشاركة البريد وحاول مرة أخرى.',
     disabled: 'هذا الحساب موقوف. تواصل مع الدعم.',
-    taken: 'حساب Google هذا مرتبط بحساب SPONGE LIVE آخر.',
+    taken: 'حساب Google هذا مرتبط بحساب سبونج لايف آخر.',
     other_google: 'حسابك مرتبط بحساب Google آخر — استخدم الحساب المرتبط.',
     reauth: 'أكّد هويتك أولًا ثم اربط Google.',
-    link_needed: 'الحساب مرتبط بطريقة تسجيل دخول أخرى: يوجد حساب SPONGE LIVE بهذا البريد. سجّل الدخول بكلمة المرور الآن وسيُربط Google به تلقائيًا — حسابك ومعرّفك وبياناتك كما هي.',
+    link_needed: 'الحساب مرتبط بطريقة تسجيل دخول أخرى: يوجد حساب سبونج لايف بهذا البريد. سجّل الدخول بكلمة المرور الآن وسيُربط Google به تلقائيًا — حسابك ومعرّفك وبياناتك كما هي.',
   };
   window.SpongeGoogle = { render, signIn, config, ERRORS };
 })();

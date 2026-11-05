@@ -1,4 +1,4 @@
-// SPONGE LIVE — preparing a lobby after «ابدأ اللعبة» (and restoring one after a restart).
+// سبونج لايف — preparing a lobby after «ابدأ اللعبة» (and restoring one after a restart).
 //
 // Each step is an operation that really runs here, reported to the studio as it starts and ends
 // (PREPARING_LOBBY → LOBBY_READY or LOBBY_ERROR). Nothing is shown for work that was not done, and there are no

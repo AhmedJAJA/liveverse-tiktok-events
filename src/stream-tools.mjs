@@ -1,4 +1,4 @@
-// SPONGE LIVE — stream tools for OBS: a countdown, a random draw from the chat and a wall of active chatters.
+// سبونج لايف — stream tools for OBS: a countdown, a random draw from the chat and a wall of active chatters.
 // They run beside the games, from the same verified chat, and every screen gets them through the room's state.
 import { randomInt } from 'node:crypto';
 import { norm } from './round-game.mjs';

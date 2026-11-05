@@ -1,4 +1,4 @@
-/* SPONGE LIVE — «إطارات الأسماء» in «حقيبتي» (the «السكنات» page): list, free claim, equip, preview.
+/* سبونج لايف — «إطارات الأسماء» in «حقيبتي» (the «السكنات» page): list, free claim, equip, preview.
    The server decides what the account owns and what it may equip (src/frames.mjs). */
 (() => {
   'use strict';

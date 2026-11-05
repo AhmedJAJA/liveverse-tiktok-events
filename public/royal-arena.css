@@ -1,5 +1,5 @@
 /* =====================================================================
-   SKY LIVE — ROYAL ARENA (broadcast / OBS layer)
+   سبونج لايف — ROYAL ARENA (broadcast / OBS layer)
    Loaded after royal-broadcast.css and aurum.css. Re-stages the registration
    screen, participant cards, question and celebrations with the Aurum effects.
    Same --u unit, so OBS 1920×1080, portrait 1080×1920 and the studio preview
@@ -189,7 +189,7 @@
 .au-perf *,.au-perf *::before,.au-perf *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 
 /* =====================================================================
-   SPONGE LIVE game screens (scaled by --u like the rest of the arena)
+   سبونج لايف game screens (scaled by --u like the rest of the arena)
    ===================================================================== */
 .party-panel .party-split>*{min-width:0}
 .sea-side{display:grid;gap:calc(var(--u)*12);align-content:center;min-width:0}
@@ -296,7 +296,7 @@
 .sea-spot-card strong{font-size:calc(var(--u)*72);font-weight:900;line-height:1.1;max-width:calc(var(--u)*1400);overflow-wrap:anywhere;color:#fff;text-shadow:0 0 30px rgba(56,212,255,.7)}
 .sea-spot-card span{font-size:calc(var(--u)*26);color:var(--text-2)}
 @media (prefers-reduced-motion:reduce){.sea-spot-rays,.sea-chairs.is-music .sea-orbit,.sea-chairs.is-music .sea-token,.sea-hero.is-turn .sea-hero-av{animation:none}}
-/* the SPONGE LIVE games use the same party layout: short prompt card, big game area */
+/* the سبونج لايف games use the same party layout: short prompt card, big game area */
 .arena:is([data-mode=drawguess],[data-mode=chairs],[data-mode=categories],[data-mode=roles],[data-mode=roulette],[data-mode=country],[data-mode=flag]) .competition-zone{grid-template-rows:calc(var(--u)*116) auto auto minmax(0,1fr) calc(var(--u)*64)}
 .arena:is([data-mode=drawguess],[data-mode=chairs],[data-mode=categories],[data-mode=roles],[data-mode=roulette],[data-mode=country],[data-mode=flag]) .question-card{grid-row:2;padding:calc(var(--u)*20) calc(var(--u)*90)}
 .arena:is([data-mode=drawguess],[data-mode=chairs],[data-mode=categories],[data-mode=roles],[data-mode=roulette],[data-mode=country],[data-mode=flag]) .question-main{font-size:calc(var(--u)*40)}

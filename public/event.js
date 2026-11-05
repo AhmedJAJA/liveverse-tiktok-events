@@ -1,4 +1,4 @@
-/* SPONGE LIVE event settings and authentic chat-driven game launch. */
+/* سبونج لايف event settings and authentic chat-driven game launch. */
 const $ = id => document.getElementById(id);
 const GAME_MODES = Object.freeze({
  glass: {title:'الجسر الزجاجي',category:'إقصاء',description:'سؤال كل خطوة ولوحين: اكتب رقم إجابتك — واللي غلط ينكسر تحته',label:'طول اللعبة',timeLabel:'وقت القفزة',badgeUnit:'ث',lengths:{short:5,normal:10,long:15},seconds:10},
@@ -77,7 +77,7 @@ function configureVisuals() {
  $('lengthHeading').textContent=meta.label;
  $('statDurationLabel').textContent=meta.timeLabel;
  $('timeFieldName').textContent=meta.timeLabel;
- document.title=meta.title+' | SPONGE LIVE';
+ document.title=meta.title+' | سبونج لايف';
  if(game==='glass'){
   $('stepSeconds').value='10';
   $('stepSeconds').closest('.advanced-row').hidden=false;

@@ -1,4 +1,4 @@
-/* SPONGE LIVE — "ارسم وخمّن" client. Talks to /api/draw/* and polls room state.
+/* سبونج لايف — "ارسم وخمّن" client. Talks to /api/draw/* and polls room state.
    No innerHTML: every node is built with createElement/textContent. */
 (() => {
   'use strict';

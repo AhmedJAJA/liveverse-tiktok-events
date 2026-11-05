@@ -1,10 +1,10 @@
-// SPONGE LIVE — «إطارات الأسماء»: an avatar ring + a nameplate shown with a player's name in the lobby and on
+// سبونج لايف — «إطارات الأسماء»: an avatar ring + a nameplate shown with a player's name in the lobby and on
 // the game screens. Cosmetic only (no effect on any game or ranking).
 //
 // Built-in frames are drawn by CSS (public/frames.css) and need no image. Uploaded frames add transparent
 // PNG / WebP images: an avatar ring (square, drawn over the picture) and a nameplate drawn as a nine-slice
 // (`slice` = top, right, bottom, left in pixels of the image), so long and short names keep the corners intact.
-// A frame shows for a viewer only when their TikTok / Kick account is officially linked to a SPONGE LIVE account
+// A frame shows for a viewer only when their TikTok / Kick account is officially linked to a سبونج لايف account
 // that equipped it — guests keep their platform picture, nothing is invented for them.
 const RARITY_ORDER = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 export const FRAME_RARITIES = Object.freeze({ common: 'عادي', rare: 'نادر', epic: 'ملحمي', legendary: 'أسطوري', mythic: 'خرافي' });
@@ -80,7 +80,7 @@ export class FrameStore {
     await this.pool.query('UPDATE users SET frame=$2 WHERE id=$1', [userId, fid]);
     return this.list(userId);
   }
-  /** Players in a stream: platform handle → the frame equipped by the verified SPONGE LIVE account that linked it. */
+  /** Players in a stream: platform handle → the frame equipped by the verified سبونج لايف account that linked it. */
   async forHandles(platformName, handles) {
     const list = [...new Set(handles.map((h) => String(h || '').toLowerCase()).filter((h) => /^[a-z0-9_.]{1,40}$/.test(h)))].slice(0, 300);
     const out = new Map(list.map((h) => [h, null]));

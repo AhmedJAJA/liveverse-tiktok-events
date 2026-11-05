@@ -1,4 +1,4 @@
-/* SPONGE LIVE — OBS overlay for the stream tools: transparent background, readable on any video. */
+/* سبونج لايف — OBS overlay for the stream tools: transparent background, readable on any video. */
 @font-face{font-family:"Tajawal";font-weight:800;font-display:swap;src:url(/fonts/tajawal-arabic-800-normal.woff2) format("woff2")}
 html,body{margin:0;background:transparent;color:#EAF8FF;font-family:"Tajawal",system-ui,sans-serif;overflow:hidden}
 .ov-stage{display:grid;place-items:center;min-height:100vh;padding:4vmin;box-sizing:border-box}
@@ -6,7 +6,7 @@ html,body{margin:0;background:transparent;color:#EAF8FF;font-family:"Tajawal",sy
 .ov-label{font-size:6vmin;font-weight:800;color:#8CE8FF}
 .ov-time{font-size:24vmin;line-height:1;font-weight:800;color:#FFD62A;font-variant-numeric:tabular-nums;direction:ltr}
 .ov-time.is-low{color:#FF6A8A}
-.ov-brand{font-size:3vmin;opacity:.75;direction:ltr}
+.ov-brand{font-size:3vmin;opacity:.75}
 .ov-brand b{color:#FFD62A}
 .ov-key{font-size:9vmin;font-weight:800;color:#FFD62A}
 .ov-count{font-size:5vmin}

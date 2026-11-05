@@ -1,4 +1,4 @@
-/* SPONGE LIVE studio: a games library (filters, search, card grid) and a game screen
+/* سبونج لايف studio: a games library (filters, search, card grid) and a game screen
    (game card + join card + roster, with the tabbed control drawer beside it). Builds on play.css. */
 body.st-page{padding-bottom:96px}
 body.st-page[data-screen=games]{padding-bottom:40px}

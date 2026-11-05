@@ -1,4 +1,4 @@
-/* SPONGE LIVE — the studio (/studio?mode=…). The screens follow the server's state (src/flow.mjs):
+/* سبونج لايف — the studio (/studio?mode=…). The screens follow the server's state (src/flow.mjs):
    library → «إعداد اللعبة» → «جاري تجهيز اللوبي» (real preparation steps) → «غرفة الانتظار» → round → results.
    «تشغيل اللعبة» opens the setup, «ابدأ اللعبة» prepares the lobby, «فتح التسجيل» / «إغلاق التسجيل» control who
    joins, and only «بدء الجولة الآن» starts a round. Every node is built with createElement/textContent. */
@@ -64,7 +64,7 @@
 
   /* ---------- game identity ---------- */
   function paintGame() {
-    document.title = (game.title || 'شاشة اللعبة') + ' | SPONGE LIVE';
+    document.title = (game.title || 'شاشة اللعبة') + ' | سبونج لايف';
     document.body.dataset.category = game.category || 'smart';
     $('gameTitle').textContent = game.title || '';
     $('gameCategory').textContent = game.categoryLabel || '';
@@ -866,10 +866,10 @@
     const changed = document.body.dataset.screen !== name;
     document.body.dataset.screen = name;
     if (changed) { setTimeout(() => beat(), 0); scrollTo({ top: 0, behavior: 'instant' }); }
-    if (name === 'games') document.title = 'الاستوديو | SPONGE LIVE';
-    else if (name === 'setup') document.title = 'إعداد ' + (game.title || 'اللعبة') + ' | SPONGE LIVE';
-    else if (name === 'prepare') document.title = 'جاري تجهيز اللوبي | SPONGE LIVE';
-    else if (name === 'lobby') document.title = 'غرفة الانتظار — ' + (game.title || '') + ' | SPONGE LIVE';
+    if (name === 'games') document.title = 'الاستوديو | سبونج لايف';
+    else if (name === 'setup') document.title = 'إعداد ' + (game.title || 'اللعبة') + ' | سبونج لايف';
+    else if (name === 'prepare') document.title = 'جاري تجهيز اللوبي | سبونج لايف';
+    else if (name === 'lobby') document.title = 'غرفة الانتظار — ' + (game.title || '') + ' | سبونج لايف';
     if (changed && name === 'setup') { advFor = ''; if (state) paintSetup(state); }
     if (changed && name !== 'lobby') { lbFirst = true; }
     if (changed && name === 'game' && document.body.dataset.drawer === 'open') $('drawerToggle').click(); // the game gets the whole screen

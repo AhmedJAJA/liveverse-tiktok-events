@@ -1,4 +1,4 @@
-// SPONGE LIVE — single source for the game catalogue, pricing, support channel and
+// سبونج لايف — single source for the game catalogue, pricing, support channel and
 // release notes. The home page, the dashboard, the join page and the server all
 // read it (via /api/site), so counts and statuses never disagree.
 
@@ -15,7 +15,7 @@ const g = (mode, title, category, summary, rules, extra = {}) => Object.freeze({
 });
 const art = (file) => ({ cover: `/games/${file}.webp`, art: `/games/${file}.png` });
 
-/** The SPONGE LIVE games, in gallery order, each with its card art. */
+/** The سبونج لايف games, in gallery order, each with its card art. */
 export const GAMES = Object.freeze([
   g('quiz', 'تحدي المعرفة', 'smart', 'سؤال وأربعة خيارات ومؤقت — الأسرع يتصدر', ['اكتب رقم الإجابة 1–4 في الشات', 'أول إجابة فقط تُحتسب', 'تظهر الإجابة الصحيحة وترتيب الأسرع'], art('01-knowledge-challenge')),
   g('drawguess', 'خمن الرسمة', 'smart', 'المشرف يرسم كلمة سرية والجمهور يخمّن من الشات', ['المشرف يرسم على اللوحة', 'اكتب تخمينك في الشات (محاولة كل ثانية)', 'أول إجابة صحيحة تربح الجولة'], art('02-guess-drawing')),
@@ -46,7 +46,7 @@ export const EXTRA_GAMES = Object.freeze([
 export const ALL_GAMES = Object.freeze([...GAMES, ...EXTRA_GAMES]);
 
 export const UPDATES = Object.freeze([
-  { version: '1.0', date: '2026-11-04', items: ['هوية SPONGE LIVE البحرية', 'ألعاب جديدة: خمن الرسمة، كراسي موسيقية، اسم حيوان جماد نبات، الأدوار المخفية، الروليت، خمن الدولة، خمن العلم', 'حجرة ورقة مقص بمواجهات ثنائية', 'صفحة انضمام لكل لعبة دون غرف أو رموز'] },
+  { version: '1.0', date: '2026-11-04', items: ['هوية سبونج لايف البحرية', 'ألعاب جديدة: خمن الرسمة، كراسي موسيقية، اسم حيوان جماد نبات، الأدوار المخفية، الروليت، خمن الدولة، خمن العلم', 'حجرة ورقة مقص بمواجهات ثنائية', 'صفحة انضمام لكل لعبة دون غرف أو رموز'] },
   { version: '0.9', date: '2026-11-04', items: ['صفحة انضمام لكل لعبة: اكتب انضم في الشات، وزر «شارك كلاعب» للمشرف', 'ست ألعاب جديدة: حجر ورقة مقص، الأقلية تفوز، أعلى أم أقل، حقيقة أم كذب، الضوء الأحمر، البولينج', 'لوحة الستريمر بثلاثة أوضاع توزيع', 'حسابات المستخدمين وغرفة خاصة لكل حساب', 'ربط Kick (تجريبي)', 'صفحة الرسم'] },
   { version: '0.8', date: '2026-11-03', items: ['تصميم Royal Black & Gold', 'تأثيرات Aurum المستوحاة من Aceternity'] },
   { version: '0.7', date: '2026-10-28', items: ['القنبلة المؤقتة', 'تسجيل المتابعين والمشتركين فقط'] }
@@ -83,6 +83,6 @@ export function siteConfig(env = process.env) {
       annual,
       annualSaving: Math.max(0, Math.round((monthly * 12 - annual) * 100) / 100)
     },
-    support: { url: safeUrl(env.SKY_SUPPORT_URL), label: safeText(env.SKY_SUPPORT_LABEL, 'تواصل مع فريق SPONGE LIVE') }
+    support: { url: safeUrl(env.SKY_SUPPORT_URL), label: safeText(env.SKY_SUPPORT_LABEL, 'تواصل مع فريق سبونج لايف') }
   };
 }

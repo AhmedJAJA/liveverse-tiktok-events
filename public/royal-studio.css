@@ -1,5 +1,5 @@
 /* =====================================================================
-   SKY LIVE — ROYAL BLACK presenter studio (/studio) + control room dialog
+   سبونج لايف — ROYAL BLACK presenter studio (/studio) + control room dialog
    ===================================================================== */
 body.presenter{min-height:100vh;min-height:100dvh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;overflow-x:hidden;
   background:radial-gradient(70% 55% at 50% -10%,rgba(55,179,212,.12),transparent 70%),radial-gradient(60% 40% at 50% 110%,rgba(55,179,212,.05),transparent 70%),var(--obsidian)}
@@ -14,7 +14,7 @@ body.presenter::before{content:"";position:fixed;inset:0;pointer-events:none;z-i
 .sky-studio-mark{width:40px;height:40px;filter:drop-shadow(0 4px 14px rgba(55,179,212,.35));transition:transform var(--t-med) var(--ease-spring)}
 .presenter-brand:hover .sky-studio-mark{transform:rotate(-8deg) scale(1.06)}
 .brand-words{display:grid;line-height:1.05}
-.brand-words strong{font-family:var(--font-latin);font-weight:600;font-size:1.02rem;letter-spacing:.2em}
+.brand-words strong{font-family:"Tajawal",system-ui,sans-serif;font-weight:600;font-size:1.02rem;letter-spacing:0}
 .brand-words small{font-size:.6rem;color:var(--champagne);letter-spacing:.45em;margin-top:3px}
 .presenter-cluster{display:flex;align-items:center;gap:.5rem;min-width:0;overflow-x:auto;scrollbar-width:none;padding:2px}
 .presenter-cluster::-webkit-scrollbar{display:none}

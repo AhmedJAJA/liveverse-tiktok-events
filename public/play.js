@@ -1,4 +1,4 @@
-/* SPONGE LIVE — the game screen (/play?mode=…).
+/* سبونج لايف — the game screen (/play?mode=…).
    Viewers join from the stream chat with the join word; the room's host gets every control.
    Every node is built with createElement/textContent (no HTML strings). */
 (() => {
@@ -45,7 +45,7 @@
 
   /* ---------- game identity ---------- */
   function paintGame() {
-    document.title = (game.title || 'شاشة اللعبة') + ' | SPONGE LIVE';
+    document.title = (game.title || 'شاشة اللعبة') + ' | سبونج لايف';
     document.body.dataset.category = game.category || 'smart';
     $('gameTitle').textContent = game.title || '';
     $('gameCategory').textContent = game.categoryLabel || '';

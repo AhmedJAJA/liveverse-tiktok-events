@@ -70,8 +70,8 @@ test('mobile, accessibility and reduced motion are supported',()=>{
 });
 test('original own branding used, no impersonation or external third-party source',()=>{
   for(const content of [broadcast,studio,landingCss,home,overlay]) assert.doesNotMatch(content,/hudhudlive\.com/i);
-  assert.match(home,/SPONGE LIVE/);
-  assert.match(overlay,/SPONGE LIVE/);
+  assert.match(home,/سبونج لايف/);
+  assert.match(overlay,/سبونج لايف/);
   for(const content of [core,studio,broadcast,landingCss]) assert.doesNotMatch(content,/@import|https?:\/\//);
 });
 test('every element id is unique on each page (duplicate ids break getElementById lookups)',()=>{

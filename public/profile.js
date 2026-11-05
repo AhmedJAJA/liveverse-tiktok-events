@@ -1,4 +1,4 @@
-/* SPONGE LIVE — public profile (/u/SPG-XXXXXX). The server applies the owner's privacy switches before answering. */
+/* سبونج لايف — public profile (/u/SPG-XXXXXX). The server applies the owner's privacy switches before answering. */
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -41,7 +41,7 @@
     const p = await r.json();
     $('main').setAttribute('aria-busy', 'false');
     if (!r.ok) { $('pageError').textContent = p.error || 'لا يوجد حساب بهذا المعرف'; $('pageError').hidden = false; return; }
-    document.title = p.displayName + ' — SPONGE LIVE';
+    document.title = p.displayName + ' — سبونج لايف';
     $('name').textContent = p.displayName; $('pid').textContent = p.publicId; $('since').textContent = 'عضو منذ ' + fmt.format(new Date(p.memberSince));
     if (p.picture && p.avatar === 'sponge') { const img = document.createElement('img'); img.className = 'pg-avatar-img'; img.alt = ''; img.referrerPolicy = 'no-referrer'; img.src = p.picture; $('avatar').replaceChildren(img); }
     else $('avatar').textContent = AVATARS[p.avatar] || '🧽';

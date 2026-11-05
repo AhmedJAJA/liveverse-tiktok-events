@@ -1,4 +1,4 @@
-/* SPONGE LIVE — «متجر العملات» (page side). Prices, limits and order states come from the server; the page
+/* سبونج لايف — «متجر العملات» (page side). Prices, limits and order states come from the server; the page
    sends only the package id and the age confirmation. Coins are added by the server after a trusted payment
    confirmation (the gateway's record, or the owner confirming a WhatsApp payment). */
 (() => {

@@ -1,4 +1,4 @@
-/* SPONGE LIVE — «عجلة السكنات» */
+/* سبونج لايف — «عجلة السكنات» */
 .wh-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
 .wh-stage-card{position:relative;padding:18px;border-radius:28px;border:1px solid rgba(255,214,42,.4);
   background:radial-gradient(90% 60% at 50% 40%,rgba(56,212,255,.18),transparent 70%),radial-gradient(70% 40% at 50% 100%,rgba(255,214,42,.12),transparent 70%),linear-gradient(180deg,#0B2152,#050F2E);

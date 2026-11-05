@@ -1,4 +1,4 @@
-/* SPONGE LIVE — account dashboard (side menu + sections). Builds on home.css (sea, tokens) and pages.css. */
+/* سبونج لايف — account dashboard (side menu + sections). Builds on home.css (sea, tokens) and pages.css. */
 body.ds{min-height:100svh}
 .ds .ds-i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor}
 .ds-shell{position:relative;z-index:1;display:grid;grid-template-columns:288px minmax(0,1fr);min-height:100svh}

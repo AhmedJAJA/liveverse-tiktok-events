@@ -1,4 +1,4 @@
-/* SKY LIVE — game join page. Royal black & gold base; each game category brings its own accent. */
+/* سبونج لايف — game join page. Royal black & gold base; each game category brings its own accent. */
 :root{
   --pl-bg:#07060A; --pl-text:#EAF9FF; --pl-text-2:#B0D5E3; --pl-text-3:#83AEBF;
   --pl-gold:#4AD3FF; --pl-gold-btn:linear-gradient(180deg,#6BDDFF 0%,#3AB1E0 100%);
@@ -27,7 +27,7 @@ body.pl-page::before{display:none}
 .pl-back,.pl-chip{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 13px;border-radius:12px;border:1px solid var(--pl-line);color:var(--pl-text-2);font-weight:700;font-size:14px;text-decoration:none;background:rgba(255,255,255,.03)}
 .pl-back .i{transform:scaleX(-1)}
 .pl-back:hover,.pl-chip:hover{border-color:var(--pl-gold);color:var(--pl-text)}
-.pl-brand{display:inline-flex;align-items:center;gap:8px;margin-inline:auto;color:var(--pl-gold);font:800 16px/1 var(--font-latin,system-ui);letter-spacing:.14em;text-decoration:none}
+.pl-brand{display:inline-flex;align-items:center;gap:8px;margin-inline:auto;color:var(--pl-gold);font:800 16px/1 "Tajawal",system-ui,sans-serif;letter-spacing:0;text-decoration:none}
 .pl-bar-tools{display:flex;align-items:center;gap:8px}
 .pl-room{height:30px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:var(--pl-accent-soft);color:var(--pl-accent);font-size:13px;font-weight:800;border:1px solid var(--pl-accent)}
 
@@ -141,7 +141,7 @@ body[data-view="live"] .pl-players{max-height:260px}
   .pl-word,.pl-pulse,.pl-live-tag i,.pl-player.is-new{animation:none}
 }
 
-/* ---------- SPONGE LIVE host panel & tools ---------- */
+/* ---------- سبونج لايف host panel & tools ---------- */
 .pl-cover.is-art{width:200px;aspect-ratio:290/371;border-radius:22px;border-color:transparent;box-shadow:0 0 0 2px rgba(56,212,255,.6),0 0 30px rgba(56,212,255,.35)}
 .pl-cover.is-art img{object-fit:cover}
 .pl-flip{transform:scaleX(-1)}

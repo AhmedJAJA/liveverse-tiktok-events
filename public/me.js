@@ -1,4 +1,4 @@
-/* SPONGE LIVE — account dashboard («لوحة التحكم»). Everything shown comes from the server; the page never decides
+/* سبونج لايف — account dashboard («لوحة التحكم»). Everything shown comes from the server; the page never decides
    access, plans, ownership or privacy — it only asks and shows the answer. Sections switch without reloading. */
 (() => {
   'use strict';
@@ -729,13 +729,13 @@
       $('inviteEarned').textContent = `ربحت ${SC.nf(v.earned)} عملة إسفنجة`;
       $('inviteFill').style.setProperty('--pct', Math.round((v.completed / v.cap) * 100) + '%');
       $('inviteBar').setAttribute('aria-valuenow', String(v.completed));
-      $('inviteMore').textContent = v.remaining ? `باقي ${v.remaining} دعوات مكافأة${v.pending ? ` • ${v.pending} بانتظار تأكيد البريد` : ''}${v.held ? ` • ${v.held} قيد المراجعة` : ''}` : 'اكتملت دعواتك العشر — شكرًا لنشر SPONGE LIVE! 🎉';
+      $('inviteMore').textContent = v.remaining ? `باقي ${v.remaining} دعوات مكافأة${v.pending ? ` • ${v.pending} بانتظار تأكيد البريد` : ''}${v.held ? ` • ${v.held} قيد المراجعة` : ''}` : 'اكتملت دعواتك العشر — شكرًا لنشر سبونج لايف! 🎉';
       $('inviteCard').classList.toggle('is-complete', !v.remaining);
       $('inviteList').replaceChildren(...v.list.map((r) => { const li = el('li'); const [t, c] = INV[r.status] || [r.status, 'is-off']; li.append(el('span', '', r.name), el('span', 'pg-badge ' + c, t)); return li; }));
     } catch {}
   }
   $('inviteCopy').addEventListener('click', (e) => copy($('inviteLink').value, e.currentTarget));
-  if (navigator.share) { $('inviteShare').hidden = false; $('inviteShare').addEventListener('click', () => navigator.share({ title: 'SPONGE LIVE', text: 'انضم إلي في SPONGE LIVE — ألعاب البث التفاعلية', url: $('inviteLink').value }).catch(() => {})); }
+  if (navigator.share) { $('inviteShare').hidden = false; $('inviteShare').addEventListener('click', () => navigator.share({ title: 'سبونج لايف', text: 'انضم إلي في سبونج لايف — ألعاب البث التفاعلية', url: $('inviteLink').value }).catch(() => {})); }
   // the wallet strip in «ملفي» and the side panel badge need the wallet on every visit; the reward is asked for once
   api('GET', '/api/me/wallet').then(paintWallet).then(() => claimDaily(false)).catch(() => {});
   const findParam = (params.get('find') || '').toUpperCase();
