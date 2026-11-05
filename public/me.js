@@ -54,6 +54,7 @@
     for (const a of document.querySelectorAll('.ds-nav a[data-sec], .ds-bottom a[data-sec]')) { if (a.dataset.sec === navSec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
     closeMenu();
     if (sec === 'settings') loadSessions();
+    if (sec === 'community') loadCommunity();
   }
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SECTIONS.includes(h)) { show(h); scrollTo({ top: 0 }); } else if (document.getElementById(h)) { show('settings'); document.getElementById(h).scrollIntoView({ block: 'start' }); } });
   function initialSection() {
@@ -79,7 +80,7 @@
     $('accountType').textContent = type; $('accountType2').textContent = type;
     $('planChip').textContent = a.active ? a.planName : 'بدون اشتراك'; $('planChip').classList.toggle('is-on', !!a.active);
     $('statusDot').classList.toggle('is-on', !!a.active); $('statusDot').title = a.active ? 'الاشتراك فعّال' : 'لا يوجد اشتراك فعّال';
-    $('publicId2').textContent = u.publicId;
+    $('publicId2').textContent = u.publicId; $('cmMyId').textContent = u.publicId;
     badge($('profEmailBadge'), u.verified ? 'موثّق' : 'غير موثّق', u.verified ? 'is-on' : 'is-warn');
     $('profLinked').textContent = links.length ? Object.entries(p.linked).filter(([, l]) => l && !l.needsReauth).map(([k, l]) => (k === 'kick' ? 'Kick' : 'TikTok') + ' @' + l.handle).join('، ') : 'لا توجد منصات مرتبطة';
     $('profEnds').textContent = a.active ? fmtDate(a.endsAt) : '—';
@@ -169,6 +170,7 @@
     // bag + billing
     paintHistory(p.history); paintPayments(p.payments);
     for (const b of document.querySelectorAll('[data-checkout]')) b.hidden = !p.billing.enabled;
+    $('methodOnline').hidden = !p.billing.enabled;
     if (p.billing.enabled) $('billingHow').textContent = 'ادفع إلكترونيًا عبر بوابة الدفع، أو اطلب عبر واتساب واستلم كود اشتراك تفعّله في الإعدادات.';
     const t = p.trial;
     badge($('trialState'), ({ active: 'تعمل الآن', expired: 'استُخدمت', available: 'متاحة لك', ready: 'متاحة لك' })[t.status] || 'غير متاحة', t.status === 'active' ? 'is-on' : ['available', 'ready'].includes(t.status) ? 'is-warn' : 'is-off');
@@ -199,13 +201,25 @@
   }
   function paintHistory(list) {
     const rows = $('historyRows'); rows.replaceChildren();
-    if (!list.length) { const td = rows.insertRow().insertCell(); td.colSpan = 6; td.className = 'ds-empty'; td.textContent = 'لا توجد اشتراكات بعد'; return; }
+    if (!list.length) { const td = rows.insertRow().insertCell(); td.colSpan = 7; td.className = 'ds-empty'; td.textContent = 'لا توجد اشتراكات بعد'; return; }
     for (const h of list) {
       const tr = rows.insertRow();
       for (const v of [h.planName || PLAN_NAMES[h.plan], SOURCE[h.source] || h.source || '—', fmtDate(h.startsAt), fmtDate(h.endsAt), h.price ? h.price + ' ريال' : 'مجاني']) tr.insertCell().textContent = v;
       const s = STATUS[h.status] || [h.status, 'is-off']; const b = el('span'); badge(b, s[0], s[1]); tr.insertCell().append(b);
+      const r = el('button', 'ds-link', 'عرض'); r.type = 'button'; r.setAttribute('aria-label', 'عرض إيصال ' + (h.planName || PLAN_NAMES[h.plan])); r.addEventListener('click', () => showReceipt(h)); tr.insertCell().append(r);
     }
   }
+  /** A receipt built only from the server's subscription record — an activation receipt, never a tax invoice. */
+  function showReceipt(h) {
+    const rows = [['رقم الإيصال', 'SL-' + String(h.id).replace(/-/g, '').slice(0, 12).toUpperCase()], ['صاحب الحساب', profile.user.displayName], ['المعرف الدائم', profile.user.publicId],
+      ['الباقة', h.planName || PLAN_NAMES[h.plan]], ['طريقة التفعيل', SOURCE[h.source] || h.source || '—'], ['من', fmtDate(h.startsAt)], ['إلى', fmtDate(h.endsAt)],
+      ['المبلغ', h.price ? h.price + ' ' + (h.currency === 'SAR' || !h.currency ? 'ريال سعودي' : h.currency) : 'مجاني'], ['الحالة', (STATUS[h.status] || [h.status])[0]]];
+    $('rcList').replaceChildren(...rows.flatMap(([k, v]) => { const dd = el('dd', '', v); if (/SPG-|SL-/.test(v)) dd.dir = 'ltr'; return [el('dt', '', k), dd]; }));
+    const d = $('receipt'); if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+  }
+  $('rcClose').addEventListener('click', () => $('receipt').close());
+  $('rcPrint').addEventListener('click', () => { document.body.classList.add('is-printing'); print(); });
+  addEventListener('afterprint', () => document.body.classList.remove('is-printing'));
   function paintPayments(list) {
     const rows = $('paymentRows'); rows.replaceChildren();
     if (!list.length) { const td = rows.insertRow().insertCell(); td.colSpan = 4; td.className = 'ds-empty'; td.textContent = 'لا توجد عمليات دفع إلكتروني بعد. الاشتراكات المفعّلة بكود تظهر في «حقيبتي».'; return; }
@@ -423,6 +437,111 @@
     };
     check();
   }
+
+  /* ---------- «المجتمع»: friends by SPG ID, requests, blocking and reports (the server decides every relation) ---------- */
+  const REL_TEXT = { friends: ['صديق', 'is-on'], outgoing: ['طلبك ينتظر الرد', 'is-warn'], incoming: ['أرسل لك طلبًا', 'is-warn'], blocked: ['محظور', 'is-bad'], unavailable: ['لا يستقبل طلبات', 'is-off'], none: ['', ''], self: ['هذا حسابك', 'is-off'] };
+  let cmTab = 'friends', cmBusy = false, reportTarget = null;
+  function memberAvatar(m) {
+    const span = el('span', 'cm-ava');
+    if (m.picture && m.avatar === 'sponge') { const img = el('img'); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.loading = 'lazy'; img.src = m.picture; span.append(img); }
+    else span.textContent = AVATARS[m.avatar] || '🧽';
+    span.setAttribute('aria-hidden', 'true'); return span;
+  }
+  function memberButton(text, cls, fn) { const b = el('button', 'ds-btn ' + cls); b.type = 'button'; b.append(el('span', 'ds-spin'), el('span', '', text)); b.querySelector('.ds-spin').setAttribute('aria-hidden', 'true'); b.addEventListener('click', () => act(b, () => fn(b))); return b; }
+  async function relate(action, m, okText) { await api('POST', '/api/me/' + action, { id: m.publicId }); toast(okText); await loadCommunity(true); if (!$('findResult').hidden && $('findResult').dataset.id === m.publicId) await findMember(m.publicId); }
+  /** Confirm by a second click on the same button (no browser dialogs). */
+  function confirmTwice(b, text, fn) { if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; b.lastChild.textContent = text; setTimeout(() => { if (b.isConnected) { b.dataset.confirm = ''; b.lastChild.textContent = b.dataset.label; } }, 4000); return; } b.dataset.confirm = ''; return fn(); }
+  function actionsFor(m, rel) {
+    const out = [];
+    const danger = (label, confirmText, fn) => { const b = memberButton(label, 'is-ghost is-danger', (btn) => confirmTwice(btn, confirmText, fn)); b.dataset.label = label; return b; };
+    if (rel === 'none') out.push(memberButton('إضافة صديق', 'is-blue', () => relate('friend-request', m, 'أُرسل طلب الصداقة ✓')));
+    if (rel === 'incoming') out.push(memberButton('قبول', 'is-blue', () => relate('friend-accept', m, 'أصبحتما صديقين ✓')), memberButton('رفض', 'is-ghost', () => relate('friend-decline', m, 'رُفض الطلب')));
+    if (rel === 'outgoing') out.push(memberButton('إلغاء الطلب', 'is-ghost', () => relate('friend-remove', m, 'أُلغي الطلب')));
+    if (rel === 'friends') out.push(danger('إزالة', 'اضغط للتأكيد', () => relate('friend-remove', m, 'أُزيل من أصدقائك')));
+    if (rel === 'blocked') out.push(memberButton('إلغاء الحظر', 'is-ghost', () => relate('unblock', m, 'أُلغي الحظر')));
+    else if (rel !== 'self') {
+      out.push(danger('حظر', 'تأكيد الحظر', () => relate('block', m, 'حُظر الحساب — لن يستطيع إرسال طلبات لك')));
+      out.push(memberButton('إبلاغ', 'is-ghost', () => openReport(m)));
+    }
+    return out;
+  }
+  function memberRow(m, rel, tag = 'li') {
+    const row = el(tag, 'cm-row'), who = el('a', 'cm-who'); who.href = '/u/' + m.publicId;
+    const txt = el('span'); txt.append(el('b', '', m.displayName), el('small', '', m.publicId)); txt.lastChild.dir = 'ltr';
+    who.append(memberAvatar(m), txt); row.append(who);
+    const [t, c] = REL_TEXT[rel] || ['', '']; if (t && rel !== 'friends') row.append(el('span', 'pg-badge ' + c, t));
+    if (m.since) row.append(el('small', 'cm-since', (rel === 'friends' ? 'منذ ' : '') + fmtDate(m.since)));
+    const acts = el('div', 'cm-acts'); acts.append(...actionsFor(m, rel)); row.append(acts);
+    return row;
+  }
+  function paintCount(n) { for (const id of ['navIncoming', 'bottomIncoming']) { const x = $(id); if (!x) continue; x.textContent = n > 9 ? '9+' : String(n); x.hidden = !n; } }
+  async function loadCommunity(force = false) {
+    if (cmBusy && !force) return; cmBusy = true;
+    try {
+      const r = await api('GET', '/api/me/friends');
+      const rel = { friends: 'friends', incoming: 'incoming', outgoing: 'outgoing', blocked: 'blocked' };
+      for (const k of Object.keys(rel)) {
+        const list = $('cm-' + k); list.replaceChildren(...(r[k].length ? r[k].map((m) => memberRow(m, rel[k])) : [el('li', 'ds-empty', list.dataset.empty)]));
+        $('n' + k[0].toUpperCase() + k.slice(1)).textContent = r[k].length;
+      }
+      $('nIncoming').classList.toggle('is-hot', r.incoming.length > 0);
+      paintCount(r.incoming.length);
+    } catch (e) { if (e.message !== 'login') toast(e.message, true); } finally { cmBusy = false; }
+  }
+  function cmSelect(tab, focus) {
+    cmTab = tab;
+    for (const b of document.querySelectorAll('.cm-tabs [role=tab]')) { const on = b.dataset.tab === tab; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); }
+    for (const k of ['friends', 'incoming', 'outgoing', 'blocked']) $('cm-' + k).hidden = k !== tab;
+  }
+  const tabs = [...document.querySelectorAll('.cm-tabs [role=tab]')];
+  for (const b of tabs) {
+    b.addEventListener('click', () => cmSelect(b.dataset.tab));
+    b.addEventListener('keydown', (e) => {
+      const i = tabs.indexOf(b), n = tabs.length;
+      // RTL: the right arrow goes to the previous tab
+      const j = e.key === 'ArrowLeft' ? (i + 1) % n : e.key === 'ArrowRight' ? (i - 1 + n) % n : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1;
+      if (j >= 0) { e.preventDefault(); cmSelect(tabs[j].dataset.tab, true); }
+    });
+  }
+  async function findMember(id) {
+    const box = $('findResult'), m = $('findMsg'); say(m, '', '');
+    try {
+      const r = await api('GET', '/api/me/find?id=' + encodeURIComponent(id));
+      box.dataset.id = r.member.publicId; box.replaceChildren(memberRow(r.member, r.member.relation, 'div')); box.hidden = false;
+    } catch (err) { box.hidden = true; box.replaceChildren(); say(m, err.message, 'is-err'); }
+  }
+  $('findForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    let id = $('findId').value.trim().toUpperCase().replace(/\s+/g, '');
+    if (/^[A-Z0-9]{6}$/.test(id)) id = 'SPG-' + id;
+    if (!/^SPG-[A-Z0-9]{6}$/.test(id)) { say($('findMsg'), 'اكتب المعرف كاملًا بهذا الشكل: SPG-XXXXXX', 'is-err'); $('findId').focus(); return; }
+    $('findId').value = id;
+    act(e.currentTarget.querySelector('button'), () => findMember(id));
+  });
+  $('cmCopy').addEventListener('click', (e) => { if (profile?.user.publicId) copy(profile.user.publicId, e.currentTarget); });
+  function openReport(m) {
+    reportTarget = m; const f = $('reportForm'); f.reset(); say($('reportMsg'), '', '');
+    $('reportWho').textContent = m.displayName + ' — ' + m.publicId;
+    const d = $('reportDialog'); if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+  }
+  const closeReport = () => { const d = $('reportDialog'); if (d.open) d.close(); reportTarget = null; };
+  $('reportCancel').addEventListener('click', closeReport);
+  $('reportForm').addEventListener('submit', (e) => {
+    e.preventDefault(); const f = e.currentTarget, reason = f.elements.reason.value;
+    if (!reason) { say($('reportMsg'), 'اختر سبب البلاغ', 'is-err'); return; }
+    act(f.querySelector('button[type=submit]'), async () => {
+      try {
+        const m = reportTarget;
+        await api('POST', '/api/me/report', { id: m.publicId, reason, note: f.elements.note.value });
+        if (f.elements.block.checked) await api('POST', '/api/me/block', { id: m.publicId });
+        closeReport(); toast(f.elements.block.checked ? 'وصل البلاغ للإدارة وحُظر الحساب ✓' : 'وصل البلاغ للإدارة ✓');
+        await loadCommunity(true); if (!$('findResult').hidden) await findMember(m.publicId);
+      } catch (err) { say($('reportMsg'), err.message, 'is-err'); }
+    });
+  });
+  const findParam = (params.get('find') || '').toUpperCase();
+  if (/^SPG-[A-Z0-9]{6}$/.test(findParam)) { $('findId').value = findParam; findMember(findParam); history.replaceState(null, '', location.pathname + location.hash); }
   initialSection();
   load();
+  if (document.body.dataset.sec !== 'community') loadCommunity();
 })();

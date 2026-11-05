@@ -9,6 +9,14 @@
   --deep:#020A22; --navy:#061A44; --blue:#1E5BFF; --cyan:#38D4FF; --aqua:#8CE8FF; --foam:#EAF8FF; --muted:rgba(234,248,255,.72);
   --yellow:linear-gradient(180deg,#FFF27D 0%,#FFD62A 55%,#FFB800 100%); --ink:#0A1A3D; --coral:#FF6A8A;
   --ease:cubic-bezier(.2,.8,.2,1);
+  /* shared design tokens — home, account, profile, guides and admin use the same values */
+  --primary:#2C8BFF; --primary-deep:#176DF0; --primary-glow:#4FA8FF;
+  --sun:#FFD62A; --sun-soft:#FFE14D; --sun-edge:#C98A00;
+  --surface:#0B1737; --surface-2:#10234D; --surface-glass:rgba(2,10,34,.4);
+  --line:rgba(140,232,255,.22); --line-strong:#244B7C; --text-dim:#9EADD0;
+  --ok:#7DF0C6; --danger:#FF4A6A; --danger-soft:#FFC2CF;
+  --r-sm:12px; --r-md:16px; --r-lg:22px; --r-pill:999px;
+  --focus:3px solid #FFE14D;
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0}
