@@ -364,15 +364,23 @@
      </div>
      <div class="sv-anims" id="skAnims" role="group" aria-label="الحركات"></div>
      <p class="ds-small sv-help" id="skHelp">اسحب لتدوير الشخصية 360°، واستخدم إصبعين أو عجلة الفأرة للتكبير والتصغير.</p>
-      <div class="sk-actions"><button type="button" class="ds-btn is-gold" id="skClaim" hidden><span class="ds-spin" aria-hidden="true"></span><span>أضفها لمجموعتي — مجانًا</span></button><button type="button" class="ds-btn is-blue" id="skEquip" hidden><span class="ds-spin" aria-hidden="true"></span><span>تجهيز السكن</span></button></div>
+      <div class="sk-actions"><button type="button" class="ds-btn is-gold" id="skClaim" hidden><span class="ds-spin" aria-hidden="true"></span><span>أضفها لمجموعتي — مجانًا</span></button><button type="button" class="ds-btn is-gold sk-buy" id="skBuy" hidden><span class="ds-spin" aria-hidden="true"></span><img src="/brand/coin-32.webp" alt="" width="22" height="22"><span id="skBuyText">شراء</span></button><button type="button" class="ds-btn is-blue" id="skEquip" hidden><span class="ds-spin" aria-hidden="true"></span><span>تجهيز السكن</span></button></div>
+      <p class="ds-small sk-how" id="skHow" hidden></p>
       <p class="pg-msg" id="skMsg" role="status" hidden></p>
      </div>
      <div class="sk-side">
       <div class="sk-filter" role="tablist" aria-label="تصفية السكنات">
        <button type="button" role="tab" aria-selected="true" data-filter="all">الكل <span class="cm-n" id="skAll">0</span></button>
        <button type="button" role="tab" aria-selected="false" tabindex="-1" data-filter="owned">مملوكة <span class="cm-n" id="skOwned">0</span></button>
+       <button type="button" role="tab" aria-selected="false" tabindex="-1" data-filter="common" class="is-r-common">عادي</button>
+       <button type="button" role="tab" aria-selected="false" tabindex="-1" data-filter="rare" class="is-r-rare">نادر</button>
+       <button type="button" role="tab" aria-selected="false" tabindex="-1" data-filter="epic" class="is-r-epic">ملحمي</button>
+       <button type="button" role="tab" aria-selected="false" tabindex="-1" data-filter="legendary" class="is-r-legendary">أسطوري</button>
+       <button type="button" role="tab" aria-selected="false" tabindex="-1" data-filter="mythic" class="is-r-mythic">خرافي</button>
       </div>
+      <label class="sk-gfx"><input type="checkbox" id="lowGfx"> رسوميات منخفضة (بدون جسيمات وهالات — أخف على الجهاز)</label>
       <ul class="sk-grid" id="skGrid" aria-label="السكنات المتاحة"></ul>
+      <p class="ds-small sk-shards" id="skShards" hidden></p>
       <p class="ds-small sk-credit" id="skCredit"></p>
      </div>
     </div>

@@ -15,14 +15,14 @@ const sharp = require('sharp');
   await page.goto(base + '/__poster');
   for (const skin of SKINS) {
     if (only.length && !only.includes(skin.id)) continue;
-    await page.evaluate(async ({ model }) => {
+    await page.evaluate(async ({ model, rarity, accent }) => {
       document.getElementById('s').replaceChildren();
       const { mountViewer } = await import('/skin-viewer.js');
       window.__v?.dispose();
-      window.__v = await mountViewer(document.getElementById('s'), { model, autoRotate: false, animations: { idle: 'idle' } });
+      window.__v = await mountViewer(document.getElementById('s'), { model, autoRotate: false, animations: { idle: 'idle' }, rarity, accent, low: false });
       window.__v.rotate(-0.45); window.__v.zoom(0.92);
       await new Promise((r) => setTimeout(r, 900));
-    }, { model: skin.model });
+    }, { model: skin.model, rarity: skin.rarity, accent: skin.accent });
     const png = await page.locator('#s').screenshot({ omitBackground: true });
     const out = path.join(__dirname, '..', 'public', 'skins', skin.id + '.webp');
     await sharp(png).webp({ quality: 82, alphaQuality: 90, effort: 6 }).toFile(out);

@@ -53,7 +53,7 @@ test('default skin, claim, equip and grant — saved in PostgreSQL', { skip }, a
     assert.equal((await p.publicProfile(a.public_id)).skin.model, '/skins/knight.glb');
 
     // equipping something not owned is refused; claiming a free skin adds it; then it can be equipped
-    await assert.rejects(p.equipSkin(a.id, 'mage'), /أضف السكن/);
+    await assert.rejects(p.equipSkin(a.id, 'mage'), /ليس في مجموعتك/);
     await assert.rejects(p.equipSkin(a.id, '../etc'), /غير موجود/);
     s = await p.claimSkin(a.id, 'mage');
     assert.equal(s.skins.find((x) => x.id === 'mage').owned, true);
@@ -81,5 +81,62 @@ test('default skin, claim, equip and grant — saved in PostgreSQL', { skip }, a
     await pool.query(`UPDATE users SET skin='retired_skin' WHERE id=$1`, [b.id]); await p.refresh(b.id);
     assert.equal((await p.skins(b.id)).equipped, DEFAULT_SKIN);
     assert.equal((await p.profile(b.id)).skin.id, DEFAULT_SKIN);
+  } finally { await pool.end(); }
+});
+
+test('rarities: five tiers, ten new skins with real recoloured models, the originals unchanged', async () => {
+  const { RARITIES, SKINS: ALL } = await import('../src/skins.mjs');
+  assert.deepEqual(Object.keys(RARITIES), ['common', 'rare', 'epic', 'legendary', 'mythic']);
+  const wheel = ALL.filter((s) => s.access === 'wheel');
+  assert.equal(wheel.length, 10);
+  assert.deepEqual(['common', 'rare', 'epic', 'legendary', 'mythic'].map((r) => wheel.filter((s) => s.rarity === r).length), [2, 2, 2, 2, 2]);
+  const textureOf = (id) => { const { json, bin } = readGlb(fs.readFileSync(pub('/skins/' + id + '.glb'))); const v = json.bufferViews[json.images[0].bufferView]; return bin.subarray(v.byteOffset || 0, (v.byteOffset || 0) + v.byteLength); };
+  for (const s of wheel) {
+    assert.ok(s.recolor, s.id + ' has its own look');
+    const base = ALL.find((o) => o.access === 'free' && o.source === s.source);
+    assert.notDeepEqual(textureOf(s.id), textureOf(base.id), s.id + ' texture differs from ' + base.id);
+    assert.ok(s.price === RARITIES[s.rarity].price, 'listed price');
+  }
+  // special clips are baked under the standard names
+  const king = readGlb(fs.readFileSync(pub('/skins/deep_king.glb'))).json;
+  assert.deepEqual(king.animations.map((a) => a.name).sort(), ['idle', 'lose', 'walk', 'win']);
+});
+
+test('catalog in PostgreSQL, owner edits survive restarts, direct purchase is atomic', { skip }, async () => {
+  const { Economy } = await import('../src/economy.mjs');
+  const { tx } = await import('../src/db.mjs');
+  const pool = createPool(dbUrl); await migrate(pool, { log: null });
+  const p = new Platform({ pool, hashCode: (c) => c, mail: { send: async () => ({ sent: false }) }, gateway: { configured: false } });
+  const eco = new Economy({ pool, platform: p });
+  const u = await p.register({ username: 'buyer1', email: 'buyer1@example.com', password: 'reef2026go', confirm: 'reef2026go' });
+  try {
+    await p.catalog(true);
+    assert.equal((await pool.query('SELECT count(*)::int n FROM skins')).rows[0].n, SKINS.length);
+    assert.equal(p.skinCatalog.wheelPool().length, 10);
+    // the owner renames a skin: kept after a restart (the seed never overwrites)
+    await pool.query(`UPDATE skins SET name='ملك البحار' WHERE id='deep_king'`);
+    const p2 = new Platform({ pool, hashCode: (c) => c, mail: { send: async () => {} }, gateway: { configured: false } });
+    await p2.catalog();
+    assert.equal(p2.skinCatalog.byId('deep_king').name, 'ملك البحار');
+
+    // wheel skins cannot be claimed for free nor equipped before they are owned
+    await assert.rejects(p.claimSkin(u.id, 'sponge_gold'), /غير متاح/);
+    await assert.rejects(p.equipSkin(u.id, 'sponge_gold'), /ليس في مجموعتك/);
+    // not enough coins
+    await assert.rejects(eco.buySkin(u.id, 'sponge_gold'), /لا يكفي/);
+    // 500 purchased + 600 earned → a 900-coin rare takes the purchased coins first
+    await tx(pool, (c) => eco.move(c, u.id, { amount: 500, bucket: 'purchased', kind: 'admin', ref: 't1' }));
+    await tx(pool, (c) => eco.move(c, u.id, { amount: 600, bucket: 'earned', kind: 'admin', ref: 't2' }));
+    const results = await Promise.allSettled([eco.buySkin(u.id, 'sponge_gold'), eco.buySkin(u.id, 'sponge_gold'), eco.buySkin(u.id, 'sponge_gold')]);
+    assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1, 'bought once');
+    const w = await eco.wallet(u.id);
+    assert.deepEqual([w.purchased, w.earned, w.balance], [0, 200, 200]);
+    assert.equal((await pool.query(`SELECT count(*)::int n FROM wallet_transactions WHERE user_id=$1 AND kind='skin_buy'`, [u.id])).rows[0].n, 2);
+    const s = await p.equipSkin(u.id, 'sponge_gold');
+    assert.deepEqual([s.equipped, s.skins.find((x) => x.id === 'sponge_gold').source, s.skins.find((x) => x.id === 'sponge_gold').rarity], ['sponge_gold', 'buy', 'rare']);
+    // a skin switched off disappears and the account falls back to the default
+    await pool.query(`UPDATE skins SET active=false WHERE id='sponge_gold'`); await p.catalog(true); await p.refresh(u.id);
+    assert.equal((await p.skins(u.id)).equipped, 'knight');
+    await assert.rejects(eco.buySkin(u.id, 'sponge_gold'), /غير موجود/);
   } finally { await pool.end(); }
 });

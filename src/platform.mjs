@@ -1,7 +1,7 @@
 // SPONGE LIVE — accounts with a permanent ID, the 24-hour free trial, paid subscriptions and admin tools.
 // Every rule that decides access (eligibility, expiry, payment status) is checked here, on the server,
 // against PostgreSQL. The browser only displays what these functions return.
-import { SKINS, SKIN_PACKS, SKIN_ANIMATIONS, SKIN_ANIMATION_LABELS, DEFAULT_SKIN, skinById, publicSkin } from './skins.mjs';
+import { SKIN_PACKS, SKIN_ANIMATIONS, SKIN_ANIMATION_LABELS, RARITIES, publicSkin, SkinCatalog } from './skins.mjs';
 import { randomBytes, randomInt, scrypt, timingSafeEqual, createHash } from 'node:crypto';
 import { tx } from './db.mjs';
 import { generateCode, normalizeCode } from './promo.mjs';
@@ -129,6 +129,7 @@ export class Platform {
    * @param {{createInvoice(o:object):Promise<object>, fetchInvoice(id:string):Promise<object>, configured:boolean, name:string}} o.gateway
    */
   constructor({ pool, hashCode, mail, gateway, appUrl = '', now = () => Date.now(), minRoundMs = MIN_ROUND_MS }) {
+    this.skinCatalog = new SkinCatalog(); this.catalogLoad = null;
     this.minRoundMs = minRoundMs;
     this.pool = pool; this.hashCode = hashCode; this.mail = mail; this.gateway = gateway; this.appUrl = appUrl.replace(/\/$/, ''); this.now = now;
     this.cache = new Map();   // user id → { user, subs, loadedAt }
@@ -138,7 +139,10 @@ export class Platform {
   /* ------------------------------------------------------------ cache
      Studio checks run on every request, so each user's row and subscription periods are kept in memory.
      Every write below refreshes the cache; entries older than 30 s are also refreshed in the background. */
+  /** The skins table, read once (and again after the owner edits it). Built-in skins work before that. */
+  catalog(force = false) { if (force || !this.catalogLoad) this.catalogLoad = this.skinCatalog.load(this.pool).catch((err) => { this.catalogLoad = null; throw err; }); return this.catalogLoad; }
   async init() {
+    await this.catalog();
     const users = (await this.pool.query('SELECT * FROM users')).rows;
     const subs = (await this.pool.query("SELECT user_id, plan, starts_at, ends_at, status FROM subscriptions WHERE status='active' AND ends_at > now()")).rows;
     const trials = new Map((await this.pool.query('SELECT user_id, activated_at, ends_at FROM trial_activations')).rows.map((t) => [t.user_id, t]));
@@ -843,7 +847,7 @@ export class Platform {
     // someone who blocked the viewer is simply not found by them
     if (viewerId && viewerId !== u.id && (await this.pool.query('SELECT 1 FROM user_blocks WHERE blocker=$1 AND blocked=$2', [u.id, viewerId])).rowCount) return null;
     const pv = privacyOf(u);
-    const out = { publicId: u.public_id, displayName: u.display_name, avatar: u.avatar, picture: u.picture_url || null, memberSince: iso(u.created_at), skin: publicSkin(skinById(this.equippedSkin(u))), skinAnimations: SKIN_ANIMATIONS };
+    const out = { publicId: u.public_id, displayName: u.display_name, avatar: u.avatar, picture: u.picture_url || null, memberSince: iso(u.created_at), skin: publicSkin(this.skinCatalog.byId(this.equippedSkin(u))), skinAnimations: SKIN_ANIMATIONS };
     out.friendsCount = pv.friendCount ? Number((await this.pool.query(`SELECT count(*)::int n FROM friendships WHERE status='accepted' AND (user_a=$1 OR user_b=$1)`, [u.id])).rows[0].n) : null;
     if (viewerId) out.relation = viewerId === u.id ? 'self' : await this.relation(viewerId, u.id, pv);
     out.streamer = pv.streamerStats ? await this.streamerStats(u.id) : null;
@@ -855,43 +859,51 @@ export class Platform {
     return out;
   }
 
-  /* ------------------------------------------------------------ «السكنات»: 3D characters (catalog in src/skins.mjs) */
-  /** The equipped skin, falling back to the default if the stored one was ever removed from the catalog. */
-  equippedSkin(u) { return skinById(u?.skin)?.id || DEFAULT_SKIN; }
-  async ownedSkins(userId) {
-    const rows = (await this.pool.query('SELECT skin_id, source, acquired_at FROM user_skins WHERE user_id=$1', [userId])).rows;
-    const owned = new Map(SKINS.filter((x) => x.default).map((x) => [x.id, { source: 'default', acquiredAt: null }]));
-    for (const r of rows) if (skinById(r.skin_id) && !owned.has(r.skin_id)) owned.set(r.skin_id, { source: r.source, acquiredAt: iso(r.acquired_at) });
+  /* ------------------------------------------------------------ «السكنات»: 3D characters (SkinCatalog: the skins table) */
+  /** The equipped skin, falling back to the default if the stored one was removed or switched off. */
+  equippedSkin(u) { return this.skinCatalog.byId(u?.skin)?.id || this.skinCatalog.defaultId; }
+  async ownedSkins(userId, c = this.pool) {
+    await this.catalog();
+    const rows = (await c.query('SELECT skin_id, source, acquired_at, copies FROM user_skins WHERE user_id=$1', [userId])).rows;
+    const owned = new Map(this.skinCatalog.list().filter((x) => x.default).map((x) => [x.id, { source: 'default', acquiredAt: null, copies: 1 }]));
+    for (const r of rows) if (this.skinCatalog.anyById(r.skin_id)) owned.set(r.skin_id, { source: owned.has(r.skin_id) ? 'default' : r.source, acquiredAt: iso(r.acquired_at), copies: r.copies });
     return owned;
   }
   async skins(userId) {
+    await this.catalog();
     const u = (await this.pool.query('SELECT skin FROM users WHERE id=$1', [userId])).rows[0];
     const owned = await this.ownedSkins(userId), equipped = this.equippedSkin(u);
+    const list = this.skinCatalog.list().filter((x) => x.access !== 'grant' || owned.has(x.id)); // grant-only skins appear once given
     return {
       equipped, animations: SKIN_ANIMATIONS, animationLabels: SKIN_ANIMATION_LABELS, packs: SKIN_PACKS,
-      skins: SKINS.map((x) => ({ ...publicSkin(x), owned: owned.has(x.id), source: owned.get(x.id)?.source || null, acquiredAt: owned.get(x.id)?.acquiredAt || null, equipped: x.id === equipped })),
+      rarities: Object.fromEntries(Object.entries(RARITIES).map(([k, r]) => [k, { name: r.name, color: r.color, order: r.order }])),
+      shards: [...owned.values()].reduce((n, o) => n + Math.max(0, (o.copies || 1) - 1), 0),
+      skins: list.map((x) => { const o = owned.get(x.id); return { ...publicSkin(x), owned: !!o, source: o?.source || null, acquiredAt: o?.acquiredAt || null, copies: o?.copies || 0, equipped: x.id === equipped }; }),
     };
   }
-  /** Adds a free skin to the account's collection. Paid / granted skins can never be claimed this way. */
+  /** Adds a free skin to the account's collection. Wheel / paid / granted skins can never be claimed this way. */
   async claimSkin(userId, id) {
-    const skin = skinById(String(id || ''));
+    await this.catalog();
+    const skin = this.skinCatalog.byId(String(id || ''));
     if (!skin) fail('السكن غير موجود', 404);
     if (skin.default) return this.skins(userId);
-    if (skin.access !== 'free') fail('هذا السكن غير متاح للإضافة المباشرة', 403);
+    if (skin.access !== 'free') fail('هذا السكن غير متاح للإضافة المجانية', 403);
     await this.pool.query(`INSERT INTO user_skins (user_id, skin_id, source) VALUES ($1,$2,'claim') ON CONFLICT DO NOTHING`, [userId, skin.id]);
     return this.skins(userId);
   }
   /** Equips a skin the account owns — ownership is checked here, never taken from the browser. */
   async equipSkin(userId, id) {
-    const skin = skinById(String(id || ''));
+    await this.catalog();
+    const skin = this.skinCatalog.byId(String(id || ''));
     if (!skin) fail('السكن غير موجود', 404);
-    if (!(await this.ownedSkins(userId)).has(skin.id)) fail('أضف السكن إلى مجموعتك أولًا', 403);
+    if (!(await this.ownedSkins(userId)).has(skin.id)) fail('هذا السكن ليس في مجموعتك', 403);
     await this.pool.query('UPDATE users SET skin=$2 WHERE id=$1', [userId, skin.id]);
     await this.refresh(userId);
     return this.skins(userId);
   }
   async grantSkin(userId, id, by) {
-    const skin = skinById(String(id || ''));
+    await this.catalog();
+    const skin = this.skinCatalog.anyById(String(id || ''));
     if (!skin) fail('السكن غير موجود', 404);
     await this.pool.query(`INSERT INTO user_skins (user_id, skin_id, source, granted_by) VALUES ($1,$2,'grant',$3) ON CONFLICT DO NOTHING`, [userId, skin.id, String(by || '').slice(0, 60)]);
     return { ok: true, skin: skin.id };
@@ -1040,7 +1052,7 @@ export class Platform {
       privacy: privacyOf(e.user),
       streamer: await this.streamerStats(userId),
       progress: await this.progress(userId),
-      skin: publicSkin(skinById(this.equippedSkin(e.user))),
+      skin: publicSkin(this.skinCatalog.byId(this.equippedSkin(e.user))),
       skinAnimations: SKIN_ANIMATIONS,
     };
   }

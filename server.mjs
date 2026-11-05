@@ -163,7 +163,7 @@ if (pool) {
   platform = new Platform({ pool, hashCode: (c) => promos.hash(c), mail: createMailer(), gateway: createGateway(), appUrl: process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000),
     ...(process.env.NODE_ENV === 'test' && process.env.SKY_MIN_ROUND_MS ? { minRoundMs: Number(process.env.SKY_MIN_ROUND_MS) } : {}) });
   await platform.init();
-  economy = new Economy({ pool });
+  economy = new Economy({ pool, platform });
   for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
 } else console.warn('[db] DATABASE_URL is not set: games and promo codes work; accounts, trials and subscriptions are off.');
 const appUrl = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000)).replace(/\/$/, '');
@@ -789,6 +789,7 @@ async function handleMe(action, req, res) {
     /* ---- «السكنات» (the skin id is the only input; ownership is checked on the server) ---- */
     if (action === 'skin-claim') return json(res, 200, { ok: true, ...(await platform.claimSkin(userId, body.id)) });
     if (action === 'skin-equip') return json(res, 200, { ok: true, ...(await platform.equipSkin(userId, body.id)) });
+    if (action === 'skin-buy') { await economy.buySkin(userId, body.id); return json(res, 200, { ok: true, ...(await platform.skins(userId)), wallet: await economy.wallet(userId) }); }
     /* ---- «المجتمع» (the other account is named only by its SPG ID; who I am comes from the session) ---- */
     if (action === 'friend-request') return json(res, 200, { ok: true, ...(await platform.friendRequest(userId, body.id)) });
     if (action === 'friend-accept') return json(res, 200, { ok: true, ...(await platform.friendRespond(userId, body.id, true)) });
