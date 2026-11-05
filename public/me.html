@@ -188,37 +188,77 @@
 
    <!-- ================= ملفي ================= -->
    <section class="ds-sec" data-sec="profile" aria-labelledby="profTitle" hidden>
-    <div class="ds-head"><small>حسابك</small><h1 id="profTitle">ملفي</h1><p>معلومات حسابك ومعرّفك الدائم.</p></div>
-    <div class="ds-two">
-     <div class="ds-card">
-      <div class="pg-who"><span class="pg-avatar" id="avatarView" aria-hidden="true">🧽</span>
-       <div><h2 id="displayName">…</h2>
-        <div class="pg-id"><span class="sr-only">معرّف الحساب الدائم</span><code id="publicId" dir="ltr">SPG-······</code><button type="button" class="pg-copy" id="copyId">نسخ</button></div>
-       </div></div>
-      <dl class="ds-dl">
-       <dt>اسم المستخدم</dt><dd dir="ltr" id="username"></dd>
-       <dt>البريد</dt><dd dir="ltr" id="profEmail"></dd>
-       <dt>تاريخ الإنشاء</dt><dd id="createdAt"></dd>
-       <dt>آخر دخول</dt><dd id="lastLogin">—</dd>
-       <dt>الاشتراك</dt><dd id="profPlan">—</dd>
-      </dl>
-      <p class="ds-small">المعرّف الدائم لا يتغير أبدًا — ولا عند تغيير الاسم أو الدخول بـ Google.</p>
+    <div class="ds-head"><small>حسابك على SPONGE LIVE</small><h1 id="profTitle">ملفي</h1><p>بياناتك الأساسية وملخص رحلتك على SPONGE LIVE.</p></div>
+    <button type="button" class="pf-edit-btn" id="editToggle" aria-expanded="false" aria-controls="editCard"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-pencil"/></svg><span>تعديل الملف</span></button>
+
+    <div class="pf-hero">
+     <div class="pf-top">
+      <div class="pf-ava-wrap"><span class="pf-ava" id="avatarView" aria-hidden="true">🧽</span><i class="pf-dot" id="statusDot" title="حالة الاشتراك"></i></div>
+      <div class="pf-id-box">
+       <h2 id="displayName">…</h2>
+       <div class="pf-spg"><span class="pf-spg-label">المعرف</span><code id="publicId" dir="ltr">SPG-······</code><button type="button" class="pf-copy" id="copyId"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-ticket"/></svg><span>نسخ</span></button></div>
+       <p class="pf-copied" id="copiedNote" role="status" hidden>تم نسخ المعرف ✓</p>
+       <div class="pf-chips"><span class="pf-chip" id="accountType">حساب</span><span class="pf-chip" id="planChip">—</span></div>
+      </div>
      </div>
-     <div class="ds-card">
-      <h2>تعديل الملف</h2>
-      <form class="pg-form" id="editForm" novalidate>
-       <label class="pg-field"><span>الاسم الظاهر</span><input name="displayName" maxlength="40" required></label>
-       <fieldset class="pg-field"><span>الصورة</span><div class="pg-avatars" id="avatarChoices"></div></fieldset>
-       <p class="pg-msg" id="editMsg" role="status" hidden></p>
-       <button class="ds-btn is-blue" type="submit"><span class="ds-spin" aria-hidden="true"></span><span>حفظ</span></button>
-      </form>
+     <div class="pf-level">
+      <div class="pf-level-head"><span>المستوى الحالي <button type="button" class="pf-q" id="xpHelp" aria-expanded="false" aria-controls="xpRules">?</button></span><b class="pf-level-n" id="levelNow">1</b></div>
+      <div class="pf-bar" role="progressbar" aria-labelledby="levelNow" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="xpBar"><i id="xpFill"></i></div>
+      <div class="pf-level-foot"><span id="xpNow" dir="ltr">XP 0</span><span id="xpNext">500 XP للمستوى التالي</span></div>
+      <p class="pf-rules" id="xpRules" hidden></p>
      </div>
-     <div class="ds-card ds-span">
-      <h2>إحصائيات الستريمر</h2>
-      <p class="ds-small">تُحسب من جلسات اللعب الموثقة فقط (اشتراك فعال + حساب بث مُثبت + بث مباشر + لعبة مفتوحة).</p>
-      <div class="ds-stats"><div><b id="statSessions">0</b><span>جلسة بث</span></div><div><b id="statPlayers">0</b><span>متسابق</span></div><div><b id="statGames">0</b><span>لعبة مختلفة</span></div></div>
-      <a class="ds-btn is-ghost" id="publicLink2" href="#">عرض ملفك العام</a>
+     <div class="pf-mode">
+      <span class="pf-mode-label"><i aria-hidden="true"></i>وضع الحساب</span>
+      <div class="pf-seg" role="tablist" aria-label="وضع العرض">
+       <button type="button" role="tab" data-mode="player" aria-selected="false"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-games"/></svg>لاعب</button>
+       <button type="button" role="tab" data-mode="streamer" aria-selected="true"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-signal"/></svg>ستريمر</button>
+      </div>
      </div>
+    </div>
+
+    <div class="pf-stats" id="statsPlayer" hidden>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">🎮</span><b id="pEntries">0</b><span>مشاركة في جولات</span></div>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">🏆</span><b id="pWins">0</b><span>مرة فوز</span></div>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">⏱</span><b id="pHours">0</b><span>ساعة لعب</span></div>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">📅</span><b id="pWeeks">0</b><span>أسبوع لعبت فيه</span></div>
+     <p class="pf-note" id="playerNote" hidden>إحصائياتك كلاعب تُحسب عندما تشارك في ألعاب SPONGE LIVE بحساب TikTok أو Kick مربوط بحسابك. <a href="#settings">اربط حسابك من الإعدادات</a>.</p>
+    </div>
+    <div class="pf-stats" id="statsStreamer">
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">📡</span><b id="sSessions">0</b><span>جلسة بث</span></div>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">⏱</span><b id="sHours">0</b><span>ساعة تشغيل لألعاب SPONGE LIVE</span></div>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">⌛</span><b id="sLongest">0</b><span>ساعة في أطول جلسة ألعاب</span></div>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">👥</span><b id="sPlayers">0</b><span>لاعب استضفتهم</span></div>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">🕹</span><b id="sGames">0</b><span>لعبة مختلفة شغّلتها</span></div>
+     <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">🔗</span><b id="sLinked">0</b><span id="sLinkedText">منصة مرتبطة</span></div>
+     <a class="ds-btn is-ghost pf-public" id="publicLink2" href="#">عرض ملفك العام</a>
+    </div>
+
+    <div class="ds-card pf-data">
+     <div class="pf-data-head"><span class="pf-data-ic" aria-hidden="true"><svg class="ds-i"><use href="/icons.svg#i-user"/></svg></span><div><h2>بيانات الحساب</h2><p>المعلومات الأساسية المرتبطة بملفك.</p></div></div>
+     <div class="pf-remain" id="remainBox" hidden><div><b>الوقت المتبقي في اشتراكك</b><small id="remainUntil"></small></div><span class="pf-remain-clock" id="remainClock" dir="ltr">—</span></div>
+     <dl class="pf-dl">
+      <div><dt>البريد الإلكتروني</dt><dd><bdi id="profEmail" dir="ltr"></bdi> <span class="ds-badge" id="profEmailBadge"></span></dd></div>
+      <div><dt>اسم المستخدم</dt><dd dir="ltr" id="username"></dd></div>
+      <div><dt>تاريخ إنشاء الحساب</dt><dd id="createdAt"></dd></div>
+      <div><dt>آخر دخول</dt><dd id="lastLogin">—</dd></div>
+      <div><dt>نوع الحساب</dt><dd id="accountType2">—</dd></div>
+      <div><dt>المعرف الدائم</dt><dd dir="ltr" id="publicId2"></dd></div>
+      <div><dt>المنصات المرتبطة</dt><dd id="profLinked">—</dd></div>
+      <div><dt>الاشتراك الحالي</dt><dd id="profPlan">—</dd></div>
+      <div><dt>تاريخ الانتهاء</dt><dd id="profEnds">—</dd></div>
+      <div><dt>الفواتير وسجل الاشتراكات</dt><dd><a href="#billing">عرض السجل</a></dd></div>
+     </dl>
+     <p class="ds-small">المعرّف الدائم لا يتغير أبدًا — ولا عند تغيير الاسم أو الدخول بـ Google.</p>
+    </div>
+
+    <div class="ds-card" id="editCard" hidden>
+     <h2>تعديل الملف</h2>
+     <form class="pg-form" id="editForm" novalidate>
+      <label class="pg-field"><span>الاسم الظاهر</span><input name="displayName" maxlength="40" required></label>
+      <fieldset class="pg-field"><span>الصورة</span><div class="pg-avatars" id="avatarChoices"></div></fieldset>
+      <p class="pg-msg" id="editMsg" role="status" hidden></p>
+      <button class="ds-btn is-blue" type="submit"><span class="ds-spin" aria-hidden="true"></span><span>حفظ</span></button>
+     </form>
     </div>
    </section>
 
@@ -259,6 +299,13 @@
     <div class="ds-card ds-soon-card"><p>تحديات الستريمرز غير متاحة بعد. ستظهر هنا عند إطلاقها.</p><a class="ds-btn is-gold" href="/studio">افتح ألعاب البث</a></div>
    </section>
   </main>
+  <nav class="ds-bottom" id="bottomNav" aria-label="أقسام لوحة التحكم">
+   <a href="#profile" data-sec="profile"><span class="ds-bottom-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-user"/></svg></span><span>ملفي</span></a>
+   <a href="#community" data-sec="community"><span class="ds-bottom-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg></span><span>المجتمع</span><small>قريبًا</small></a>
+   <a href="#bag" data-sec="bag"><span class="ds-bottom-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-gift"/></svg></span><span>حقيبتي</span></a>
+   <a href="/studio"><span class="ds-bottom-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-games"/></svg></span><span>ألعاب البث</span></a>
+   <a href="#challenge" data-sec="challenge"><span class="ds-bottom-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-trophy"/></svg></span><span>التحديات</span><small>قريبًا</small></a>
+  </nav>
  </div>
 </div>
 <div class="ds-toast" id="toast" role="status" aria-live="polite" hidden></div>
