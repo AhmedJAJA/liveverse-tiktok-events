@@ -147,6 +147,46 @@ test('official TikTok/Kick sign-in, linked-only connections and the active-strea
     assert.equal((await anon('GET', '/api/leaderboard?board=streamers&metric=sessions&find=' + host.publicId)).data.found.rank, 1);
     await host('POST', '/api/admin/heartbeat', { tab: T, screen: 'game' });
     await host('POST', '/api/admin/prepare', { mode: 'quiz' }, { 'X-Studio-Tab': T }); // back to a waiting game
+
+    // ===== the launch flow, with real (signed) chat comments from Kick =====
+    const H = { 'X-Studio-Tab': T };
+    const flowOf = async () => (await anon('GET', '/api/state?room=' + host.room)).data;
+    const say = (id, name, content) => fake.kickWebhook(srv.base, { broadcasterUserId: 501, sender: { id, name, slug: name.toLowerCase() }, content });
+    await host('POST', '/api/admin/reset', {}, H);
+    r = await host('POST', '/api/admin/flow-setup', { mode: 'quiz' }, H);           // «تشغيل اللعبة»
+    assert.equal(r.status, 200, JSON.stringify(r.data)); assert.equal(r.data.flow.stage, 'GAME_SETUP');
+    assert.equal((await host('POST', '/api/admin/flow-start', {}, H)).status, 409, 'no round from the setup');
+    assert.equal((await host('POST', '/api/admin/flow-settings', { settings: { questions: 1, seconds: 15 } }, H)).data.flow.settings.seconds, 15);
+    assert.equal((await host('POST', '/api/admin/flow-settings', { settings: { seconds: 999 } }, H)).status, 400, 'only listed values');
+    r = await host('POST', '/api/admin/flow-begin', {}, H);                          // «ابدأ اللعبة»
+    assert.equal(r.data.flow.stage, 'REGISTRATION_SETUP');
+    let st = await flowOf();
+    assert.equal(st.status.active, false, '«ابدأ اللعبة» did not start the round'); assert.notEqual(st.registration.phase, 'open');
+    await say(9201, 'Early', 'جاهز'); await sleep(200);
+    assert.equal((await flowOf()).playerCount, 0, 'no joining before registration opens');
+    r = await host('POST', '/api/admin/flow-open', { keyword: 'جاهز' }, H);         // «فتح التسجيل»
+    assert.equal(r.data.flow.stage, 'WAITING_FOR_PLAYERS');
+    st = await flowOf(); assert.equal(st.registration.keyword, 'جاهز'); assert.equal(st.registration.phase, 'open');
+    await say(9202, 'Mona', 'جاهز'); await say(9202, 'Mona', 'جاهز');                 // matching, twice
+    await say(9203, 'Other', 'انضم');                                                  // a different word
+    st = await waitFor(async () => { const x = await flowOf(); return x.roster.some((p) => p.name === 'Mona') && x; }, 5000, 'Mona joined');
+    assert.equal(st.roster.filter((p) => p.name === 'Mona').length, 1, 'added once');
+    assert.equal(st.roster.some((p) => p.name === 'Other'), false, 'other words ignored');
+    assert.equal(st.status.active, false);
+    // a refresh / WebSocket reconnect reads the same session back
+    assert.equal(st.flow.stage, 'WAITING_FOR_PLAYERS'); assert.equal(st.flow.mode, 'quiz'); assert.ok(st.flow.sessionId);
+    const sid = st.flow.sessionId;
+    r = await host('POST', '/api/admin/flow-start', {}, H);                          // «بدء الجولة الآن»
+    assert.equal(r.status, 200, JSON.stringify(r.data)); assert.equal(r.data.flow.stage, 'GAME_RUNNING');
+    st = await flowOf(); assert.equal(st.status.active, true); assert.equal(st.status.mode, 'quiz');
+    assert.equal(st.status.endsAt - st.status.startedAt, 15_000, 'saved answer time applied');
+    assert.equal(st.flow.sessionId, sid, 'one session, no duplicate');
+    assert.equal((await host('POST', '/api/admin/flow-start', {}, H)).status, 409, 'cannot start twice');
+    assert.equal((await host('POST', '/api/admin/flow-setup', { mode: 'flag' }, H)).status, 409, 'no new game session while a round runs');
+    await host('POST', '/api/admin/flow-end', {}, H);                                // «إنهاء اللعبة»
+    st = await flowOf(); assert.equal(st.flow.stage, 'GAME_LIBRARY'); assert.equal(st.status.active, false);
+    await host('POST', '/api/admin/heartbeat', { tab: T, screen: 'game' });
+    await host('POST', '/api/admin/prepare', { mode: 'quiz' }, H); // back to the older join page flow used below
     // the faker's unverified room below plays too, but never reaches the board
 
     // 20. forging from the browser changes nothing
@@ -218,6 +258,8 @@ test('official TikTok/Kick sign-in, linked-only connections and the active-strea
     assert.match((await signIn(fake, host, 'kick', 501)).location, /linked=kick/);
     assert.equal((await owner('POST', '/api/manage/stop', { publicId: host.publicId })).status, 200);
     assert.equal((await host('POST', '/api/admin/connect', { platform: 'kick' })).status, 402);
+    assert.equal((await host('POST', '/api/admin/flow-setup', { mode: 'quiz' })).status, 402, 'an ended plan opens no game session');
+    assert.equal((await host('POST', '/api/admin/flow-start', {})).status, 402);
     assert.match((await host('GET', '/api/oauth/kick/start')).location, /link_error=plan/);
     assert.equal((await host('POST', '/api/me/stream-unlink', { platform: 'kick' })).data.removed, true);
 

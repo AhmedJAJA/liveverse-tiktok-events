@@ -77,7 +77,10 @@ test('studio layout: game list, main screen and a tabbed drawer with only the cu
     assert.match(html, new RegExp('id="' + id + '"'), id);
   assert.match(html, /role="tablist"/);
   const js = pub('studio.js');
-  assert.match(js, /async function selectGame/);
+  // the launch flow: one command per button, in order (setup → join word → open → start)
+  for (const a of ['flow-setup', 'flow-begin', 'flow-open', 'flow-close', 'flow-start', 'flow-again', 'flow-end', 'flow-trial', 'flow-settings']) assert.ok(js.includes("'" + a + "'"), a);
+  for (const id of ['setupView', 'registerView', 'beginButton', 'tryButton', 'wordInput', 'openButton', 'advFields']) assert.match(html, new RegExp('id="' + id + '"'), id);
+  assert.doesNotMatch(js, /admin\('start'/, 'the studio never starts a round with the old one-step command');
   assert.match(js, /history\.replaceState\(null, '', '\/studio\?mode='/);
   for (const a of ['promo-create', 'promo-list', 'promo-update', 'promo-delete', 'connect', 'disconnect']) assert.ok(js.includes("'" + a + "'"), a);
 });
