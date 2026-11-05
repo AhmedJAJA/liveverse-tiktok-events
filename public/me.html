@@ -217,6 +217,23 @@
      </div>
     </div>
 
+    <div class="ds-card sv-card" id="myChar">
+     <div class="sv-head"><div><small>شخصيتي ثلاثية الأبعاد</small><h2 id="myCharName">—</h2></div><a class="ds-btn is-ghost" href="#skins"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg><span>تغيير السكن</span></a></div>
+     <div class="sv-stage" id="myStage" tabindex="0" aria-label="شخصيتك — اسحب للتدوير، والأسهم للتدوير، و+ و− للتكبير والتصغير" aria-describedby="myHelp">
+      <img class="sv-poster" id="myPoster" alt="" width="480" height="480" decoding="async">
+      <p class="sv-status" id="myStatus" role="status"></p>
+      <div class="sv-tools" role="group" aria-label="التحكم بالعرض">
+       <button type="button" data-view="zoom-in" aria-label="تكبير">+</button>
+       <button type="button" data-view="zoom-out" aria-label="تصغير">−</button>
+       <button type="button" data-view="turn-left" aria-label="تدوير لليسار">⟲</button>
+       <button type="button" data-view="turn-right" aria-label="تدوير لليمين">⟳</button>
+       <button type="button" data-view="reset" aria-label="إعادة الوضع"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg></button>
+      </div>
+     </div>
+     <div class="sv-anims" id="myAnims" role="group" aria-label="الحركات"></div>
+     <p class="ds-small sv-help" id="myHelp">اسحب لتدوير الشخصية 360°، واستخدم إصبعين أو عجلة الفأرة للتكبير والتصغير.</p>
+    </div>
+
     <div class="pf-stats" id="statsPlayer" hidden>
      <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">🎮</span><b id="pEntries">0</b><span>مشاركة في جولات</span></div>
      <div class="pf-stat"><span class="pf-stat-ic" aria-hidden="true">🏆</span><b id="pWins">0</b><span>مرة فوز</span></div>
@@ -266,9 +283,44 @@
    <!-- ================= حقيبتي ================= -->
    <section class="ds-sec" data-sec="bag" aria-labelledby="bagTitle" hidden>
     <div class="ds-head"><small>اشتراكاتك</small><h1 id="bagTitle">حقيبتي</h1><p>كل اشتراك ورمز فعّلته على حسابك.</p></div>
+    <nav class="bag-tabs" aria-label="أقسام حقيبتي"><a href="#skins"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg>السكنات</a><a href="#bag" aria-current="page"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-ticket"/></svg>الاشتراكات</a></nav>
     <div class="ds-card">
      <h2>سجل الاشتراكات</h2>
      <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الباقة</th><th>المصدر</th><th>من</th><th>إلى</th><th>المبلغ</th><th>الحالة</th><th>الإيصال</th></tr></thead><tbody id="historyRows"></tbody></table></div>
+    </div>
+   </section>
+
+   <!-- ================= حقيبتي › السكنات ================= -->
+   <section class="ds-sec" data-sec="skins" aria-labelledby="skinsTitle" hidden>
+    <div class="ds-head"><small>حقيبتي</small><h1 id="skinsTitle">السكنات</h1><p>شخصيتك ثلاثية الأبعاد في ملفك. عاين أي شخصية، أضفها لمجموعتك، ثم جهّزها.</p></div>
+    <nav class="bag-tabs" aria-label="أقسام حقيبتي"><a href="#skins" aria-current="page"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg>السكنات</a><a href="#bag"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-ticket"/></svg>الاشتراكات</a></nav>
+    <div class="sk-layout">
+     <div class="ds-card sv-card sk-preview">
+      <div class="sv-head"><div><small id="skPreviewTag">معاينة</small><h2 id="skPreviewName">—</h2><p class="ds-small" id="skPreviewBlurb"></p></div><span class="pg-badge" id="skPreviewBadge" hidden></span></div>
+      <div class="sv-stage" id="skStage" tabindex="0" aria-label="معاينة السكن — اسحب للتدوير، والأسهم للتدوير، و+ و− للتكبير والتصغير" aria-describedby="skHelp">
+      <img class="sv-poster" id="skPoster" alt="" width="480" height="480" decoding="async">
+      <p class="sv-status" id="skStatus" role="status"></p>
+      <div class="sv-tools" role="group" aria-label="التحكم بالعرض">
+       <button type="button" data-view="zoom-in" aria-label="تكبير">+</button>
+       <button type="button" data-view="zoom-out" aria-label="تصغير">−</button>
+       <button type="button" data-view="turn-left" aria-label="تدوير لليسار">⟲</button>
+       <button type="button" data-view="turn-right" aria-label="تدوير لليمين">⟳</button>
+       <button type="button" data-view="reset" aria-label="إعادة الوضع"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg></button>
+      </div>
+     </div>
+     <div class="sv-anims" id="skAnims" role="group" aria-label="الحركات"></div>
+     <p class="ds-small sv-help" id="skHelp">اسحب لتدوير الشخصية 360°، واستخدم إصبعين أو عجلة الفأرة للتكبير والتصغير.</p>
+      <div class="sk-actions"><button type="button" class="ds-btn is-gold" id="skClaim" hidden><span class="ds-spin" aria-hidden="true"></span><span>أضفها لمجموعتي — مجانًا</span></button><button type="button" class="ds-btn is-blue" id="skEquip" hidden><span class="ds-spin" aria-hidden="true"></span><span>تجهيز السكن</span></button></div>
+      <p class="pg-msg" id="skMsg" role="status" hidden></p>
+     </div>
+     <div class="sk-side">
+      <div class="sk-filter" role="tablist" aria-label="تصفية السكنات">
+       <button type="button" role="tab" aria-selected="true" data-filter="all">الكل <span class="cm-n" id="skAll">0</span></button>
+       <button type="button" role="tab" aria-selected="false" tabindex="-1" data-filter="owned">مملوكة <span class="cm-n" id="skOwned">0</span></button>
+      </div>
+      <ul class="sk-grid" id="skGrid" aria-label="السكنات المتاحة"></ul>
+      <p class="ds-small sk-credit" id="skCredit"></p>
+     </div>
     </div>
    </section>
 

@@ -1,0 +1,4 @@
+3D characters: KayKit Adventurers Character Pack 1.0 by Kay Lousberg — www.kaylousberg.com
+License: CC0 1.0 Universal (public domain) — http://creativecommons.org/publicdomain/zero/1.0/
+Optimized for SPONGE LIVE by scripts/build-skins.mjs (one loadout, four animations per character).
+Viewer: three.js r170 (MIT) — see /vendor/three/LICENSE.txt

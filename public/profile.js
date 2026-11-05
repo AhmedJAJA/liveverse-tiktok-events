@@ -46,6 +46,7 @@
     if (p.picture && p.avatar === 'sponge') { const img = document.createElement('img'); img.className = 'pg-avatar-img'; img.alt = ''; img.referrerPolicy = 'no-referrer'; img.src = p.picture; $('avatar').replaceChildren(img); }
     else $('avatar').textContent = AVATARS[p.avatar] || '🧽';
     if (p.friendsCount !== null && p.friendsCount !== undefined) { const n = p.friendsCount; $('friends').textContent = n === 0 ? 'لا أصدقاء بعد' : n === 1 ? 'صديق واحد' : n === 2 ? 'صديقان' : n <= 10 ? n + ' أصدقاء' : n + ' صديقًا'; $('friends').hidden = false; }
+    if (p.skin) { $('skinImg').src = p.skin.thumb; $('skinImg').alt = 'شخصية ' + p.displayName + ': ' + p.skin.name; $('skinName').textContent = p.skin.name; $('skinBox').hidden = false; }
     paintRelation(p);
     $('card').hidden = false;
     if (p.streamer) { $('sSessions').textContent = p.streamer.sessions; $('sPlayers').textContent = p.streamer.playersTotal; $('sGames').textContent = Object.keys(p.streamer.games || {}).length; $('streamer').hidden = false; }

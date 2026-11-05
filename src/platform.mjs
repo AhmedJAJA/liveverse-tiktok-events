@@ -1,6 +1,7 @@
 // SPONGE LIVE — accounts with a permanent ID, the 24-hour free trial, paid subscriptions and admin tools.
 // Every rule that decides access (eligibility, expiry, payment status) is checked here, on the server,
 // against PostgreSQL. The browser only displays what these functions return.
+import { SKINS, SKIN_PACKS, SKIN_ANIMATIONS, SKIN_ANIMATION_LABELS, DEFAULT_SKIN, skinById, publicSkin } from './skins.mjs';
 import { randomBytes, randomInt, scrypt, timingSafeEqual, createHash } from 'node:crypto';
 import { tx } from './db.mjs';
 import { generateCode, normalizeCode } from './promo.mjs';
@@ -842,7 +843,7 @@ export class Platform {
     // someone who blocked the viewer is simply not found by them
     if (viewerId && viewerId !== u.id && (await this.pool.query('SELECT 1 FROM user_blocks WHERE blocker=$1 AND blocked=$2', [u.id, viewerId])).rowCount) return null;
     const pv = privacyOf(u);
-    const out = { publicId: u.public_id, displayName: u.display_name, avatar: u.avatar, picture: u.picture_url || null, memberSince: iso(u.created_at) };
+    const out = { publicId: u.public_id, displayName: u.display_name, avatar: u.avatar, picture: u.picture_url || null, memberSince: iso(u.created_at), skin: publicSkin(skinById(this.equippedSkin(u))), skinAnimations: SKIN_ANIMATIONS };
     out.friendsCount = pv.friendCount ? Number((await this.pool.query(`SELECT count(*)::int n FROM friendships WHERE status='accepted' AND (user_a=$1 OR user_b=$1)`, [u.id])).rows[0].n) : null;
     if (viewerId) out.relation = viewerId === u.id ? 'self' : await this.relation(viewerId, u.id, pv);
     out.streamer = pv.streamerStats ? await this.streamerStats(u.id) : null;
@@ -852,6 +853,48 @@ export class Platform {
     } else out.linked = null;
     out.player = pv.playerStats ? { available: false } : null; // viewers' game stats are not tied to accounts yet
     return out;
+  }
+
+  /* ------------------------------------------------------------ «السكنات»: 3D characters (catalog in src/skins.mjs) */
+  /** The equipped skin, falling back to the default if the stored one was ever removed from the catalog. */
+  equippedSkin(u) { return skinById(u?.skin)?.id || DEFAULT_SKIN; }
+  async ownedSkins(userId) {
+    const rows = (await this.pool.query('SELECT skin_id, source, acquired_at FROM user_skins WHERE user_id=$1', [userId])).rows;
+    const owned = new Map(SKINS.filter((x) => x.default).map((x) => [x.id, { source: 'default', acquiredAt: null }]));
+    for (const r of rows) if (skinById(r.skin_id) && !owned.has(r.skin_id)) owned.set(r.skin_id, { source: r.source, acquiredAt: iso(r.acquired_at) });
+    return owned;
+  }
+  async skins(userId) {
+    const u = (await this.pool.query('SELECT skin FROM users WHERE id=$1', [userId])).rows[0];
+    const owned = await this.ownedSkins(userId), equipped = this.equippedSkin(u);
+    return {
+      equipped, animations: SKIN_ANIMATIONS, animationLabels: SKIN_ANIMATION_LABELS, packs: SKIN_PACKS,
+      skins: SKINS.map((x) => ({ ...publicSkin(x), owned: owned.has(x.id), source: owned.get(x.id)?.source || null, acquiredAt: owned.get(x.id)?.acquiredAt || null, equipped: x.id === equipped })),
+    };
+  }
+  /** Adds a free skin to the account's collection. Paid / granted skins can never be claimed this way. */
+  async claimSkin(userId, id) {
+    const skin = skinById(String(id || ''));
+    if (!skin) fail('السكن غير موجود', 404);
+    if (skin.default) return this.skins(userId);
+    if (skin.access !== 'free') fail('هذا السكن غير متاح للإضافة المباشرة', 403);
+    await this.pool.query(`INSERT INTO user_skins (user_id, skin_id, source) VALUES ($1,$2,'claim') ON CONFLICT DO NOTHING`, [userId, skin.id]);
+    return this.skins(userId);
+  }
+  /** Equips a skin the account owns — ownership is checked here, never taken from the browser. */
+  async equipSkin(userId, id) {
+    const skin = skinById(String(id || ''));
+    if (!skin) fail('السكن غير موجود', 404);
+    if (!(await this.ownedSkins(userId)).has(skin.id)) fail('أضف السكن إلى مجموعتك أولًا', 403);
+    await this.pool.query('UPDATE users SET skin=$2 WHERE id=$1', [userId, skin.id]);
+    await this.refresh(userId);
+    return this.skins(userId);
+  }
+  async grantSkin(userId, id, by) {
+    const skin = skinById(String(id || ''));
+    if (!skin) fail('السكن غير موجود', 404);
+    await this.pool.query(`INSERT INTO user_skins (user_id, skin_id, source, granted_by) VALUES ($1,$2,'grant',$3) ON CONFLICT DO NOTHING`, [userId, skin.id, String(by || '').slice(0, 60)]);
+    return { ok: true, skin: skin.id };
   }
 
   /* ------------------------------------------------------------ «المجتمع»: friends, blocks, reports */
@@ -997,6 +1040,8 @@ export class Platform {
       privacy: privacyOf(e.user),
       streamer: await this.streamerStats(userId),
       progress: await this.progress(userId),
+      skin: publicSkin(skinById(this.equippedSkin(e.user))),
+      skinAnimations: SKIN_ANIMATIONS,
     };
   }
   /** XP, level and play/stream statistics — derived only from what the server counted (real, listed sessions),

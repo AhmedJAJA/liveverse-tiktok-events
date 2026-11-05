@@ -8,7 +8,7 @@
   const STATUS = { active: ['فعّال', 'is-on'], expired: ['منتهي', 'is-off'], scheduled: ['يبدأ لاحقًا', 'is-warn'], cancelled: ['موقوف', 'is-bad'] };
   const PAY = { paid: ['مدفوعة ✓', 'is-on'], pending: ['بانتظار التأكيد', 'is-warn'], failed: ['فشلت', 'is-bad'], expired: ['منتهية', 'is-off'], refunded: ['مستردة', 'is-off'] };
   const SOURCE = { trial: 'تجربة مجانية', voucher: 'كود اشتراك', payment: 'دفع إلكتروني', admin: 'الإدارة', manual: 'الإدارة' };
-  const SECTIONS = ['settings', 'profile', 'bag', 'billing', 'community', 'challenge'];
+  const SECTIONS = ['settings', 'profile', 'bag', 'skins', 'billing', 'community', 'challenge'];
   const params = new URLSearchParams(location.search);
   const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Riyadh' });
   const fmtDate = (iso) => (iso ? fmt.format(new Date(iso)) : '—');
@@ -50,11 +50,12 @@
     if (!SECTIONS.includes(sec)) sec = 'settings';
     document.body.dataset.sec = sec;
     for (const s of document.querySelectorAll('.ds-sec')) s.hidden = s.dataset.sec !== sec;
-    const navSec = sec === 'billing' ? 'settings' : sec;
+    const navSec = sec === 'billing' ? 'settings' : sec === 'skins' ? 'bag' : sec;
     for (const a of document.querySelectorAll('.ds-nav a[data-sec], .ds-bottom a[data-sec]')) { if (a.dataset.sec === navSec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
     closeMenu();
     if (sec === 'settings') loadSessions();
     if (sec === 'community') loadCommunity();
+    syncViewers(sec);
   }
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SECTIONS.includes(h)) { show(h); scrollTo({ top: 0 }); } else if (document.getElementById(h)) { show('settings'); document.getElementById(h).scrollIntoView({ block: 'start' }); } });
   function initialSection() {
@@ -81,6 +82,7 @@
     $('planChip').textContent = a.active ? a.planName : 'بدون اشتراك'; $('planChip').classList.toggle('is-on', !!a.active);
     $('statusDot').classList.toggle('is-on', !!a.active); $('statusDot').title = a.active ? 'الاشتراك فعّال' : 'لا يوجد اشتراك فعّال';
     $('publicId2').textContent = u.publicId; $('cmMyId').textContent = u.publicId;
+    paintMySkin(p);
     badge($('profEmailBadge'), u.verified ? 'موثّق' : 'غير موثّق', u.verified ? 'is-on' : 'is-warn');
     $('profLinked').textContent = links.length ? Object.entries(p.linked).filter(([, l]) => l && !l.needsReauth).map(([k, l]) => (k === 'kick' ? 'Kick' : 'TikTok') + ' @' + l.handle).join('، ') : 'لا توجد منصات مرتبطة';
     $('profEnds').textContent = a.active ? fmtDate(a.endsAt) : '—';
@@ -539,6 +541,103 @@
       } catch (err) { say($('reportMsg'), err.message, 'is-err'); }
     });
   });
+
+  /* ---------- 3D skins: «شخصيتي» in ملفي and «السكنات» in حقيبتي ----------
+     three.js and a model are fetched only when one of these sections is opened, and only one 3D view is alive at a
+     time (leaving the section frees it). Ownership and the equipped skin always come from the server. */
+  const LABELS = { idle: 'وقوف', walk: 'مشي', win: 'فوز', lose: 'خسارة' };
+  const views = {}; let viewerMod = null, skinState = null, skPicked = null, skFilter = 'all';
+  const hasGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } })();
+  function stageStatus(pre, text) { const n = $(pre + 'Status'); n.textContent = text; n.hidden = !text; }
+  function paintAnims(pre, names, active = 'idle') {
+    const box = $(pre + 'Anims');
+    box.replaceChildren(...['idle', 'walk', 'win', 'lose'].filter((n) => names.includes(n)).map((n) => {
+      const b = el('button', 'sv-anim', LABELS[n]); b.type = 'button'; b.dataset.anim = n; b.setAttribute('aria-pressed', String(n === active));
+      b.addEventListener('click', () => { views[pre]?.play(n); for (const x of box.children) x.setAttribute('aria-pressed', String(x === b)); });
+      return b;
+    }));
+  }
+  const queue = {};
+  /** One request at a time per stage, so two quick calls never create two WebGL views. */
+  function showModel(pre, skin, animations) { queue[pre] = (queue[pre] || Promise.resolve()).then(() => showModelNow(pre, skin, animations)).catch(() => {}); return queue[pre]; }
+  async function showModelNow(pre, skin, animations) {
+    const stage = $(pre + 'Stage'), poster = $(pre + 'Poster');
+    if (poster.getAttribute('src') !== skin.thumb) poster.src = skin.thumb;
+    stage.dataset.state = 'poster';
+    if (!hasGL) { stageStatus(pre, 'جهازك لا يدعم العرض ثلاثي الأبعاد — نعرض صورة الشخصية.'); $(pre + 'Anims').replaceChildren(); return; }
+    stageStatus(pre, 'جارٍ تحميل الشخصية…');
+    try {
+      viewerMod ||= await import('/skin-viewer.js');
+      if (document.body.dataset.sec !== (pre === 'my' ? 'profile' : 'skins')) return; // the visitor moved on meanwhile
+      const onState = (st, info) => {
+        if (st === 'ready') { stageStatus(pre, ''); paintAnims(pre, info.animations); }
+        if (st === 'error') { stageStatus(pre, 'تعذر تحميل الشخصية — تحقق من الاتصال ثم أعد المحاولة.'); stage.dataset.state = 'poster'; }
+      };
+      if (!views[pre]) views[pre] = await viewerMod.mountViewer(stage, { model: skin.model, animations, label: skin.name, onState });
+      else await views[pre].setModel(skin.model, animations);
+    } catch { stageStatus(pre, 'تعذر تشغيل العرض ثلاثي الأبعاد.'); }
+  }
+  function syncViewers(sec) {
+    for (const [pre, v] of Object.entries(views)) if ((pre === 'my' && sec !== 'profile') || (pre === 'sk' && sec !== 'skins')) { v.dispose(); delete views[pre]; $(pre + 'Stage').dataset.state = 'poster'; }
+    if (sec === 'profile' && profile) showModel('my', profile.skin, profile.skinAnimations);
+    if (sec === 'skins') loadSkins();
+  }
+  function paintMySkin(p) {
+    if (!p.skin) return;
+    $('myCharName').textContent = p.skin.name;
+    const poster = $('myPoster'); if (poster.getAttribute('src') !== p.skin.thumb) poster.src = p.skin.thumb;
+    if (document.body.dataset.sec === 'profile' && !views.my) showModel('my', p.skin, p.skinAnimations);
+  }
+  for (const pre of ['my', 'sk']) $(pre + 'Stage').querySelector('.sv-tools').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-view]'), v = views[pre]; if (!b || !v) return;
+    ({ 'zoom-in': () => v.zoom(0.85), 'zoom-out': () => v.zoom(1.18), 'turn-left': () => v.rotate(-0.5), 'turn-right': () => v.rotate(0.5), reset: () => v.reset() })[b.dataset.view]();
+  });
+
+  async function loadSkins() {
+    try { skinState = await api('GET', '/api/me/skins'); } catch (e) { if (e.message !== 'login') say($('skMsg'), e.message, 'is-err'); return; }
+    if (!skPicked || !skinState.skins.some((x) => x.id === skPicked)) skPicked = skinState.equipped;
+    paintSkins();
+  }
+  function skinBadge(x) { return x.equipped ? ['مُجهّز', 'is-on'] : x.owned ? ['في مجموعتك', 'is-warn'] : x.access === 'free' ? ['مجاني', 'is-off'] : ['قريبًا', 'is-off']; }
+  function paintSkins() {
+    const st = skinState, owned = st.skins.filter((x) => x.owned);
+    $('skAll').textContent = st.skins.length; $('skOwned').textContent = owned.length;
+    $('skCredit').textContent = Object.values(st.packs).map((p) => 'الشخصيات: ' + p.credit).join(' • ');
+    const list = skFilter === 'owned' ? owned : st.skins;
+    $('skGrid').replaceChildren(...list.map((x) => {
+      const li = el('li'), b = el('button', 'sk-item'); b.type = 'button'; b.dataset.id = x.id;
+      b.setAttribute('aria-pressed', String(x.id === skPicked)); b.style.setProperty('--sk-accent', x.accent);
+      const img = el('img'); img.src = x.thumb; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.width = 160; img.height = 160;
+      const [t, c] = skinBadge(x); const badge = el('span', 'pg-badge ' + c, t);
+      b.append(img, el('b', '', x.name), badge);
+      b.addEventListener('click', () => { skPicked = x.id; paintSkins(); });
+      li.append(b); return li;
+    }));
+    const pick = st.skins.find((x) => x.id === skPicked);
+    $('skPreviewName').textContent = pick.name; $('skPreviewBlurb').textContent = pick.blurb;
+    $('skPreviewTag').textContent = pick.equipped ? 'السكن المُجهّز حاليًا' : 'معاينة';
+    const [t, c] = skinBadge(pick); badge($('skPreviewBadge'), t, c); $('skPreviewBadge').hidden = false;
+    $('skClaim').hidden = pick.owned || pick.access !== 'free';
+    $('skEquip').hidden = !pick.owned || pick.equipped;
+    if (document.body.dataset.sec === 'skins' && $('skStage').dataset.skin !== pick.id) { $('skStage').dataset.skin = pick.id; showModel('sk', pick, st.animations); }
+  }
+  for (const b of document.querySelectorAll('.sk-filter [role=tab]')) b.addEventListener('click', () => {
+    skFilter = b.dataset.filter;
+    for (const x of document.querySelectorAll('.sk-filter [role=tab]')) { const on = x === b; x.setAttribute('aria-selected', String(on)); x.tabIndex = on ? 0 : -1; }
+    if (skinState) paintSkins();
+  });
+  $('skClaim').addEventListener('click', (e) => act(e.currentTarget, async () => {
+    try { skinState = await api('POST', '/api/me/skin-claim', { id: skPicked }); paintSkins(); say($('skMsg'), 'أُضيفت الشخصية إلى مجموعتك ✓ — يمكنك تجهيزها الآن.', 'is-ok'); }
+    catch (err) { say($('skMsg'), err.message, 'is-err'); }
+  }));
+  $('skEquip').addEventListener('click', (e) => act(e.currentTarget, async () => {
+    try {
+      skinState = await api('POST', '/api/me/skin-equip', { id: skPicked }); paintSkins();
+      const now = skinState.skins.find((x) => x.equipped);
+      if (profile) { profile.skin = now; paintMySkin(profile); }
+      say($('skMsg'), `تم تجهيز «${now.name}» ✓ — تظهر الآن في ملفك.`, 'is-ok'); views.sk?.play('win');
+    } catch (err) { say($('skMsg'), err.message, 'is-err'); }
+  }));
   const findParam = (params.get('find') || '').toUpperCase();
   if (/^SPG-[A-Z0-9]{6}$/.test(findParam)) { $('findId').value = findParam; findMember(findParam); history.replaceState(null, '', location.pathname + location.hash); }
   initialSection();
