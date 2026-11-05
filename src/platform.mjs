@@ -89,6 +89,13 @@ export function validateSignup({ username, email, password, confirm } = {}) {
 
 const iso = (d) => (d ? new Date(d).toISOString() : null);
 const MIN_ROUND_MS = 15_000, MAX_ROUND_S = 3600;
+/** XP for counted events only (editable here). A level needs 500 XP, then 250 more for each next level. */
+export const XP_RULES = Object.freeze({ entry: 10, win: 40, playMinute: 1, session: 50, streamMinute: 2, streamRound: 5 });
+export function levelFor(xp) {
+  let level = 1, need = 500, floor = 0;
+  while (xp >= floor + need && level < 200) { floor += need; level++; need = 500 + 250 * (level - 1); }
+  return { level, levelXp: xp - floor, nextXp: need, pct: Math.min(100, Math.floor(((xp - floor) / need) * 100)) };
+}
 /** A partner photo the owner uploaded: PNG, JPEG or WebP (checked by its bytes), at most 400 KB. */
 function parsePhoto(dataUrl) {
   const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+=*)$/.exec(String(dataUrl || ''));
@@ -625,6 +632,10 @@ export class Platform {
       ON CONFLICT (user_id) DO UPDATE SET sessions = streamer_stats.sessions + 1, last_session_at = now(),
         games = streamer_stats.games || jsonb_build_object($2::text, COALESCE((streamer_stats.games->>$2)::int, 0) + 1)`, [userId, String(mode).slice(0, 20)]);
   }
+  async noteSessionLength(userId, minutes) {
+    if (!(minutes > 0)) return;
+    await this.pool.query('UPDATE streamer_stats SET longest_minutes = GREATEST(longest_minutes, $2) WHERE user_id=$1', [userId, Math.min(100000, minutes | 0)]);
+  }
   async addStreamPlayers(userId, n) {
     if (!(n > 0)) return;
     await this.pool.query('UPDATE streamer_stats SET players_total = players_total + $2 WHERE user_id=$1', [userId, Math.min(100000, n | 0)]);
@@ -863,7 +874,28 @@ export class Platform {
       trialNeedsVerifiedEmail: this.trialNeedsVerifiedEmail,
       privacy: privacyOf(e.user),
       streamer: await this.streamerStats(userId),
+      progress: await this.progress(userId),
     };
+  }
+  /** XP, level and play/stream statistics — derived only from what the server counted (real, listed sessions),
+      so reloading pages or repeating requests can never add XP. */
+  async progress(userId) {
+    const [pl, st, wk, uniq] = await Promise.all([
+      this.pool.query(`SELECT COALESCE(sum(p.entries),0)::int entries, COALESCE(sum(p.wins),0)::int wins, COALESCE(sum(p.seconds),0)::int seconds,
+          COUNT(DISTINCT p.week_start)::int weeks
+        FROM weekly_player_stats p JOIN linked_accounts la ON la.user_id = $1 AND la.verified AND la.platform = p.platform AND p.handle IS NOT NULL AND lower(la.handle) = p.handle`, [userId]),
+      this.pool.query('SELECT sessions, players_total, games, longest_minutes FROM streamer_stats WHERE user_id=$1', [userId]),
+      this.pool.query('SELECT COALESCE(sum(minutes),0)::int minutes, COALESCE(sum(rounds),0)::int rounds FROM weekly_streamer_stats WHERE user_id=$1', [userId]),
+      this.pool.query('SELECT count(DISTINCT (platform, player_id))::int n FROM weekly_streamer_players WHERE user_id=$1', [userId]),
+    ]);
+    const p = pl.rows[0], s = st.rows[0] || {}, w = wk.rows[0];
+    const player = { entries: p.entries, wins: p.wins, hours: Math.round(p.seconds / 360) / 10, weeks: p.weeks };
+    const streamer = { sessions: s.sessions || 0, hours: Math.round(w.minutes / 6) / 10, longestHours: Math.round((s.longest_minutes || 0) / 6) / 10,
+      players: uniq.rows[0].n, games: Object.keys(s.games || {}).length, rounds: w.rounds };
+    const R = XP_RULES;
+    const xp = player.entries * R.entry + player.wins * R.win + Math.floor(p.seconds / 60) * R.playMinute
+      + streamer.sessions * R.session + w.minutes * R.streamMinute + w.rounds * R.streamRound;
+    return { xp, ...levelFor(xp), player, streamer, rules: R };
   }
 
   /* -------------------------------------------------------------- admin */

@@ -969,7 +969,7 @@ function sweepLive() {
     // streamer statistics count only real sessions: every listing condition holds (a hidden stream still counts)
     const real = inGame && st.reasons.every((x) => x === 'hidden');
     if (real && room.kind === 'acct' && platform && !room.sessionCounted) {
-      room.sessionCounted = true; room.sessionPeak = 0; room.minuteAt = now;
+      room.sessionCounted = true; room.sessionPeak = 0; room.minuteAt = now; room.sessionStartedAt = now;
       platform.recordStreamSession(room.ownerId, room.engine.status.mode).catch(() => {});
       platform.addWeeklyStreamer(room.ownerId, { sessions: 1 }).catch(() => {});
     }
@@ -980,7 +980,10 @@ function sweepLive() {
       else if (!real) room.minuteAt = now;
     }
     if (!inGame) {
-      if (room.sessionCounted && platform) { platform.addStreamPlayers(room.ownerId, room.sessionPeak).catch(() => {}); platform.addWeeklyStreamer(room.ownerId, { players: room.sessionPeak }).catch(() => {}); }
+      if (room.sessionCounted && platform) {
+        platform.addStreamPlayers(room.ownerId, room.sessionPeak).catch(() => {}); platform.addWeeklyStreamer(room.ownerId, { players: room.sessionPeak }).catch(() => {});
+        platform.noteSessionLength(room.ownerId, Math.floor((now - (room.sessionStartedAt || now)) / 60_000)).catch(() => {});
+      }
       room.gameSessionId = null; room.sessionCounted = false; room.sessionPeak = 0;
     }
     if (room.kind !== 'acct' || !platform) continue;

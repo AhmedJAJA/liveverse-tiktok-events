@@ -51,7 +51,7 @@
     document.body.dataset.sec = sec;
     for (const s of document.querySelectorAll('.ds-sec')) s.hidden = s.dataset.sec !== sec;
     const navSec = sec === 'billing' ? 'settings' : sec;
-    for (const a of document.querySelectorAll('.ds-nav a[data-sec]')) { if (a.dataset.sec === navSec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
+    for (const a of document.querySelectorAll('.ds-nav a[data-sec], .ds-bottom a[data-sec]')) { if (a.dataset.sec === navSec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
     closeMenu();
     if (sec === 'settings') loadSessions();
   }
@@ -68,6 +68,67 @@
   $('sideOpen').addEventListener('click', openMenu); $('sideClose').addEventListener('click', closeMenu); $('scrim').addEventListener('click', closeMenu);
   addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
 
+  /* ---------- «ملفي»: level, XP and the player / streamer view (all counted by the server) ---------- */
+  const nf = (n) => Number(n || 0).toLocaleString('en-US');
+  let lastXp = null, remainTimer = 0;
+  function paintProgress(p) {
+    const u = p.user, a = p.access, g = p.progress || { xp: 0, level: 1, levelXp: 0, nextXp: 500, pct: 0, player: {}, streamer: {}, rules: {} };
+    const links = Object.values(p.linked || {}).filter((l) => l && !l.needsReauth);
+    const streamerAcct = a.active || links.length > 0 || (g.streamer.sessions || 0) > 0;
+    const type = streamerAcct ? 'حساب ستريمر' : 'حساب لاعب';
+    $('accountType').textContent = type; $('accountType2').textContent = type;
+    $('planChip').textContent = a.active ? a.planName : 'بدون اشتراك'; $('planChip').classList.toggle('is-on', !!a.active);
+    $('statusDot').classList.toggle('is-on', !!a.active); $('statusDot').title = a.active ? 'الاشتراك فعّال' : 'لا يوجد اشتراك فعّال';
+    $('publicId2').textContent = u.publicId;
+    badge($('profEmailBadge'), u.verified ? 'موثّق' : 'غير موثّق', u.verified ? 'is-on' : 'is-warn');
+    $('profLinked').textContent = links.length ? Object.entries(p.linked).filter(([, l]) => l && !l.needsReauth).map(([k, l]) => (k === 'kick' ? 'Kick' : 'TikTok') + ' @' + l.handle).join('، ') : 'لا توجد منصات مرتبطة';
+    $('profEnds').textContent = a.active ? fmtDate(a.endsAt) : '—';
+    // level and XP
+    $('levelNow').textContent = String(g.level);
+    $('xpNow').textContent = 'XP ' + nf(g.levelXp);
+    $('xpNext').textContent = nf(g.nextXp) + ' XP للمستوى التالي';
+    $('xpBar').setAttribute('aria-valuenow', String(g.pct));
+    $('xpFill').style.setProperty('--pct', g.pct + '%');
+    if (lastXp !== null && g.xp > lastXp) { $('xpBar').classList.remove('is-up'); void $('xpBar').offsetWidth; $('xpBar').classList.add('is-up'); }
+    lastXp = g.xp;
+    const R = g.rules || {};
+    $('xpRules').textContent = `تكسب XP من أحداث لعب حقيقية فقط: ${R.entry} لكل مشاركة في جولة، ${R.win} لكل فوز، ${R.playMinute} لكل دقيقة لعب، ${R.session} لكل جلسة بث، ${R.streamMinute} لكل دقيقة تشغيل ألعاب، و${R.streamRound} لكل جولة مكتملة في بثك. المستوى الأول يحتاج 500 XP، وكل مستوى بعده يحتاج 250 XP إضافية.`;
+    // statistics
+    const pl = g.player || {}, sr = g.streamer || {};
+    $('pEntries').textContent = nf(pl.entries); $('pWins').textContent = nf(pl.wins); $('pHours').textContent = String(pl.hours || 0); $('pWeeks').textContent = nf(pl.weeks);
+    $('playerNote').hidden = links.length > 0;
+    $('sSessions').textContent = nf(sr.sessions); $('sHours').textContent = String(sr.hours || 0); $('sLongest').textContent = String(sr.longestHours || 0);
+    $('sPlayers').textContent = nf(sr.players); $('sGames').textContent = nf(sr.games); $('sLinked').textContent = String(links.length);
+    $('sLinkedText').textContent = links.length ? 'منصة مرتبطة: ' + links.map((l) => '@' + l.handle).join('، ') : 'منصة مرتبطة';
+    let mode = ''; try { mode = localStorage.getItem('sponge_profile_mode') || ''; } catch {}
+    setMode(mode || (streamerAcct ? 'streamer' : 'player'));
+    // time left in the subscription (from the server's end date)
+    clearInterval(remainTimer);
+    $('remainBox').hidden = !a.active;
+    if (a.active) {
+      const end = Date.parse(a.endsAt);
+      $('remainUntil').textContent = 'ينتهي ' + fmtDate(a.endsAt);
+      const tick = () => { const ms = Math.max(0, end - Date.now()); const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s2 = Math.floor(ms / 1e3) % 60; $('remainClock').textContent = (d ? d + 'd ' : '') + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s2).padStart(2, '0'); };
+      tick(); remainTimer = setInterval(tick, 1000);
+    }
+  }
+  function setMode(mode) {
+    for (const b of document.querySelectorAll('.pf-seg [data-mode]')) b.setAttribute('aria-selected', String(b.dataset.mode === mode));
+    $('statsPlayer').hidden = mode !== 'player'; $('statsStreamer').hidden = mode !== 'streamer';
+  }
+  document.querySelector('.pf-seg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mode]'); if (!b) return;
+    setMode(b.dataset.mode); try { localStorage.setItem('sponge_profile_mode', b.dataset.mode); } catch {}
+  });
+  $('xpHelp').addEventListener('click', () => { const open = $('xpRules').hidden; $('xpRules').hidden = !open; $('xpHelp').setAttribute('aria-expanded', String(open)); });
+  $('editToggle').addEventListener('click', () => {
+    const open = $('editCard').hidden; $('editCard').hidden = !open; $('editToggle').setAttribute('aria-expanded', String(open));
+    if (open) $('editCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // the bottom bar steps aside while the keyboard is up
+  addEventListener('focusin', (e) => { if (e.target.matches('input,textarea,select')) document.body.classList.add('is-typing'); });
+  addEventListener('focusout', () => document.body.classList.remove('is-typing'));
   /* ---------- render ---------- */
   function render(p) {
     profile = p;
@@ -76,14 +137,13 @@
     $('navAdmin').hidden = !u.isAdmin; $('navStudio').hidden = !a.active;
     // profile
     $('displayName').textContent = u.displayName;
-    if (u.picture && u.avatar === 'sponge') { const img = el('img', 'pg-avatar-img'); img.src = u.picture; img.alt = ''; img.width = 72; img.height = 72; img.referrerPolicy = 'no-referrer'; $('avatarView').replaceChildren(img); }
+    if (u.picture && u.avatar === 'sponge') { const img = el('img', 'pg-avatar-img'); img.src = u.picture; img.alt = ''; img.width = 96; img.height = 96; img.referrerPolicy = 'no-referrer'; $('avatarView').replaceChildren(img); }
     else $('avatarView').textContent = AVATARS[u.avatar] || '🧽';
     $('publicId').textContent = u.publicId; $('username').textContent = u.username; $('profEmail').textContent = u.email;
     $('createdAt').textContent = fmtDate(u.createdAt); $('lastLogin').textContent = fmtDate(u.lastLoginAt);
     $('profPlan').textContent = a.active ? a.planName : 'لا يوجد اشتراك فعّال';
     for (const id of ['publicLink', 'publicLink2']) $(id).href = '/u/' + u.publicId;
-    const st = p.streamer || {};
-    $('statSessions').textContent = String(st.sessions || 0); $('statPlayers').textContent = String(st.playersTotal || 0); $('statGames').textContent = String(Object.keys(st.games || {}).length);
+    paintProgress(p);
     // email & password
     $('email').textContent = u.email;
     badge($('emailBadge'), u.verified ? 'موثّق' : 'غير موثّق', u.verified ? 'is-on' : 'is-warn');
@@ -325,7 +385,11 @@
   }
 
   /* ---------- profile ---------- */
-  $('copyId').addEventListener('click', (e) => copy(profile?.user.publicId || '', e.currentTarget));
+  $('copyId').addEventListener('click', async () => {
+    const text = profile?.user.publicId || ''; if (!text) return;
+    try { await navigator.clipboard.writeText(text); } catch { const t = document.createElement('textarea'); t.value = text; document.body.append(t); t.select(); document.execCommand('copy'); t.remove(); }
+    $('copiedNote').hidden = false; clearTimeout($('copiedNote')._t); $('copiedNote')._t = setTimeout(() => { $('copiedNote').hidden = true; }, 1800);
+  });
   $('editForm').addEventListener('submit', (e) => {
     e.preventDefault(); const f = e.currentTarget;
     act(f.querySelector('button'), async () => {
