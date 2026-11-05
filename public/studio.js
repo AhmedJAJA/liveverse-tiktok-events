@@ -1,7 +1,7 @@
-/* SPONGE LIVE — the studio (/studio?mode=…). Four stages, decided by the server (src/flow.mjs):
-   library → «إعداد اللعبة» → «تجهيز المتسابقين» (join word) → lobby / round / results.
-   «تشغيل اللعبة» opens the setup, «ابدأ اللعبة» opens the join-word screen, «فتح التسجيل» starts accepting
-   viewers, and only «بدء الجولة الآن» starts the round. Every node is built with createElement/textContent. */
+/* SPONGE LIVE — the studio (/studio?mode=…). The screens follow the server's state (src/flow.mjs):
+   library → «إعداد اللعبة» → «جاري تجهيز اللوبي» (real preparation steps) → «غرفة الانتظار» → round → results.
+   «تشغيل اللعبة» opens the setup, «ابدأ اللعبة» prepares the lobby, «فتح التسجيل» / «إغلاق التسجيل» control who
+   joins, and only «بدء الجولة الآن» starts a round. Every node is built with createElement/textContent. */
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
@@ -12,11 +12,11 @@
   let mode = MODES.includes(params.get('mode')) ? params.get('mode') : 'quiz';
   const NO_TIMER = ['race', 'wheel'];
   // server stage → studio screen
-  const SCREEN = { GAME_LIBRARY: 'games', GAME_SETUP: 'setup', REGISTRATION_SETUP: 'register', WAITING_FOR_PLAYERS: 'game', GAME_RUNNING: 'game', GAME_FINISHED: 'game' };
+  const SCREEN = { GAME_LIBRARY: 'games', GAME_SETUP: 'setup', PREPARING_LOBBY: 'prepare', WAITING_FOR_PLAYERS: 'lobby', GAME_RUNNING: 'game', GAME_FINISHED: 'game' };
   let browsing = false; // the host looks at the library while a game session is still open on the server
   let game = { mode, title: '', minPlayers: 1, rules: [], setup: '/event?mode=' + mode };
   let state = null, seen = new Set(), firstPaint = true, busy = false, retries = 0, site = null, ws = null, me = {};
-  let advFor = '', wordTouched = false;
+  let advFor = '', wordTouched = false, readyFlash = 0;
 
   const session = () => window.SkySession;
   const fx = () => window.SpongeFx;
@@ -69,7 +69,7 @@
     $('gameCover').closest('.pl-cover').classList.toggle('is-art', cover.startsWith('/games/'));
     $('setupTitle').textContent = game.title || ''; $('setupSummary').textContent = game.summary || '';
     $('setupCover').src = game.cover ? coverAt(game, 200) : cover;
-    $('regGame').textContent = game.title || '';
+    $('lbGame').textContent = game.title || '';
     $('setupGuess').hidden = mode !== 'guess';
   }
 
@@ -132,11 +132,13 @@
       seen = new Set(); firstPaint = true; secretRound = -1; advFor = ''; wordTouched = false;
       paintGame();
     }
-    const screen = browsing ? 'games' : SCREEN[f.stage] || 'games';
+    let screen = browsing ? 'games' : SCREEN[f.stage] || 'games';
+    // «اللوبي جاهز!» stays on the preparation card for a moment so the host sees it finish (the lobby is already live)
+    if (screen === 'lobby' && document.body.dataset.screen === 'prepare' && Date.now() < readyFlash) screen = 'prepare';
     if (document.body.dataset.screen !== screen) showScreen(screen);
     const open = f.stage !== 'GAME_LIBRARY' && f.mode;
     $('resumeGame').hidden = !(browsing && open);
-    if (open) $('resumeText').textContent = (f.stage === 'GAME_RUNNING' ? 'تُلعب الآن' : f.stage === 'GAME_SETUP' ? 'تجهّز' : 'مفتوحة') + ' «' + (game.title || '') + '»';
+    if (open) $('resumeText').textContent = (f.stage === 'GAME_RUNNING' ? 'تُلعب الآن' : f.stage === 'GAME_SETUP' ? 'تجهّز' : f.stage === 'PREPARING_LOBBY' ? 'يُجهَّز لوبي' : 'مفتوحة') + ' «' + (game.title || '') + '»';
     if (screen === 'games' && !browsing) history.replaceState(null, '', '/studio');
     else if (open) history.replaceState(null, '', '/studio?mode=' + mode);
   }
@@ -192,7 +194,7 @@
     }
     if (host) paintHost(s, view, need);
     else $('hostTools').hidden = true;
-    paintSetup(s); paintRegister(s);
+    paintSetup(s); paintPrepare(s); paintLobbyView(s);
   }
   function paintHost(s, view, need) {
     const reg = s.registration || {}, active = !!s.status.active, stage = s.flow?.stage;
@@ -241,6 +243,9 @@
     const f = s.flow || {};
     if (document.body.dataset.screen !== 'setup') return;
     $('setupWord').textContent = f.join?.keyword || 'انضم';
+    if (!wordTouched && document.activeElement !== $('wordInput')) $('wordInput').value = f.join?.keyword || 'انضم';
+    for (const b of $('wordChips').children) b.setAttribute('aria-pressed', String(b.dataset.word === $('wordInput').value.trim()));
+    $('autoOpenToggle').setAttribute('aria-checked', String(f.join?.autoOpen !== false));
     // joining after the start: what this game's rules allow
     const supported = !!f.join?.lateJoinSupported, late = f.join?.lateJoin === 'open' && supported ? 'open' : 'click';
     for (const b of document.querySelectorAll('[data-late]')) {
@@ -322,22 +327,196 @@
     catch (err) { if (err.code === 409 && /الإعدادات/.test(err.message)) loadLinks(); throw err; }
   }
 
-  /* ---------- stage 3: the join word ---------- */
-  function paintRegister(s) {
-    if (document.body.dataset.screen !== 'register') return;
-    const f = s.flow || {}, c = s.connection || {};
-    if (!wordTouched && document.activeElement !== $('wordInput')) $('wordInput').value = f.join?.keyword || 'انضم';
-    paintWordPreview();
-    const live = c.state === 'connected' && (c.liveConfirmed || me.owner || ownerToken());
-    $('regConn').dataset.on = String(!!live);
-    $('regConn').textContent = live ? 'البث متصل — ستصل تعليقات المشاهدين الحقيقية بعد فتح التسجيل.'
-      : 'البث غير متصل الآن — يمكنك فتح التسجيل، لكن لن تصل تعليقات حقيقية حتى تتصل بحسابك المربوط.';
+  /* ---------- «جاري تجهيز اللوبي»: the server's real steps, as they happen ---------- */
+  let prepWatch = 0;
+  function paintPrepare(s) {
+    const f = s.flow || {}, l = f.lobby;
+    clearTimeout(prepWatch);
+    if (!l || document.body.dataset.screen !== 'prepare') return;
+    const st = Date.now() < readyFlash ? 'READY' : l.state, err = l.state === 'LOBBY_ERROR' ? l.error : null;
+    $('prepCard').dataset.state = st;
+    const steps = l.steps || [], done = steps.filter((x) => x.status === 'done' || x.status === 'skipped').length;
+    const now = steps.find((x) => x.status === 'running') || steps.find((x) => x.status === 'failed');
+    $('prepEyebrow').textContent = l.demo ? 'غرفة الانتظار • وضع التجربة' : 'غرفة الانتظار';
+    $('prepTitle').textContent = st === 'READY' ? 'اللوبي جاهز!' : err ? err.title : l.state === 'RECOVERING' ? 'جاري استعادة الجلسة' : 'جاري تجهيز اللوبي';
+    $('prepNow').textContent = st === 'READY' ? 'جاري فتح غرفة الانتظار' : err ? (err.step ? 'توقف عند: ' + (steps.find((x) => x.key === err.step)?.label || '') : '') : now ? 'جاري ' + now.label.replace(/^ال/, 'ال') : steps.length ? 'جاري إنهاء التجهيز' : 'جاري بدء التجهيز';
+    // a measured bar: one share per real step (no fake percentages)
+    const total = steps.length || 1, ratio = st === 'READY' ? 1 : done / total;
+    $('prepFill').style.setProperty('--p', Math.round(ratio * 100) + '%');
+    $('prepBar').setAttribute('aria-valuenow', ratio.toFixed(2));
+    $('prepCount').textContent = steps.length ? num(done) + ' من ' + num(steps.length) + ' خطوات' : '';
+    $('prepSteps').replaceChildren(...steps.map((x) => { const li = el('li'); li.dataset.status = x.status; li.append(el('span', '', x.label)); if (x.detail) li.append(el('small', '', x.detail)); return li; }));
+    $('prepError').hidden = !err;
+    if (err) $('prepErrText').textContent = err.message || '';
+    const link = err && err.href, act = err && !err.href;
+    $('prepLink').hidden = !link; $('prepAction').hidden = !act;
+    if (link) { $('prepLink').href = err.href; $('prepLink').textContent = err.label; }
+    if (act) { $('prepAction').textContent = err.label; $('prepAction').dataset.action = err.action; }
+    $('prepBack').textContent = err ? 'العودة للإعدادات' : 'إلغاء';
+    $('prepDemo').hidden = !err || l.demo || !['not_linked', 'not_live', 'chat_failed', 'reauth', 'not_connected', 'unavailable'].includes(err.code);
+    // no WebSocket (or a slow one): keep reading the state while the server works
+    if (!err && st !== 'READY' && (!ws || ws.readyState !== 1)) prepWatch = setTimeout(() => refresh().catch(() => {}), 1200);
   }
-  function paintWordPreview() {
-    const w = $('wordInput').value.trim() || 'انضم';
-    $('wordPreview').textContent = w;
-    for (const b of $('wordChips').children) b.setAttribute('aria-pressed', String(b.dataset.word === w));
+  $('prepBack').addEventListener('click', (e) => run(e.currentTarget, async () => { await step('flow-cancel'); }));
+  $('prepAction').addEventListener('click', (e) => {
+    const a = e.currentTarget.dataset.action;
+    if (a === 'setup') return run(e.currentTarget, () => step('flow-cancel'));
+    if (a === 'demo') return run(e.currentTarget, () => step('flow-trial'));
+    run(e.currentTarget, () => step('flow-begin', { platform: preferredPlatform() })); // «إعادة المحاولة» / «التحقق مجددًا» / «إعادة الاتصال»
+  });
+  $('prepDemo').addEventListener('click', (e) => run(e.currentTarget, () => step('flow-trial')));
+
+  /* ---------- «غرفة الانتظار» ---------- */
+  let lbSeen = new Set(), lbFirst = true, lbWordShown = '';
+  const PICON = { tiktok: 'TikTok', kick: 'Kick' };
+  function lbFeedback(msg, error = false) { $('lbFeedback').textContent = msg || ''; $('lbFeedback').classList.toggle('is-error', !!error); feedback(msg, error); }
+  function lbAvatar(p) {
+    const box = el('span', 'lb-av'); box.append(el('span', '', initial(p.name)));
+    if (p.avatar && /^https:\/\//.test(p.avatar)) {
+      const img = el('img'); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.decoding = 'async'; img.src = p.avatar;
+      img.addEventListener('error', () => img.remove(), { once: true }); box.append(img);
+    }
+    return box;
   }
+  function paintLobbyView(s) {
+    if (document.body.dataset.screen !== 'lobby') return;
+    const f = s.flow || {}, l = f.lobby || {}, reg = s.registration || {}, c = s.connection || {};
+    const demo = !!l.demo, open = reg.phase === 'open', count = Number(s.playerCount || 0);
+    const live = c.state === 'connected' && (c.liveConfirmed || c.verified || me.owner || ownerToken());
+    // toolbar: four separate facts — never «connected» for a simulated stream
+    const tone = demo ? 'demo' : live ? 'ok' : c.state === 'connecting' ? 'wait' : 'bad';
+    $('lbStatus').dataset.tone = tone;
+    $('lbStatusText').textContent = demo ? 'وضع التجربة — لاعبون تجريبيون، بلا بث'
+      : live ? 'البث متصل · ' + (PICON[c.platform] || '') + (open ? ' — الانضمام مباشر' : ' — التسجيل مغلق')
+      : c.state === 'connecting' ? 'جارٍ الاتصال بالبث…' + (s.connRetry?.attempts ? ' (المحاولة ' + num(s.connRetry.attempts) + ')' : '')
+      : 'البث غير متصل — لن تصل تعليقات';
+    $('lbObs').href = roomPath('/overlay');
+    $('lbDemo').hidden = !demo;
+    // the join word
+    const word = reg.keyword || f.join?.keyword || 'انضم';
+    if (lbWordShown && lbWordShown !== word) { $('lbWord').classList.remove('is-changed'); void $('lbWord').offsetWidth; $('lbWord').classList.add('is-changed'); }
+    lbWordShown = word; $('lbWord').textContent = word;
+    $('lbEmptyText').textContent = open ? 'أول من يكتب «' + word + '» في التعليقات يظهر هنا.' : 'التسجيل مغلق — افتحه ليبدأ المشاهدون بالانضمام، أو أضف لاعبًا بنفسك.';
+    const roundOn = ['ROUND_STARTING', 'ROUND_RUNNING'].includes(f.state);
+    $('lbWordEdit').disabled = roundOn;
+    // count
+    if ($('lbCount').textContent !== num(count)) { $('lbCount').textContent = num(count); $('lbCount').classList.remove('bump'); void $('lbCount').offsetWidth; $('lbCount').classList.add('bump'); }
+    $('lbCountLabel').textContent = count === 1 ? 'لاعب انضم' : count === 2 ? 'لاعبان انضما' : count >= 3 && count <= 10 ? 'لاعبين انضموا' : count > 10 ? 'لاعبًا انضموا' : 'لاعبين بعد';
+    $('lbPlayersN').textContent = num(count) + ' من ' + num(reg.maxPlayers || 1500);
+    // notes: the real reason no comments arrive, a restored session
+    const note = l.note ? l.note : (!demo && !live) ? (c.detail && c.state === 'error' ? 'تعذر استقبال التعليقات: ' + c.detail : 'البث غير متصل — لن تصل تعليقات حقيقية. يمكنك إضافة لاعبين بنفسك.') : '';
+    $('lbNote').hidden = !note; $('lbNoteText').textContent = note; $('lbNote').dataset.tone = l.note && live ? 'info' : 'warn';
+    $('lbConnect').hidden = demo || !!live;
+    // players
+    const frames = s.frames || {}, list = Array.isArray(s.roster) ? s.roster : [];
+    let joined = 0;
+    const nodes = [...list].reverse().map((p) => {
+      const key = p.number + '\u0000' + p.name, isNew = !lbSeen.has(key) && !lbFirst;
+      lbSeen.add(key); if (isNew) joined++;
+      const fr = !p.bot && !p.manual || p.host ? frames['n:' + p.number] : null; // frames only for verified linked accounts
+      const li = el('li', 'lb-player' + (isNew ? ' is-new' : '') + (p.host ? ' is-host' : '') + (p.bot ? ' is-bot' : ''));
+      const who = el('span', 'lb-who');
+      who.append(window.SpongeFrames ? SpongeFrames.plate(p.name, fr) : el('bdi', '', p.name));
+      const tags = el('span', 'lb-tags');
+      tags.append(el('span', 'lb-tag', '#' + num(p.number)));
+      if (p.host) tags.append(el('span', 'lb-tag is-host', 'المضيف'));
+      else if (p.bot) tags.append(el('span', 'lb-tag is-bot', 'تجريبي'));
+      else if (p.manual) tags.append(el('span', 'lb-tag is-manual', 'يدوي'));
+      else if (c.platform && PICON[c.platform]) tags.append(el('span', 'lb-tag', PICON[c.platform]));
+      if (fr) tags.append(el('span', 'lb-tag', fr.name));
+      who.append(tags);
+      const av = window.SpongeFrames ? SpongeFrames.avatar(lbAvatar(p), fr) : lbAvatar(p);
+      li.append(av, who);
+      if (!roundOn) {
+        const x = el('button', 'lb-rm'); x.type = 'button'; x.dataset.number = p.number; x.dataset.name = p.name; x.setAttribute('aria-label', 'إزالة ' + p.name);
+        x.innerHTML = ''; const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); ic.setAttribute('class', 'i'); ic.setAttribute('aria-hidden', 'true');
+        const u = document.createElementNS('http://www.w3.org/2000/svg', 'use'); u.setAttribute('href', '/icons.svg#i-trash'); ic.append(u); x.append(ic);
+        li.append(x);
+      }
+      return li;
+    });
+    $('lbList').replaceChildren(...nodes);
+    $('lbEmpty').hidden = list.length > 0;
+    if (joined) { fx()?.play('join'); }
+    lbFirst = false;
+    // registration + actions
+    $('lbReg').dataset.open = String(open);
+    $('lbRegText').textContent = open ? 'التسجيل مفتوح' : f.state === 'LOBBY_READY' ? 'اللوبي جاهز — التسجيل لم يُفتح' : 'التسجيل مغلق';
+    $('lbRegSub').textContent = open ? 'يُقبل كل من يكتب «' + word + '»' : 'لا يُقبل لاعبون جدد من التعليقات';
+    $('lbRegToggle').textContent = open ? 'إغلاق التسجيل' : 'فتح التسجيل';
+    $('lbRegToggle').disabled = busy || roundOn;
+    const seated = !!reg.hostSeated;
+    $('lbSeat').setAttribute('aria-pressed', String(seated)); $('lbSeatLabel').textContent = seated ? 'إلغاء مشاركتي' : 'دخّلني كلاعب';
+    $('lbFx').setAttribute('aria-pressed', String(!(window.SpongeFrames?.lite())));
+    const need = Math.max(0, (reg.minPlayers || game.minPlayers || 1) - count);
+    $('lbStart').disabled = busy || need > 0 || roundOn || startPending;
+    $('lbStartLabel').textContent = roundOn ? 'الجولة تبدأ…' : need > 0 ? 'بدء الجولة الآن (ينقص ' + num(need) + ')' : 'بدء الجولة الآن';
+    $('lbReset').disabled = busy || roundOn; $('lbEnd').disabled = busy || roundOn;
+  }
+  // one listener for every remove button, however often the list is redrawn
+  $('lbList').addEventListener('click', (e) => {
+    const x = e.target.closest('.lb-rm'); if (!x) return;
+    run(x, async () => { await admin('remove-player', { number: Number(x.dataset.number) }); lbFeedback('أُزيل ' + x.dataset.name); });
+  });
+  const confirmBox = (title, text, ok) => new Promise((resolve) => {
+    const d = $('confirmDialog'); $('confirmTitle').textContent = title; $('confirmText').textContent = text; $('confirmOk').textContent = ok;
+    d.returnValue = ''; d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true });
+    if (typeof d.showModal === 'function') d.showModal(); else resolve(true);
+  });
+  $('lbRegToggle').addEventListener('click', (e) => run(e.currentTarget, async () => {
+    if (state?.registration?.phase === 'open') { await step('flow-close'); lbFeedback('أُغلق التسجيل — اللاعبون الحاليون باقون، ولا يُقبل جدد.'); }
+    else { await step('flow-open'); lbFeedback('فُتح التسجيل — يكتب المشاهدون «' + (state?.registration?.keyword || 'انضم') + '» للانضمام.'); }
+  }));
+  $('lbReset').addEventListener('click', (e) => { const b = e.currentTarget; (async () => {
+    const n = Number(state?.playerCount || 0);
+    if (n && !(await confirmBox('إعادة تعيين اللاعبين؟', 'سيُحذف ' + num(n) + (n === 1 ? ' لاعب' : ' لاعبين') + ' من هذا اللوبي. النتائج المحفوظة سابقًا لا تتأثر، وتعليقات «' + (state?.registration?.keyword || '') + '» القديمة لن تُحتسب.', 'إعادة تعيين'))) return;
+    run(b, async () => { await step('flow-registration-reset', { confirm: true }); lbFeedback('بدأ تسجيل جديد — القائمة فارغة.'); });
+  })(); });
+  $('lbEnd').addEventListener('click', (e) => { const b = e.currentTarget; (async () => {
+    const n = Number(state?.playerCount || 0);
+    if (n && !(await confirmBox('إنهاء الجلسة؟', 'يُغلق اللوبي ويتوقف قبول اللاعبين، وتعود إلى مكتبة الألعاب.', 'إنهاء الجلسة'))) return;
+    run(b, async () => { await step('flow-end'); browsing = false; });
+  })(); });
+  // «بدء الجولة الآن»: disabled at once; the same request id makes a double click start one round only
+  let startPending = false;
+  $('lbStart').addEventListener('click', (e) => {
+    const b = e.currentTarget; if (startPending) return;
+    startPending = true; b.disabled = true; b.classList.add('is-busy');
+    const requestId = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    run(null, async () => {
+      try { await step('flow-start', { requestId }); if (mode === 'wheel') feedback('دخل كل المشاركين السحب — اضغط «اسحب الفائز».'); }
+      catch (err) { lbFeedback(err.message, true); throw err; }
+    }).finally(() => { startPending = false; b.classList.remove('is-busy'); if (state) render(state); });
+  });
+  $('lbSettings').addEventListener('click', (e) => run(e.currentTarget, async () => { browsing = false; await step('flow-setup', { mode }); }));
+  $('lbSeat').addEventListener('click', (e) => run(e.currentTarget, async () => {
+    if (state?.registration?.hostSeated) { await admin('host-unseat'); lbFeedback('ألغيت مشاركتك — ما زلت تدير اللعبة.'); }
+    else { await admin('host-seat'); lbFeedback('أنت الآن ضمن اللاعبين، وتطبق عليك قواعد اللعبة نفسها.'); }
+  }));
+  $('lbFx').addEventListener('click', () => { const lite = !window.SpongeFrames?.lite(); window.SpongeFrames?.setLite(lite); $('lbFx').setAttribute('aria-pressed', String(!lite)); });
+  $('lbConnect').addEventListener('click', (e) => {
+    if (me.owner || ownerToken() || !me.account) { document.body.dataset.showtop = '1'; scrollTo({ top: 0 }); $('handleInput')?.focus(); return; }
+    const p = (state?.connection?.platform && links.linked?.[state.connection.platform] ? state.connection.platform : null) || linkedList()[0]?.[0];
+    if (!p) { location.href = '/account#settings'; return; }
+    run(e.currentTarget, () => connectPlatform(p));
+  });
+  // the join word, edited in place (the server keeps one word for every screen; an older edit is refused)
+  const wordEdit = (on) => { $('lbWordForm').hidden = !on; $('lbWordEdit').hidden = on; $('lbWord').hidden = on; if (on) { $('lbWordInput').value = state?.registration?.keyword || 'انضم'; $('lbWordInput').focus(); $('lbWordInput').select(); } };
+  $('lbWordEdit').addEventListener('click', () => wordEdit(true));
+  $('lbWordCancel').addEventListener('click', () => wordEdit(false));
+  $('lbWordForm').addEventListener('submit', (e) => { e.preventDefault(); run(null, async () => {
+    const keyword = $('lbWordInput').value.trim(); if (!keyword) { $('lbWordInput').focus(); throw new Error('اكتب كلمة الانضمام'); }
+    try { await step('flow-keyword', { keyword, version: state?.flow?.version }); }
+    catch (err) { if (/نافذة أخرى/.test(err.message)) await refresh().catch(() => {}); throw err; }
+    wordEdit(false); lbFeedback('الكلمة الآن «' + keyword + '» — تغيّرت على شاشة البث أيضًا.');
+  }); });
+  // «إضافة لاعب»: a name typed by the host, shown as «يدوي»
+  $('lbAdd').addEventListener('click', () => { $('addDialogErr').textContent = ''; $('addDialogName').value = ''; $('addDialog').showModal?.(); });
+  $('addDialogClose').addEventListener('click', () => $('addDialog').close());
+  $('addDialogForm').addEventListener('submit', (e) => { e.preventDefault(); const name = $('addDialogName').value.trim();
+    if (!name) { $('addDialogErr').textContent = 'اكتب اسم اللاعب'; return; }
+    admin('add-player', { name }).then(() => { $('addDialog').close(); lbFeedback('أُضيف ' + name); }).catch((err) => { $('addDialogErr').textContent = err.message; });
+  });
 
   /* ---------- host tools for the running game ---------- */
   let secretRound = -1, rolesAt = 0;
@@ -457,7 +636,6 @@
   $('toSetup').addEventListener('click', toSetup);
   $('doneSetup').addEventListener('click', toSetup);
   $('drawerToSetup').addEventListener('click', toSetup);
-  $('registerBack').addEventListener('click', toSetup);
   $('setupBack').addEventListener('click', (e) => run(e.currentTarget, async () => { await step('flow-library'); }));
 
   /* setup screen */
@@ -486,23 +664,25 @@
     if (!prompt || !answer) { $(prompt ? 'guessAnswer' : 'guessPrompt').focus(); throw new Error('اكتب التلميح والإجابة السرية قبل البدء'); }
     await admin('configure', { mode, prompt, answer });
   }
-  // «ابدأ اللعبة»: only the join-word screen — no round, no timer, no registration yet
-  $('beginButton').addEventListener('click', (e) => run(e.currentTarget, async () => { await saveGuess(); wordTouched = false; await step('flow-begin'); }));
-  // «تجربة اللعبة»: a preview lobby with demo players; still started with «بدء الجولة الآن»
-  $('tryButton').addEventListener('click', (e) => run(e.currentTarget, async () => {
-    await saveGuess(); await step('flow-trial');
-    feedback('تجربة: لاعبون تجريبيون في الانتظار ويلعبون تلقائيًا — اضغط «بدء الجولة الآن».');
-  }));
+  async function saveWordIfChanged() {
+    const w = $('wordInput').value.trim();
+    if (wordTouched && w && w !== state?.flow?.join?.keyword) await step('flow-settings', { keyword: w });
+    wordTouched = false;
+  }
+  // «ابدأ اللعبة»: prepares the lobby (real steps on the server) — no round, no timer
+  $('beginButton').addEventListener('click', (e) => run(e.currentTarget, async () => { await saveGuess(); await saveWordIfChanged(); lbFirst = true; lbSeen = new Set(); await step('flow-begin', { platform: preferredPlatform() }); }));
+  // «تجربة اللعبة»: the same preparation in «وضع التجربة»; still started with «بدء الجولة الآن»
+  $('tryButton').addEventListener('click', (e) => run(e.currentTarget, async () => { await saveGuess(); await saveWordIfChanged(); lbFirst = true; lbSeen = new Set(); await step('flow-trial'); }));
+  $('autoOpenToggle').addEventListener('click', (e) => run(null, async () => { await step('flow-settings', { autoOpen: e.currentTarget.getAttribute('aria-checked') !== 'true' }); }));
 
-  /* join-word screen */
-  $('wordChips').replaceChildren(...['انضم', 'العب', 'دخول', 'جاهز'].map((w) => { const b = el('button', 'rg-chip', w); b.type = 'button'; b.dataset.word = w; return b; }));
-  $('wordChips').addEventListener('click', (e) => { const b = e.target.closest('.rg-chip'); if (!b) return; $('wordInput').value = b.dataset.word; wordTouched = true; paintWordPreview(); });
-  $('wordInput').addEventListener('input', () => { wordTouched = true; paintWordPreview(); });
-  // «حفظ الكلمة وفتح التسجيل»
-  $('wordForm').addEventListener('submit', (e) => { e.preventDefault(); run($('openButton'), async () => {
+  /* the join word on the setup screen */
+  $('wordChips').replaceChildren(...['انضم', 'العب', 'جاهز', 'دخول', 'ابدأ'].map((w) => { const b = el('button', 'rg-chip', w); b.type = 'button'; b.dataset.word = w; return b; }));
+  $('wordChips').addEventListener('click', (e) => { const b = e.target.closest('.rg-chip'); if (!b) return; $('wordInput').value = b.dataset.word; wordTouched = true; $('wordForm').requestSubmit(); });
+  $('wordInput').addEventListener('input', () => { wordTouched = true; for (const b of $('wordChips').children) b.setAttribute('aria-pressed', String(b.dataset.word === $('wordInput').value.trim())); });
+  $('wordForm').addEventListener('submit', (e) => { e.preventDefault(); run($('wordSave'), async () => {
     const keyword = $('wordInput').value.trim(); if (!keyword) { $('wordInput').focus(); throw new Error('اكتب كلمة الانضمام'); }
-    await step('flow-open', { keyword }); wordTouched = false;
-    feedback('التسجيل مفتوح — يكتب المشاهدون «' + keyword + '» في التعليقات.');
+    await step('flow-settings', { keyword }); wordTouched = false;
+    feedback('حُفظت كلمة الانضمام «' + keyword + '».');
   }); });
 
   /* ---------- presence: the server only lists a stream while its studio window keeps beating ---------- */
@@ -510,7 +690,7 @@
   async function beat(takeover = false) {
     clearTimeout(beatTimer);
     try {
-      const r = await admin('heartbeat', { tab: TAB, screen: document.body.dataset.screen === 'game' ? 'game' : 'games', ...(takeover ? { takeover: true } : {}) });
+      const r = await admin('heartbeat', { tab: TAB, screen: ['game', 'lobby', 'prepare'].includes(document.body.dataset.screen) ? 'game' : 'games', ...(takeover ? { takeover: true } : {}) });
       $('windowBanner').hidden = r.primary;
       paintListed(r);
     } catch { /* offline or plan ended: the server stops listing the stream by itself */ }
@@ -540,9 +720,17 @@
     if (ws && ws.readyState <= 1) return; // never more than one live connection
     try { ws = new WebSocket(session() ? session().wsUrl() : (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws'); } catch { return; }
     ws.addEventListener('open', () => { retries = 0; document.body.classList.remove('is-offline'); });
-    ws.addEventListener('message', (ev) => { try { const p = JSON.parse(ev.data); if (p.type === 'state') render(p.data); } catch {} });
+    ws.addEventListener('message', (ev) => { try { const p = JSON.parse(ev.data); if (p.type === 'state') render(p.data); else if (p.type === 'lobby') lobbyEvent(p); } catch {} });
     ws.addEventListener('close', () => { if (leaving) return; document.body.classList.add('is-offline'); setTimeout(() => { socket(); refresh().catch(() => {}); }, Math.min(15000, 1500 * (++retries))); });
     ws.addEventListener('error', () => ws.close());
+  }
+  /** lobby:* events arrive at once (the full state follows): the preparation card advances step by step. */
+  function lobbyEvent(p) {
+    if (!state || !p.data || !('lobby' in p.data)) return;
+    if (p.event === 'lobby:ready' || (p.event === 'registration:opened' && state.flow?.stage === 'PREPARING_LOBBY')) readyFlash = Date.now() + 650;
+    state = { ...state, flow: { ...state.flow, state: p.data.state, stage: p.data.stage, version: p.data.version, lobby: p.data.lobby } };
+    render(state);
+    if (readyFlash > Date.now()) setTimeout(() => state && render(state), 700);
   }
   function paintRoom() {
     const badge = $('roomBadge');
@@ -619,9 +807,11 @@
     if (changed) { setTimeout(() => beat(), 0); scrollTo({ top: 0, behavior: 'instant' }); }
     if (name === 'games') document.title = 'الاستوديو | SPONGE LIVE';
     else if (name === 'setup') document.title = 'إعداد ' + (game.title || 'اللعبة') + ' | SPONGE LIVE';
-    else if (name === 'register') document.title = 'تجهيز المتسابقين | SPONGE LIVE';
+    else if (name === 'prepare') document.title = 'جاري تجهيز اللوبي | SPONGE LIVE';
+    else if (name === 'lobby') document.title = 'غرفة الانتظار — ' + (game.title || '') + ' | SPONGE LIVE';
     if (changed && name === 'setup') { advFor = ''; if (state) paintSetup(state); }
-    if (changed && name === 'register' && state) paintRegister(state);
+    if (changed && name !== 'lobby') { lbFirst = true; }
+    if (changed && name === 'lobby') { $('lbWordForm').hidden = true; $('lbWordEdit').hidden = false; $('lbWord').hidden = false; }
   }
   function openRules(m) {
     const g = allGames().find((x) => x.mode === m); if (!g) return;
@@ -741,7 +931,7 @@
   function paintLeaders(list) {
     $('leaders').replaceChildren(...(list || []).slice(0, 10).map((p, i) => { const li = el('li'); li.append(el('b', 'num', String(i + 1)), el('span', '', p.name), el('small', 'num', String(p.score))); return li; }));
   }
-  $('resetButton').addEventListener('click', (e) => run(e.currentTarget, async () => { const keyword = state?.registration?.keyword; await admin('reset'); await step('flow-open', { keyword }); feedback('صُفّرت النقاط وقائمة المتسابقين — التسجيل مفتوح.'); }));
+  $('resetButton').addEventListener('click', () => $('lbReset').click());
 
   /* ---------- promo codes (owner) ---------- */
   async function loadCodes() {

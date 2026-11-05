@@ -158,14 +158,19 @@ test('official TikTok/Kick sign-in, linked-only connections and the active-strea
     assert.equal((await host('POST', '/api/admin/flow-start', {}, H)).status, 409, 'no round from the setup');
     assert.equal((await host('POST', '/api/admin/flow-settings', { settings: { questions: 1, seconds: 15 } }, H)).data.flow.settings.seconds, 15);
     assert.equal((await host('POST', '/api/admin/flow-settings', { settings: { seconds: 999 } }, H)).status, 400, 'only listed values');
+    assert.equal((await host('POST', '/api/admin/flow-settings', { keyword: 'جاهز', autoOpen: false }, H)).status, 200);
     r = await host('POST', '/api/admin/flow-begin', {}, H);                          // «ابدأ اللعبة»
-    assert.equal(r.data.flow.stage, 'REGISTRATION_SETUP');
-    let st = await flowOf();
+    assert.equal(r.data.flow.state, 'PREPARING_LOBBY', JSON.stringify(r.data));
+    assert.equal(r.data.flow.status?.active, undefined);
+    let st = await waitFor(async () => { const x = await flowOf(); return x.flow.state !== 'PREPARING_LOBBY' && x; }, 8000, 'lobby prepared');
+    assert.equal(st.flow.state, 'LOBBY_READY', JSON.stringify(st.flow.lobby));
+    assert.deepEqual(st.flow.lobby.steps.map((x) => [x.key, x.status]), [['auth', 'done'], ['game', 'done'], ['session', 'done'], ['lobby', 'done'], ['account', 'done'], ['listener', 'done'], ['sync', 'done']]);
+    assert.match(st.flow.lobby.steps.find((x) => x.key === 'listener').detail, /لم يُنشأ اتصال جديد/, 'the working Kick connection is reused');
     assert.equal(st.status.active, false, '«ابدأ اللعبة» did not start the round'); assert.notEqual(st.registration.phase, 'open');
     await say(9201, 'Early', 'جاهز'); await sleep(200);
     assert.equal((await flowOf()).playerCount, 0, 'no joining before registration opens');
-    r = await host('POST', '/api/admin/flow-open', { keyword: 'جاهز' }, H);         // «فتح التسجيل»
-    assert.equal(r.data.flow.stage, 'WAITING_FOR_PLAYERS');
+    r = await host('POST', '/api/admin/flow-open', {}, H);                           // «فتح التسجيل»
+    assert.equal(r.data.flow.state, 'REGISTRATION_OPEN'); assert.equal(r.data.flow.stage, 'WAITING_FOR_PLAYERS');
     st = await flowOf(); assert.equal(st.registration.keyword, 'جاهز'); assert.equal(st.registration.phase, 'open');
     await say(9202, 'Mona', 'جاهز'); await say(9202, 'Mona', 'جاهز');                 // matching, twice
     await say(9203, 'Other', 'انضم');                                                  // a different word
@@ -176,8 +181,10 @@ test('official TikTok/Kick sign-in, linked-only connections and the active-strea
     // a refresh / WebSocket reconnect reads the same session back
     assert.equal(st.flow.stage, 'WAITING_FOR_PLAYERS'); assert.equal(st.flow.mode, 'quiz'); assert.ok(st.flow.sessionId);
     const sid = st.flow.sessionId;
-    r = await host('POST', '/api/admin/flow-start', {}, H);                          // «بدء الجولة الآن»
-    assert.equal(r.status, 200, JSON.stringify(r.data)); assert.equal(r.data.flow.stage, 'GAME_RUNNING');
+    r = await host('POST', '/api/admin/flow-start', { requestId: 'click-0001' }, H);  // «بدء الجولة الآن»
+    assert.equal(r.status, 200, JSON.stringify(r.data)); assert.equal(r.data.flow.stage, 'GAME_RUNNING'); assert.equal(r.data.flow.state, 'ROUND_RUNNING');
+    const twice = await host('POST', '/api/admin/flow-start', { requestId: 'click-0001' }, H);
+    assert.equal(twice.data.duplicate, true, 'the same click twice'); assert.equal(twice.data.round.id, r.data.round.id);
     st = await flowOf(); assert.equal(st.status.active, true); assert.equal(st.status.mode, 'quiz');
     assert.equal(st.status.endsAt - st.status.startedAt, 15_000, 'saved answer time applied');
     assert.equal(st.flow.sessionId, sid, 'one session, no duplicate');

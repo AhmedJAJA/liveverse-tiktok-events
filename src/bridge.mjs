@@ -14,21 +14,31 @@ export function isConfirmedFollower(event) {
 export function isConfirmedSubscriber(event) {
   return event?.user?.isSubscriber === true || event?.isSubscriber === true;
 }
+/** Reconnect delay: exponential from 2 s, capped at 2 min, with ±20 % jitter so many rooms never retry together. */
+export const RETRY = Object.freeze({ baseMs: 2_000, capMs: 120_000, jitter: 0.2, maxAttempts: 12 });
+export function backoffDelay(attempt, random = Math.random) {
+  const raw = Math.min(RETRY.capMs, RETRY.baseMs * 2 ** Math.max(0, attempt - 1));
+  return Math.round(raw * (1 - RETRY.jitter + 2 * RETRY.jitter * random()));
+}
+/** Errors that another attempt cannot fix (a wrong or banned account): retrying stops at once. */
+export const permanentError = (err) => /user ?not ?found|invalid user|banned|private account|unauthori[sz]ed|forbidden|401|403/i.test(String(err?.message || err));
 // The app works in demo mode without any LIVE connection.
 export class LiveBridge {
-  constructor(engine) { this.engine = engine; this.connection = null; this.username = ''; this.generation = 0; this.retry = null; }
+  constructor(engine) { this.engine = engine; this.connection = null; this.username = ''; this.generation = 0; this.retry = null; this.failures = 0; this.nextRetryAt = null; }
+  /** What the studio may show about reconnecting (never a guess). */
+  retryState() { return { attempts: this.failures, nextAt: this.nextRetryAt, max: RETRY.maxAttempts }; }
   async connect(username) {
     username = String(username || '').trim().replace(/^@/, '');
     if (!/^[\w.]{2,30}$/.test(username)) throw new Error('اسم مستخدم TikTok غير صالح');
     await this.disconnect();
     const generation = ++this.generation;
-    this.username = username;
+    this.username = username; this.failures = 0; this.nextRetryAt = null;
     this.engine.setConnection('connecting', username, 'جارٍ محاولة الاتصال...', 'tiktok');
     try { await this.attempt(generation); }
     catch(err) {
       if (generation === this.generation) {
         this.engine.setConnection('error', username, String(err?.message || err).slice(0,140), 'tiktok');
-        this.schedule(generation);
+        this.schedule(generation, err);
       }
       throw err;
     }
@@ -73,6 +83,7 @@ export class LiveBridge {
     });
     await connection.connect();
     if (generation !== this.generation) { await connection.disconnect().catch(() => {}); return; }
+    this.failures = 0; this.nextRetryAt = null;
     this.engine.setConnection('connected', this.username, 'متصل بالبث المباشر', 'tiktok');
     // The connector fetched the room info first and refuses offline rooms, so reaching this line means TikTok reports the user live.
     this.engine.setConnectionMeta?.({ liveConfirmed: true });
@@ -83,24 +94,32 @@ export class LiveBridge {
       this.engine.setStreamer({ platformId: String(owner.id_str || owner.id || ''), displayName: owner.nickname || '', avatar: pic('avatar_large') || pic('avatar_medium') || pic('avatar_thumb') });
     } catch {}
   }
-  schedule(generation) {
+  /** One pending retry at a time per bridge; the old connection is always closed before a new one is made (attempt()). */
+  schedule(generation, err) {
     if (this.retry || generation !== this.generation) return;
+    if (permanentError(err) || this.failures >= RETRY.maxAttempts) {
+      this.nextRetryAt = null;
+      this.engine.setConnection('error', this.username, permanentError(err) ? 'تعذر الاتصال بهذا الحساب — لن تُعاد المحاولة تلقائيًا' : 'توقفت إعادة المحاولة بعد عدة محاولات — اضغط «إعادة الاتصال»', 'tiktok');
+      return;
+    }
+    const wait = backoffDelay(++this.failures);
+    this.nextRetryAt = Date.now() + wait;
     this.retry = setTimeout(async () => {
-      this.retry = null;
+      this.retry = null; this.nextRetryAt = null;
       if (generation !== this.generation) return;
-      this.engine.setConnection('connecting', this.username, 'إعادة الاتصال...', 'tiktok');
-      try { await this.attempt(generation); } catch(err) {
+      this.engine.setConnection('connecting', this.username, 'إعادة الاتصال (المحاولة ' + this.failures + ')...', 'tiktok');
+      try { await this.attempt(generation); } catch(e) {
         if (generation === this.generation) {
-          this.engine.setConnection('error', this.username, String(err?.message || err).slice(0,140), 'tiktok');
-          this.schedule(generation);
+          this.engine.setConnection('error', this.username, String(e?.message || e).slice(0,140), 'tiktok');
+          this.schedule(generation, e);
         }
       }
-    }, 20000);
+    }, wait);
     this.retry.unref?.();
   }
   async disconnect(report = true) {
     this.generation++;
-    clearTimeout(this.retry); this.retry = null;
+    clearTimeout(this.retry); this.retry = null; this.nextRetryAt = null; this.failures = 0;
     const old = this.connection; this.connection = null;
     if (old) { try { await old.disconnect(); } catch {} }
     if (report) this.engine.setConnection('disconnected', '', 'تم الفصل', 'tiktok');

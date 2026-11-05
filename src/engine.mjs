@@ -63,6 +63,16 @@ export function normalizeAnswer(raw) {
     .replace(/[^\p{L}\p{N}]/gu, '')
     .trim();
 }
+/** A join word the host may choose: 1–32 characters, at most 3 words, something left after normalising,
+    and not a bare number (numbers are answers in several games). Returns the cleaned word or throws. */
+export function cleanJoinWord(raw) {
+  const w = String(raw ?? '').normalize('NFKC').replace(/[\u0000-\u001f\u007f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]/g, '').replace(/\s+/g, ' ').trim();
+  const n = normalizeAnswer(w);
+  if (!w || [...w].length > 32 || !n) throw Object.assign(new Error('اكتب كلمة انضمام من 1 إلى 32 حرفًا'), { status: 400 });
+  if (w.split(' ').length > 3) throw Object.assign(new Error('كلمة الانضمام: ثلاث كلمات على الأكثر'), { status: 400 });
+  if (/^\p{N}+$/u.test(n)) throw Object.assign(new Error('اختر كلمة وليس رقمًا — الأرقام إجابات في بعض الألعاب'), { status: 400 });
+  return w;
+}
 export function safeLine(raw, max = MAX_MESSAGE) {
   return String(raw ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
 }
@@ -82,7 +92,7 @@ export class Engine {
     this.wheelEntries = new Map();
     this.lastChatAt = new Map();
     this.round = 0;
-    this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0, maxPlayers: MAX_PLAYERS, audience: 'all', hostJoin: 'manual', lateJoin: 'click' };
+    this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0, maxPlayers: MAX_PLAYERS, audience: 'all', hostJoin: 'manual', lateJoin: 'click', generation: 1, notBefore: 0 };
     this.glass = { steps: 10, stepDuration: 10, step: 0, safeSide: 0, survivors: new Set(), choices: new Map(), choiceTimes: new Map() };
     this.registrationRecent = [];
     // Viewers who wrote the join word after kick-off: they enter the next round automatically.
@@ -232,10 +242,7 @@ export class Engine {
       this.registration.hostJoin = hostJoin;
     }
     if (this.status.active) { if (hostJoin !== undefined) { this.emit(); return { hostJoin }; } throw new Error('لا يمكن تعديل التسجيل أثناء الجولة'); }
-    const rawKeyword = String(keyword ?? '').trim();
-    const clean = safeLine(rawKeyword, 32).trim();
-    if (!clean || !normalizeAnswer(clean) || rawKeyword.length > 32 || /[\r\n]/.test(rawKeyword))
-      throw new Error('اكتب كلمة تسجيل صالحة من 1 إلى 32 حرفًا');
+    const clean = keyword === this.registration.keyword ? keyword : cleanJoinWord(keyword);
     if (!Number.isInteger(maxPlayers) || maxPlayers < 1 || maxPlayers > MAX_PLAYERS)
       throw new Error('عدد اللاعبين يجب أن يكون بين 1 و1500');
     if (!['all','followers','subscribers'].includes(audience))
@@ -253,9 +260,7 @@ export class Engine {
   }
   openRegistration({ keyword = this.registration.keyword, reset = false, maxPlayers = this.registration.maxPlayers, audience = this.registration.audience } = {}) {
     if (this.status.active) throw new Error('أنهِ الجولة قبل فتح التسجيل');
-    const rawKeyword = String(keyword ?? '').trim();
-    const clean = safeLine(rawKeyword, 32).trim();
-    if (!clean || !normalizeAnswer(clean) || rawKeyword.length > 32 || /[\r\n]/.test(rawKeyword)) throw new Error('اكتب كلمة تسجيل صالحة من 1 إلى 32 حرفًا');
+    const clean = keyword === this.registration.keyword ? keyword : cleanJoinWord(keyword);
     if (!Number.isInteger(maxPlayers) || maxPlayers < 1 || maxPlayers > MAX_PLAYERS) throw new Error('عدد اللاعبين يجب أن يكون بين 1 و1500');
     if (!['all','followers','subscribers'].includes(audience)) throw new Error('نوع الجمهور غير صالح');
     const eligibleCount = reset ? 0 : [...this.players.values()].filter(player => this.eligibleForAudience(player,audience)).length;
@@ -270,7 +275,7 @@ export class Engine {
       this.party = null;
     }
     if (!reset) this.pruneForAudience(audience);
-    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience, hostJoin: this.registration.hostJoin || 'manual', hostName: this.registration.hostName, lateJoin: this.registration.lateJoin || 'click' };
+    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience, hostJoin: this.registration.hostJoin || 'manual', hostName: this.registration.hostName, lateJoin: this.registration.lateJoin || 'click', generation: this.registration.generation || 1, notBefore: this.registration.notBefore || 0 };
     if (this.registration.hostJoin === 'auto') this.joinHost(false);
     this.status.results = null; this.status.winner = null; this.status.endsAt = null;
     this.status.notice = `التسجيل مفتوح! اكتب ${clean} في شات البث`;
@@ -541,13 +546,16 @@ export class Engine {
     const n = Number(count);
     if (!Number.isInteger(n) || n < 1 || n > 100) throw new Error('عدد اللاعبين التجريبيين من 1 إلى 100');
     if (this.status.active) throw new Error('أنهِ الجولة قبل إضافة لاعبين تجريبيين');
-    if (this.registration.phase !== 'open') this.openRegistration({});
+    if (this.registration.phase === 'idle') { if (this.lobbyManaged) { this.registration.phase = 'closed'; this.registration.closedAt = this.now(); } else this.openRegistration({}); }
+    const closed = this.registration.phase !== 'open'; // a closed registration stays closed: test players are seated by the host
     const names = ['نورة','فهد','ريم','سلطان','لمى','ماجد','هيا','تركي','جود','بدر','دانة','يزيد','شهد','راكان','غادة','عبدالله'];
     let added = 0;
     for (let i = 0; i < n; i++) {
       const serial = ++this.demoSerial;
-      if (this.register('demo:bot-' + serial, names[(serial - 1) % names.length] + ' ' + serial, '', { isFollower: true, isSubscriber: true })) added++;
+      const id = 'demo:bot-' + serial, name = names[(serial - 1) % names.length] + ' ' + serial, who = { isFollower: true, isSubscriber: true };
+      if (closed ? this.registerLate(id, name, '', who) : this.register(id, name, '', who)) added++;
     }
+    if (closed && added) this.emit();
     return added;
   }
   finishGlassStep() {
@@ -635,12 +643,14 @@ export class Engine {
     this.waiting.clear();
     this.party = null;
     this.registration.phase = 'idle'; this.registration.openedAt = null; this.registration.closedAt = null;
+    // a new registration generation: comments written before the reset (delivered late by the platform) are not joins
+    this.registration.generation = (this.registration.generation || 1) + 1; this.registration.notBefore = this.now();
     this.status.results = null; this.status.winner = null;
     this.status.notice = 'تم تصفير الجلسة. افتح التسجيل للبدء من جديد';
     this.emit();
   }
   addScore(player, points) { player.score += points; }
-  receiveChat({ id, username, text, avatar = '', isFollower = false, isSubscriber = false, msgId = '', handle = '' }) {
+  receiveChat({ id, username, text, avatar = '', isFollower = false, isSubscriber = false, msgId = '', handle = '', at = 0 }) {
     const message = safeLine(text);
     let identity = safeLine(id, 80);
     // Reconnects can replay recent messages; a message id is applied at most once.
@@ -666,7 +676,10 @@ export class Engine {
     const name = safeUserName(username);
     this.recent.unshift({ name, message, at: currentTime });
     if (this.recent.length > KEEP_CHAT) this.recent.length = KEEP_CHAT;
-    // Joining the TikTok room does NOT enroll the viewer. Only the chosen chat word does.
+    // Joining the TikTok room does NOT enroll the viewer. Only the chosen chat word does — and only a comment
+    // written after the last «إعادة تعيين» (platform time when the platform gives one).
+    const sent = Number(at) || 0;
+    if (sent && this.registration.notBefore && sent < this.registration.notBefore && this.hasValidJoinWord(message)) { this.emit(); return; }
     if (this.registration.phase === 'open') {
       if (this.hasValidJoinWord(message) && this.register(identity, name, avatar, {isFollower,isSubscriber})) this.noteHandle(identity, handle);
     } else if (this.registration.phase === 'closed' && this.status.active && this.registration.lateJoin === 'open' && LATE_JOIN.includes(this.status.mode) && !this.players.has(identity) && this.hasValidJoinWord(message)) {
@@ -763,6 +776,25 @@ export class Engine {
     this.emit();
     return true;
   }
+  /** Participants for a lobby that must survive a server restart (no demo players: they are recreated on demand). */
+  exportPlayers() {
+    return [...this.players.values()].filter((p) => !p.id.startsWith('demo:')).slice(0, MAX_PLAYERS)
+      .map((p) => ({ id: p.id, name: p.name, ...(p.avatar ? { avatar: p.avatar } : {}), ...(p.handle ? { handle: p.handle } : {}), ...(p.manual ? { manual: true } : {}), ...(p.host ? { host: true } : {}), joinedAt: p.firstSeen }));
+  }
+  /** Recovery: put back the participants saved before a restart (scores start again from zero). */
+  restorePlayers(list = []) {
+    if (this.status.active) throw new Error('لا يمكن الاستعادة أثناء جولة');
+    let n = 0;
+    for (const x of Array.isArray(list) ? list.slice(0, MAX_PLAYERS) : []) {
+      if (!x || typeof x.id !== 'string' || this.players.has(x.id)) continue;
+      const p = this.player(x.id, x.name, x.avatar); if (!p) break;
+      if (x.manual) p.manual = true; if (x.host) p.host = true; p.isFollower = true; p.isSubscriber = true;
+      if (Number.isFinite(x.joinedAt)) p.firstSeen = x.joinedAt;
+      this.noteHandle(x.id, x.handle); n++;
+    }
+    if (n) this.emit();
+    return n;
+  }
   /** Host control: add a contestant by name (no chat needed). */
   addManualPlayer({ name, host = false } = {}) {
     if (this.status.active && !LATE_JOIN.includes(this.status.mode)) throw new Error('قواعد هذه اللعبة لا تسمح بإضافة لاعب أثناء الجولة');
@@ -771,7 +803,8 @@ export class Engine {
     const id = host ? 'host:' + clean.toLowerCase() : 'manual:' + normalizeAnswer(clean);
     if (this.players.has(id)) throw new Error(host ? 'المضيف مسجل بالفعل' : 'هذا الاسم مسجل بالفعل');
     if (this.players.size >= this.registration.maxPlayers) throw new Error('اكتمل عدد المتسابقين');
-    if (this.registration.phase === 'idle' && !this.status.active) this.openRegistration({});
+    // inside a lobby the host's own additions never open the chat registration by themselves
+    if (this.registration.phase === 'idle' && !this.status.active) { if (this.lobbyManaged) { this.registration.phase = 'closed'; this.registration.closedAt = this.now(); } else this.openRegistration({}); }
     const player = this.player(id, host ? '@' + clean : clean);
     if (!player) throw new Error('اكتمل عدد المتسابقين');
     player.manual = true; player.host = host; player.isFollower = true; player.isSubscriber = true;

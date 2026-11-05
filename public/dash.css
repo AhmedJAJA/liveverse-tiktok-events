@@ -475,3 +475,19 @@ body.ds{min-height:100svh}
 .sv-stage[data-rarity=legendary]{background:radial-gradient(110% 90% at 50% 25%,rgba(255,200,58,.38),transparent 60%),radial-gradient(60% 40% at 50% 95%,rgba(255,200,58,.25),transparent 70%),linear-gradient(180deg,#2A2050,#0A0F2A)}
 .sv-stage[data-rarity=mythic]{background:conic-gradient(from 0deg at 50% 60%,rgba(255,61,110,.35),rgba(176,107,255,.35),rgba(56,212,255,.35),rgba(255,61,110,.35)),radial-gradient(80% 70% at 50% 40%,#1A0B3A,#05041A);background-blend-mode:screen}
 @media (prefers-reduced-motion:reduce){.sk-rarity.is-r-mythic{animation:none}}
+/* «إطارات الأسماء» in «حقيبتي» */
+.mf-card{margin-top:18px}
+.mf-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
+.mf-head h2{margin:2px 0 0}
+.mf-preview{display:grid;justify-items:center;gap:6px;padding:16px 22px;border-radius:20px;background:rgba(2,10,34,.55);border:1px solid rgba(140,232,255,.2)}
+.mf-pill{display:flex;align-items:center;gap:12px;padding:8px 16px 8px 10px;border-radius:999px;background:linear-gradient(90deg,rgba(30,60,160,.55),rgba(14,34,92,.7));border:1px solid rgba(140,232,255,.22);max-width:100%}
+.mf-av{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;overflow:hidden;background:linear-gradient(180deg,#4FDBFF,#1E5BFF);color:#03122F;font-weight:900}
+.mf-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mf-pill .fr-plate.is-plain{padding:0;border:0}
+.mf-grid{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.mf-item{display:grid;gap:10px;padding:14px;border-radius:18px;background:rgba(2,10,34,.45);border:1px solid rgba(140,232,255,.2)}
+.mf-item.is-on{border-color:#38D4FF;box-shadow:0 0 0 1px #38D4FF inset}
+.mf-demo{display:grid;place-items:center;min-height:72px;padding-top:10px}
+.mf-info{display:grid}.mf-info small{color:var(--muted)}
+.mf-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+@media (max-width:640px){.mf-head{grid-template-columns:minmax(0,1fr)}}

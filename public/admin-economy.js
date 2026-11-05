@@ -132,5 +132,44 @@
     } catch (er) { msg('skinsMsg', er.message, false); }
   });
 
-  overview(); orders(); wheel(); skins();
+  /* name frames */
+  const EFFECTS = [['none', 'بدون'], ['cyan', 'سماوي'], ['gold', 'لمعة ذهبية'], ['saudi', 'أخضر سعودي'], ['ice', 'جليد'], ['flame', 'لهب'], ['crown', 'تاج'], ['royal', 'ملكي']];
+  async function frames() {
+    const tb = $('frameRows');
+    try {
+      const d = await api('GET', '/api/manage/frames'); tb.replaceChildren();
+      for (const f of d.frames) {
+        const av = el('span', 'pg-frame-av', 'س'); const demo = el('span', 'pg-frame-demo');
+        demo.append(window.SpongeFrames ? SpongeFrames.avatar(av, f) : av, window.SpongeFrames ? SpongeFrames.plate(f.name, f) : el('b', '', f.name));
+        const name = el('input'); name.value = f.name; name.maxLength = 40;
+        const rar = el('select'); for (const k of KEYS) { const o = new Option(R[k], k); o.selected = k === f.rarity; rar.append(o); }
+        const acc = el('select'); for (const [k, t] of [['free', 'مجاني (للموثّقين)'], ['grant', 'منحة فقط']]) { const o = new Option(t, k); o.selected = k === f.access; acc.append(o); }
+        const eff = el('select'); for (const [k, t] of EFFECTS) { const o = new Option(t, k); o.selected = k === f.effect; eff.append(o); }
+        const active = el('input'); active.type = 'checkbox'; active.checked = f.active;
+        const save = el('button', 'pg-btn2', 'حفظ'); save.type = 'button';
+        save.addEventListener('click', async () => {
+          try { await api('POST', '/api/manage/frame-save', { id: f.id, name: name.value, rarity: rar.value, access: acc.value, effect: eff.value, active: active.checked }); msg('framesMsg', 'حُفظ «' + name.value + '»'); frames(); }
+          catch (e) { msg('framesMsg', e.message, false); }
+        });
+        const id = el('code', '', f.id); id.dir = 'ltr';
+        row(tb, [demo, id, name, rar, acc, eff, active, nf(f.owners), save]);
+      }
+    } catch (e) { msg('framesMsg', e.message, false); }
+  }
+  $('frameUpload').addEventListener('submit', async (e) => {
+    e.preventDefault(); const f = e.target;
+    try {
+      const a = f.avatar.files[0], p = f.plate.files[0];
+      await api('POST', '/api/manage/frame-save', { id: f.id.value.trim(), name: f.name.value, rarity: f.rarity.value, effect: f.effect.value,
+        slice: [f.s0, f.s1, f.s2, f.s3].map((x) => Number(x.value || 0)), avatar: a ? await asDataUrl(a) : undefined, plate: p ? await asDataUrl(p) : undefined });
+      msg('framesMsg', 'حُفظ الإطار ✓ — امنحه لحساب أو اجعله مجانيًا من الجدول'); f.reset(); frames();
+    } catch (er) { msg('framesMsg', er.message, false); }
+  });
+  $('frameGrant').addEventListener('submit', async (e) => {
+    e.preventDefault(); const f = e.target;
+    try { const r = await api('POST', '/api/manage/frame-grant', { publicId: f.publicId.value.trim(), frame: f.frame.value.trim() }); msg('framesMsg', r.added ? 'مُنح الإطار ✓' : 'الحساب يملك هذا الإطار بالفعل'); f.reset(); frames(); }
+    catch (er) { msg('framesMsg', er.message, false); }
+  });
+
+  overview(); orders(); wheel(); skins(); frames();
 })();

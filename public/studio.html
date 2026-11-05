@@ -12,9 +12,12 @@
 <link rel="stylesheet" href="/play.css">
 <link rel="stylesheet" href="/sponge.css">
 <link rel="stylesheet" href="/studio.css">
+<link rel="stylesheet" href="/frames.css">
+<link rel="stylesheet" href="/lobby.css">
 <script defer src="/session.js"></script>
 <script defer src="/sponge.js"></script>
 <script defer src="/sponge-ui.js"></script>
+<script defer src="/frames.js"></script>
 <script defer src="/studio.js"></script>
 </head>
 <body class="pl-page st-page" data-category="smart" data-view="join" data-drawer="open" data-screen="games">
@@ -121,10 +124,16 @@
 
    <section class="su-card su-join" aria-labelledby="joinTitle">
     <div class="su-card-head"><small class="su-kicker">انضمام اللاعبين</small><h2 id="joinTitle">طريقة الانضمام للجولة</h2><p>يكتب المشاهدون كلمة الانضمام في تعليقات البث بعد فتح التسجيل.</p></div>
-    <div class="su-word">
-     <span class="su-word-label">كلمة الانضمام</span>
-     <b class="su-word-now" id="setupWord">انضم</b>
-     <small>تحددها أو تغيّرها في الخطوة التالية قبل فتح التسجيل.</small>
+    <form class="su-word" id="wordForm" novalidate>
+     <label class="su-word-label" for="wordInput">كلمة الانضمام</label>
+     <div class="su-word-row"><input id="wordInput" class="su-word-input" maxlength="32" value="انضم" autocomplete="off" spellcheck="false" enterkeyhint="done" dir="auto"><button type="submit" class="su-reset" id="wordSave">حفظ</button></div>
+     <div class="rg-chips su-word-chips" id="wordChips" role="group" aria-label="كلمات مقترحة"></div>
+     <small id="wordHint">تُقبل الكلمة وحدها في التعليق (مع اختلاف التشكيل أو الهمزة) — لا تُقبل كلمة أطول تحتويها. تقدر تغيّرها من غرفة الانتظار أيضًا.</small>
+     <b class="su-word-now" id="setupWord" hidden>انضم</b>
+    </form>
+    <div class="su-auto">
+     <span><b id="autoOpenTitle">فتح التسجيل تلقائيًا</b><small>عند جاهزية اللوبي يبدأ قبول المشاهدين مباشرة. أطفئه لتفتحه بنفسك.</small></span>
+     <button type="button" class="su-switch" id="autoOpenToggle" role="switch" aria-checked="true" aria-labelledby="autoOpenTitle"><i></i></button>
     </div>
     <div class="su-late">
      <p class="su-late-title">الانضمام بعد بدء اللعبة <span class="su-warn" id="lateWarn" hidden>!</span></p>
@@ -154,7 +163,7 @@
   </div>
 
   <footer class="su-foot">
-   <p class="su-foot-hint" id="setupHint"><i aria-hidden="true"></i><span>جرّب اللعبة الآن بلاعبين تجريبيين، أو ابدأها لتحديد كلمة الانضمام.</span></p>
+   <p class="su-foot-hint" id="setupHint"><i aria-hidden="true"></i><span>«ابدأ اللعبة» يجهّز اللوبي ويتحقق من اتصال البث — لا تبدأ أي جولة قبل «بدء الجولة الآن». «تجربة اللعبة» بلاعبين تجريبيين بلا بث.</span></p>
    <div class="su-foot-btns">
     <button type="button" class="su-btn su-btn-ghost" id="tryButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span>تجربة اللعبة</span></button>
     <button type="button" class="su-btn su-btn-main" id="beginButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span>ابدأ اللعبة</span></button>
@@ -163,25 +172,104 @@
  </div>
 </section>
 
-<!-- ===== stage 3: «تجهيز المتسابقين» — the join word; registration opens only on the button ===== -->
-<section class="st-register" id="registerView" aria-labelledby="regTitle">
- <div class="rg-in">
-  <button type="button" class="su-back rg-back" id="registerBack"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg><span>العودة للإعدادات</span></button>
-  <div class="rg-card">
-   <span class="rg-game" id="regGame">—</span>
-   <h1 id="regTitle">تجهيز المتسابقين</h1>
-   <p class="rg-sub">حدد الكلمة التي سيكتبها المشاهدون في تعليقات البث</p>
-   <form id="wordForm" class="rg-form" novalidate>
-    <label for="wordInput" class="rg-label">ما الكلمة التي سيكتبها المشاهدون في الشات للانضمام؟</label>
-    <input id="wordInput" class="rg-input" maxlength="32" value="انضم" autocomplete="off" spellcheck="false" enterkeyhint="go">
-    <div class="rg-chips" id="wordChips" role="group" aria-label="كلمات مقترحة"></div>
-    <p class="rg-preview">سيظهر على شاشة البث: «اكتب <b id="wordPreview">انضم</b> في تعليقات البث للدخول إلى اللعبة»</p>
-    <p class="rg-conn" id="regConn" data-on="false"></p>
-    <button type="submit" class="su-btn su-btn-main rg-open" id="openButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg><span>حفظ الكلمة وفتح التسجيل</span></button>
-   </form>
+<!-- ===== «جاري تجهيز اللوبي»: every line is a step the server really runs (src/lobby.mjs) ===== -->
+<section class="st-prepare" id="prepareView" aria-labelledby="prepTitle">
+ <div class="pp-card" id="prepCard" data-state="PREPARING_LOBBY">
+  <div class="pp-brand"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span dir="ltr"><b>SPONGE</b> LIVE</span></div>
+  <div class="pp-orbit" aria-hidden="true"><i class="pp-halo"></i><i class="pp-ring"></i><i class="pp-core"></i><i class="pp-sat"></i></div>
+  <span class="pp-eyebrow" id="prepEyebrow">غرفة الانتظار</span>
+  <h1 id="prepTitle">جاري تجهيز اللوبي</h1>
+  <p class="pp-now" id="prepNow" aria-live="polite">جاري التحقق من بيانات اللعبة</p>
+  <div class="pp-bar" id="prepBar" role="progressbar" aria-labelledby="prepTitle" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><i id="prepFill"></i></div>
+  <p class="pp-count" id="prepCount"></p>
+  <div class="pp-error" id="prepError" hidden role="alert"><p id="prepErrText"></p></div>
+  <div class="pp-actions">
+   <button type="button" class="pp-btn pp-main" id="prepAction" hidden></button>
+   <a class="pp-btn pp-main" id="prepLink" hidden href="/account"></a>
+   <button type="button" class="pp-btn pp-ghost" id="prepBack">العودة للإعدادات</button>
+  </div>
+  <button type="button" class="pp-alt" id="prepDemo" hidden>جرّب اللعبة بلاعبين تجريبيين بدل ذلك</button>
+  <details class="pp-steps" id="prepDetails"><summary>تفاصيل التجهيز</summary><ol id="prepSteps"></ol></details>
+ </div>
+</section>
+
+<!-- ===== «غرفة الانتظار»: the ready lobby — join word, players, registration; only «بدء الجولة الآن» starts a round ===== -->
+<section class="st-lobby" id="lobbyView" aria-labelledby="lbTitle">
+ <header class="lb-top">
+  <a class="lb-brand" href="/" aria-label="SPONGE LIVE — الرئيسية"><img src="/brand/sponge-128.webp" alt="" width="34" height="34"><span dir="ltr"><b>SPONGE</b> LIVE</span></a>
+  <div class="lb-status" id="lbStatus" data-tone="off" role="status"><i aria-hidden="true"></i><span id="lbStatusText">البث غير متصل</span></div>
+  <div class="lb-top-tools">
+   <a class="lb-icon" id="lbObs" href="/overlay" target="_blank" rel="noopener" title="شاشة OBS" aria-label="شاشة OBS"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-screen"/></svg></a>
+   <button type="button" class="lb-icon" data-sp-toggle="sound" aria-label="الصوت"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-volume"/></svg></button>
+   <button type="button" class="lb-settings" id="lbSettings"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>الإعدادات</span></button>
+  </div>
+ </header>
+ <div class="lb-in">
+  <div class="lb-head">
+   <div class="lb-id">
+    <span class="lb-eyebrow"><i aria-hidden="true"></i>غرفة الانتظار <span class="lb-demo" id="lbDemo" hidden>وضع التجربة</span></span>
+    <h1 id="lbTitle">تجهيز اللاعبين</h1>
+    <p id="lbGame">—</p>
+   </div>
+   <div class="lb-word" id="lbWordBox">
+    <span class="lb-word-ic" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-chat"/></svg></span>
+    <span class="lb-word-label"><small>أرسل في التعليقات</small><b>كلمة الانضمام</b></span>
+    <b class="lb-word-badge" id="lbWord" dir="auto">انضم</b>
+    <button type="button" class="lb-edit" id="lbWordEdit" aria-label="تعديل كلمة الانضمام"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-pencil"/></svg></button>
+    <form class="lb-word-form" id="lbWordForm" hidden novalidate>
+     <label class="sr-only" for="lbWordInput">كلمة الانضمام الجديدة</label>
+     <input id="lbWordInput" maxlength="32" autocomplete="off" spellcheck="false" enterkeyhint="done" dir="auto">
+     <button type="submit" class="lb-mini lb-mini-main">حفظ</button><button type="button" class="lb-mini" id="lbWordCancel">إلغاء</button>
+    </form>
+    <p class="lb-word-help">اكتب هذه الكلمة في تعليقات البث للمشاركة في الجولة.</p>
+   </div>
+   <div class="lb-count"><b id="lbCount">0</b><span id="lbCountLabel">لاعب انضم</span></div>
+  </div>
+  <div class="lb-note" id="lbNote" hidden role="status"><span id="lbNoteText"></span><button type="button" class="lb-mini lb-mini-main" id="lbConnect" hidden>إعادة الاتصال</button></div>
+
+  <section class="lb-players" aria-labelledby="lbPlayersTitle">
+   <div class="lb-players-head">
+    <span class="lb-players-ic" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-users"/></svg></span>
+    <h2 id="lbPlayersTitle">اللاعبون</h2>
+    <span class="lb-players-n" id="lbPlayersN">0 من 1500</span>
+    <div class="lb-tools">
+     <button type="button" class="lb-tool" id="lbAdd"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg><span>إضافة لاعب</span></button>
+     <button type="button" class="lb-tool" id="lbSeat" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user"/></svg><span id="lbSeatLabel">دخّلني كلاعب</span></button>
+     <button type="button" class="lb-tool" id="lbFx" aria-pressed="true" title="تأثيرات الإطارات المتحركة"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-sparkle"/></svg><span>تأثيرات الإطارات</span></button>
+    </div>
+   </div>
+   <ul class="lb-list" id="lbList" aria-live="polite"></ul>
+   <div class="lb-empty" id="lbEmpty"><span class="lb-empty-ic" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-users"/></svg></span><b>لا يوجد لاعبون بعد</b><span id="lbEmptyText">أول من يكتب «انضم» في التعليقات يظهر هنا.</span></div>
+  </section>
+  <p class="lb-feedback" id="lbFeedback" role="status" aria-live="polite"></p>
+ </div>
+ <div class="lb-bar">
+  <div class="lb-reg" id="lbReg" data-open="false"><span class="lb-reg-ic" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-check"/></svg></span><span><b id="lbRegText">التسجيل مغلق</b><small id="lbRegSub"></small></span></div>
+  <div class="lb-actions">
+   <button type="button" class="lb-btn lb-ghost" id="lbRegToggle">فتح التسجيل</button>
+   <button type="button" class="lb-btn lb-ghost" id="lbReset"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg><span>إعادة تعيين</span></button>
+   <button type="button" class="lb-btn lb-ghost lb-danger" id="lbEnd">إنهاء الجلسة</button>
+   <button type="button" class="lb-btn lb-main" id="lbStart"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span id="lbStartLabel">بدء الجولة الآن</span></button>
   </div>
  </div>
 </section>
+
+<dialog class="st-dialog lb-dialog" id="addDialog" aria-labelledby="addTitle">
+ <form method="dialog" class="st-dialog-in" id="addDialogForm">
+  <h2 id="addTitle">إضافة لاعب</h2>
+  <p>يُضاف باسم تكتبه أنت ويظهر بعلامة «يدوي» — لا يرتبط بحساب بث ولا إطار له.</p>
+  <label class="lb-field"><span>اسم اللاعب</span><input id="addDialogName" maxlength="32" autocomplete="off" required></label>
+  <p class="lb-dialog-err" id="addDialogErr" role="alert"></p>
+  <div class="st-dialog-actions"><button type="submit" class="pl-btn pl-btn-gold" value="add">إضافة</button><button type="button" class="pl-btn pl-btn-ghost" id="addDialogClose">إلغاء</button></div>
+ </form>
+</dialog>
+<dialog class="st-dialog lb-dialog" id="confirmDialog" aria-labelledby="confirmTitle">
+ <form method="dialog" class="st-dialog-in">
+  <h2 id="confirmTitle"></h2>
+  <p id="confirmText"></p>
+  <div class="st-dialog-actions"><button class="pl-btn pl-btn-danger" value="ok" id="confirmOk">تأكيد</button><button class="pl-btn pl-btn-ghost" value="cancel">إلغاء</button></div>
+ </form>
+</dialog>
 
 <div class="st-layout" id="gameScreen">
  <!-- ===== the selected game ===== -->
