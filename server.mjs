@@ -767,6 +767,8 @@ async function handleMe(action, req, res) {
       return json(res, 200, { linked: p.linked, platforms: { tiktok: linkableNow('tiktok'), kick: linkableNow('kick'), twitch: false }, entitled: platform.entitlement(userId).active });
     }
     if (action === 'wallet' && req.method === 'GET') return json(res, 200, await economy.wallet(userId));
+    if (action === 'wheel' && req.method === 'GET') return json(res, 200, await economy.wheel(userId));
+    if (action === 'wheel-result' && req.method === 'GET') { const r = await economy.spinByKey(userId, new URL(req.url, 'http://x').searchParams.get('key')); return r ? json(res, 200, r) : json(res, 404, { error: 'لم تُسجَّل هذه العملية' }); }
     if (action === 'invites' && req.method === 'GET') { const u = platform.cached(userId).user; return json(res, 200, await economy.invitations(userId, u.public_id, appUrl)); }
     if (action === 'skins' && req.method === 'GET') return json(res, 200, await platform.skins(userId));
     if (action === 'friends' && req.method === 'GET') return json(res, 200, await platform.community(userId));
@@ -785,6 +787,7 @@ async function handleMe(action, req, res) {
     /* ---- «الإعدادات» ---- */
     if (action === 'privacy') return json(res, 200, { ok: true, privacy: await platform.setPrivacy(userId, String(body.key || ''), body.value) });
     /* ---- «عملات الإسفنجة»: nothing about amounts or timing is read from the browser ---- */
+    if (action === 'wheel-spin') { const r = await economy.spin(userId, body.count, body.key); return json(res, 200, { ok: true, ...r }); }
     if (action === 'daily-claim') { const r = await economy.claimDaily(userId); if (r.granted) await afterLogin(req, res, userId); return json(res, 200, { ok: true, ...r }); }
     /* ---- «السكنات» (the skin id is the only input; ownership is checked on the server) ---- */
     if (action === 'skin-claim') return json(res, 200, { ok: true, ...(await platform.claimSkin(userId, body.id)) });
@@ -895,6 +898,7 @@ async function handleManage(action, req, res) {
       if (action === 'prizes') return json(res, 200, await platform.listPrizes());
       if (action === 'reports') return json(res, 200, { reports: await platform.listReports(url.searchParams.get('status') || 'open') });
       if (action === 'economy') return json(res, 200, await economy.adminOverview());
+      if (action === 'wheel') return json(res, 200, await economy.wheelReport());
       if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
       return json(res, 404, { error: 'Not found' });
     }
@@ -909,6 +913,8 @@ async function handleManage(action, req, res) {
     if (action === 'voucher-create') { const codes = await platform.createVouchers(String(body.plan), body.count, { label: body.label, createdBy: admin.name }); await platform.audit(admin.name, 'voucher-create', { details: { plan: body.plan, count: codes.length, label: String(body.label || '').slice(0, 60) }, ip }); return json(res, 200, { ok: true, codes }); }
     if (action === 'voucher-revoke') { const r = await platform.revokeVoucher(String(body.code || '')); await platform.audit(admin.name, 'voucher-revoke', { details: { hint: String(body.code).slice(0, 4) + '…' + String(body.code).slice(-4) }, ip }); return json(res, 200, { ok: true, ...r }); }
     if (action === 'code-revoke') { const code = promos.update(String(body.id), { active: false }); sessions.destroyWhere((x) => x.codeId === body.id); await platform.audit(admin.name, 'promo-revoke', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, code }); }
+    if (action === 'wheel-odds') return json(res, 200, { ok: true, config: await economy.setWheelOdds(body.odds, { cost1: body.cost1, cost10: body.cost10, actor: admin.name, reason: body.reason }) });
+    if (action === 'wheel-simulate') return json(res, 200, await economy.simulate(body.n));
     const userId = await platform.userByPublicId(body.publicId || '');
     if (!userId) return json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
     const log = (what, details = {}) => platform.audit(admin.name, what, { target: userId, details, ip });
@@ -1055,7 +1061,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
