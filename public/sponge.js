@@ -1,4 +1,4 @@
-/* SPONGE LIVE — shared ambience: rising bubbles, original sound effects, and the
+/* سبونج لايف — shared ambience: rising bubbles, original sound effects, and the
    viewer's "effects" / "sound" switches. Classic script; exposes window.SpongeFx. */
 (() => {
   'use strict';

@@ -1,4 +1,4 @@
-// SPONGE LIVE — countries for «خمن الدولة» and «خمن العلم».
+// سبونج لايف — countries for «خمن الدولة» and «خمن العلم».
 // Each entry: ISO code (flag file /flags/<iso>.svg), Arabic name, accepted spellings, continent,
 // one well-known landmark/feature, and the capital. Facts kept to widely documented ones.
 export const COUNTRIES = Object.freeze([

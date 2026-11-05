@@ -1,4 +1,4 @@
-/* SPONGE LIVE — account, sign-in, admin and legal pages. Loaded after home.css (tokens, fonts, sea, buttons). */
+/* سبونج لايف — account, sign-in, admin and legal pages. Loaded after home.css (tokens, fonts, sea, buttons). */
 body.pg{min-height:100svh}
 .pg-top{display:flex;align-items:center;justify-content:space-between;gap:12px;width:min(1120px,100%);margin:0 auto;padding:18px 16px}
 .pg-brand{display:inline-flex;align-items:center;gap:10px;color:var(--foam);text-decoration:none;font-weight:900;font-size:20px}

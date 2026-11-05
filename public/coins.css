@@ -1,4 +1,4 @@
-/* SPONGE LIVE — Sponge Coins: balance pill, reward celebration (shared by home and «لوحة التحكم») */
+/* سبونج لايف — Sponge Coins: balance pill, reward celebration (shared by home and «لوحة التحكم») */
 .sc-pill{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px 0 6px;border-radius:999px;border:1px solid rgba(255,214,42,.55);
   background:linear-gradient(180deg,rgba(255,214,42,.16),rgba(255,214,42,.05));color:#FFE98A;font:900 15px/1 "Tajawal",system-ui,sans-serif;text-decoration:none;white-space:nowrap;
   box-shadow:0 0 18px -8px rgba(255,214,42,.9)}

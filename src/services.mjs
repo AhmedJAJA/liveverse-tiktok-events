@@ -1,4 +1,4 @@
-// SPONGE LIVE — outside services: e-mail (Resend) and payments (Moyasar hosted invoices).
+// سبونج لايف — outside services: e-mail (Resend) and payments (Moyasar hosted invoices).
 // Both are optional. Without keys, e-mail links are written to the server log outside production,
 // and checkout answers «الدفع غير مفعّل بعد» instead of pretending to take money.
 import { timingSafeEqual } from 'node:crypto';

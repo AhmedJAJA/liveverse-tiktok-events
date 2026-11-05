@@ -1,4 +1,4 @@
-/* SPONGE LIVE — private role page for «الأدوار المخفية».
+/* سبونج لايف — private role page for «الأدوار المخفية».
    The page asks the server for a one-time code; the player writes «دوري <code>» in the stream chat,
    which ties this browser to that viewer. Roles never travel to the public broadcast. */
 (() => {

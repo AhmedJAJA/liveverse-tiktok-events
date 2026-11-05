@@ -1,4 +1,4 @@
-/* SPONGE LIVE — shared mobile bottom navigation (home, «لوحة التحكم», public profiles).
+/* سبونج لايف — shared mobile bottom navigation (home, «لوحة التحكم», public profiles).
    One component for every page: include /bottom-nav.css and this script (defer, before the page script).
    - Phones and tablets only (≤ 980px); desktops keep the header and the side panel.
    - Links are real: on /account they switch sections in place (hash, no reload); elsewhere they go through

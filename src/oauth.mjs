@@ -1,4 +1,4 @@
-// SPONGE LIVE — official sign-in with the streaming platforms (no typed usernames).
+// سبونج لايف — official sign-in with the streaming platforms (no typed usernames).
 //   TikTok: Login Kit for Web, OAuth 2.0 Authorization Code (+ state); scopes user.info.basic,user.info.profile.
 //   Kick:   OAuth 2.1 Authorization Code + PKCE (S256); scopes user:read channel:read events:subscribe.
 // Tokens never reach the browser: they are encrypted (AES-256-GCM, key from TOKEN_ENC_KEY) before they are stored.

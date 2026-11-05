@@ -1,4 +1,4 @@
-/* SPONGE LIVE session context — shared by every page (classic script, load before page scripts).
+/* سبونج لايف session context — shared by every page (classic script, load before page scripts).
    Resolves which room the page shows: an explicit ?room=, the signed-in account/guest room,
    or the owner's main room. Admin requests are routed by the server from the credentials. */
 (() => {

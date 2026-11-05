@@ -1,4 +1,4 @@
-/* SPONGE LIVE — «عجلة السكنات» (the page side). The server decides and stores every prize before this file
+/* سبونج لايف — «عجلة السكنات» (the page side). The server decides and stores every prize before this file
    animates anything: the wheel only travels to the slice of the rarity the server already chose.
    - The wheel is drawn from the published odds: each rarity's slice is exactly its share of 360°.
    - Every request carries a one-time key; if the connection drops, the same key fetches the stored result

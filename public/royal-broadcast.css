@@ -1,5 +1,5 @@
 /* =====================================================================
-   SKY LIVE — ROYAL BLACK broadcast (/overlay)
+   سبونج لايف — ROYAL BLACK broadcast (/overlay)
    Fixed-composition canvas: designed at 1920×1080 (landscape) and
    1080×1920 (portrait) and scaled with one unit, --u, so OBS, the studio
    preview and phones all show the same composition.
@@ -40,7 +40,7 @@ body.broadcast{
 .brand-lockup{display:flex;align-items:center;gap:calc(var(--u)*16)}
 .sky-overlay-mark{width:calc(var(--u)*56);height:calc(var(--u)*56);filter:drop-shadow(0 calc(var(--u)*6) calc(var(--u)*18) rgba(55,179,212,.35))}
 .brand-words{display:grid;line-height:1.05}
-.brand-words strong{font-family:var(--font-latin);font-weight:600;font-size:calc(var(--u)*26);letter-spacing:.2em;color:var(--ivory)}
+.brand-words strong{font-family:"Tajawal",system-ui,sans-serif;font-weight:600;font-size:calc(var(--u)*26);letter-spacing:0;color:var(--ivory)}
 .brand-words small{font-size:calc(var(--u)*11);letter-spacing:.42em;color:var(--champagne);margin-top:calc(var(--u)*6)}
 .live-pill{position:absolute;left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:calc(var(--u)*12);height:calc(var(--u)*46);padding:0 calc(var(--u)*22);border-radius:999px;
   background:rgba(10,19,42,.78);border:1px solid var(--line-2);font-size:calc(var(--u)*19);font-weight:700;color:var(--text-2);backdrop-filter:blur(8px)}
@@ -263,7 +263,7 @@ body.broadcast{
 .results-head::before,.results-head::after{content:"";width:calc(var(--u)*80);height:1px;background:linear-gradient(90deg,transparent,var(--line-3))}
 .results-head::after{transform:scaleX(-1)}
 .results-head .results-brand,.results-heading .results-eyebrow{display:none}
-.results-brand{display:inline-flex;align-items:center;gap:calc(var(--u)*10);font-family:var(--font-latin);letter-spacing:.24em;color:var(--champagne)}
+.results-brand{display:inline-flex;align-items:center;gap:calc(var(--u)*10);font-family:"Tajawal",system-ui,sans-serif;letter-spacing:0;color:var(--champagne)}
 .results-brand .i{width:calc(var(--u)*22);height:calc(var(--u)*22)}
 .results-heading{text-align:center;display:grid;justify-items:center;gap:calc(var(--u)*4)}
 .results-eyebrow{font-size:calc(var(--u)*15);color:var(--champagne);letter-spacing:.5em}

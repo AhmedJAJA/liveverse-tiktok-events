@@ -1,4 +1,4 @@
-/* SPONGE LIVE — «عملات الإسفنجة» (Sponge Coins): wallets, daily reward, invitations.
+/* سبونج لايف — «عملات الإسفنجة» (Sponge Coins): wallets, daily reward, invitations.
    The server is the only source of truth: every balance change runs in one database transaction with the
    wallet row locked, and every movement has a unique idempotency key (wallet_transactions UNIQUE), so a
    refresh, a second tab, a replayed request or a restart can never pay or charge twice.
@@ -348,7 +348,7 @@ export class Economy {
     if (order.provider === 'moyasar') {
       const app = this.platform.appUrl;
       try {
-        const inv = await gw.createInvoice({ amount: order.amount_halalas, currency: order.currency, description: `SPONGE LIVE — ${pkg.coins} عملة إسفنجة (${order.ref})`,
+        const inv = await gw.createInvoice({ amount: order.amount_halalas, currency: order.currency, description: `سبونج لايف — ${pkg.coins} عملة إسفنجة (${order.ref})`,
           callback_url: `${app}/api/billing/webhook`, success_url: `${app}/account?coins=${order.id}#store`, back_url: `${app}/account#store`, metadata: { purchase_id: order.id } });
         await this.pool.query('UPDATE purchases SET provider_ref=$2, raw_status=$3, updated_at=now() WHERE id=$1', [order.id, inv.id, String(inv.status || '')]);
         return { order: this.purchaseView(order), url: inv.url };

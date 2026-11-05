@@ -1,4 +1,4 @@
-// SPONGE LIVE — accounts with a permanent ID, the 24-hour free trial, paid subscriptions and admin tools.
+// سبونج لايف — accounts with a permanent ID, the 24-hour free trial, paid subscriptions and admin tools.
 // Every rule that decides access (eligibility, expiry, payment status) is checked here, on the server,
 // against PostgreSQL. The browser only displays what these functions return.
 import { SKIN_PACKS, SKIN_ANIMATIONS, SKIN_ANIMATION_LABELS, RARITIES, publicSkin, SkinCatalog } from './skins.mjs';
@@ -237,7 +237,7 @@ export class Platform {
     await this.pool.query('INSERT INTO email_tokens (token_hash, user_id, purpose, expires_at) VALUES ($1,$2,$3,$4)', [sha(token), userId, 'verify', new Date(this.now() + VERIFY_TTL_MS)]);
     const link = `${this.appUrl}/verify?token=${token}`;
     const result = await this.mail.send({
-      to: u.email, subject: 'تأكيد بريدك في SPONGE LIVE',
+      to: u.email, subject: 'تأكيد بريدك في سبونج لايف',
       text: `مرحبًا ${u.display_name}،\n\nلتأكيد بريدك وتفعيل حسابك (${u.public_id}) افتح الرابط التالي خلال 48 ساعة:\n${link}\n\nإذا لم تنشئ هذا الحساب فتجاهل الرسالة.`,
       html: `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;line-height:1.8"><p>مرحبًا ${escapeHtml(u.display_name)}،</p><p>لتأكيد بريدك وتفعيل حسابك <b dir="ltr">${u.public_id}</b> اضغط الزر خلال 48 ساعة:</p><p><a href="${link}" style="display:inline-block;padding:12px 22px;border-radius:12px;background:#FFD62A;color:#0A1A3D;font-weight:bold;text-decoration:none">تأكيد البريد</a></p><p style="color:#666">إذا لم تنشئ هذا الحساب فتجاهل الرسالة.</p></div>`,
     });
@@ -256,7 +256,7 @@ export class Platform {
     const u = id ? (await this.pool.query('SELECT * FROM users WHERE lower(username)=$1 OR canonical_email=$2 LIMIT 1', [id, canonicalEmail(id)])).rows[0] : null;
     if (!u || u.disabled_at || !this.mail.configured) return { sent: false }; // the answer never says whether an account exists
     const link = `${(base || this.appUrl).replace(/\/$/, '')}/reset?token=${await this.createPasswordReset(u.id)}`;
-    const r = await this.mail.send({ to: u.email, subject: 'إعادة تعيين كلمة المرور — SPONGE LIVE',
+    const r = await this.mail.send({ to: u.email, subject: 'إعادة تعيين كلمة المرور — سبونج لايف',
       text: `مرحبًا ${u.display_name}،\n\nلإعادة تعيين كلمة مرور حسابك (${u.public_id}) افتح الرابط خلال 30 دقيقة:\n${link}\n\nإذا لم تطلب ذلك فتجاهل الرسالة — كلمة مرورك لم تتغير.`,
       html: `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;line-height:1.8"><p>مرحبًا ${escapeHtml(u.display_name)}،</p><p>لإعادة تعيين كلمة مرور حسابك <b dir="ltr">${u.public_id}</b> اضغط الزر خلال 30 دقيقة:</p><p><a href="${link}" style="display:inline-block;padding:12px 22px;border-radius:12px;background:#FFD62A;color:#0A1A3D;font-weight:bold;text-decoration:none">تعيين كلمة مرور جديدة</a></p><p style="color:#666">إذا لم تطلب ذلك فتجاهل الرسالة — كلمة مرورك لم تتغير.</p></div>` });
     return { sent: !!r.sent };
@@ -444,7 +444,7 @@ export class Platform {
   /** Link Google to the signed-in account (ownership of both is proven: the session and the Google token). */
   async linkGoogle(userId, g) {
     const owner = await this.findByGoogle(g.sub);
-    if (owner && owner.id !== userId) fail('حساب Google هذا مرتبط بحساب SPONGE LIVE آخر', 409);
+    if (owner && owner.id !== userId) fail('حساب Google هذا مرتبط بحساب سبونج لايف آخر', 409);
     const me = this.cached(userId)?.user || (await this.refresh(userId))?.user;
     if (me.google_sub && me.google_sub !== g.sub) fail('حسابك مرتبط بحساب Google آخر', 409);
     const sameMail = g.emailVerified && canonicalEmail(g.email) === me.canonical_email;
@@ -528,7 +528,7 @@ export class Platform {
     let invoice;
     try {
       invoice = await this.gateway.createInvoice({
-        amount: plan.priceHalalas, currency: 'SAR', description: `SPONGE LIVE — ${plan.name} (${plan.duration}) — ${u.public_id}`,
+        amount: plan.priceHalalas, currency: 'SAR', description: `سبونج لايف — ${plan.name} (${plan.duration}) — ${u.public_id}`,
         callback_url: `${this.appUrl}/api/billing/webhook`, success_url: `${this.appUrl}/account?payment=${pay.id}`, back_url: `${this.appUrl}/account#plans`,
         metadata: { payment_id: pay.id, public_id: u.public_id, plan: planId },
       });
@@ -587,7 +587,7 @@ export class Platform {
       tokenExpiresAt: r.token_expires_at ? +r.token_expires_at : 0, refreshExpiresAt: r.refresh_expires_at ? +r.refresh_expires_at : 0 } : null;
   }
   /** Record an official sign-in with the platform. The same platform account (by its own id) belongs to one
-      SPONGE LIVE account: a newer sign-in moves it, and the previous owner is returned so their room can be closed. */
+      سبونج لايف account: a newer sign-in moves it, and the previous owner is returned so their room can be closed. */
   async saveOAuthLink(userId, platform, { platformUserId, handle, displayName, avatar, scope, accessTokenEnc, refreshTokenEnc, expiresAt, refreshExpiresAt }) {
     const pid = String(platformUserId || '');
     if (!/^[A-Za-z0-9_.:-]{1,80}$/.test(pid)) fail('معرف حساب المنصة غير صالح');
@@ -744,7 +744,7 @@ export class Platform {
     [weekOf(this.now()).start, userId, sessions | 0, Math.min(100000, players | 0), Math.min(10080, minutes | 0)]);
   }
   /** Top five of a week. Accounts that hid their statistics are left out; a player shows an SPG ID only when
-      their platform account is linked to a SPONGE LIVE account that allows it. */
+      their platform account is linked to a سبونج لايف account that allows it. */
   async leaderboard(board, metric, { week = weekOf(this.now()).start } = {}) {
     const w = weekOf(this.now());
     const out = { board: board === 'streamers' ? 'streamers' : 'players', weekStart: week, endsAt: w.endsAt, current: week === w.start };
@@ -872,9 +872,9 @@ export class Platform {
     const platform = input.platform === 'kick' ? 'kick' : 'tiktok';
     const description = String(input.description || '').trim().slice(0, 120);
     const sort = Number.isInteger(Number(input.sort)) ? Number(input.sort) : 0;
-    // «شريك رسمي» only for a partner whose platform account is linked (officially signed in) to a SPONGE LIVE account
+    // «شريك رسمي» only for a partner whose platform account is linked (officially signed in) to a سبونج لايف account
     const owner = (await this.pool.query('SELECT user_id FROM linked_accounts WHERE verified AND platform=$1 AND lower(handle)=lower($2)', [platform, handle])).rows[0]?.user_id || null;
-    if (input.official && !owner) fail('شارة «شريك رسمي» تحتاج أن يربط الشريك حسابه على المنصة رسميًا بحساب SPONGE LIVE');
+    if (input.official && !owner) fail('شارة «شريك رسمي» تحتاج أن يربط الشريك حسابه على المنصة رسميًا بحساب سبونج لايف');
     const photo = input.photo ? parsePhoto(input.photo) : null; // checked before anything is written
     const vals = [name, handle, platform, description, sort, input.active !== false, !!input.official && !!owner, owner];
     let id = Number(input.id) || null;
@@ -954,7 +954,7 @@ export class Platform {
     await this.refresh(userId);
     return this.skins(userId);
   }
-  /** Skins of viewers playing in a stream: their platform handle → the equipped skin of the SPONGE LIVE account
+  /** Skins of viewers playing in a stream: their platform handle → the equipped skin of the سبونج لايف account
       that officially linked that same platform account (verified). Used by the game screens. */
   async skinsForHandles(platformName, handles) {
     await this.catalog();

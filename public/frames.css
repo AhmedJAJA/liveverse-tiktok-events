@@ -1,4 +1,4 @@
-/* SPONGE LIVE — «إطارات الأسماء»: an avatar ring (.fr-av) and a nameplate (.fr-plate) per player.
+/* سبونج لايف — «إطارات الأسماء»: an avatar ring (.fr-av) and a nameplate (.fr-plate) per player.
    Built-in frames are pure CSS (data-effect); uploaded frames add a transparent image ring (.fr-img) and a
    nine-slice nameplate (.fr-plate.has-img: border-image with the slice values of that frame), so long names never
    stretch the corners. Cosmetic only. Heavy motion stops with body.fx-lite (the host's switch) or reduced motion. */

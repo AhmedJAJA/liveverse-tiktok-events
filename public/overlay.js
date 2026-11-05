@@ -1,4 +1,4 @@
-/* SPONGE LIVE ARENA: read-only broadcast view. All player data uses textContent. */
+/* سبونج لايف ARENA: read-only broadcast view. All player data uses textContent. */
 const $ = id => document.getElementById(id);
 if (new URLSearchParams(location.search).get('embedded') === '1') document.documentElement.classList.add('embedded');
 const modeInfo = {
@@ -119,7 +119,7 @@ function updateStandings(players) {
   });
 }
 const memberColors = ['#A96C87','#6B8D9D','#8E83AD','#588D9E','#699787','#A87965','#7489B2'];
-/* Skins: viewers whose TikTok / Kick account is linked to a SPONGE LIVE account appear as their equipped
+/* Skins: viewers whose TikTok / Kick account is linked to a سبونج لايف account appear as their equipped
    character (a rendered image — light even with dozens of players); eliminated players show the «lose» pose;
    the round winner gets the real 3D character doing its win move. */
 let skinMap = {}, frameMap = {};
@@ -176,7 +176,7 @@ function paintAvatar(container, player) {
       img.classList.add('is-loaded');
     },{once:true});
     img.addEventListener('error',()=>{
-      console.warn('[SPONGE LIVE Media] تعذر تحميل صورة المتسابق، تم تفعيل الواجهة البديلة:',player.avatar);
+      console.warn('[سبونج لايف Media] تعذر تحميل صورة المتسابق، تم تفعيل الواجهة البديلة:',player.avatar);
       container.classList.remove('is-loading-avatar','has-loaded-avatar');
       container.classList.add('is-fallback-avatar');
       container.setAttribute('title',(player?.name||'متسابق')+' • الصورة غير متاحة حاليًا');
@@ -613,7 +613,7 @@ function hideBomb(){
 const partyCache = { key:null };
 function hearts(n) { const box=node('span','party-hearts'); for(let i=0;i<3;i++){const h=icon('i-flame','i heart'+(i<n?' is-on':''));box.append(h);} box.setAttribute('aria-label',n+' حيوات'); return box; }
 function chip(p, extra) { const c=node('span','party-chip'); const av=node('span','member-avatar party-av'); paintAvatar(av,p); c.append(av,node('bdi','party-name',p.name)); if(extra)c.append(extra); return c; }
-/* ---------------- SPONGE LIVE game screens ---------------- */
+/* ---------------- سبونج لايف game screens ---------------- */
 function banner(small, big, line, cls='') { const b=node('div','party-banner '+cls); b.append(node('small','',small),node('strong','party-big',big)); if(line)b.append(node('span','',line)); return b; }
 function bigAvatar(p, cls='') { const box=node('div','sea-hero '+cls); const av=node('span','member-avatar sea-hero-av'); paintAvatar(av,p); box.append(av,node('strong','',p.name),node('small','num','#'+p.number)); return box; }
 /** Players who just left the game slide out in a strip — the «المستبعدون» list. */
@@ -969,7 +969,7 @@ function guardOverlayImages() {
   const onFail = img => {
     if (!img || img.dataset.fallbackApplied === '1') return;
     img.dataset.fallbackApplied = '1';
-    console.warn('[SPONGE LIVE Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:', img.currentSrc || img.src);
+    console.warn('[سبونج لايف Media] تعذر تحميل الصورة، تم تفعيل الواجهة البديلة:', img.currentSrc || img.src);
     img.alt = '';
     img.hidden = true;
     const parent = img.parentElement;

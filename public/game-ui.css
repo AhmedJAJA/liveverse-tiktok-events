@@ -1,6 +1,6 @@
-/* SPONGE LIVE — the gameplay board (/overlay: OBS, the studio preview, the viewers' page).
+/* سبونج لايف — the gameplay board (/overlay: OBS, the studio preview, the viewers' page).
    Built on the fixed 1920×1080 canvas of royal-broadcast.css (one unit: --u; a 1080×1920 portrait variant below).
-     top: the SPONGE LIVE logo, then a thin info strip (game · question n of N · players · state)
+     top: the سبونج لايف logo, then a thin info strip (game · question n of N · players · state)
      centre: one main card — a round timer overlapping its top edge, the question, the answers (2×2 or side by side),
              the hint / answer count, and a time bar along the bottom edge
    Sea decor (bubbles, light rays, reef) stays on the edges: nothing is ever drawn over the question or the answers. */
@@ -27,7 +27,7 @@
 .arena .top-line.gx-head{top:calc(var(--u)*22);inset-inline:0;height:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:calc(var(--u)*10)}
 .gx-logo{position:relative;display:flex;align-items:center;gap:calc(var(--u)*12);overflow:hidden;padding:calc(var(--u)*4) calc(var(--u)*14);border-radius:999px}
 .gx-logo-img{width:calc(var(--u)*58);height:calc(var(--u)*58);filter:drop-shadow(0 0 calc(var(--u)*14) rgba(56,212,255,.65)) drop-shadow(0 calc(var(--u)*4) calc(var(--u)*6) rgba(0,0,0,.5))}
-.gx-word{font-family:var(--font-latin),"Tajawal",sans-serif;font-size:calc(var(--u)*34);font-weight:800;letter-spacing:.08em;color:var(--gx-ink);text-shadow:0 0 calc(var(--u)*18) rgba(56,212,255,.55)}
+.gx-word{font-family:"Tajawal",system-ui,sans-serif;font-size:calc(var(--u)*34);font-weight:800;letter-spacing:0;color:var(--gx-ink);text-shadow:0 0 calc(var(--u)*18) rgba(56,212,255,.55)}
 .gx-word b{color:var(--gx-sun);text-shadow:0 0 calc(var(--u)*16) rgba(255,214,42,.55)}
 .gx-logo::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%) -200% 0/250% 100% no-repeat;opacity:0;pointer-events:none}
 .gx-logo.gx-shine{animation:gx-pop .7s cubic-bezier(.2,.9,.3,1.3)}

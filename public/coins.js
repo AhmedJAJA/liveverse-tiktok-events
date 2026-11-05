@@ -1,4 +1,4 @@
-/* SPONGE LIVE — Sponge Coins helpers shared by the home page and «لوحة التحكم».
+/* سبونج لايف — Sponge Coins helpers shared by the home page and «لوحة التحكم».
    - claimDaily(): asks the server for today's reward (the server decides; repeat calls are harmless).
    - celebrate(): a light celebration (DOM + CSS only, no canvas) with +amount and the next reward time.
    - countdown(el, nextAt, serverNow): HH:MM:SS from the SERVER clock (offset measured once), every second.

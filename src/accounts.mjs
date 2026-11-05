@@ -1,4 +1,4 @@
-// SKY LIVE accounts: server-side validation, scrypt password hashing, opaque
+// سبونج لايف accounts: server-side validation, scrypt password hashing, opaque
 // HttpOnly session cookies and owner-managed subscriptions.
 // Storage is a JSON file (SKY_DATA_DIR). On hosts with an ephemeral disk the file
 // resets on redeploy — mount a persistent disk for production accounts.

@@ -1,4 +1,4 @@
-// SPONGE LIVE — verify Google ID tokens (Google Identity Services / OpenID Connect) on the server.
+// سبونج لايف — verify Google ID tokens (Google Identity Services / OpenID Connect) on the server.
 // Checks: RS256 signature against Google's published keys, issuer, audience (our client ID), expiry,
 // issue time, and the nonce bound to this browser. Only the stable subject ID ("sub") identifies the person.
 import { createPublicKey, createVerify } from 'node:crypto';

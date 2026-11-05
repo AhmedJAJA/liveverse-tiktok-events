@@ -1,4 +1,4 @@
-/* SPONGE LIVE — «إطارات الأسماء» on any page: SpongeFrames.avatar(node, frame) wraps an avatar in its frame ring,
+/* سبونج لايف — «إطارات الأسماء» on any page: SpongeFrames.avatar(node, frame) wraps an avatar in its frame ring,
    SpongeFrames.plate(name, frame) draws the nameplate. A frame comes from the server (equipped by a verified account);
    without one the plain avatar and name are returned — nothing is invented for guests. Images are drawn with CSSOM
    only (no inline style attributes, so the page's CSP holds). */

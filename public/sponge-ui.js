@@ -1,4 +1,4 @@
-/* SPONGE LIVE — page behaviours shared by every screen: bubbles, 3D tilt on cards,
+/* سبونج لايف — page behaviours shared by every screen: bubbles, 3D tilt on cards,
    a short cinematic transition into a game, and the sound / effects switches. */
 (() => {
   'use strict';

@@ -1,6 +1,6 @@
 # SPONGE LIVE — TikTok LIVE Game Platform
 
-**SPONGE LIVE** is the current public brand (previously SKY LIVE); repository and hosting slugs retain their earlier names to preserve existing links.
+**سبونج لايف** is the current public brand (previously SPONGE LIVE, and before that SKY LIVE); repository and hosting slugs retain their earlier names to preserve existing links.
 
 SKY LIVE is an Arabic interactive livestream events website with a public homepage at `/`, a presenter studio at `/studio`, and a read-only broadcast screen at `/overlay`. Built with Node.js and WebSockets, with an OBS overlay and a **best-effort unofficial** TikTok LIVE chat bridge.
 

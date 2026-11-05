@@ -1,4 +1,4 @@
-/* SPONGE LIVE — sign in / sign up / forgot / reset. The server creates the account, its permanent ID and the session;
+/* سبونج لايف — sign in / sign up / forgot / reset. The server creates the account, its permanent ID and the session;
    this page only shows what the server answered (nothing is "signed in" here before the server says so). */
 (() => {
   'use strict';
@@ -18,12 +18,12 @@
   const forms = { login: 'loginForm', signup: 'signupForm', forgot: 'forgotForm', reset: 'resetForm' };
   for (const [m, id] of Object.entries(forms)) $(id).hidden = m !== mode;
   if (mode === 'login' || mode === 'signup') $(mode === 'login' ? 'tabLogin' : 'tabSignup').setAttribute('aria-current', 'page');
-  const TITLES = { login: ['مرحباً بك في SPONGE LIVE', 'سجّل دخولك وابدأ تجربة ألعاب البث المباشر، واجمع السكنات والمكافآت، ونافس اللاعبين.', 'تسجيل الدخول'],
-    signup: ['أنشئ حسابك في SPONGE LIVE', 'حساب واحد لألعاب بثّك وسكناتك وعملاتك — بمعرّف دائم لا يتغير.', 'إنشاء حساب'],
+  const TITLES = { login: ['مرحباً بك في سبونج لايف', 'سجّل دخولك وابدأ تجربة ألعاب البث المباشر، واجمع السكنات والمكافآت، ونافس اللاعبين.', 'تسجيل الدخول'],
+    signup: ['أنشئ حسابك في سبونج لايف', 'حساب واحد لألعاب بثّك وسكناتك وعملاتك — بمعرّف دائم لا يتغير.', 'إنشاء حساب'],
     forgot: ['نسيت كلمة المرور؟', 'اكتب بريدك أو اسم المستخدم وسنرسل لك رابطًا لتعيين كلمة مرور جديدة.', 'استعادة كلمة المرور'],
     reset: ['كلمة مرور جديدة', 'اختر كلمة مرور جديدة لحسابك — ستُسجّل خارج الأجهزة الأخرى.', 'تعيين كلمة المرور'] };
   $('authTitle').textContent = TITLES[mode][0]; $('authSub').textContent = TITLES[mode][1];
-  document.title = TITLES[mode][2] + ' — SPONGE LIVE';
+  document.title = TITLES[mode][2] + ' — سبونج لايف';
 
   function notice(text, kind = 'is-info') { const n = $('authNotice'); n.textContent = text || ''; n.className = 'pg-msg ' + kind; n.hidden = !text; }
   function gError(text) { $('googleError').textContent = text || ''; $('googleError').hidden = !text; }
@@ -108,7 +108,7 @@
     (d) => {
       const done = $('forgotDone');
       done.textContent = d.mail ? 'إذا كان هذا الحساب موجودًا فستصلك رسالة فيها رابط صالح لمدة 30 دقيقة. تحقق من البريد والرسائل غير المرغوبة.'
-        : 'إرسال البريد غير مفعّل على الموقع بعد: تواصل مع فريق SPONGE LIVE عبر واتساب باسم المستخدم أو البريد المسجّل، وسنرسل لك رابطًا آمنًا لتعيين كلمة مرور جديدة.';
+        : 'إرسال البريد غير مفعّل على الموقع بعد: تواصل مع فريق سبونج لايف عبر واتساب باسم المستخدم أو البريد المسجّل، وسنرسل لك رابطًا آمنًا لتعيين كلمة مرور جديدة.';
       done.hidden = false;
       if (!d.mail && /^https:\/\//.test(d.support?.url || '')) { const a = document.createElement('a'); a.href = d.support.url; a.target = '_blank'; a.rel = 'noopener'; a.className = 'au-link'; a.textContent = ' تواصل عبر واتساب'; done.append(a); }
     });

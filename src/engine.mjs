@@ -314,7 +314,7 @@ export class Engine {
     if (notify) this.emit();
     return true;
   }
-  /** The viewer's public platform handle: lets a SPONGE LIVE account that linked the same platform account see its own stats. */
+  /** The viewer's public platform handle: lets a سبونج لايف account that linked the same platform account see its own stats. */
   noteHandle(id, handle) {
     const h = String(handle || '').replace(/^@/, '').toLowerCase();
     const p = this.players.get(id);

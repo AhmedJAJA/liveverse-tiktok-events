@@ -1,4 +1,4 @@
-/* SPONGE LIVE — stream tools control page. Commands go to the server; the overlay links show the result. */
+/* سبونج لايف — stream tools control page. Commands go to the server; the overlay links show the result. */
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);

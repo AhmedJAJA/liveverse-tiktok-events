@@ -1,4 +1,4 @@
-/* SPONGE LIVE — 3D skins catalog («السكنات»).
+/* سبونج لايف — 3D skins catalog («السكنات»).
    Characters: KayKit Adventurers by Kay Lousberg (www.kaylousberg.com), CC0 — free for commercial use.
    Every skin is a real GLB in public/skins/ built by scripts/build-skins.mjs from the original pack: one loadout,
    four animations (idle / walk / win / lose — some rarities use their own clips), and for the new skins a

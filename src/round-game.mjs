@@ -1,4 +1,4 @@
-// SPONGE LIVE — shared base for round-based chat games (rules only, no UI).
+// سبونج لايف — shared base for round-based chat games (rules only, no UI).
 // The server owns every timer; one input per player per round unless a game overrides input().
 export const ROUND_DEFAULTS = {};
 export const POINTS = [10, 7, 5, 3, 2, 1];

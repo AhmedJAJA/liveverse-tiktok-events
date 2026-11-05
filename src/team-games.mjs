@@ -1,4 +1,4 @@
-// SPONGE LIVE — team and secret-word chat games (rules only, no UI). Server-authoritative like the others.
+// سبونج لايف — team and secret-word chat games (rules only, no UI). Server-authoritative like the others.
 //
 //   tug       شد الحبل     — two balanced teams; every «شد» in chat pulls the rope; best of three pulls
 //   outsider  برا السالفة  — everyone but one sees a secret word on their private page; find who is out of it

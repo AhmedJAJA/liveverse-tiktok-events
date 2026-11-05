@@ -1,4 +1,4 @@
-// SPONGE LIVE — keeps the in-memory promo-code and session stores in PostgreSQL.
+// سبونج لايف — keeps the in-memory promo-code and session stores in PostgreSQL.
 // The stores stay synchronous (fast checks on every request); every change is written through, in order,
 // so codes and logins survive restarts and redeploys on hosts whose disk is wiped.
 

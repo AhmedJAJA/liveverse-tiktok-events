@@ -1,4 +1,4 @@
-/* SPONGE LIVE — admin panel. Every action is checked and logged on the server (/api/manage/*). */
+/* سبونج لايف — admin panel. Every action is checked and logged on the server (/api/manage/*). */
 (() => {
   'use strict';
   // a page restored from the back/forward cache is checked again (the session may have ended meanwhile)

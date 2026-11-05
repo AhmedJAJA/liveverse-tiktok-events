@@ -15,7 +15,7 @@ test('partners and prizes are never invented: hidden until the owner adds real o
 test('FAQ: the required questions, official sign-in only, accordion with aria-expanded', () => {
   const html = pub('home.html');
   const faq = html.slice(html.indexOf('id="faq"'), html.indexOf('id="contact"'));
-  for (const q of ['ما هو SPONGE LIVE', 'كيف أربط TikTok', 'كيف أربط Kick', 'هل أحتاج OBS', 'هل يوجد تجديد تلقائي', 'كيف يُحسب ترتيب المتصدرين', 'كيف أستخدم كود الغرفة', 'كيف أتواصل مع الدعم'])
+  for (const q of ['ما هو سبونج لايف', 'كيف أربط TikTok', 'كيف أربط Kick', 'هل أحتاج OBS', 'هل يوجد تجديد تلقائي', 'كيف يُحسب ترتيب المتصدرين', 'كيف أستخدم كود الغرفة', 'كيف أتواصل مع الدعم'])
     assert.ok(faq.includes(q), q);
   assert.equal((faq.match(/class="fq-q"/g) || []).length, 16);
   assert.doesNotMatch(faq, /اكتب اسم حسابك|اكتب اسم قناتك/, 'no username-based linking instructions');

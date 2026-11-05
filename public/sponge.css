@@ -1,5 +1,5 @@
 /* =====================================================================
-   SPONGE LIVE — Bikini-Bottom-at-night theme layer.
+   سبونج لايف — Bikini-Bottom-at-night theme layer.
    Loaded last on every page: deep ocean background, rising bubbles (sponge.js),
    sea-floor silhouettes, neon cyan frames like the game cards, and a bright
    sponge-yellow primary action.
@@ -34,7 +34,7 @@ html.fx-off .sp-bubbles{display:none}
 html.is-hidden *,html.is-hidden *::before,html.is-hidden *::after{animation-play-state:paused!important}
 
 /* brand mark */
-.sp-brand{display:inline-flex;align-items:center;gap:10px;color:var(--sp-foam);text-decoration:none;font:900 18px/1 var(--font-latin);letter-spacing:.16em;text-shadow:0 0 14px rgba(56,212,255,.65)}
+.sp-brand{display:inline-flex;align-items:center;gap:10px;color:var(--sp-foam);text-decoration:none;font:900 18px/1 "Tajawal",system-ui,sans-serif;letter-spacing:0;text-shadow:0 0 14px rgba(56,212,255,.65)}
 .sp-brand img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 7px rgba(255,214,42,.55)) drop-shadow(0 0 12px rgba(56,212,255,.45))}
 .sp-brand b{color:var(--sp-yellow);text-shadow:0 0 14px rgba(255,210,31,.6)}
 
@@ -89,7 +89,7 @@ html.fx-off .sp-curtain{display:none}
 @media (max-width:340px){.sp-gallery{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.sp-gallery .sp-game{animation:none}}
 
-/* ---------- skins in the games (players linked to SPONGE LIVE accounts) ---------- */
+/* ---------- skins in the games (players linked to سبونج لايف accounts) ---------- */
 .has-skin{background:radial-gradient(circle at 50% 35%,rgba(140,232,255,.35),rgba(6,26,68,.9) 70%)!important;overflow:hidden;box-shadow:0 0 0 2px var(--skin-ring,#C9D3E3),0 0 12px -2px var(--skin-ring,#C9D3E3)}
 .has-skin[data-rarity=rare]{--skin-ring:#3FA3FF}.has-skin[data-rarity=epic]{--skin-ring:#B06BFF}
 .has-skin[data-rarity=legendary]{--skin-ring:#FFC83A}.has-skin[data-rarity=mythic]{--skin-ring:#FF3D6E}

@@ -1,4 +1,4 @@
-/* SPONGE LIVE — the launch screens after «ابدأ اللعبة»: «جاري تجهيز اللوبي» (one card, real steps) and
+/* سبونج لايف — the launch screens after «ابدأ اللعبة»: «جاري تجهيز اللوبي» (one card, real steps) and
    «غرفة الانتظار» (toolbar · status card with the join word · players · action bar). Underwater neon identity. */
 body:not([data-screen=prepare]) .st-prepare,body:not([data-screen=lobby]) .st-lobby{display:none}
 body[data-screen=prepare] .st-top,body[data-screen=lobby]:not([data-showtop]) .st-top,body[data-screen=prepare] .st-notices .is-window{display:none}
@@ -16,7 +16,7 @@ body.st-page[data-screen=lobby]{padding-bottom:0}
 /* ---------- «جاري تجهيز اللوبي» ---------- */
 .st-prepare{min-height:100dvh;display:grid;place-items:center;padding:24px 16px;background:radial-gradient(70% 55% at 20% 0%,rgba(30,91,255,.28),transparent 70%),radial-gradient(60% 50% at 90% 100%,rgba(56,212,255,.16),transparent 70%),linear-gradient(180deg,#041434,#020A22)}
 .pp-card{position:relative;display:grid;justify-items:center;gap:8px;width:min(440px,100%);padding:26px 24px 22px;border-radius:26px;text-align:center;background:linear-gradient(180deg,rgba(10,26,64,.96),rgba(4,14,38,.97));border:1px solid rgba(140,232,255,.22);box-shadow:0 30px 80px -30px rgba(0,0,0,.9),0 0 0 1px rgba(56,212,255,.06) inset}
-.pp-brand{display:flex;align-items:center;gap:8px;font-size:15px;color:#EAF8FF;letter-spacing:.3px}
+.pp-brand{display:flex;align-items:center;gap:8px;font-size:15px;color:#EAF8FF;letter-spacing:0}
 .pp-brand b{color:#FFE14D}
 .pp-orbit{position:relative;width:96px;height:96px;margin:8px 0 2px}
 .pp-orbit i{position:absolute;border-radius:50%}
