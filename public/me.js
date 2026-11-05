@@ -81,11 +81,11 @@
   function paintProgress(p) {
     const u = p.user, a = p.access, g = p.progress || { xp: 0, level: 1, levelXp: 0, nextXp: 500, pct: 0, player: {}, streamer: {}, rules: {} };
     const links = Object.values(p.linked || {}).filter((l) => l && !l.needsReauth);
-    const streamerAcct = a.active || links.length > 0 || (g.streamer.sessions || 0) > 0;
+    const streamerAcct = links.length > 0 || (g.streamer.sessions || 0) > 0;
     const type = streamerAcct ? 'حساب ستريمر' : 'حساب لاعب';
     $('accountType').textContent = type; $('accountType2').textContent = type;
-    $('planChip').textContent = a.active ? a.planName : 'بدون اشتراك'; $('planChip').classList.toggle('is-on', !!a.active);
-    $('statusDot').classList.toggle('is-on', !!a.active); $('statusDot').title = a.active ? 'الاشتراك فعّال' : 'لا يوجد اشتراك فعّال';
+    $('planChip').textContent = 'الألعاب مجانية'; $('planChip').classList.add('is-on');
+    $('statusDot').classList.toggle('is-on', !!a.active); $('statusDot').title = 'كل الألعاب مجانية';
     $('publicId2').textContent = u.publicId; $('cmMyId').textContent = u.publicId;
     paintMySkin(p);
     if (wallet) paintDaily(wallet);
@@ -113,8 +113,8 @@
     setMode(mode || (streamerAcct ? 'streamer' : 'player'));
     // time left in the subscription (from the server's end date)
     clearInterval(remainTimer);
-    $('remainBox').hidden = !a.active;
-    if (a.active) {
+    $('remainBox').hidden = true; // every game is free: no time limit to show
+    if (false) {
       const end = Date.parse(a.endsAt);
       $('remainUntil').textContent = 'ينتهي ' + fmtDate(a.endsAt);
       const tick = () => { const ms = Math.max(0, end - Date.now()); const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s2 = Math.floor(ms / 1e3) % 60; $('remainClock').textContent = (d ? d + 'd ' : '') + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s2).padStart(2, '0'); };
@@ -141,14 +141,14 @@
     profile = p;
     const u = p.user, a = p.access;
     $('main').setAttribute('aria-busy', 'false');
-    $('navAdmin').hidden = !u.isAdmin; $('navStudio').hidden = !a.active;
+    $('navAdmin').hidden = !u.isAdmin; $('navStudio').hidden = false;
     // profile
     $('displayName').textContent = u.displayName;
     if (u.picture && u.avatar === 'sponge') { const img = el('img', 'pg-avatar-img'); img.src = u.picture; img.alt = ''; img.width = 96; img.height = 96; img.referrerPolicy = 'no-referrer'; $('avatarView').replaceChildren(img); }
     else $('avatarView').textContent = AVATARS[u.avatar] || '🧽';
     $('publicId').textContent = u.publicId; $('username').textContent = u.username; $('profEmail').textContent = u.email;
     $('createdAt').textContent = fmtDate(u.createdAt); $('lastLogin').textContent = fmtDate(u.lastLoginAt);
-    $('profPlan').textContent = a.active ? a.planName : 'لا يوجد اشتراك فعّال';
+    $('profPlan').textContent = 'مجانية 100%';
     for (const id of ['publicLink', 'publicLink2']) $(id).href = '/u/' + u.publicId;
     paintProgress(p);
     // email & password
@@ -177,7 +177,7 @@
     paintHistory(p.history); paintPayments(p.payments);
     for (const b of document.querySelectorAll('[data-checkout]')) b.hidden = !p.billing.enabled;
     $('methodOnline').hidden = !p.billing.enabled;
-    if (p.billing.enabled) $('billingHow').textContent = 'ادفع إلكترونيًا عبر بوابة الدفع، أو اطلب عبر واتساب واستلم كود اشتراك تفعّله في الإعدادات.';
+    for (const b of document.querySelectorAll('[data-checkout]')) b.hidden = true; // no subscriptions are sold
     const t = p.trial;
     badge($('trialState'), ({ active: 'تعمل الآن', expired: 'استُخدمت', available: 'متاحة لك', ready: 'متاحة لك' })[t.status] || 'غير متاحة', t.status === 'active' ? 'is-on' : ['available', 'ready'].includes(t.status) ? 'is-warn' : 'is-off');
     // edit form
@@ -202,12 +202,12 @@
     const paid = (p.history || []).some((h) => ['weekly', 'monthly'].includes(h.plan));
     $('planEmpty').hidden = paid || a.active;
     $('planEmpty').textContent = t.status === 'expired' ? 'انتهت تجربتك المجانية. اختر باقة «شفيق العادي» أو «أمير الهامور» لمواصلة البث.' : 'لا توجد باقات مدفوعة بعد. ابدأ تجربتك المجانية أو اختر باقة.';
-    $('trialStart').hidden = !['available', 'ready'].includes(t.status) || a.active;
+    $('trialStart').hidden = true;
     $('trialStart').disabled = !!(p.trialNeedsVerifiedEmail && !p.user.verified);
   }
   function paintHistory(list) {
     const rows = $('historyRows'); rows.replaceChildren();
-    if (!list.length) { const td = rows.insertRow().insertCell(); td.colSpan = 7; td.className = 'ds-empty'; td.textContent = 'لا توجد اشتراكات بعد'; return; }
+    if (!list.length) { const td = rows.insertRow().insertCell(); td.colSpan = 7; td.className = 'ds-empty'; td.textContent = 'لا توجد اشتراكات سابقة — كل الألعاب مجانية'; return; }
     for (const h of list) {
       const tr = rows.insertRow();
       for (const v of [h.planName || PLAN_NAMES[h.plan], SOURCE[h.source] || h.source || '—', fmtDate(h.startsAt), fmtDate(h.endsAt), h.price ? h.price + ' ريال' : 'مجاني']) tr.insertCell().textContent = v;
@@ -228,7 +228,7 @@
   addEventListener('afterprint', () => document.body.classList.remove('is-printing'));
   function paintPayments(list) {
     const rows = $('paymentRows'); rows.replaceChildren();
-    if (!list.length) { const td = rows.insertRow().insertCell(); td.colSpan = 4; td.className = 'ds-empty'; td.textContent = 'لا توجد عمليات دفع إلكتروني بعد. الاشتراكات المفعّلة بكود تظهر في «حقيبتي».'; return; }
+    if (!list.length) { const td = rows.insertRow().insertCell(); td.colSpan = 4; td.className = 'ds-empty'; td.textContent = 'لا توجد عمليات دفع سابقة.'; return; }
     for (const x of list) {
       const tr = rows.insertRow();
       for (const v of [fmtDate(x.createdAt), PLAN_NAMES[x.plan] || x.plan, x.amount + ' ' + (x.currency === 'SAR' ? 'ريال' : x.currency)]) tr.insertCell().textContent = v;
@@ -237,7 +237,7 @@
   }
   function countdown() {
     clearTimeout(tick);
-    if (!profile?.access.active) { $('planLeft').textContent = '—'; return; }
+    if (!profile?.access.active || !profile.access.endsAt) { $('planLeft').textContent = '—'; return; }
     const left = new Date(profile.access.endsAt).getTime() - Date.now();
     $('planLeft').textContent = remaining(left);
     if (left <= 0) { load(); return; } // the server decides what happens at expiry
@@ -278,7 +278,7 @@
       if (link.avatar && /^https:\/\//.test(link.avatar)) { const img = el('img'); img.alt = ''; img.referrerPolicy = 'no-referrer'; img.decoding = 'async'; img.addEventListener('error', () => img.remove(), { once: true }); img.src = link.avatar; q('ava').append(img); }
       q('since').textContent = 'مرتبط رسميًا منذ ' + fmtDate(link.verifiedAt);
       q('text').textContent = stale ? 'انتهى تفويض ' + name + ' — أعد الربط لتتمكن من الاتصال ببثك.' : 'حسابك مرتبط — اختر ' + name + ' عند بدء جلستك في الاستوديو دون كتابة أي اسم.';
-    } else q('text').textContent = 'سجّل الدخول إلى ' + name + ' ووافق على الصلاحيات مرة واحدة، ثم ابدأ جلساتك من الاستوديو.';
+    } else q('text').textContent = 'سجّل الدخول إلى ' + name + ' ووافق على الصلاحيات مرة واحدة، ثم ابدأ جلساتك من صفحة أي لعبة.';
   }
   for (const card of document.querySelectorAll('.ds-plat[data-platform="tiktok"],.ds-plat[data-platform="kick"]')) {
     const platform = card.dataset.platform, q = (r) => card.querySelector(`[data-role="${r}"]`);
@@ -433,8 +433,6 @@
   if (params.get('google') || params.get('reauth') || params.get('google_error')) history.replaceState(null, '', '/account#settings');
   if (params.get('verified') === '1') notice('تم توثيق بريدك الإلكتروني ✓', 'is-ok');
   else if (params.get('verified') === '0') notice('رابط التوثيق غير صالح أو منتهي. اطلب رابطًا جديدًا من «البريد وكلمة المرور».', 'is-err');
-  else if (params.get('verify') === 'trial') notice('لتفعيل التجربة المجانية وثّق بريدك الإلكتروني أو اربط حساب Google.');
-  else if (params.get('need') === 'plan') notice('الاستوديو يحتاج تجربة أو اشتراكًا فعّالًا. فعّل تجربتك المجانية أو اشترك في باقة.');
   else if (params.get('welcome') === '1') notice('أهلًا بك! حسابك جاهز ومعرّفك الدائم في «ملفي».', 'is-ok');
   const paymentId = params.get('payment');
   if (paymentId) {
@@ -443,10 +441,10 @@
     const check = async () => {
       try {
         const r = await api('GET', '/api/me/payment?id=' + encodeURIComponent(paymentId));
-        if (r.status === 'paid') { notice('تم تأكيد الدفع وتفعيل اشتراكك ✓', 'is-ok'); return load(); }
-        if (r.status === 'failed' || r.status === 'expired') { notice('لم تكتمل عملية الدفع، ولم يُفعّل أي اشتراك.', 'is-err'); return; }
+        if (r.status === 'paid') { notice('تم تأكيد الدفع ✓', 'is-ok'); return load(); }
+        if (r.status === 'failed' || r.status === 'expired') { notice('لم تكتمل عملية الدفع، ولم يُخصم أي شيء من رصيدك.', 'is-err'); return; }
       } catch {}
-      if (++tries < 10) setTimeout(check, 3000); else notice('لم يصل تأكيد الدفع بعد. سيتفعّل اشتراكك تلقائيًا فور تأكيد البوابة.');
+      if (++tries < 10) setTimeout(check, 3000); else notice('لم يصل تأكيد الدفع بعد. سيُحدَّث حسابك تلقائيًا فور تأكيد البوابة.');
     };
     check();
   }

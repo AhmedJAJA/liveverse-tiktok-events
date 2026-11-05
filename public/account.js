@@ -113,7 +113,7 @@
     copy.addEventListener('click', async () => { try { await navigator.clipboard.writeText(obs); copy.textContent = 'تم النسخ'; } catch { copy.textContent = 'انسخه يدويًا'; } });
     const logout = h('button', { type: 'button', class: 'acc-ghost', text: 'تسجيل الخروج' });
     logout.addEventListener('click', async () => { await window.SkySession.logout(); finish(window.SkySession.me()); });
-    const plan = u ? (u.planActive ? `${u.planLabel} — حتى ${new Date(u.planUntil).toLocaleDateString('ar-SA-u-nu-latn')}` : 'بدون اشتراك — الألعاب متاحة بلاعبين تجريبيين، والربط بالبث يحتاج اشتراكًا') : 'زائر — غرفة تجريبية مؤقتة (24 ساعة)';
+    const plan = u ? 'كل الألعاب مجانية — اختر لعبة وابدأ' : 'سجّل الدخول لتشغيل الألعاب مجانًا';
     return h('div', { class: 'acc-profile' },
       h('div', { class: 'acc-avatar', 'aria-hidden': 'true', text: Array.from((u?.displayName || 'زائر').trim())[0] }),
       h('strong', { class: 'acc-name', text: u ? u.displayName : 'زائر' }),
@@ -121,7 +121,7 @@
       h('p', { class: 'acc-plan' + (u?.planActive ? ' is-active' : ''), text: plan }),
       h('label', { class: 'acc-obs-label', for: 'acc-obs', text: 'رابط شاشة البث الخاصة بك (OBS)' }),
       h('div', { class: 'acc-obs' }, h('input', { id: 'acc-obs', value: obs, readonly: true, dir: 'ltr' }), copy),
-      h('a', { class: 'acc-submit', href: '/studio', text: 'افتح لوحة الستريمر' }),
+      h('a', { class: 'acc-submit', href: '/#games', text: 'اختر لعبة' }),
       logout);
   }
   function build(me) {

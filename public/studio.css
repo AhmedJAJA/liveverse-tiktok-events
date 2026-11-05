@@ -393,3 +393,10 @@ body[data-drawer=closed] .st-drawer{display:none!important}
   .su-adv-head{flex-direction:column}
 }
 @media (prefers-reduced-motion:reduce){.su-option,.su-choice,.su-switch i,.su-caret,.su-btn{transition:none}}
+
+/* no separate studio: this page belongs to one game — while its settings open, only a short status (and any error) shows */
+.st-library>:not(.st-lib-opening):not(#libNote){display:none}
+.st-lib-opening{display:flex;align-items:center;justify-content:center;gap:10px;min-height:40vh;margin:0;color:#C9F2FF;font-weight:800;font-size:18px}
+.st-lib-opening i{width:18px;height:18px;border-radius:50%;border:2.5px solid #38D4FF;border-top-color:transparent;animation:st-open-spin .7s linear infinite}
+@keyframes st-open-spin{to{rotate:360deg}}
+@media (prefers-reduced-motion:reduce){.st-lib-opening i{animation:none}}

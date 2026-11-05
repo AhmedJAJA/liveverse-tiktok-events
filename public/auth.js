@@ -7,7 +7,7 @@
   const MODES = { '/login': 'login', '/signup': 'signup', '/forgot': 'forgot', '/reset': 'reset' };
   const mode = MODES[location.pathname] || 'login';
   document.body.dataset.mode = mode;
-  const safeNext = (n) => (n && /^\/(account|studio|admin|u\/|go\/|tools|event)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : null);
+  const safeNext = (n) => (n && /^\/(account|game\/|admin|u\/|go\/|tools|event|#games)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : null);
   const next = safeNext(params.get('next'));
   const intent = params.get('intent') || (params.get('trial') === '1' ? 'trial' : '');
   const wantsTrial = intent === 'trial';
@@ -27,8 +27,7 @@
 
   function notice(text, kind = 'is-info') { const n = $('authNotice'); n.textContent = text || ''; n.className = 'pg-msg ' + kind; n.hidden = !text; }
   function gError(text) { $('googleError').textContent = text || ''; $('googleError').hidden = !text; }
-  if (wantsTrial) notice(mode === 'signup' ? 'أنشئ حسابك وتبدأ تجربتك المجانية لمدة 24 ساعة مباشرة.' : 'سجّل الدخول وتبدأ تجربتك المجانية لمدة 24 ساعة مباشرة.');
-  else if (intent === 'studio') notice('سجّل الدخول لدخول الاستوديو.');
+  if (intent === 'studio' || wantsTrial) notice('سجّل الدخول وابدأ اللعب — كل الألعاب مجانية.');
   if (params.get('reset') === '1') notice('تم تعيين كلمة المرور الجديدة ✓ سجّل الدخول بها الآن.', 'is-ok');
   if (params.get('signed_out') === '1') notice('تم تسجيل خروجك، يرجى تسجيل الدخول مجدداً.');
   // back from Google with a problem (the server decided; the message explains what to do)
@@ -40,21 +39,12 @@
   }
   const remember = () => (mode === 'signup' ? $('rememberSignup') : $('rememberMe')).checked;
 
-  /** After a successful sign-in/up: carry on with what the visitor came to do. The server decides access. */
+  /** After a successful sign-in/up: carry on with what the visitor came to do (every game is free). */
   async function continueIntent(data) {
     const go = (u) => location.replace(u);
     if (next) return go(next);
-    if (wantsTrial) {
-      if (data.account?.entitled) return go('/studio');
-      const res = await fetch('/api/me/trial-start', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-      const r = await res.json().catch(() => ({}));
-      if (res.ok) { if (r.started) notice('تم تفعيل تجربتك المجانية بنجاح ✓ جارٍ فتح الاستوديو…', 'is-ok'); return setTimeout(() => go('/studio'), r.started ? 1200 : 0); }
-      if (res.status === 409) return go('/account?need=plan');
-      if (res.status === 403) return go('/account?verify=trial');
-      return go('/account');
-    }
-    if (intent === 'studio') return go(data.account?.entitled ? '/studio' : '/account?need=plan');
-    return go(data.next || '/account');
+    if (intent === 'studio' || wantsTrial) return go('/#games');
+    return go(data.next || '/#games');
   }
 
   // «المتابعة باستخدام Google»
@@ -99,7 +89,7 @@
   const val = (f, n) => f.elements[n].value;
   bind($('signupForm'), $('signupError'), '/api/auth/register',
     (f) => ({ username: val(f, 'username').trim().toLowerCase(), email: val(f, 'email').trim(), password: val(f, 'password'), confirm: val(f, 'confirm'), remember: remember() }),
-    (d) => (intent || next ? continueIntent(d) : location.replace(d.next || '/account?welcome=1')));
+    (d) => (intent || next ? continueIntent(d) : location.replace('/account?welcome=1')));
   bind($('loginForm'), $('loginError'), '/api/auth/login',
     (f) => ({ identifier: val(f, 'identifier').trim(), password: val(f, 'password'), remember: remember() }),
     async (d) => { if (d.googleLinked) { notice('تم ربط حساب Google بحسابك ✓', 'is-ok'); await new Promise((r) => setTimeout(r, 900)); } return continueIntent(d); });

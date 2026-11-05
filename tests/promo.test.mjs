@@ -59,22 +59,25 @@ const jar = (base) => {
   return call;
 };
 
-test('promo access over HTTP: studio gated, codes checked on the server, sessions survive a restart', async () => {
+test('promo / owner codes over HTTP: game pages gated, codes checked on the server, sessions survive a restart', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sponge-access-'));
   let srv = await boot(dir, { SPONGE_PROMO_CODES: 'BIKINI2026' });
   try {
     const visitor = jar(srv.base);
     // home is public and contains no codes
     const home = await (await fetch(srv.base + '/')).text();
-    assert.match(home, /الدخول باستخدام الرمز الترويجي/);
+    assert.match(home, /لديك رمز دخول؟/);
     assert.ok(!home.includes('BIKINI2026'));
     const homeJs = await (await fetch(srv.base + '/home.js')).text();
     assert.ok(!homeJs.includes('BIKINI2026'));
-    // no session: every studio page redirects home
-    for (const p of ['/studio', '/dashboard', '/event?mode=quiz', '/bomb', '/play?mode=quiz']) {
+    // no session: host pages ask to sign in; /studio and the host side of /play lead to the game itself
+    for (const p of ['/game/quiz', '/dashboard', '/event?mode=quiz', '/bomb']) {
       const r = await visitor('GET', p);
-      assert.equal(r.status, 302, p); assert.match(r.location, /^\/\?next=/);
+      assert.equal(r.status, 302, p); assert.match(r.location, /^\/login\?next=/);
     }
+    assert.equal((await visitor('GET', '/studio')).location, '/#games');
+    assert.equal((await visitor('GET', '/play?mode=quiz')).location, '/game/quiz');
+    assert.equal((await visitor('GET', '/game/nope')).status, 404);
     assert.equal((await visitor('GET', '/play?mode=quiz&room=main')).status, 200, 'viewers can still watch a room');
     assert.equal((await visitor('GET', '/overlay')).status, 200);
     assert.equal((await visitor('POST', '/api/admin/prepare', { mode: 'quiz' })).status, 401);
@@ -84,9 +87,9 @@ test('promo access over HTTP: studio gated, codes checked on the server, session
     assert.equal(wrong.status, 401); assert.match(wrong.data.error, /غير صحيح/);
     assert.equal((await visitor('POST', '/api/access/redeem', { code: 'BIKINI2026' }, { Origin: 'https://evil.example' })).status, 403);
     const ok = await visitor('POST', '/api/access/redeem', { code: 'bikini2026' });
-    assert.equal(ok.status, 200); assert.equal(ok.data.next, '/studio');
+    assert.equal(ok.status, 200); assert.equal(ok.data.next, '/#games');
     assert.match(ok.cookie, /HttpOnly/); assert.match(ok.cookie, /SameSite=Lax/);
-    assert.equal((await visitor('GET', '/studio')).status, 200);
+    assert.equal((await visitor('GET', '/game/quiz')).status, 200);
     const me = (await visitor('GET', '/api/access/me')).data;
     assert.equal(me.signedIn, true); assert.equal(me.access, 'promo'); assert.match(me.room, /^p[a-z0-9]{9}$/);
     assert.equal((await visitor('POST', '/api/admin/prepare', { mode: 'flag' })).status, 200);
@@ -106,12 +109,12 @@ test('promo access over HTTP: studio gated, codes checked on the server, session
     assert.equal(conn.status, 402, 'a promo code is not a subscription: no real stream'); assert.equal(conn.data.needPlan, true);
     // disabling a code closes its sessions
     await owner('POST', '/api/admin/promo-update', { id: made.data.code.id, active: false });
-    assert.equal((await demo('GET', '/studio')).status, 302);
+    assert.match((await demo('GET', '/game/quiz')).location, /^\/login/);
     // the promo session survives a server restart
     const kept = visitor.cookie();
     await srv.stop();
     srv = await boot(dir, { SPONGE_PROMO_CODES: 'BIKINI2026' });
-    const again = await fetch(srv.base + '/studio', { redirect: 'manual', headers: { Cookie: kept } });
+    const again = await fetch(srv.base + '/game/quiz', { redirect: 'manual', headers: { Cookie: kept } });
     assert.equal(again.status, 200, 'no need to type the code again after a restart');
     // repeated guessing is throttled
     const guesser = jar(srv.base); let limited = false;
@@ -120,7 +123,7 @@ test('promo access over HTTP: studio gated, codes checked on the server, session
     // logout ends the session
     const out = jar(srv.base); await out('POST', '/api/access/redeem', { code: 'BIKINI2026' });
     await out('POST', '/api/access/logout', {});
-    assert.equal((await out('GET', '/studio')).status, 302);
+    assert.match((await out('GET', '/game/quiz')).location, /^\/login/);
   } finally { await srv.stop(); }
 });
 

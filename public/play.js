@@ -54,7 +54,7 @@
     const cover = game.cover || '/covers/' + mode + '.svg';
     for (const id of ['gameCover', 'backdropCover']) $(id).src = cover;
     $('gameCover').closest('.pl-cover').classList.toggle('is-art', cover.startsWith('/games/'));
-    $('setupLink').href = game.setup || '/studio';
+    $('setupLink').href = game.setup || '/game/' + game.mode;
     $('guessFields').hidden = mode !== 'guess';
     const v = VARIANTS[mode];
     $('variantWrap').hidden = !v;

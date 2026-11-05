@@ -70,7 +70,7 @@ function paintAuth() {
 /* ---------- actions ---------- */
 const seconds = () => Number($('secondsSelect').value);
 async function ensureBombMode() {
-  if (state?.status?.active && state.status.mode !== 'bomb') throw new Error('توجد جولة من لعبة أخرى جارية. أنهِها من الاستوديو أولًا.');
+  if (state?.status?.active && state.status.mode !== 'bomb') throw new Error('توجد جولة من لعبة أخرى جارية. أنهِها من صفحة اللعبة أولًا.');
   if (state?.status?.mode !== 'bomb' || (!state.status.active && state.bomb?.seconds !== seconds()))
     await admin('configure', { mode: 'bomb', title: 'القنبلة المؤقتة', bombSeconds: seconds() });
 }

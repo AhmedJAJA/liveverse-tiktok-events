@@ -626,9 +626,9 @@ function paintAccount() {
   const label = authToken ? 'المالك' : me.user ? me.user.displayName : me.guest ? 'زائر' : 'دخول';
   el('toolAccountName').textContent = label;
   const live = !!authToken || !!me.live;
-  el('barNote').textContent = live ? '' : (me.user || me.guest) ? 'ربط البث يحتاج اشتراكًا فعّالًا — جرّب كل الألعاب الآن بلاعبين تجريبيين.' : 'سجّل الدخول أو تابع كزائر لتشغيل الألعاب في غرفتك الخاصة.';
+  el('barNote').textContent = live ? '' : (me.user || me.guest) ? 'سجّل الدخول بحسابك (مجاني) لربط البث.' : 'سجّل الدخول أو تابع كزائر لتشغيل الألعاب في غرفتك الخاصة.';
   el('barConnect').disabled = !live;
-  el('barConnect').title = live ? '' : 'يحتاج اشتراكًا فعّالًا';
+  el('barConnect').title = live ? '' : 'يحتاج تسجيل الدخول بحساب';
 }
 function playerRow(p, { remove = false } = {}) {
   const row = node('div', 'dp-row');
@@ -724,8 +724,8 @@ function renderCatalogIntro(data, scored) {
   el('ciBar').setAttribute('aria-valuenow', String(into));
   el('ciLevelText').textContent = into + ' / 100 نقطة للمستوى التالي';
   const me = session?.me() || {};
-  el('ciPlan').textContent = authToken ? 'مالك الموقع' : me.user ? (me.user.planActive ? me.user.planLabel : 'بدون اشتراك') : me.guest ? 'زائر' : 'غير مسجّل';
-  el('ciPlanNote').textContent = authToken ? 'كل الميزات مفعّلة' : me.user?.planActive ? 'الربط بالبث مفعّل حتى ' + new Date(me.user.planUntil).toLocaleDateString('ar-SA-u-nu-latn') : 'الألعاب متاحة بلاعبين تجريبيين؛ الربط بالبث يحتاج اشتراكًا';
+  el('ciPlan').textContent = authToken ? 'مالك الموقع' : me.user ? 'الألعاب مجانية' : me.guest ? 'زائر' : 'غير مسجّل';
+  el('ciPlanNote').textContent = authToken ? 'كل الميزات مفعّلة' : me.user?.planActive ? 'كل الألعاب والربط بالبث مجانًا' : 'سجّل الدخول لربط البث';
   const pod = el('ciPodium'); renderPodium(pod, scored);
 }
 function renderSeason() {

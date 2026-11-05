@@ -25,7 +25,7 @@ test('server offers images, icons and fonts with correct MIME, compression and c
   assert.match(server,/\.woff': 'font\/woff'/);
   assert.match(server,/'\/favicon\.ico': 'brand\/favicon-64\.png'/);
   assert.match(server,/'\/': 'home\.html'/);
-  assert.match(server,/'\/studio': 'studio\.html'/);
+  assert.match(server,/gamePage \? 'studio\.html'/, 'each game page is served by the game screen');
   assert.match(server,/'\/dashboard': 'index\.html'/);
   assert.match(server,/'\/overlay': 'overlay\.html'/);
   assert.match(server,/gzipSync/);

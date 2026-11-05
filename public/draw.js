@@ -43,7 +43,7 @@
     if (next === 'account') {
       if (me.user) {
         $('playerName').value = me.user.displayName || me.user.username || '';
-        $('identHint').textContent = 'تدخل باسم حسابك. يمكنك إنشاء غرفة إذا كان اشتراكك فعّالًا.';
+        $('identHint').textContent = 'تدخل باسم حسابك. يمكنك إنشاء غرفة مجانًا.';
       } else {
         $('identHint').textContent = 'سجّل الدخول لتلعب باسم حسابك.';
         window.SkyAccount?.open({ tab: 'login', onDone: () => setTab('account') });

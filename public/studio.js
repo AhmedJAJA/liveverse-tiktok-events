@@ -1,5 +1,5 @@
-/* سبونج لايف — the studio (/studio?mode=…). The screens follow the server's state (src/flow.mjs):
-   library → «إعداد اللعبة» → «جاري تجهيز اللوبي» (real preparation steps) → «غرفة الانتظار» → round → results.
+/* سبونج لايف — a game's own page (/game/<mode>; there is no separate studio). The screens follow the server's
+   state (src/flow.mjs): «إعداد اللعبة» → «جاري تجهيز اللوبي» (real preparation steps) → «غرفة الانتظار» → round → results.
    «تشغيل اللعبة» opens the setup, «ابدأ اللعبة» prepares the lobby, «فتح التسجيل» / «إغلاق التسجيل» control who
    joins, and only «بدء الجولة الآن» starts a round. Every node is built with createElement/textContent. */
 (() => {
@@ -11,7 +11,11 @@
   const MODES = ['quiz', 'drawguess', 'chairs', 'bowling', 'bomb', 'categories', 'rps', 'roles', 'roulette', 'redlight', 'country', 'flag', 'tug', 'outsider',
     'guess', 'race', 'glass', 'truefalse', 'higherlower', 'minority', 'wheel'];
   let codeAt = 0; // last «كود الغرفة» request
-  let mode = MODES.includes(params.get('mode')) ? params.get('mode') : 'quiz';
+  const pathMode = (location.pathname.match(/^\/game\/([a-z]+)$/) || [])[1];
+  let mode = MODES.includes(pathMode) ? pathMode : MODES.includes(params.get('mode')) ? params.get('mode') : 'quiz';
+  // the games list lives on the home page; leaving this page never ends anything on the server
+  let toListing = false, booted = false, autoOpening = false;
+  const toList = () => { toListing = true; location.assign('/#games'); };
   const NO_TIMER = ['race', 'wheel'];
   // server stage → studio screen
   const SCREEN = { GAME_LIBRARY: 'games', GAME_SETUP: 'setup', PREPARING_LOBBY: 'prepare', WAITING_FOR_PLAYERS: 'lobby', GAME_RUNNING: 'game', GAME_FINISHED: 'game' };
@@ -39,13 +43,13 @@
   }
   $('gmActions').prepend($('adminBar').firstElementChild); // the round's buttons live in the slim top bar
 
-  /** The subscription ended while the studio was open: the round on screen is kept (viewers and OBS still see it),
-      but the server refuses new commands until the account is renewed. */
+  /** The session ended (signed out elsewhere, account stopped): the round on screen is kept (viewers and OBS still
+      see it), but the server refuses new commands until the host signs in again. */
   function expired(message) {
     if (document.getElementById('expiredBanner')) return;
     const b = el('div', 'st-expired'); b.id = 'expiredBanner'; b.setAttribute('role', 'alert');
-    const t = el('span', '', message || 'انتهى اشتراكك أو تجربتك — الجولة الحالية محفوظة على الشاشة، جدّد للمتابعة.');
-    const a = el('a', '', 'تجديد الاشتراك'); a.href = '/account#plans';
+    const t = el('span', '', message || 'انتهت جلستك — الجولة الحالية محفوظة على الشاشة، سجّل الدخول للمتابعة.');
+    const a = el('a', '', 'تسجيل الدخول'); a.href = '/login?next=' + encodeURIComponent(location.pathname);
     b.append(t, a); document.body.prepend(b);
   }
   // One id per studio window: the server lets only one window control the room and counts it as the host being present.
@@ -142,15 +146,16 @@
       seen = new Set(); firstPaint = true; secretRound = -1; advFor = ''; wordTouched = false;
       paintGame();
     }
-    let screen = browsing ? 'games' : SCREEN[f.stage] || 'games';
+    let screen = SCREEN[f.stage] || 'games';
+    // no library here: with nothing open on the server, this page opens its own game's settings
+    if (screen === 'games' && booted && !toListing && !autoOpening) { autoOpening = true; playGame(mode).finally(() => { autoOpening = false; }); }
     // «اللوبي جاهز!» stays on the preparation card for a moment so the host sees it finish (the lobby is already live)
     if (screen === 'lobby' && document.body.dataset.screen === 'prepare' && Date.now() < readyFlash) screen = 'prepare';
     if (document.body.dataset.screen !== screen) showScreen(screen);
     const open = f.stage !== 'GAME_LIBRARY' && f.mode;
     $('resumeGame').hidden = !(browsing && open);
     if (open) $('resumeText').textContent = (f.stage === 'GAME_RUNNING' ? 'تُلعب الآن' : f.stage === 'GAME_SETUP' ? 'تجهّز' : f.stage === 'PREPARING_LOBBY' ? 'يُجهَّز لوبي' : 'مفتوحة') + ' «' + (game.title || '') + '»';
-    if (screen === 'games' && !browsing) history.replaceState(null, '', '/studio');
-    else if (open) history.replaceState(null, '', '/studio?mode=' + mode);
+    if (open && location.pathname !== '/game/' + mode) history.replaceState(null, '', '/game/' + mode);
   }
   function render(s) {
     if (!s?.status) return;
@@ -536,7 +541,7 @@
   $('lbEnd').addEventListener('click', (e) => { const b = e.currentTarget; (async () => {
     const n = Number(state?.playerCount || 0);
     if (n && !(await confirmBox('إنهاء الجلسة؟', 'يُغلق اللوبي ويتوقف قبول اللاعبين، وتعود إلى مكتبة الألعاب.', 'إنهاء الجلسة'))) return;
-    run(b, async () => { await step('flow-end'); browsing = false; });
+    run(b, async () => { await step('flow-end'); toList(); });
   })(); });
   // «بدء الجولة الآن»: disabled at once; the same request id makes a double click start one round only
   let startPending = false;
@@ -687,7 +692,7 @@
   $('liveStopButton').addEventListener('click', (e) => run(e.currentTarget, stop));
   $('stopButton').addEventListener('click', (e) => run(e.currentTarget, stop));
   // «إنهاء اللعبة»: stops safely and goes back to the library
-  const endGame = (e) => run(e.currentTarget, async () => { await step('flow-end'); browsing = false; feedback(''); });
+  const endGame = (e) => run(e.currentTarget, async () => { await step('flow-end'); feedback(''); toList(); });
   $('endButton').addEventListener('click', endGame);
   $('doneEnd').addEventListener('click', endGame);
   // «جولة جديدة»: the lobby again, same players and word
@@ -697,7 +702,7 @@
   $('toSetup').addEventListener('click', toSetup);
   $('doneSetup').addEventListener('click', toSetup);
   $('drawerToSetup').addEventListener('click', toSetup);
-  $('setupBack').addEventListener('click', (e) => run(e.currentTarget, async () => { await step('flow-library'); }));
+  $('setupBack').addEventListener('click', (e) => run(e.currentTarget, async () => { toListing = true; await step('flow-library'); toList(); }));
 
   /* setup screen */
   $('advFields').addEventListener('click', (e) => {
@@ -796,7 +801,7 @@
   function paintRoom() {
     const badge = $('roomBadge');
     badge.hidden = false;
-    badge.textContent = me.owner || ownerToken() ? 'غرفة المالك' : me.access === 'promo' ? (me.level === 'live' ? 'استوديو كامل' : 'وضع التجربة') : me.user ? 'غرفتك' : 'غرفة';
+    badge.textContent = me.owner || ownerToken() ? 'غرفة المالك' : me.access === 'promo' ? (me.level === 'live' ? 'كل الميزات' : 'وضع التجربة') : me.user ? 'غرفتك' : 'غرفة';
     $('tab-codes').hidden = !(me.owner || ownerToken());
   }
 
@@ -866,7 +871,7 @@
     const changed = document.body.dataset.screen !== name;
     document.body.dataset.screen = name;
     if (changed) { setTimeout(() => beat(), 0); scrollTo({ top: 0, behavior: 'instant' }); }
-    if (name === 'games') document.title = 'الاستوديو | سبونج لايف';
+    if (name === 'games') document.title = (game.title || 'اللعبة') + ' | سبونج لايف';
     else if (name === 'setup') document.title = 'إعداد ' + (game.title || 'اللعبة') + ' | سبونج لايف';
     else if (name === 'prepare') document.title = 'جاري تجهيز اللوبي | سبونج لايف';
     else if (name === 'lobby') document.title = 'غرفة الانتظار — ' + (game.title || '') + ' | سبونج لايف';
@@ -900,9 +905,9 @@
   });
   $('rulesPlay').addEventListener('click', () => { $('rulesDialog').close(); playGame($('rulesPlay').dataset.play); });
   // looking at the library does not end anything on the server; «العودة إليها» comes back
-  const browse = () => { browsing = true; libNote(''); if (state) render(state); else showScreen('games'); };
+  const browse = () => toList();
   $('backToGames').addEventListener('click', browse);
-  $('gamesLink').addEventListener('click', browse);
+  $('gamesLink')?.addEventListener('click', browse);
   $('resumeGame').addEventListener('click', () => { browsing = false; if (state) render(state); });
 
   /* ---------- drawer tabs ---------- */
@@ -977,7 +982,7 @@
     const running = !!s?.status?.active || (s?.registration?.phase === 'open' && document.body.dataset.screen === 'game');
     chip('chipGame', running, s?.status?.active ? 'تعمل' : running ? 'بانتظار اللاعبين' : 'متوقفة');
     const plan = me.owner || ownerToken() ? true : !!me.account?.entitled;
-    chip('chipPlan', plan, me.owner || ownerToken() ? 'المالك' : plan ? 'فعال' : 'منتهٍ');
+    chip('chipPlan', true, me.owner || ownerToken() ? 'المالك' : 'مجاني');
   }
   function paintConnection(c) {
     const st = c?.state || 'disconnected';
@@ -1029,14 +1034,18 @@
 
   async function boot() {
     try { site = await (await fetch('/api/site', { cache: 'no-store' })).json(); } catch {}
-    try { me = await (await fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' })).json(); if (!me.signedIn && !ownerToken()) { location.href = '/?next=' + encodeURIComponent(location.pathname + location.search); return; } } catch {}
+    try { me = await (await fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' })).json(); if (!me.signedIn && !ownerToken()) { location.href = '/login?next=' + encodeURIComponent(location.pathname); return; } } catch {}
     game = [...(site?.games || []), ...(site?.extraGames || [])].find((x) => x.mode === mode) || game;
     paintNav(); paintGame(); paintRoom(); loadLinks();
     const s = session(); if (s) await s.ready;
     beat(true); // the window opened last takes control (a reload never waits for the old window to time out)
     await refresh().catch(() => feedback('تعذر الاتصال بالسيرفر', true));
-    // /studio?mode=… from a link: open that game's setup, unless a session is already under way (a reload keeps it)
-    if (params.has('mode') && state?.flow?.stage === 'GAME_LIBRARY') await playGame(mode);
+    // /game/<mode>: open that game's settings, unless a session is already under way (a reload keeps it)
+    booted = true;
+    // another game's settings screen (nothing running yet) gives way to the game this page is for;
+    // a waiting room or a round already under way stays on screen until the host ends it
+    const want = MODES.includes(pathMode) ? pathMode : mode;
+    if (!state?.flow || state.flow.stage === 'GAME_LIBRARY' || (state.flow.stage === 'GAME_SETUP' && state.flow.mode !== want)) { mode = want; await playGame(want); }
     socket();
   }
   boot();

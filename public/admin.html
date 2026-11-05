@@ -20,7 +20,7 @@
 </div>
 <header class="pg-top">
  <a class="pg-brand" href="/"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
- <nav class="pg-nav" aria-label="روابط"><a href="/">الرئيسية</a><a href="/studio">الاستوديو</a></nav>
+ <nav class="pg-nav" aria-label="روابط"><a href="/">الرئيسية</a><a href="/#games">الألعاب</a></nav>
 </header>
 <main class="pg-main">
  <p class="pg-msg is-err" id="pageError" role="alert" hidden></p>
@@ -29,20 +29,21 @@
    <h1 id="usersTitle">لوحة الإدارة</h1>
    <p class="pg-sub" id="stats">…</p>
    <form class="pg-row" id="searchForm" role="search"><label class="pg-field"><span class="sr-only">بحث</span><input name="q" placeholder="ابحث بالمعرّف SPG-… أو اسم المستخدم أو البريد" dir="auto"></label><button class="pg-btn2" type="submit">بحث</button></form>
-   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>المعرّف</th><th>المستخدم</th><th>البريد</th><th>الاشتراك</th><th>ينتهي</th><th></th></tr></thead><tbody id="userRows"></tbody></table></div>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>المعرّف</th><th>المستخدم</th><th>البريد</th><th>الاشتراك السابق</th><th>ينتهي</th><th></th></tr></thead><tbody id="userRows"></tbody></table></div>
   </section>
 
   <section class="pg-card pg-span" id="userPanel" aria-labelledby="userTitle" hidden>
    <h2 id="userTitle">الحساب</h2>
    <dl class="pg-dl" id="userInfo"></dl>
    <div class="pg-row">
-    <form class="pg-row" id="grantForm"><label class="pg-field"><span>منح اشتراك (أيام)</span><input name="days" type="number" min="1" max="366" value="7" required></label><label class="pg-field"><span>ملاحظة</span><input name="note" maxlength="200"></label><button class="pg-btn2" type="submit">منح</button></form>
-    <form class="pg-row" id="extendForm"><label class="pg-field"><span>تمديد الحالي (أيام)</span><input name="days" type="number" min="1" max="366" value="7" required></label><button class="pg-btn2" type="submit">تمديد</button></form>
+    <p class="pg-sub">كل الألعاب مجانية: لا تُمنح اشتراكات جديدة. الاشتراكات السابقة تظهر في السجل أدناه للمراجعة.</p>
+    <form class="pg-row" id="grantForm" hidden><label class="pg-field"><span>منح اشتراك (أيام)</span><input name="days" type="number" min="1" max="366" value="7" required></label><label class="pg-field"><span>ملاحظة</span><input name="note" maxlength="200"></label><button class="pg-btn2" type="submit">منح</button></form>
+    <form class="pg-row" id="extendForm" hidden><label class="pg-field"><span>تمديد الحالي (أيام)</span><input name="days" type="number" min="1" max="366" value="7" required></label><button class="pg-btn2" type="submit">تمديد</button></form>
    </div>
    <div class="pg-row">
-    <button class="pg-btn2 is-danger" type="button" id="stopButton">إيقاف الاشتراك</button>
+    <button class="pg-btn2 is-danger" type="button" id="stopButton">إيقاف الاشتراكات السابقة الفعّالة</button>
     <button class="pg-btn2" type="button" id="verifyButton">تأكيد البريد يدويًا</button>
-    <button class="pg-btn2" type="button" id="trialRevokeButton">إلغاء رمز التجربة غير المستخدم</button>
+    <button class="pg-btn2" type="button" id="trialRevokeButton" hidden>إلغاء رمز التجربة غير المستخدم</button>
     <button class="pg-btn2" type="button" id="resetLinkButton">رابط إعادة تعيين كلمة المرور (30 دقيقة)</button>
     <p class="pg-msg is-info" id="resetLinkOut" hidden></p>
     <button class="pg-btn2 is-danger" type="button" id="disableButton">إيقاف الحساب</button>
@@ -56,7 +57,7 @@
    <form class="pg-form" id="codeForm">
     <label class="pg-field"><span>الوصف</span><input name="label" maxlength="60" placeholder="مثال: ستريمر ضيف"></label>
     <div class="pg-row"><label class="pg-field"><span>عدد الاستخدامات (0 = بلا حد)</span><input name="maxUses" type="number" min="0" max="100000" value="1"></label>
-    <label class="pg-field"><span>الصلاحية</span><select name="level"><option value="live">استوديو كامل مع ربط البث</option><option value="demo">تجربة بلا ربط بث</option></select></label></div>
+    <label class="pg-field"><span>الصلاحية</span><select name="level"><option value="live">كل الميزات مع ربط البث</option><option value="demo">تجربة بلا ربط بث</option></select></label></div>
     <label class="pg-field"><span>ينتهي في (اختياري)</span><input name="expiresAt" type="datetime-local"></label>
     <button class="pg-btn2" type="submit">إنشاء رمز</button>
    </form>
@@ -65,9 +66,10 @@
   </section>
 
   <section class="pg-card" aria-labelledby="vouchersTitle">
-   <h2 id="vouchersTitle">رموز الاشتراك</h2>
+   <h2 id="vouchersTitle">رموز الاشتراك (أرشيف)</h2>
+   <p class="pg-sub">بيع الاشتراكات متوقف: لا تُنشأ رموز جديدة، ولا تُفعّل الرموز غير المستخدمة. الإحصاءات والإلغاء للمراجعة فقط.</p>
    <p class="pg-sub" id="voucherStats">…</p>
-   <form class="pg-form" id="voucherForm">
+   <form class="pg-form" id="voucherForm" hidden>
     <div class="pg-row"><label class="pg-field"><span>الباقة</span><select name="plan"><option value="monthly">أمير الهامور — شهر</option><option value="weekly">شفيق العادي — 7 أيام</option></select></label>
     <label class="pg-field"><span>العدد (حتى 500)</span><input name="count" type="number" min="1" max="500" value="10" required></label></div>
     <label class="pg-field"><span>الوصف</span><input name="label" maxlength="60"></label>
@@ -103,7 +105,7 @@
     <div class="pg-row"><label class="pg-field"><span>اللوحة</span><select name="board"><option value="players">اللاعبون</option><option value="streamers">الستريمرز</option></select></label>
     <label class="pg-field"><span>الترتيب حسب</span><select name="metric"><option value="wins">الانتصارات (لاعبون)</option><option value="entries">المشاركات (لاعبون)</option><option value="hours">الساعات</option><option value="players">اللاعبون (ستريمرز)</option><option value="sessions">الجلسات (ستريمرز)</option><option value="rounds">الجولات (ستريمرز)</option></select></label>
     <label class="pg-field"><span>من المركز</span><input name="rankFrom" type="number" min="1" max="5" value="1"></label><label class="pg-field"><span>إلى المركز</span><input name="rankTo" type="number" min="1" max="5" value="1"></label></div>
-    <label class="pg-field"><span>الجائزة</span><input name="title" maxlength="80" required placeholder="مثال: اشتراك أمير الهامور مجانًا"></label>
+    <label class="pg-field"><span>الجائزة</span><input name="title" maxlength="80" required placeholder="مثال: 5,000 عملة إسفنجة"></label>
     <label class="pg-field"><span>شروط التأهل</span><input name="conditions" maxlength="300"></label>
     <div class="pg-row"><label class="pg-field"><span>تبدأ من أسبوع</span><input name="startsOn" type="date"></label><label class="pg-field"><span>تنتهي (اختياري)</span><input name="endsOn" type="date"></label></div>
     <button class="pg-btn2" type="submit">إضافة الجائزة</button>

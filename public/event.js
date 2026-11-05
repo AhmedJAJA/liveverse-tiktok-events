@@ -277,7 +277,7 @@ async function startEvent() {
      try{const result=await admin('draw');report('🏆 الفائز: '+result.result.name);await requestState();}catch(error){report(error.message,true);}finally{launchBusy=false;}
      return;
    }
-   report('هناك فعالية قيد التشغيل حاليًا. أنهِ الجولة من الاستوديو قبل بدء فعالية أخرى.',true);
+   report('هناك فعالية قيد التشغيل حاليًا. أنهِ الجولة من صفحة اللعبة قبل بدء فعالية أخرى.',true);
    return;
  }
  if(!canControl()){resumeAfterAuth=true;openAuth();return;}

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#020A22">
 <meta name="robots" content="noindex">
-<title>الاستوديو | سبونج لايف</title>
+<title>اللعبة | سبونج لايف</title>
 <link rel="icon" href="/brand/favicon-64.png" type="image/png">
 <link rel="preload" href="/fonts/tajawal-arabic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/royal-core.css">
@@ -26,9 +26,9 @@
   <a class="sp-brand st-brand" href="/" aria-label="سبونج لايف"><img src="/brand/sponge-128.webp" alt="" width="34" height="34"><span><b>سبونج</b> لايف</span></a>
   <nav class="st-links" aria-label="روابط الموقع">
    <a href="/">الرئيسية</a>
-   <button type="button" class="st-link-btn" id="gamesLink">الألعاب</button>
+   <a href="/#games" id="gamesLink">الألعاب</a>
    <a href="/tools">أدوات البث</a>
-   <a href="/#plans">الأسعار</a>
+   <a href="/#store">المتجر</a>
    <a href="/#faq">الأسئلة الشائعة</a>
    <a href="/#contact">تواصل معنا</a>
   </nav>
@@ -56,7 +56,7 @@
    <li id="chipAccount" data-on="false"><span>الحساب</span><b>غير مرتبط</b></li>
    <li id="chipStream" data-on="false"><span>البث</span><b>غير مباشر</b></li>
    <li id="chipGame" data-on="false"><span>اللعبة</span><b>متوقفة</b></li>
-   <li id="chipPlan" data-on="false"><span>الاشتراك</span><b>…</b></li>
+   <li id="chipPlan" data-on="true"><span>الألعاب</span><b>مجاني</b></li>
   </ul>
   <div class="st-top-tools">
    <span class="st-count" title="عدد المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b id="topCount">0</b></span>
@@ -69,12 +69,13 @@
 </header>
 <!-- server-decided notices: plan needed, proof of account ownership, another studio window -->
 <div class="st-notices">
- <div class="st-notice is-plan" id="planNotice" hidden role="alert"><span>تحتاج إلى اشتراك فعال لربط بثك المباشر</span><a class="st-notice-btn" href="/account#plans">عرض الاشتراكات</a></div>
- <div class="st-notice is-window" id="windowBanner" hidden role="alert"><span>الاستوديو مفتوح في نافذة أخرى — التحكم هناك الآن.</span><button type="button" class="st-notice-btn" id="takeOver">التحكم من هنا</button></div>
+ <div class="st-notice is-plan" id="planNotice" hidden role="alert"><span>تعذر ربط البث — سجّل الدخول من جديد ثم حاول.</span><a class="st-notice-btn" href="/login">تسجيل الدخول</a></div>
+ <div class="st-notice is-window" id="windowBanner" hidden role="alert"><span>اللعبة مفتوحة في نافذة أخرى — التحكم هناك الآن.</span><button type="button" class="st-notice-btn" id="takeOver">التحكم من هنا</button></div>
 </div>
 
 <!-- ===== games library: filters, search and a grid of game cards ===== -->
 <section class="st-library" id="gamesView" aria-labelledby="libTitle">
+ <p class="st-lib-opening" role="status"><i aria-hidden="true"></i>جاري فتح اللعبة…</p>
  <div class="st-lib-head">
   <div><h1 id="libTitle">ألعاب البث</h1><p>اختر لعبة وشغّلها — المشاهدون يدخلون بكتابة «انضم» في التعليقات.</p></div>
   <span class="st-lib-count" id="gameCount" aria-live="polite">0 لعبة</span>
@@ -394,7 +395,7 @@
     <label><span>الرمز (اختياري — يُولَّد تلقائيًا)</span><input id="codeText" maxlength="32" dir="ltr" autocomplete="off"></label>
     <label><span>عدد مرات الاستخدام (0 = بلا حد)</span><input id="codeUses" type="number" min="0" value="1"></label>
     <label><span>تاريخ الانتهاء (اختياري)</span><input id="codeExpires" type="date"></label>
-    <label><span>مستوى الصلاحية</span><select id="codeLevel"><option value="live">استوديو كامل مع ربط البث</option><option value="demo">تجربة بلا ربط بث</option></select></label>
+    <label><span>مستوى الصلاحية</span><select id="codeLevel"><option value="live">كل الميزات مع ربط البث</option><option value="demo">تجربة بلا ربط بث</option></select></label>
     <button type="submit" class="pl-btn pl-btn-gold">إنشاء رمز</button>
    </form>
    <p class="st-new-code" id="newCode" hidden></p>

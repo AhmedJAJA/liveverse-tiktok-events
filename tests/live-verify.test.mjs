@@ -47,7 +47,6 @@ async function account(base, name, trial = true) {
   const r = await b('POST', '/api/auth/register', { username: name, email: name + '@example.com', password: 'reef2026go', confirm: 'reef2026go' });
   assert.equal(r.status, 201, JSON.stringify(r.data));
   b.publicId = r.data.account.publicId; b.room = r.data.account.room;
-  if (trial) assert.equal((await b('POST', '/api/me/trial-start', {})).data.started, true);
   return b;
 }
 /** The whole sign-in round trip: our start → the platform's page (approved as `uid`) → our callback. */
@@ -75,12 +74,13 @@ test('official TikTok/Kick sign-in, linked-only connections and the active-strea
     let r = await anon('GET', '/api/oauth/kick/start');
     assert.equal(r.status, 302); assert.match(r.location, /^\/login\?next=/, 'signed out → sign in to SPONGE LIVE first');
 
-    // 5. not subscribed: refused before any platform page is opened
+    // 5. every account is free: a brand-new account goes straight to the platform's sign-in page;
+    //    connecting before linking is refused for that reason only (never «no subscription»)
     const free = await account(srv.base, 'free_user', false);
     r = await free('GET', '/api/oauth/kick/start');
-    assert.match(r.location, /link_error=plan/);
+    assert.match(r.location, /\/kick\/authorize\?/);
     r = await free('POST', '/api/admin/connect', { platform: 'kick' });
-    assert.equal(r.status, 402); assert.equal(r.data.error, 'تحتاج إلى اشتراك فعال لربط بثك المباشر');
+    assert.notEqual(r.status, 402); assert.notEqual(r.data.error, 'تحتاج إلى اشتراك فعال لربط بثك المباشر');
 
     // 3. Kick: OAuth 2.1 + PKCE (S256), state checked, the official id stored, tokens sealed
     const host = await account(srv.base, 'host_user');
@@ -261,13 +261,11 @@ test('official TikTok/Kick sign-in, linked-only connections and the active-strea
     assert.equal((await host('POST', '/api/me/stream-unlink', { platform: 'tiktok' })).data.revoked, true);
     assert.ok(fake.revoked.some(([p]) => p === 'tiktok'));
 
-    // subscription ends: no new sessions, but managing links stays possible
+    // stopping old subscription rows changes nothing: games stay free, links stay manageable
     assert.match((await signIn(fake, host, 'kick', 501)).location, /linked=kick/);
     assert.equal((await owner('POST', '/api/manage/stop', { publicId: host.publicId })).status, 200);
-    assert.equal((await host('POST', '/api/admin/connect', { platform: 'kick' })).status, 402);
-    assert.equal((await host('POST', '/api/admin/flow-setup', { mode: 'quiz' })).status, 402, 'an ended plan opens no game session');
-    assert.equal((await host('POST', '/api/admin/flow-start', {})).status, 402);
-    assert.match((await host('GET', '/api/oauth/kick/start')).location, /link_error=plan/);
+    assert.notEqual((await host('POST', '/api/admin/flow-setup', { mode: 'quiz' })).status, 402, 'games stay free');
+    assert.match((await host('GET', '/api/oauth/kick/start')).location, /\/kick\/authorize\?/);
     assert.equal((await host('POST', '/api/me/stream-unlink', { platform: 'kick' })).data.removed, true);
 
     // 18 + 19. the home page stays light: one poll every 20 s, no WebSocket

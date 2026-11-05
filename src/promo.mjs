@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 
-export const PROMO_LEVELS = Object.freeze({ live: 'استوديو كامل مع ربط البث', demo: 'تجربة بلا ربط بث' });
+export const PROMO_LEVELS = Object.freeze({ live: 'كل الميزات مع ربط البث', demo: 'تجربة بلا ربط بث' });
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I to avoid misreading
 
 export function normalizeCode(raw) { return String(raw ?? '').normalize('NFKC').toUpperCase().replace(/[\s\-_]/g, '').slice(0, 64); }

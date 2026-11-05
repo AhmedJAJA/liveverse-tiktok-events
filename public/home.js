@@ -1,11 +1,12 @@
-/* سبونج لايف — entry page. The server checks the promo code and opens a session; this page only sends it.
+/* سبونج لايف — entry page: the games list (every game is free and opens its own page), the coin store, and the
+   owner / promo code field. The server checks a code and opens a session; this page only sends it.
    Below the window: platform tabs and a real stream connection (through the studio API, status read by
    light polling — no live socket on this page), scroll reveal, and links that follow the visitor's account. */
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
   const form = $('promoForm'), input = $('promoCode'), button = $('promoSubmit'), error = $('promoError');
-  const next = (() => { const n = new URLSearchParams(location.search).get('next') || '/studio'; return /^\/(studio|dashboard|event|bomb|play)\b/.test(n) ? n : '/studio'; })();
+  const next = (() => { const n = new URLSearchParams(location.search).get('next') || ''; return /^\/(game\/[a-z]+|dashboard|event|bomb)\b/.test(n) ? n : '/#games'; })();
   let busy = false, me = null;
   document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('is-hidden', document.hidden));
   const post = (url, body) => fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
@@ -23,14 +24,12 @@
     if (busy) return; // one request at a time, however many times the button is pressed
     const code = input.value.trim();
     if (!code) {
-      // no code typed: a signed-in subscriber goes straight in; anyone else gets told what is needed
-      if (me && (me.signedIn || me.account)) { enterStudio(); return; }
       showError('أدخل الرمز الترويجي'); input.focus(); return;
     }
     busy = true; button.disabled = true; button.classList.add('is-busy'); showError('');
     try {
       const res = await post('/api/access/redeem', { code });
-      if (res.ok) { $('promoLabel').textContent = res.data.voucher ? 'تم تفعيل الاشتراك' : 'تم — جارٍ فتح الاستوديو'; location.replace(res.data.voucher ? res.data.next : next); return; }
+      if (res.ok) { $('promoLabel').textContent = 'تم ✓'; location.replace(next); if (next.startsWith('/#')) location.reload(); return; }
       showError(res.data.error || (res.status === 429 ? 'محاولات كثيرة، انتظر قليلًا' : 'تعذر التحقق من الرمز'));
       input.select();
     } catch {
@@ -48,7 +47,6 @@
       // signed in with an account: the sign-up/login links become the account page
       $('linkSignup').textContent = 'حسابي (' + me.account.publicId + ')'; $('linkSignup').href = '/account';
       $('linkLogin').hidden = true;
-      $('linkTrial').href = $('planTrial').href = $('barTrial').href = $('menuTrial').href = '/account#trial';
       $('barAccount').href = $('menuAccount').href = '/account';
       // restored from the session cookie: show who is signed in (name, picture, permanent ID)
       const shortName = me.account.displayName.length > 14 ? me.account.displayName.slice(0, 13) + '…' : me.account.displayName;
@@ -62,15 +60,43 @@
         if (!w) return; $('barCoins').hidden = false; window.SpongeCoins.setBalance(w.balance);
         return window.SpongeCoins.claimDaily().then((d) => { if (d.granted) window.SpongeCoins.celebrate({ amount: d.amount, balance: d.balance, nextAt: d.daily.nextAt, serverNow: d.serverNow }); });
       }).catch(() => {});
-      if (me.account.entitled) { $('barTrial').hidden = true; $('barStudio').hidden = false; $('heroStudio').querySelector('span').textContent = 'ادخل الاستوديو'; $('heroStudio').href = '/studio'; }
-      else { $('heroStudio').querySelector('span').textContent = 'حسابي'; $('heroStudio').href = '/account'; }
+      $('barTrial').hidden = true; $('barStudio').hidden = false;
+      $('heroAccount').querySelector('span').textContent = 'حسابي'; $('heroAccount').href = '/account';
     } else if (me.signedIn) {
-      // promo-code or owner session: offer the studio and a way out
+      // promo-code or owner session: the games and a way out
       $('barTrial').hidden = true; $('barStudio').hidden = false; $('menuLogout').hidden = false;
     }
-    paintStatus();
   }).catch(() => {}).finally(() => document.documentElement.classList.remove('me-pending'));
+  /* ---------------------------------------------- the games list: every game opens its own page (all free) */
+  const coverAt = (g, w) => (/\.webp$/.test(g.cover || '') && g.cover.startsWith('/games/') ? g.cover.replace(/\.webp$/, '-' + w + '.webp') : g.cover);
+  function paintGames(games) {
+    const ul = $('gameStrip'); if (!ul || !games?.length) return;
+    ul.replaceChildren(...games.map((g, i) => {
+      const li = document.createElement('li'), a = document.createElement('a');
+      a.href = '/game/' + g.mode; a.className = 'hm-game'; a.setAttribute('aria-label', 'العب ' + g.title);
+      const img = document.createElement('img'); img.src = coverAt(g, 200); img.alt = ''; img.width = 120; img.height = 154; img.decoding = 'async'; if (i > 5) img.loading = 'lazy';
+      const t = document.createElement('b'); t.textContent = g.title;
+      const play = document.createElement('span'); play.className = 'hm-game-play'; play.textContent = 'العب';
+      a.append(img, t, play); li.append(a); return li;
+    }));
+  }
+  fetch('/api/store/packages', { cache: 'no-store' }).then((r) => r.json()).then((st) => {
+    if (st.dailyReward) $('dailyAmount').textContent = st.dailyReward.toLocaleString('en-US');
+    if (st.referralReward) $('refAmount').textContent = st.referralReward.toLocaleString('en-US');
+    if (st.referralCap) $('refCap').textContent = String(st.referralCap);
+    if (!st.packages?.length) return;
+    $('packList').replaceChildren(...st.packages.map((p) => {
+      const li = document.createElement('li'); li.className = 'hm-pack is-in' + (p.featured ? ' is-featured' : '');
+      if (p.badge && p.featured) { const em = document.createElement('em'); em.textContent = p.badge; li.append(em); }
+      const img = document.createElement('img'); img.src = '/brand/coin-128.webp'; img.alt = ''; img.width = 64; img.height = 64;
+      const b = document.createElement('b'); b.textContent = p.coins.toLocaleString('en-US');
+      const sp = document.createElement('span'); sp.textContent = 'عملة';
+      const price = document.createElement('p'); price.className = 'hm-pack-price'; const bdi = document.createElement('bdi'); bdi.textContent = String(p.price); price.append(bdi, ' ريال');
+      li.append(img, b, sp, price); return li;
+    }));
+  }).catch(() => {});
   fetch('/api/site', { cache: 'force-cache' }).then((r) => r.json()).then((site) => {
+    paintGames(site.games);
     const url = site.support?.url; if (!url) return;
     const a = $('supportLink'); a.href = url; a.hidden = false;
   }).catch(() => {});
@@ -140,105 +166,6 @@
     new IntersectionObserver(([e]) => { heroVisible = e.isIntersecting; $('heroPlay').classList.toggle('is-off', !heroVisible); if (heroVisible) chatTimer = setTimeout(chatLoop, 1200); else clearTimeout(chatTimer); }).observe($('heroPlay'));
     document.addEventListener('visibilitychange', () => { if (!document.hidden && heroVisible) chatTimer = setTimeout(chatLoop, 1200); });
   }
-
-  /* ---------------------------------------------- studio & free-trial flow
-     The server decides everything (session, subscription, trial). This page only asks and shows the answer. */
-  const flow = $('flow');
-  const fmtLeft = (ms) => { const m = Math.max(0, Math.floor(ms / 60000)), h = Math.floor(m / 60); return h ? `${h} ساعة و${m % 60} دقيقة` : `${m % 60} دقيقة`; };
-  async function refreshMe() { me = await fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.json()); paintStatus(); return me; }
-  let statusTimer = 0;
-  function paintStatus() {
-    clearTimeout(statusTimer);
-    const a = me?.account, el = $('heroStatus'), text = $('heroStatusText');
-    el.dataset.state = 'trial'; el.dataset.action = 'trial';
-    if (a?.entitled) {
-      el.dataset.state = 'on'; el.dataset.action = 'studio'; el.href = '/studio';
-      text.textContent = a.plan === 'trial' ? 'تجربتك المجانية فعالة — متبقي ' + fmtLeft(new Date(a.endsAt) - Date.now()) : 'اشتراكك فعال — دخول الاستوديو';
-      statusTimer = setTimeout(paintStatus, 30_000);
-    } else if (me?.signedIn) { el.dataset.state = 'on'; el.dataset.action = 'studio'; el.href = '/studio'; text.textContent = 'أنت مسجّل الدخول — دخول الاستوديو'; }
-    else if (a && a.trial?.status !== 'available') { el.dataset.state = 'off'; el.dataset.action = 'renew'; el.href = '#plans'; text.textContent = 'انتهى اشتراكك — جدّد الآن'; }
-    else text.textContent = 'ابدأ تجربتك المجانية لمدة 24 ساعة';
-  }
-  function showFlow(kind, { intent = 'trial', message = '' } = {}) {
-    const T = {
-      auth: [intent === 'trial' ? 'ابدأ تجربتك المجانية لمدة 24 ساعة' : 'سجّل الدخول لدخول الاستوديو', intent === 'trial' ? 'سجّل الدخول أو أنشئ حسابًا مجانيًا، وتبدأ تجربتك مباشرة بعده.' : 'ادخل بحسابك المشترك، أو أنشئ حسابًا وابدأ تجربتك المجانية.', 'i-user'],
-      expired: ['انتهى اشتراكك', 'اشتراكك أو تجربتك انتهت. جدّد اشتراكك لتعود إلى الاستوديو — حسابك ومعرّفك محفوظان.', 'i-hourglass'],
-      none: ['لا يوجد اشتراك فعّال', 'فعّل تجربتك المجانية لمدة 24 ساعة، أو اختر باقة.', 'i-ticket'],
-      verify: ['أكّد بريدك أولًا', message || 'لتفعيل التجربة المجانية أكّد بريدك الإلكتروني من صفحة «حسابي»، أو سجّل الدخول باستخدام Google.', 'i-shield'],
-      error: ['تعذر إتمام الطلب', message, 'i-close'],
-      wait: ['لحظة…', '', 'i-sparkle'],
-      done: ['تم تفعيل تجربتك المجانية بنجاح', 'لديك 24 ساعة كاملة. جارٍ فتح الاستوديو…', 'i-check'],
-    }[kind];
-    $('flowTitle').textContent = T[0]; $('flowText').textContent = T[1]; $('flowText').hidden = !T[1];
-    $('flowIconUse').setAttribute('href', '/icons.svg#' + T[2]);
-    $('flowError').hidden = true;
-    $('flowAuth').hidden = kind !== 'auth';
-    $('flowPlans').hidden = !['expired', 'none'].includes(kind);
-    $('flowTrial').hidden = !(['expired', 'none'].includes(kind) && me?.account?.trial?.status === 'available');
-    $('flowWait').hidden = !['wait', 'done'].includes(kind);
-    $('flowSignup').href = '/signup?intent=' + intent; $('flowLogin').href = '/login?intent=' + intent;
-    if (kind === 'verify') { $('flowAuth').hidden = false; $('flowSignup').textContent = 'افتح صفحة «حسابي»'; $('flowSignup').href = '/account'; $('flowLogin').hidden = true; }
-    else { $('flowSignup').textContent = 'إنشاء حساب بالبريد'; $('flowLogin').hidden = false; }
-    if (flow.hidden) { lastFocusFlow = document.activeElement; flow.hidden = false; document.documentElement.classList.add('menu-open'); }
-    $('flowClose').focus();
-    if (kind === 'auth' || kind === 'verify') mountGoogle(intent);
-  }
-  let lastFocusFlow = null;
-  function hideFlow() { if (flow.hidden) return; flow.hidden = true; document.documentElement.classList.remove('menu-open'); lastFocusFlow?.focus?.(); }
-  $('flowClose').addEventListener('click', hideFlow);
-  flow.addEventListener('click', (e) => { if (e.target === flow) hideFlow(); else if (e.target.closest('a[href^="#"]')) hideFlow(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !flow.hidden) hideFlow(); });
-  let googleLoaded = null;
-  function mountGoogle(intent) {
-    googleLoaded ||= new Promise((resolve) => { const sc = document.createElement('script'); sc.src = '/google.js'; sc.onload = resolve; sc.onerror = resolve; document.head.append(sc); });
-    googleLoaded.then(async () => {
-      if (!window.SpongeGoogle) return;
-      const shown = await window.SpongeGoogle.render($('flowGoogle'), async (credential) => {
-        showFlow('wait');
-        try { await window.SpongeGoogle.signIn(credential); await refreshMe(); intent === 'trial' ? startTrial() : enterStudio(); }
-        catch (err) { showFlow('auth', { intent }); $('flowError').textContent = err.message; $('flowError').hidden = false; }
-      });
-      $('flowOr').hidden = !shown;
-    });
-  }
-  let acting = false;
-  async function enterStudio() {
-    if (acting) return; acting = true;
-    try {
-      await refreshMe();
-      if (me.signedIn) { location.assign('/studio'); return; } // a running subscription/trial, a promo code or the owner
-      if (!me.account) { showFlow('auth', { intent: 'studio' }); return; }
-      showFlow(me.account.expired || me.account.trial?.status === 'expired' ? 'expired' : 'none');
-    } catch { showFlow('error', { message: 'تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجددًا.' }); }
-    finally { acting = false; }
-  }
-  async function startTrial() {
-    if (acting) return; acting = true;
-    try {
-      await refreshMe();
-      if (!me.account) { showFlow('auth', { intent: 'trial' }); return; }
-      if (me.signedIn) { location.assign('/studio'); return; } // already has access: no new trial is created
-      showFlow('wait');
-      const r = await post('/api/me/trial-start', {});
-      if (r.ok) {
-        if (r.data.started) { showFlow('done'); setTimeout(() => location.assign('/studio'), 1400); }
-        else location.assign('/studio');
-        return;
-      }
-      if (r.status === 403) showFlow('verify', { message: r.data.error });
-      else if (r.status === 409) { await refreshMe(); showFlow('expired'); }
-      else showFlow('error', { message: r.data.error || 'تعذر تفعيل التجربة' });
-    } catch { showFlow('error', { message: 'انقطع الاتصال قبل اكتمال الطلب. لم يُفعّل شيء مرتين — حاول مرة أخرى.' }); }
-    finally { acting = false; }
-  }
-  $('flowTrial').addEventListener('click', startTrial);
-  document.addEventListener('click', (e) => {
-    const a = e.target.closest('[data-action]'); if (!a) return;
-    const action = a.dataset.action;
-    if (action === 'renew') return; // a normal link to #plans
-    e.preventDefault(); closeMenu(false);
-    if (action === 'trial') startTrial(); else if (action === 'studio') enterStudio();
-  });
 
   /* ------------------------------------------------------------------- menu */
   const menu = $('menu'), menuBtn = $('menuButton');
@@ -363,7 +290,7 @@
     'players:wins': 'المركز الأول في كل جولة منتهية داخل بث موثّق ومرتبط رسميًا. الجولة الأقصر من 15 ثانية لا تُحسب.',
     'players:entries': 'كل جولة مؤهلة شارك فيها اللاعب من بدايتها. الجولة الأقصر من 15 ثانية لا تُحسب، ولا تُحسب الجولة مرتين إذا تداخل وقتها مع جولة في بث آخر.',
     'players:hours': 'مدة الجولات المؤهلة التي شارك فيها (حتى ساعة للجولة الواحدة). الوقت المتداخل بين بثّين في نفس اللحظة يُحسب مرة واحدة فقط.',
-    'streamers:hours': 'الوقت الذي كانت فيه لعبة تعمل فعليًا في بث مباشر موثّق والاستوديو مفتوح — وليس عدد المتابعين.',
+    'streamers:hours': 'الوقت الذي كانت فيه لعبة تعمل فعليًا في بث مباشر موثّق وصفحة اللعبة مفتوحة — وليس عدد المتابعين.',
     'streamers:players': 'عدد اللاعبين المختلفين الذين شاركوا في جولات الستريمر هذا الأسبوع (كل لاعب مرة واحدة).',
     'streamers:sessions': 'عدد جلسات الألعاب الحقيقية التي بدأها الستريمر في بث موثّق.',
     'streamers:rounds': 'عدد الجولات المكتملة (15 ثانية على الأقل) في بثوث الستريمر.',
@@ -552,18 +479,7 @@
       for (const a of spyLinks) { if (a.getAttribute('href') === id) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); }
     }
   }, { rootMargin: '-45% 0px -50% 0px' });
-  for (const id of ['top', 'live', 'leaders', 'partners', 'room', 'faq', 'plans']) { const el = document.getElementById(id); if (el) spy.observe(el); }
-
-  /* -------------------------------------------------------------- plan tabs */
-  const planTabs = [...document.querySelectorAll('[data-plan-tab]')];
-  function selectPlan(id, scroll) {
-    for (const t of planTabs) t.setAttribute('aria-selected', String(t.dataset.planTab === id));
-    for (const c of document.querySelectorAll('.hm-plan')) c.classList.toggle('is-focus', c.id === 'plan-' + id);
-    const track = $('planTrack');
-    if (scroll && track.scrollWidth > track.clientWidth + 4) $('plan-' + id).scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-  }
-  planTabs.forEach((t) => t.addEventListener('click', () => selectPlan(t.dataset.planTab, true)));
-  selectPlan('monthly', false);
+  for (const id of ['top', 'live', 'leaders', 'partners', 'room', 'faq', 'store']) { const el = document.getElementById(id); if (el) spy.observe(el); }
 
   /* ------------------------------------------- off-screen pause + light parallax
      Sections that are not visible stop animating; the hero layers move with scroll and pointer

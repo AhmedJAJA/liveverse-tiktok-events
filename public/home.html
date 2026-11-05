@@ -38,12 +38,11 @@
    <a href="#partners" data-partners-link hidden>الشركاء</a>
    <a href="#room">دخول الغرفة</a>
    <a href="#faq">الأسئلة الشائعة</a>
-   <a href="#plans">الأسعار</a>
+   <a href="#store">المتجر</a>
    <div class="hm-more">
     <button type="button" class="hm-more-btn" id="moreButton" aria-expanded="false" aria-controls="moreMenu">المزيد <span aria-hidden="true">▾</span></button>
     <div class="hm-more-menu" id="moreMenu" hidden>
      <a href="#games">الألعاب</a>
-     <a href="#enter">الدخول بالرمز</a>
      <a href="/guide/games">دليل الألعاب</a>
      <a href="/guide/tiktok-live">دليل تيك توك لايف</a>
      <a href="/guide/tools">أدوات البث</a>
@@ -52,9 +51,9 @@
   </nav>
   <div class="hm-bar-actions">
    <a class="sc-pill" id="barCoins" href="/account#wallet" hidden aria-label="رصيد عملات الإسفنجة"><img src="/brand/coin-64.webp" alt="" width="28" height="28"><b data-coin-balance>0</b></a>
-   <a class="hm-pill hm-pill-blue" id="barStudio" href="/studio" hidden><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-play"></use></svg><span>الاستوديو</span></a>
+   <a class="hm-pill hm-pill-blue" id="barStudio" href="#games" hidden><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-play"></use></svg><span>العب الآن</span></a>
    <a class="hm-pill hm-pill-ghost" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
-   <a class="hm-pill hm-pill-gold" id="barTrial" href="/signup?intent=trial" data-action="trial">جرّب مجاناً</a>
+   <a class="hm-pill hm-pill-gold" id="barTrial" href="/signup">ابدأ مجاناً</a>
   </div>
  </div>
 </header>
@@ -69,16 +68,15 @@
    <a href="#partners" data-partners-link hidden><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-star"></use></svg>الشركاء</a>
    <a href="#room"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg>دخول الغرفة</a>
    <a href="#games"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg>الألعاب</a>
-   <a href="#enter"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg>دخول الاستوديو بالرمز</a>
    <a href="#connect"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-plug"></use></svg>ربط البث</a>
-   <a href="#plans"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-ticket"></use></svg>الأسعار والباقات</a>
+   <a href="#store"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-ticket"></use></svg>المتجر</a>
    <a href="#faq"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-question"></use></svg>الأسئلة الشائعة</a>
    <a href="#contact"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg>تواصل معنا</a>
   </nav>
   <div class="hm-menu-actions">
    <a class="hm-enter hm-enter-sm" id="menuAccount" href="/login"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span id="menuAccountLabel">تسجيل الدخول</span></a>
    <a class="hm-pill hm-pill-ghost hm-pill-wide" id="menuSecond" href="/signup">إنشاء حساب جديد</a>
-   <a class="hm-pill hm-pill-green hm-pill-wide" id="menuTrial" href="/signup?intent=trial" data-action="trial">تجربة مجانية لمدة 24 ساعة</a>
+   <a class="hm-pill hm-pill-green hm-pill-wide" id="menuTrial" href="#games">العب الآن — كل الألعاب مجانية</a>
    <button type="button" class="hm-pill hm-pill-danger hm-pill-wide" id="menuLogout" hidden>تسجيل الخروج</button>
   </div>
  </div>
@@ -111,10 +109,10 @@
  <h2 class="hm-hero-title" id="heroTitle"><span class="hm-t1">حوّل بثك إلى لعبة.</span><span class="hm-t2">وجمهورك إلى لاعبين.</span></h2>
  <p class="hm-hero-text">اختر لعبة من 14 لعبة جاهزة، يكتب متابعوك «انضم» في التعليقات، وتبدأ الجولة مباشرة على شاشة بثك.</p>
  <div class="hm-hero-cta">
-  <a class="hm-enter" id="heroStudio" href="/login?intent=studio" data-action="studio"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span>الدخول لحسابك</span></a>
-  <a class="hm-ghost" href="#games"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg><span>تصفح الألعاب</span></a>
+  <a class="hm-enter" id="heroStudio" href="#games"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-play"></use></svg><span>ابدأ اللعب مجاناً</span></a>
+  <a class="hm-ghost" id="heroAccount" href="/login"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span>الدخول لحسابك</span></a>
  </div>
- <a class="hm-status" id="heroStatus" href="/signup?intent=trial" data-action="trial"><i aria-hidden="true"></i><span id="heroStatusText">ابدأ تجربتك المجانية لمدة 24 ساعة</span></a>
+ <a class="hm-status" id="heroStatus" href="#games" data-state="on"><i aria-hidden="true"></i><span id="heroStatusText">كل الألعاب مجانية 100% — بلا اشتراك ولا دفع</span></a>
  <ul class="hm-chips">
   <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg><span>مشاركة من شات البث</span></li>
   <li><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user-plus"></use></svg><span>انضمام تلقائي</span></li>
@@ -222,57 +220,43 @@
  </div>
 </section>
 
-<section class="hm-strip" id="games" aria-labelledby="gamesTitle">
- <h2 class="hm-strip-title" id="gamesTitle">14 لعبة جاهزة لبثّك</h2>
- <ul class="hm-cards" id="gameStrip">
-  <li><img src="/games/01-knowledge-challenge-120.webp" srcset="/games/01-knowledge-challenge-120.webp 120w, /games/01-knowledge-challenge-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="تحدي المعرفة" decoding="async"></li>
-  <li><img src="/games/02-guess-drawing-120.webp" srcset="/games/02-guess-drawing-120.webp 120w, /games/02-guess-drawing-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="خمن الرسمة" decoding="async"></li>
-  <li><img src="/games/03-musical-chairs-120.webp" srcset="/games/03-musical-chairs-120.webp 120w, /games/03-musical-chairs-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="كراسي موسيقية" decoding="async"></li>
-  <li><img src="/games/04-bowling-120.webp" srcset="/games/04-bowling-120.webp 120w, /games/04-bowling-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="لعبة البولينج" decoding="async"></li>
-  <li><img src="/games/05-time-bomb-120.webp" srcset="/games/05-time-bomb-120.webp 120w, /games/05-time-bomb-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="القنبلة الموقوتة" decoding="async"></li>
-  <li><img src="/games/06-categories-120.webp" srcset="/games/06-categories-120.webp 120w, /games/06-categories-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="اسم حيوان جماد نبات" decoding="async"></li>
-  <li><img src="/games/07-rock-paper-scissors-120.webp" srcset="/games/07-rock-paper-scissors-120.webp 120w, /games/07-rock-paper-scissors-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="حجرة ورقة مقص" loading="lazy" decoding="async"></li>
-  <li><img src="/games/08-hidden-roles-120.webp" srcset="/games/08-hidden-roles-120.webp 120w, /games/08-hidden-roles-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="الأدوار المخفية" loading="lazy" decoding="async"></li>
-  <li><img src="/games/09-roulette-120.webp" srcset="/games/09-roulette-120.webp 120w, /games/09-roulette-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="الروليت" loading="lazy" decoding="async"></li>
-  <li><img src="/games/10-red-light-120.webp" srcset="/games/10-red-light-120.webp 120w, /games/10-red-light-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="الضوء الأحمر" loading="lazy" decoding="async"></li>
-  <li><img src="/games/11-guess-country-120.webp" srcset="/games/11-guess-country-120.webp 120w, /games/11-guess-country-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="خمن الدولة" loading="lazy" decoding="async"></li>
-  <li><img src="/games/12-guess-flag-120.webp" srcset="/games/12-guess-flag-120.webp 120w, /games/12-guess-flag-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="لعبة خمن العلم" loading="lazy" decoding="async"></li>
- </ul>
+<section class="hm-strip hm-games" id="games" aria-labelledby="gamesTitle">
+ <h2 class="hm-strip-title" id="gamesTitle">اختر لعبة وابدأ — كل الألعاب مجانية</h2>
+ <ul class="hm-cards hm-game-list" id="gameStrip"></ul>
+ <noscript><p class="hm-note hm-center"><a href="/guide/games">دليل الألعاب</a></p></noscript>
 </section>
 
 
 <section class="hm-sec hm-enter-sec" id="enter" aria-labelledby="hmTitle">
  <div class="hm-card">
   <span class="hm-card-icon" aria-hidden="true"><svg width="26" height="26" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg></span>
-  <span class="hm-eyebrow">الدخول باستخدام الرمز الترويجي</span>
+  <span class="hm-eyebrow">لديك رمز دخول؟</span>
   <h2 id="hmTitle">مرحباً بك في سبونج لايف!</h2>
-  <p class="hm-text">أدخل الرمز الترويجي أو رمز اشتراكك للوصول إلى استوديو الألعاب.</p>
+  <p class="hm-text">كل الألعاب مجانية بحسابك. هذا الحقل لرموز الإدارة والرموز الترويجية فقط.</p>
   <form id="promoForm" class="hm-form" novalidate>
    <label class="hm-field"><span class="hm-label">الرمز</span>
-    <input id="promoCode" name="code" type="text" placeholder="أدخل الرمز الترويجي" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="64" enterkeyhint="go" dir="ltr" required aria-describedby="promoHint promoError">
+    <input id="promoCode" name="code" type="text" placeholder="أدخل الرمز الترويجي" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="64" enterkeyhint="go" dir="ltr" required aria-describedby="promoError">
    </label>
-   <p class="hm-hint" id="promoHint">رموز الاشتراك تبدأ بـ <bdi dir="ltr">AMIR-</bdi> أو <bdi dir="ltr">SHFQ-</bdi> وتحتاج تسجيل الدخول.</p>
    <p class="hm-error" id="promoError" role="alert" hidden></p>
-   <button type="submit" class="hm-enter" id="promoSubmit"><span id="promoLabel">دخول الاستوديو</span></button>
+   <button type="submit" class="hm-enter" id="promoSubmit"><span id="promoLabel">دخول</span></button>
   </form>
-  <p class="hm-session" id="sessionNote" hidden>أنت مسجّل الدخول. <a href="/studio">متابعة إلى الاستوديو</a></p>
-  <nav class="hm-links" aria-label="الحساب والاشتراك">
+  <p class="hm-session" id="sessionNote" hidden>أنت مسجّل الدخول. <a href="#games">اختر لعبة وابدأ</a></p>
+  <nav class="hm-links" aria-label="الحساب">
    <a href="/signup" id="linkSignup">إنشاء حساب جديد</a>
    <a href="/login" id="linkLogin">تسجيل الدخول</a>
-   <a href="/signup?intent=trial" id="linkTrial" data-action="trial" class="is-gold">تجربة مجانية لمدة 24 ساعة</a>
-   <a href="#plans">عرض باقات الاشتراك</a>
+   <a href="#store" class="is-gold">المتجر</a>
   </nav>
  </div>
 </section>
 
 <section class="hm-sec hm-connect" id="connect" aria-labelledby="connectTitle">
  <h2 class="hm-h" id="connectTitle">اربط بثك بتسجيل الدخول الرسمي</h2>
- <p class="hm-sub">سجّل الدخول إلى TikTok أو Kick مرة واحدة من «الإعدادات» ووافق على الصلاحيات — لا نطلب اسم المستخدم ولا كلمة مرور المنصة. بعدها تختار المنصة من الاستوديو بضغطة.</p>
+ <p class="hm-sub">سجّل الدخول إلى TikTok أو Kick مرة واحدة من «الإعدادات» ووافق على الصلاحيات — لا نطلب اسم المستخدم ولا كلمة مرور المنصة. بعدها تختار المنصة من صفحة اللعبة بضغطة.</p>
  <div class="hm-oauth">
   <a class="hm-oauth-btn is-tiktok" href="/api/oauth/tiktok/start" rel="nofollow"><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-note"></use></svg><span>المتابعة باستخدام TikTok</span></a>
   <a class="hm-oauth-btn is-kick" href="/api/oauth/kick/start" rel="nofollow"><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-kick"></use></svg><span>المتابعة باستخدام Kick</span></a>
  </div>
- <p class="hm-note" id="connectMsg">الربط يحتاج حسابًا في سبونج لايف وتجربة أو اشتراكًا فعّالًا. يظهر بثك في «البثوث النشطة» فقط عندما يكون مباشرًا فعلًا وتشغّل لعبة من الاستوديو.</p>
+ <p class="hm-note" id="connectMsg">الربط يحتاج حسابًا مجانيًا في سبونج لايف. يظهر بثك في «البثوث النشطة» فقط عندما يكون مباشرًا فعلًا وتشغّل لعبة.</p>
 </section>
 
 <section class="hm-sec" id="why" aria-labelledby="whyTitle">
@@ -280,10 +264,10 @@
  <ul class="hm-grid hm-why">
   <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg><h3>14 لعبة تفاعلية</h3><p>من تحدي المعرفة وخمن الرسمة إلى الكراسي الموسيقية والقنبلة الموقوتة — كلها تُلعب من شات البث.</p></li>
   <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg><h3>انضمام بكلمة واحدة</h3><p>يكتب المشاهد «انضم» في الشات فيدخل اللعبة تلقائيًا، بلا رموز غرف ولا تطبيقات إضافية.</p></li>
-  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg><h3>TikTok LIVE و Kick</h3><p>اربط بثك على أي من المنصتين من نفس الاستوديو.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg><h3>TikTok LIVE و Kick</h3><p>اربط بثك على أي من المنصتين من صفحة اللعبة نفسها.</p></li>
   <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-screen"></use></svg><h3>شاشة جاهزة لـ OBS</h3><p>رابط شاشة عرض بمقاس 1920×1080 تضيفه كمصدر متصفح في برنامج البث.</p></li>
-  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-layout"></use></svg><h3>استوديو واحد للتحكم</h3><p>اختر اللعبة، افتح التسجيل، ابدأ الجولة وأدِر اللاعبين من لوحة واحدة.</p></li>
-  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><h3>معرّف دائم لحسابك</h3><p>كل حساب يحصل على معرّف ثابت مثل <bdi dir="ltr">SPG-8F42K9</bdi> تستخدمه للاشتراك والدعم.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-layout"></use></svg><h3>مجانية بالكامل</h3><p>كل الألعاب بلا اشتراك ولا دفع: اختر اللعبة، اضبط إعداداتها، افتح غرفة الانتظار وابدأ الجولة.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><h3>معرّف دائم لحسابك</h3><p>كل حساب يحصل على معرّف ثابت مثل <bdi dir="ltr">SPG-8F42K9</bdi> تستخدمه للدعم وشراء العملات.</p></li>
  </ul>
 </section>
 
@@ -292,59 +276,36 @@
  <ol class="hm-steps">
   <li data-reveal><b>1</b><span>أنشئ حسابك مجاناً</span></li>
   <li data-reveal><b>2</b><span>احصل على معرفك الدائم</span></li>
-  <li data-reveal><b>3</b><span>فعّل التجربة المجانية أو اشترك في باقة</span></li>
+  <li data-reveal><b>3</b><span>اختر لعبة من القائمة</span></li>
   <li data-reveal><b>4</b><span>اربط حساب TikTok أو Kick</span></li>
-  <li data-reveal><b>5</b><span>افتح الاستوديو وابدأ اللعب</span></li>
+  <li data-reveal><b>5</b><span>اضبط الإعدادات وابدأ الجولة</span></li>
  </ol>
 </section>
 
-<section class="hm-sec" id="plans" aria-labelledby="plansTitle">
- <p class="hm-kicker"><i aria-hidden="true"></i>الباقات</p>
- <h2 class="hm-h" id="plansTitle">باقات الاشتراك</h2>
- <p class="hm-lead">كل الباقات تفتح الاستوديو كاملًا: جميع الألعاب، ربط TikTok أو Kick، وشاشة OBS. الأسعار بالريال السعودي.</p>
- <div class="hm-plan-tabs" role="tablist" aria-label="اختر الباقة">
-  <button type="button" role="tab" aria-selected="false" data-plan-tab="trial">التجربة</button>
-  <button type="button" role="tab" aria-selected="false" data-plan-tab="weekly">شفيق العادي</button>
-  <button type="button" role="tab" aria-selected="true" data-plan-tab="monthly">أمير الهامور</button>
- </div>
- <div class="hm-plans" id="planTrack">
-  <article class="hm-plan hm-plan-trial" id="plan-trial" data-reveal>
-   <div class="hm-plan-art" aria-hidden="true"><img class="a1" src="/games/02-guess-drawing-200.webp" srcset="/games/02-guess-drawing-200.webp 200w, /games/02-guess-drawing-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><span class="hm-plan-mark">🎁</span><i class="pop"></i><i class="pop"></i><i class="pop"></i></div>
-   <h3>التجربة المجانية</h3>
-   <p class="hm-plan-desc">جرّب الاستوديو كاملًا قبل أن تشترك.</p>
-   <p class="hm-price"><b>0</b> ريال</p>
-   <p class="hm-dur">24 ساعة</p>
-   <ul><li>مرة واحدة لكل حساب مؤكَّد</li><li>تبدأ الـ24 ساعة من لحظة التفعيل</li><li>بلا بطاقة دفع</li></ul>
-   <a class="hm-plan-btn" id="planTrial" href="/signup?intent=trial" data-action="trial">احصل على تجربتك المجانية</a>
-  </article>
-  <article class="hm-plan hm-plan-shafiq" id="plan-weekly" data-reveal>
-   <div class="hm-plan-art" aria-hidden="true"><img class="a1" src="/games/03-musical-chairs-200.webp" srcset="/games/03-musical-chairs-200.webp 200w, /games/03-musical-chairs-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><span class="hm-plan-mark">🎷</span><i class="note">♪</i><i class="note">♫</i><i class="note">♪</i></div>
-   <h3>شفيق العادي</h3>
-   <p class="hm-plan-desc">مناسبة لبثوث الأسبوع أو لتجربة أطول.</p>
-   <p class="hm-price"><b>29</b> ريال</p>
-   <p class="hm-dur">7 أيام <small>≈ 4.14 ريال لليوم</small></p>
-   <ul><li>الاستوديو وجميع الألعاب</li><li>ربط بث TikTok أو Kick</li><li>شاشة OBS</li></ul>
-   <a class="hm-plan-btn" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener" data-plan="weekly">اشترك الآن عبر واتساب</a>
-  </article>
-  <article class="hm-plan hm-plan-amir" id="plan-monthly" data-reveal>
-   <span class="hm-plan-tag">الأوفر لكل يوم</span>
-   <div class="hm-plan-art" aria-hidden="true"><img class="a2" src="/games/09-roulette-200.webp" srcset="/games/09-roulette-200.webp 200w, /games/09-roulette-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><img class="a1" src="/games/05-time-bomb-200.webp" srcset="/games/05-time-bomb-200.webp 200w, /games/05-time-bomb-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><img class="a3" src="/games/01-knowledge-challenge-200.webp" srcset="/games/01-knowledge-challenge-200.webp 200w, /games/01-knowledge-challenge-400.webp 400w" sizes="120px" width="120" height="153" alt="" loading="lazy" decoding="async"><span class="hm-plan-mark">👑</span><i class="spark">✦</i><i class="spark">✦</i><i class="spark">✦</i><i class="spark">✦</i></div>
-   <h3>أمير الهامور</h3>
-   <p class="hm-plan-desc">للستريمر المستمر طوال الشهر.</p>
-   <p class="hm-price"><b>44.99</b> ريال</p>
-   <p class="hm-dur">شهر واحد <small>≈ 1.50 ريال لليوم</small></p>
-   <ul><li>الاستوديو وجميع الألعاب</li><li>ربط بث TikTok أو Kick</li><li>شاشة OBS</li></ul>
-   <a class="hm-plan-btn" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener" data-plan="monthly">اشترك الآن عبر واتساب</a>
-  </article>
- </div>
- <p class="hm-note hm-center" id="billingNote">الشراء عبر واتساب: تواصل معنا، وبعد الدفع يصلك رمز الاشتراك وتفعّله من صفحة «حسابي».</p>
+<section class="hm-sec hm-store" id="store" aria-labelledby="storeTitle">
+ <p class="hm-kicker"><i aria-hidden="true"></i>المتجر</p>
+ <h2 class="hm-h" id="storeTitle">عملات الإسفنجة</h2>
+ <p class="hm-lead">الألعاب مجانية للجميع. العملات للسكنات والإطارات والعناصر التجميلية فقط — لا تمنح أي أفضلية في اللعب. الأسعار بالريال السعودي.</p>
+ <ul class="hm-packs" id="packList">
+  <li class="hm-pack" data-reveal><img src="/brand/coin-128.webp" alt="" width="64" height="64" loading="lazy" decoding="async"><b>500</b><span>عملة</span><p class="hm-pack-price"><bdi>3.75</bdi> ريال</p></li>
+  <li class="hm-pack" data-reveal><img src="/brand/coin-128.webp" alt="" width="64" height="64" loading="lazy" decoding="async"><b>2,000</b><span>عملة</span><p class="hm-pack-price"><bdi>9.99</bdi> ريال</p></li>
+  <li class="hm-pack" data-reveal><img src="/brand/coin-128.webp" alt="" width="64" height="64" loading="lazy" decoding="async"><b>5,000</b><span>عملة</span><p class="hm-pack-price"><bdi>19.99</bdi> ريال</p></li>
+  <li class="hm-pack is-featured" data-reveal><em>أفضل قيمة</em><img src="/brand/coin-128.webp" alt="" width="64" height="64" loading="lazy" decoding="async"><b>10,000</b><span>عملة</span><p class="hm-pack-price"><bdi>34.99</bdi> ريال</p></li>
+ </ul>
+ <ul class="hm-store-uses">
+  <li><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span>سكنات ثلاثية الأبعاد لشخصيتك</span></li>
+  <li><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-star"></use></svg><span>إطارات أسماء تظهر في اللوبي والنتائج</span></li>
+  <li><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-gift"></use></svg><span>مجانًا: <b id="dailyAmount">200</b> عملة يوميًا عند الدخول، و<b id="refAmount">50</b> عملة لكل صديق مؤهل تدعوه (حتى <b id="refCap">10</b> دعوات)</span></li>
+ </ul>
+ <div class="hm-store-cta"><a class="hm-enter" href="/account#store"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-ticket"></use></svg><span>افتح المتجر</span></a></div>
+ <p class="hm-note hm-center">الشراء من «حسابي ← المتجر». لا نحفظ بيانات بطاقات، ولا توجد اشتراكات أو تجديد تلقائي.</p>
 </section>
 
 <section class="hm-sec" id="pay" aria-labelledby="payTitle">
  <div class="hm-panelbox">
   <div class="hm-box-head">
    <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-shield"></use></svg></span>
-   <div class="hm-box-text"><h2 id="payTitle">طرق الدفع</h2><p>الدفع حاليًا عن طريق واتساب مع فريق سبونج لايف، والدفع الإلكتروني المباشر قيد التجهيز.</p></div>
+   <div class="hm-box-text"><h2 id="payTitle">طرق الدفع</h2><p>شراء العملات حاليًا عن طريق واتساب مع فريق سبونج لايف، والدفع الإلكتروني المباشر قيد التجهيز.</p></div>
   </div>
   <ul class="hm-pay">
    <li class="is-on"><a href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener"><span class="hm-pay-ico hm-pay-wa" aria-hidden="true"><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></span><b>واتساب</b><small>متاح الآن</small></a></li>
@@ -361,21 +322,21 @@
  <p class="hm-kicker"><i aria-hidden="true"></i>أسئلة شائعة</p>
  <h2 class="hm-h hm-h2" id="faqTitle">كل ما تحتاجه<span class="hm-accent">قبل أن تبدأ.</span></h2>
  <div class="fq-list">
-  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq0" id="fqq0"><span>ما هو سبونج لايف؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq0" role="region" aria-labelledby="fqq0" hidden><p>منصة ألعاب تفاعلية للبث المباشر على TikTok وKick: تختار لعبة من الاستوديو، يكتب متابعوك كلمة الانضمام في التعليقات فيدخلون اللعبة بأسمائهم وصورهم، والخادم يدير المؤقتات والنتائج على شاشة البث.</p></div></div>
-  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq1" id="fqq1"><span>كيف أبدأ بثًا باللعبة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq1" role="region" aria-labelledby="fqq1" hidden><p>افتح بثك على TikTok أو Kick، ثم الاستوديو: اختر لعبة واضغط «تشغيل اللعبة» لتظهر إعداداتها، ثم «ابدأ اللعبة» لتحدد كلمة الانضمام، ثم «فتح التسجيل». عندما يكتمل العدد اضغط «بدء الجولة الآن».</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq0" id="fqq0"><span>ما هو سبونج لايف؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq0" role="region" aria-labelledby="fqq0" hidden><p>منصة ألعاب تفاعلية للبث المباشر على TikTok وKick: تختار لعبة — كل الألعاب مجانية —، يكتب متابعوك كلمة الانضمام في التعليقات فيدخلون اللعبة بأسمائهم وصورهم، والخادم يدير المؤقتات والنتائج على شاشة البث.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq1" id="fqq1"><span>كيف أبدأ بثًا باللعبة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq1" role="region" aria-labelledby="fqq1" hidden><p>افتح بثك على TikTok أو Kick، ثم اختر لعبة من قائمة الألعاب: تفتح إعداداتها مباشرة، ثم «ابدأ اللعبة» لتجهيز غرفة الانتظار، ثم «فتح التسجيل». عندما يكتمل العدد اضغط «بدء الجولة الآن».</p></div></div>
   <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq2" id="fqq2"><span>ما الألعاب المتاحة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq2" role="region" aria-labelledby="fqq2" hidden><p>أكثر من 20 لعبة، منها تحدي المعرفة وخمن الرسمة والكراسي الموسيقية والقنبلة الموقوتة والأدوار المخفية والروليت وشد الحبل وبرا السالفة. تجد شرح كل لعبة في <a href="/guide/games">دليل الألعاب</a>.</p></div></div>
   <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq3" id="fqq3"><span>كيف يدخل المتسابقون؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq3" role="region" aria-labelledby="fqq3" hidden><p>بعد أن تفتح التسجيل يكتب المشاهد كلمة الانضمام التي حددتها (مثل «انضم» أو «جاهز») في تعليقات البث، فيُضاف مرة واحدة باسمه وصورته. الكلمات الأخرى لا تُدخله.</p></div></div>
   <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq4" id="fqq4"><span>هل يحتاج المتابع إلى إنشاء حساب؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq4" role="region" aria-labelledby="fqq4" hidden><p>لا. المتابع يشارك من شات البث نفسه بلا تطبيق ولا تسجيل، ويمكنه فتح صفحة اللعبة على جواله بكود الغرفة.</p></div></div>
   <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq5" id="fqq5"><span>كيف أربط TikTok؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq5" role="region" aria-labelledby="fqq5" hidden><p>من «حسابي ← الإعدادات ← ربط منصاتك» اضغط «المتابعة باستخدام TikTok» وسجّل الدخول ووافق في صفحة TikTok الرسمية. لا نطلب كلمة مرورك ولا يمكن الربط بكتابة اسم الحساب.</p></div></div>
   <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq6" id="fqq6"><span>كيف أربط Kick؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq6" role="region" aria-labelledby="fqq6" hidden><p>بنفس الطريقة: «المتابعة باستخدام Kick» من الإعدادات، ثم تسجيل الدخول والموافقة في صفحة Kick الرسمية. تصل التعليقات عبر خدمة Kick الرسمية بعد الربط.</p></div></div>
-  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq7" id="fqq7"><span>هل أحتاج OBS؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq7" role="region" aria-labelledby="fqq7" hidden><p>ليس شرطًا للعب، لكن لعرض اللعبة على شاشة بثك انسخ رابط «شاشة OBS» من الاستوديو وأضفه كمصدر متصفح في OBS أو TikTok LIVE Studio. أدوات مثل العد التنازلي والسحب لها روابط مستقلة في <a href="/guide/tools">أدوات البث</a>.</p></div></div>
-  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq8" id="fqq8"><span>ما الفرق بين التجربة المجانية والاشتراك؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq8" role="region" aria-labelledby="fqq8" hidden><p>التجربة المجانية 24 ساعة كاملة بكل الألعاب، مرة واحدة لكل حساب. الاشتراكات: «شفيق العادي» 29 ريال لمدة 7 أيام، و«أمير الهامور» 44.99 ريال لمدة شهر.</p></div></div>
-  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq9" id="fqq9"><span>كيف تبدأ مدة التجربة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq9" role="region" aria-labelledby="fqq9" hidden><p>أنشئ حسابًا وأكّد بريدك (أو سجّل الدخول بـ Google)، ثم اضغط «ابدأ التجربة المجانية». تبدأ الـ24 ساعة من لحظة الضغط.</p></div></div>
-  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq10" id="fqq10"><span>كيف أشترك أو أجدد؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq10" role="region" aria-labelledby="fqq10" hidden><p>حاليًا الدفع عبر واتساب مع فريق سبونج لايف. بعد التحقق من الدفع تصلك رمز الاشتراك، أدخله في «حسابي ← استخدام كود الاسترداد» فيُضاف لحسابك فورًا. إذا جددت قبل انتهاء الاشتراك تُضاف المدة بعده.</p></div></div>
-  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq11" id="fqq11"><span>هل يوجد تجديد تلقائي؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq11" role="region" aria-labelledby="fqq11" hidden><p>لا. لا نحفظ بيانات بطاقات ولا نجدد تلقائيًا؛ كل تجديد بطلبك.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq7" id="fqq7"><span>هل أحتاج OBS؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq7" role="region" aria-labelledby="fqq7" hidden><p>ليس شرطًا للعب، لكن لعرض اللعبة على شاشة بثك انسخ رابط «شاشة OBS» من صفحة اللعبة وأضفه كمصدر متصفح في OBS أو TikTok LIVE Studio. أدوات مثل العد التنازلي والسحب لها روابط مستقلة في <a href="/guide/tools">أدوات البث</a>.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq8" id="fqq8"><span>هل الألعاب مجانية؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq8" role="region" aria-labelledby="fqq8" hidden><p>نعم، 100%. كل الألعاب متاحة لأي حساب بلا اشتراك ولا دفع ولا مدة محدودة.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq9" id="fqq9"><span>ما فائدة عملات الإسفنجة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq9" role="region" aria-labelledby="fqq9" hidden><p>للسكنات والإطارات والعناصر التجميلية فقط. لا تفتح ألعابًا ولا تمنح أي أفضلية في اللعب. تحصل على 200 عملة مجانًا كل يوم عند الدخول، و50 عملة لكل صديق مؤهل تدعوه حتى 10 دعوات.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq10" id="fqq10"><span>كيف أشتري العملات؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq10" role="region" aria-labelledby="fqq10" hidden><p>من «حسابي ← المتجر» اختر الباقة: 500 عملة بـ3.75 ريال، 2,000 بـ9.99، 5,000 بـ19.99، 10,000 بـ34.99. حاليًا يتم الدفع عبر واتساب، وتُضاف العملات لحسابك بعد التحقق من الدفع.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq11" id="fqq11"><span>هل يوجد اشتراك أو تجديد تلقائي؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq11" role="region" aria-labelledby="fqq11" hidden><p>لا. لا توجد اشتراكات، ولا نحفظ بيانات بطاقات، وكل شراء للعملات بطلبك.</p></div></div>
   <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq12" id="fqq12"><span>كيف أحصل على المعرّف الدائم؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq12" role="region" aria-labelledby="fqq12" hidden><p>يُنشأ تلقائيًا مع حسابك مثل <bdi dir="ltr">SPG-8F42K9</bdi> ولا يتغير أبدًا. تجده في «ملفي» مع زر نسخ، واذكره عند التواصل مع الدعم.</p></div></div>
   <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq13" id="fqq13"><span>كيف يُحسب ترتيب المتصدرين؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq13" role="region" aria-labelledby="fqq13" hidden><p>من الجولات الحقيقية فقط في بثوث مربوطة رسميًا وتعمل فيها لعبة: الانتصارات (المركز الأول في كل جولة)، المشاركات، والساعات. الجولة الأقصر من 15 ثانية لا تُحسب، والوقت المتداخل بين بثّين لا يُحسب مرتين. يبدأ أسبوع جديد كل أحد الساعة 12 ليلًا بتوقيت السعودية.</p></div></div>
-  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq14" id="fqq14"><span>كيف أستخدم كود الغرفة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq14" role="region" aria-labelledby="fqq14" hidden><p>الستريمر يرى كود الغرفة (4 خانات) في الاستوديو ويظهر على شاشة البث. اكتبه في «معاك كود غرفة؟» بالصفحة الرئيسية فتفتح لك صفحة اللعبة.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq14" id="fqq14"><span>كيف أستخدم كود الغرفة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq14" role="region" aria-labelledby="fqq14" hidden><p>الستريمر يرى كود الغرفة (4 خانات) في صفحة اللعبة ويظهر على شاشة البث. اكتبه في «معاك كود غرفة؟» بالصفحة الرئيسية فتفتح لك صفحة اللعبة.</p></div></div>
   <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq15" id="fqq15"><span>كيف أتواصل مع الدعم؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq15" role="region" aria-labelledby="fqq15" hidden><p>عبر واتساب من زر «تواصل معنا» أسفل الصفحة. اذكر معرّفك الدائم ليساعدك الفريق أسرع.</p></div></div>
  </div>
 </section>
@@ -384,7 +345,7 @@
  <div class="hm-panelbox hm-contact">
   <div class="hm-box-head">
    <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></span>
-   <div class="hm-box-text"><h2 id="contactTitle">تواصل معنا</h2><p>للاشتراك أو الدعم أو أي سؤال — نرد عليك عبر واتساب.</p></div>
+   <div class="hm-box-text"><h2 id="contactTitle">تواصل معنا</h2><p>للدعم أو شراء العملات أو أي سؤال — نرد عليك عبر واتساب.</p></div>
   </div>
   <a class="hm-contact-row" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener"><span class="hm-pay-ico hm-pay-wa" aria-hidden="true"><svg width="22" height="22" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></span><span><b>واتساب</b><small>اذكر معرّف حسابك إن كان لديك حساب</small></span><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-arrow"></use></svg></a>
  </div>
@@ -393,12 +354,11 @@
 <footer class="hm-foot">
  <div class="hm-foot-in">
   <div class="hm-foot-brand"><img src="/brand/sponge-128.webp" alt="" width="44" height="44" loading="lazy" decoding="async"><b>سبونج لايف</b></div>
-  <p class="hm-foot-desc">منصة ألعاب تفاعلية للبث المباشر: جمهورك يلعب من التعليقات، وأنت تدير كل شيء من استوديو واحد.</p>
+  <p class="hm-foot-desc">منصة ألعاب تفاعلية للبث المباشر: جمهورك يلعب من التعليقات، وكل الألعاب مجانية.</p>
   <div class="hm-foot-cols">
    <nav aria-label="روابط الموقع"><h3>الموقع</h3><a href="#live">البثوث النشطة</a><a href="#leaders">المتصدرون</a><a href="#games">الألعاب</a><a href="#connect">ربط البث</a><a href="#faq">الأسئلة الشائعة</a></nav>
    <nav aria-label="الأدلة"><h3>الأدلة</h3><a href="/guide/games">دليل الألعاب</a><a href="/guide/tiktok-live">دليل تيك توك لايف</a><a href="/guide/tools">أدوات البث</a></nav>
-   <nav aria-label="الأدلة"><h3>الأدلة</h3><a href="/guide/games">دليل الألعاب</a><a href="/guide/tiktok-live">دليل تيك توك لايف</a><a href="/guide/tools">أدوات البث</a></nav>
-   <nav aria-label="الحساب"><h3>الحساب</h3><a href="/login">تسجيل الدخول</a><a href="/signup">إنشاء حساب جديد</a><a href="/account">حسابي</a><a href="#plans">الاشتراكات</a></nav>
+   <nav aria-label="الحساب"><h3>الحساب</h3><a href="/login">تسجيل الدخول</a><a href="/signup">إنشاء حساب جديد</a><a href="/account">حسابي</a><a href="#store">المتجر</a></nav>
    <nav aria-label="تواصل"><h3>تواصل معنا</h3><a href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener">واتساب</a><a href="#" id="supportLink" hidden rel="noopener" target="_blank">الدعم</a></nav>
   </div>
   <nav class="hm-foot-policies" aria-label="السياسات"><a href="/privacy">سياسة الخصوصية</a><a href="/terms">شروط الاستخدام</a><a href="/refund">سياسة الاسترداد</a></nav>
@@ -406,29 +366,6 @@
  </div>
 </footer>
 </main>
-
-<div class="hm-modal" id="flow" role="dialog" aria-modal="true" aria-labelledby="flowTitle" hidden>
- <div class="hm-modal-card">
-  <button type="button" class="hm-icon-btn hm-modal-x" id="flowClose" aria-label="إغلاق"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-close"></use></svg></button>
-  <span class="hm-card-icon" id="flowIcon" aria-hidden="true"><svg width="26" height="26"><use id="flowIconUse" href="/icons.svg#i-gift"></use></svg></span>
-  <h2 id="flowTitle">ابدأ تجربتك المجانية لمدة 24 ساعة</h2>
-  <p class="hm-text" id="flowText">سجّل الدخول أو أنشئ حسابًا، وتبدأ تجربتك مباشرة.</p>
-  <p class="hm-error" id="flowError" role="alert" hidden></p>
-  <div class="hm-flow-auth" id="flowAuth">
-   <div class="hm-google" id="flowGoogle" hidden></div>
-   <p class="hm-or" id="flowOr" hidden><span>أو</span></p>
-   <a class="hm-enter hm-enter-sm" id="flowSignup" href="/signup">إنشاء حساب بالبريد</a>
-   <a class="hm-ghost hm-ghost-sm" id="flowLogin" href="/login">لدي حساب — تسجيل الدخول</a>
-  </div>
-  <div class="hm-flow-plans" id="flowPlans" hidden>
-   <a class="hm-enter hm-enter-sm" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener">تجديد الاشتراك عبر واتساب</a>
-   <a class="hm-ghost hm-ghost-sm" href="#plans" id="flowSeePlans">عرض الباقات</a>
-   <button type="button" class="hm-ghost hm-ghost-sm hm-ghost-green" id="flowTrial" hidden>ابدأ تجربتك المجانية لمدة 24 ساعة</button>
-   <a class="hm-link-sm" href="#enter" id="flowHaveCode">لدي رمز اشتراك</a>
-  </div>
-  <div class="hm-flow-wait" id="flowWait" hidden><span class="hm-spinner" aria-hidden="true"></span><span id="flowWaitText">جارٍ التحقق…</span></div>
- </div>
-</div>
 
 <a class="hm-fab" href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener" aria-label="تواصل معنا عبر واتساب"><svg width="26" height="26" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg></a>
 </body>

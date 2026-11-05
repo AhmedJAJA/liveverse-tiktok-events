@@ -46,11 +46,13 @@ test('client pages: light home, single WebSocket, cleanup on leave, pause when h
   const home = pub('home.html'), homeCss = pub('home.css'), studio = pub('studio.js'), sponge = pub('sponge.js'), spongeCss = pub('sponge.css');
   assert.doesNotMatch(home, /<script[^>]+src="\/(aurum|session|account|sponge)\.js"/, 'the entry page loads only its own script');
   assert.doesNotMatch(home, /style="/, 'no inline styles (CSP)');
-  assert.doesNotMatch(home, /<a[^>]+href="\/(play|studio)\?mode=/, 'decorative cards are not links');
+  assert.doesNotMatch(home, /href="\/studio/, 'no separate studio');
   const imgs = [...home.matchAll(/<img [^>]+>/g)].map((m) => m[0]);
-  assert.ok(imgs.length >= 13);
+  assert.ok(imgs.length >= 5);
   for (const img of imgs) { assert.match(img, /width="\d+" height="\d+"/, 'images reserve their space'); }
-  assert.equal(imgs.filter((i) => /\/games\/\d\d-[\w-]+-120\.webp/.test(i) && /srcset=/.test(i)).length, 12, 'small card images with srcset');
+  // the games list: every game is a link to its own page, built from /api/site with small card images
+  assert.match(pub('home.js'), /a\.href = '\/game\/' \+ g\.mode/);
+  assert.match(pub('home.js'), /img\.width = 120; img\.height = 154/, 'game images reserve their space');
   assert.match(homeCss, /grid-template-columns:minmax\(0,1fr\)/, 'the card strip cannot widen the page');
   assert.match(homeCss, /overflow-x:auto/);
   // logo bubbles: CSS only, behind the letters plus edge-only ones in front, more on hover, off for reduced motion
@@ -60,7 +62,7 @@ test('client pages: light home, single WebSocket, cleanup on leave, pause when h
   assert.match(homeCss, /content-visibility:auto/, 'lower sections render lazily');
   assert.doesNotMatch(pub('home.js'), /WebSocket/, 'no WebSocket on the home page');
   // v1.3 layout: sticky bar + side menu, real live streams (no invented partners), payments shown honestly, refund policy linked
-  for (const id of ['menuButton', 'menu', 'live', 'liveTrack', 'liveEmpty', 'enter', 'plans', 'pay', 'faq', 'contact']) assert.match(home, new RegExp('id="' + id + '"'), id);
+  for (const id of ['menuButton', 'menu', 'live', 'liveTrack', 'liveEmpty', 'enter', 'games', 'gameStrip', 'store', 'packList', 'pay', 'faq', 'contact']) assert.match(home, new RegExp('id="' + id + '"'), id);
   assert.match(pub('home.js'), /fetch\('\/api\/streams'/, 'live cards come from real connected rooms');
   assert.match(home, /قريبًا/, 'card payments are marked as coming, not live');
   assert.match(home, /href="\/refund"/);
@@ -82,6 +84,6 @@ test('studio layout: game list, main screen and a tabbed drawer with only the cu
   for (const id of ['setupView', 'prepareView', 'lobbyView', 'beginButton', 'tryButton', 'wordInput', 'autoOpenToggle', 'lbStart', 'lbRegToggle', 'lbReset', 'lbEnd', 'lbWordEdit', 'lbList', 'advFields']) assert.match(html, new RegExp('id="' + id + '"'), id);
   assert.match(js, /requestId/, '«بدء الجولة الآن» sends one request id per click');
   assert.doesNotMatch(js, /admin\('start'/, 'the studio never starts a round with the old one-step command');
-  assert.match(js, /history\.replaceState\(null, '', '\/studio\?mode='/);
+  assert.match(js, /history\.replaceState\(null, '', '\/game\/' \+ mode\)/, 'the address is the game\'s own page');
   for (const a of ['promo-create', 'promo-list', 'promo-update', 'promo-delete', 'connect', 'disconnect']) assert.ok(js.includes("'" + a + "'"), a);
 });

@@ -14,7 +14,7 @@ export const LOBBY_ERRORS = Object.freeze({
   not_live: { title: 'البث المباشر غير نشط', label: 'التحقق مجددًا', action: 'retry', hint: 'ابدأ البث المباشر على المنصة أولًا ثم اضغط «التحقق مجددًا».' },
   chat_failed: { title: 'تعذر استقبال التعليقات', label: 'إعادة الاتصال', action: 'retry', hint: 'لم نتمكن من الوصول إلى تعليقات البث بعد عدة محاولات. تأكد أن البث شغال ثم أعد الاتصال.' },
   reauth: { title: 'انتهت صلاحية التفويض', label: 'إعادة ربط المنصة', action: 'link', href: '/account#settings', hint: 'انتهت صلاحية الدخول إلى المنصة — أعد الربط من «الإعدادات» ثم ارجع.' },
-  plan: { title: 'لا يمكن استخدام الاستوديو لانتهاء الاشتراك', label: 'عرض الاشتراكات', action: 'plans', href: '/account#plans', hint: 'جدّد اشتراكك أو فعّل التجربة المجانية لتشغيل الألعاب على بثك.' },
+  plan: { title: 'انتهت جلسة حسابك', label: 'تسجيل الدخول', action: 'plans', href: '/login', hint: 'جدّد اشتراكك أو فعّل التجربة المجانية لتشغيل الألعاب على بثك.' },
   not_connected: { title: 'البث غير متصل', label: 'التحقق مجددًا', action: 'retry', hint: 'اتصل ببثك من شريط الأعلى ثم أعد المحاولة.' },
   unavailable: { title: 'ربط المنصة غير مفعّل على الموقع بعد', label: 'إعادة المحاولة', action: 'retry', hint: 'ربط المنصات يحتاج تفعيلًا من إدارة الموقع — جرّب اللعبة بلاعبين تجريبيين الآن.' },
   demo_only: { title: 'هذه الغرفة للتجربة فقط', label: 'تجربة اللعبة', action: 'demo', hint: 'هذه الغرفة لا تتصل ببث مباشر — جرّب اللعبة بلاعبين تجريبيين.' },
@@ -62,7 +62,7 @@ export async function prepareLobby(room, ctx) {
     begin('auth');
     if (live && !actor.live) throw new LobbyError(actor.kind === 'acct' ? 'plan' : 'demo_only', null, 'auth');
     if (actor.kind === 'acct' && !ctx.entitled(actor)) throw new LobbyError('plan', null, 'auth');
-    done('auth', actor.kind === 'owner' ? 'غرفة المالك' : actor.kind === 'acct' ? 'الاشتراك فعال' : demo ? 'جلسة تجربة' : 'رمز الاستوديو صالح');
+    done('auth', actor.kind === 'owner' ? 'غرفة المالك' : actor.kind === 'acct' ? 'حسابك جاهز — الألعاب مجانية' : demo ? 'جلسة تجربة' : 'رمز الدخول صالح');
 
     if (recovering) {
       begin('restore');
