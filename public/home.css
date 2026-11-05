@@ -969,3 +969,7 @@ html.is-hidden .hm-sponge,html.is-hidden .hm-sponge *{animation-play-state:pause
   .hm-nav a{padding:10px 8px;font-size:14px}
   .hm-nav button{font-size:14px}
 }
+/* Sponge Coins balance in the header (signed-in accounts) */
+.hm-bar .sc-pill{height:40px}
+@media (max-width:520px){ .hm-bar .sc-pill{height:36px;padding:0 9px 0 4px;font-size:14px} .hm-bar .sc-pill img{width:24px;height:24px} #barStudio span{display:none} #barStudio{padding-inline:10px} }
+@media (max-width:480px){ .hm-bar.is-signed .hm-bar-brand span{display:none} }

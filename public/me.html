@@ -10,8 +10,10 @@
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/pages.css">
 <link rel="stylesheet" href="/dash.css">
+<link rel="stylesheet" href="/coins.css">
 <link rel="stylesheet" href="/bottom-nav.css">
 <script defer src="/google.js"></script>
+<script defer src="/coins.js"></script>
 <script defer src="/bottom-nav.js"></script>
 <script defer src="/me.js"></script>
 </head>
@@ -32,6 +34,7 @@
    <a href="#profile" data-sec="profile"><span class="ds-nav-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-user"/></svg></span>ملفي</a>
    <a href="#community" data-sec="community"><span class="ds-nav-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg></span>المجتمع<small class="ds-soon is-count" id="navIncoming" hidden></small></a>
    <a href="#bag" data-sec="bag"><span class="ds-nav-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-gift"/></svg></span>حقيبتي</a>
+   <a href="#wallet" data-sec="wallet"><span class="ds-nav-i"><img class="ds-coin-i" src="/brand/coin-32.webp" alt="" width="20" height="20"></span>المحفظة<small class="ds-soon is-count" id="navDaily" hidden>جاهزة</small></a>
    <a href="/studio" class="ds-nav-out"><span class="ds-nav-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-games"/></svg></span>ألعاب البث</a>
    <a href="#challenge" data-sec="challenge"><span class="ds-nav-i"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-trophy"/></svg></span>تحدي الستريمرز<small class="ds-soon">قريبًا</small></a>
    <span class="ds-nav-sep" aria-hidden="true"></span>
@@ -219,6 +222,11 @@
      </div>
     </div>
 
+    <a class="ds-card wl-strip" href="#wallet" id="walletStrip">
+     <img src="/brand/coin-128.webp" alt="" width="56" height="56">
+     <span class="wl-strip-main"><small>رصيد عملات الإسفنجة</small><b data-coin-balance id="stripBalance">—</b></span>
+     <span class="wl-strip-daily"><small id="stripDailyLabel">مكافأتك اليومية القادمة</small><b dir="ltr" id="stripDaily">--:--:--</b></span>
+    </a>
     <div class="ds-card sv-card" id="myChar">
      <div class="sv-head"><div><small>شخصيتي ثلاثية الأبعاد</small><h2 id="myCharName">—</h2></div><a class="ds-btn is-ghost" href="#skins"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg><span>تغيير السكن</span></a></div>
      <div class="sv-stage" id="myStage" tabindex="0" aria-label="شخصيتك — اسحب للتدوير، والأسهم للتدوير، و+ و− للتكبير والتصغير" aria-describedby="myHelp">
@@ -285,17 +293,61 @@
    <!-- ================= حقيبتي ================= -->
    <section class="ds-sec" data-sec="bag" aria-labelledby="bagTitle" hidden>
     <div class="ds-head"><small>اشتراكاتك</small><h1 id="bagTitle">حقيبتي</h1><p>كل اشتراك ورمز فعّلته على حسابك.</p></div>
-    <nav class="bag-tabs" aria-label="أقسام حقيبتي"><a href="#skins"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg>السكنات</a><a href="#bag" aria-current="page"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-ticket"/></svg>الاشتراكات</a></nav>
+    <nav class="bag-tabs" aria-label="أقسام حقيبتي"><a href="#skins"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg>السكنات</a><a href="#wallet"><img class="ds-coin-i" src="/brand/coin-32.webp" alt="" width="18" height="18">المحفظة</a><a href="#bag" aria-current="page"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-ticket"/></svg>الاشتراكات</a></nav>
     <div class="ds-card">
      <h2>سجل الاشتراكات</h2>
      <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الباقة</th><th>المصدر</th><th>من</th><th>إلى</th><th>المبلغ</th><th>الحالة</th><th>الإيصال</th></tr></thead><tbody id="historyRows"></tbody></table></div>
     </div>
    </section>
 
+   <!-- ================= المحفظة والمكافآت ================= -->
+   <section class="ds-sec" data-sec="wallet" aria-labelledby="walletTitle" hidden>
+    <div class="ds-head"><small>حقيبتي</small><h1 id="walletTitle">المحفظة والمكافآت</h1><p>عملات الإسفنجة محفوظة في حسابك على الخادم ومرتبطة بمعرّفك الدائم.</p></div>
+    <nav class="bag-tabs" aria-label="أقسام حقيبتي"><a href="#skins"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg>السكنات</a><a href="#wallet" aria-current="page"><img class="ds-coin-i" src="/brand/coin-32.webp" alt="" width="18" height="18">المحفظة</a><a href="#bag"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-ticket"/></svg>الاشتراكات</a></nav>
+
+    <div class="wl-grid">
+     <div class="ds-card wl-balance">
+      <img class="wl-coin" src="/brand/coin-256.webp" alt="" width="132" height="132">
+      <div class="wl-bal-main"><small>رصيدك</small><b data-coin-balance id="walletBalance">—</b><span>عملة إسفنجة</span></div>
+      <dl class="wl-split">
+       <div><dt>مكتسبة</dt><dd id="wEarned">—</dd><small>من المكافآت والدعوات — تُستخدم في عجلة السكنات</small></div>
+       <div><dt>مشتراة</dt><dd id="wPurchased">—</dd><small>لشراء السكنات مباشرة بسعر ثابت</small></div>
+      </dl>
+      <dl class="wl-totals"><div><dt>إجمالي المكتسب</dt><dd id="wTotEarned">—</dd></div><div><dt>إجمالي المشترى</dt><dd id="wTotBought">—</dd></div><div><dt>إجمالي المصروف</dt><dd id="wTotSpent">—</dd></div></dl>
+     </div>
+
+     <div class="ds-card wl-daily" id="dailyCard">
+      <div class="ds-card-head"><span class="ds-badge-i is-gold"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-gift"/></svg></span>
+       <div><small>كل 24 ساعة</small><h2>مكافأة الدخول اليومية</h2><p><b>200</b> عملة إسفنجة كل 24 ساعة كاملة من آخر مكافأة. الأيام الفائتة لا تتراكم.</p></div></div>
+      <div class="wl-timer"><small id="dailyLabel">مكافأتك اليومية القادمة</small><b dir="ltr" id="dailyTimer">--:--:--</b></div>
+      <p class="pg-msg" id="dailyMsg" role="status" hidden></p>
+      <button type="button" class="ds-btn is-gold" id="dailyClaim" hidden><span class="ds-spin" aria-hidden="true"></span><span>استلم 200 عملة</span></button>
+     </div>
+    </div>
+
+    <div class="ds-card wl-invite" id="inviteCard">
+     <div class="ds-card-head"><span class="ds-badge-i is-blue"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg></span>
+      <div><small>50 عملة لكل صديق — حتى 10 أصدقاء</small><h2>ادعُ أصدقاءك واربح الإسفنجات!</h2>
+       <p>تحصل على 50 عملة عندما ينشئ صديقك حسابًا جديدًا من رابطك ويؤكد بريده. زيارة الرابط وحدها لا تكفي.</p></div></div>
+     <div class="wl-link"><label class="sr-only" for="inviteLink">رابط دعوتك</label><input id="inviteLink" dir="ltr" readonly value="…">
+      <button type="button" class="ds-btn is-blue" id="inviteCopy">نسخ</button><button type="button" class="ds-btn is-ghost" id="inviteShare" hidden>مشاركة</button></div>
+     <div class="wl-progress"><div class="wl-progress-head"><b id="inviteCount">0 من 10 دعوات</b><span id="inviteEarned">ربحت 0 عملة إسفنجة</span></div>
+      <div class="pf-bar" role="progressbar" aria-labelledby="inviteCount" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0" id="inviteBar"><i id="inviteFill"></i></div>
+      <small id="inviteMore"></small></div>
+     <ul class="wl-invites" id="inviteList"></ul>
+    </div>
+
+    <div class="ds-card">
+     <h2>آخر المعاملات</h2>
+     <ul class="wl-tx" id="txList"><li class="ds-empty">…</li></ul>
+     <p class="ds-small">العملات لا تُحوّل إلى أموال، ولا تُنقل بين الحسابات، ولا تُسترد نقدًا. السكنات تجميلية فقط ولا تمنح أفضلية في اللعب.</p>
+    </div>
+   </section>
+
    <!-- ================= حقيبتي › السكنات ================= -->
    <section class="ds-sec" data-sec="skins" aria-labelledby="skinsTitle" hidden>
     <div class="ds-head"><small>حقيبتي</small><h1 id="skinsTitle">السكنات</h1><p>شخصيتك ثلاثية الأبعاد في ملفك. عاين أي شخصية، أضفها لمجموعتك، ثم جهّزها.</p></div>
-    <nav class="bag-tabs" aria-label="أقسام حقيبتي"><a href="#skins" aria-current="page"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg>السكنات</a><a href="#bag"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-ticket"/></svg>الاشتراكات</a></nav>
+    <nav class="bag-tabs" aria-label="أقسام حقيبتي"><a href="#skins" aria-current="page"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-palette"/></svg>السكنات</a><a href="#wallet"><img class="ds-coin-i" src="/brand/coin-32.webp" alt="" width="18" height="18">المحفظة</a><a href="#bag"><svg class="ds-i" aria-hidden="true"><use href="/icons.svg#i-ticket"/></svg>الاشتراكات</a></nav>
     <div class="sk-layout">
      <div class="ds-card sv-card sk-preview">
       <div class="sv-head"><div><small id="skPreviewTag">معاينة</small><h2 id="skPreviewName">—</h2><p class="ds-small" id="skPreviewBlurb"></p></div><span class="pg-badge" id="skPreviewBadge" hidden></span></div>

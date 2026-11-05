@@ -16,7 +16,7 @@
     { key: 'challenge', label: 'التحديات', icon: 'i-trophy', soon: true },
   ];
   // «لوحة التحكم» sections → the item that represents them (settings / billing have none)
-  const SECTION_ITEM = { profile: 'profile', community: 'community', bag: 'bag', skins: 'bag', challenge: 'challenge' };
+  const SECTION_ITEM = { profile: 'profile', community: 'community', bag: 'bag', skins: 'bag', wallet: 'bag', wheel: 'bag', store: 'bag', challenge: 'challenge' };
   const onAccount = () => location.pathname === '/account';
   const hrefFor = (key) => (key === 'studio' ? '/go/studio' : onAccount() ? '#' + key : '/go/' + key);
   const SVG = 'http://www.w3.org/2000/svg';

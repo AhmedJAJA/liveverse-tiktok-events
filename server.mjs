@@ -20,6 +20,7 @@ import { createPool, migrate } from './src/db.mjs';
 import { PromoMirror, SessionMirror } from './src/persist.mjs';
 import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS, privacyOf, weekOf } from './src/platform.mjs';
 import { createMailer, createGateway } from './src/services.mjs';
+import { Economy, EconomyError, hashDevice, hashIp } from './src/economy.mjs';
 import { GoogleVerifier } from './src/google.mjs';
 import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
 
@@ -154,7 +155,7 @@ for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((
 /* PostgreSQL (DATABASE_URL): accounts with permanent IDs, trials, subscriptions, payments, admin audit — and
    the promo codes and sessions above are written through to it, so nothing depends on the host's disk. */
 const pool = createPool();
-let platform = null;
+let platform = null, economy = null;
 if (pool) {
   await migrate(pool);
   await PromoMirror.attach(pool, promos);
@@ -162,6 +163,7 @@ if (pool) {
   platform = new Platform({ pool, hashCode: (c) => promos.hash(c), mail: createMailer(), gateway: createGateway(), appUrl: process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000),
     ...(process.env.NODE_ENV === 'test' && process.env.SKY_MIN_ROUND_MS ? { minRoundMs: Number(process.env.SKY_MIN_ROUND_MS) } : {}) });
   await platform.init();
+  economy = new Economy({ pool });
   for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
 } else console.warn('[db] DATABASE_URL is not set: games and promo codes work; accounts, trials and subscriptions are off.');
 const appUrl = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000)).replace(/\/$/, '');
@@ -186,8 +188,28 @@ const draw = new DrawHub();
 const isHttps = (req) => req.socket.encrypted || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
 const clientIp = (req) => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'ip';
 /** maxAge in seconds; 0 = a browser-session cookie (gone when the browser closes, «تذكرني» off). */
+/** Adds a cookie without dropping the ones already set on this response. */
+function appendCookie(res, cookie) { const prev = res.getHeader('Set-Cookie'); res.setHeader('Set-Cookie', [...(prev ? [].concat(prev) : []), cookie]); }
+/** A random first-party browser id (never shown); one of the signals used to spot self-invitations. */
+function browserId(req, res) {
+  let id = parseCookies(req.headers.cookie).sl_dev || '';
+  if (!/^[A-Za-z0-9_-]{24}$/.test(id)) { id = randomBytes(18).toString('base64url'); appendCookie(res, `sl_dev=${id}; HttpOnly; Path=/; SameSite=Lax; Max-Age=63072000${isHttps(req) ? '; Secure' : ''}`); }
+  return hashDevice(id);
+}
+/** After a new account is created: remember who invited it (cookie from /signup?ref=…) and this browser. */
+async function afterSignup(req, res, userId) {
+  if (!economy) return;
+  const device = browserId(req, res);
+  try {
+    const ref = parseCookies(req.headers.cookie).sl_ref;
+    if (ref) { await economy.attachReferral(userId, ref, { device, ipHash: hashIp(clientIp(req)) }); appendCookie(res, `sl_ref=; Path=/; Max-Age=0; SameSite=Lax${isHttps(req) ? '; Secure' : ''}`); }
+    await economy.noteDevice(userId, device);
+    await economy.settleReferral(userId); // Google sign-ups arrive already verified
+  } catch (err) { console.warn('[economy] signup', err.message); }
+}
+async function afterLogin(req, res, userId) { if (economy) await economy.noteDevice(userId, browserId(req, res)).catch(() => {}); }
 function setSession(res, req, id, maxAge) {
-  res.setHeader('Set-Cookie', `${COOKIE}=${id}; HttpOnly; Path=/; SameSite=Lax${maxAge ? '; Max-Age=' + maxAge : ''}${isHttps(req) ? '; Secure' : ''}`);
+  appendCookie(res, `${COOKIE}=${id}; HttpOnly; Path=/; SameSite=Lax${maxAge ? '; Max-Age=' + maxAge : ''}${isHttps(req) ? '; Secure' : ''}`);
 }
 const REMEMBER_S = 30 * 86400;
 /** Every request with a remembered account session pushes its expiry back to 30 days (at most once a day). */
@@ -651,7 +673,7 @@ const meLimiter = new RateLimiter({ limit: 60, windowMs: 10 * 60_000 });
 const findLimiter = new RateLimiter({ limit: 20, windowMs: 60_000 });
 const clearCookie = (req, res) => res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isHttps(req) ? '; Secure' : ''}`);
 const platformOff = (res) => json(res, 503, { error: 'الحسابات غير مفعّلة على هذا الخادم بعد (قاعدة البيانات غير مهيأة). يمكنك الدخول بالرمز الترويجي.', disabled: true });
-const pErr = (res, err) => { if (err instanceof PlatformError) return json(res, err.status, { error: err.message, ...(err.fields ? { fields: err.fields } : {}) }); throw err; };
+const pErr = (res, err) => { if (err instanceof PlatformError || err instanceof EconomyError) return json(res, err.status, { error: err.message, ...(err.fields ? { fields: err.fields } : {}) }); throw err; };
 
 async function handleAuth(action, req, res) {
   if (action === 'me' && req.method === 'GET') {
@@ -680,6 +702,7 @@ async function handleAuth(action, req, res) {
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
       setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false, device: deviceLabel(req) }), body.remember !== false ? REMEMBER_S : 0);
       platform.touchLogin(u.id).catch(() => {});
+      await afterSignup(req, res, u.id);
       return json(res, 201, { ok: true, account: accountView(u.id), next: '/account?welcome=1' });
     }
     if (action === 'login') {
@@ -691,6 +714,7 @@ async function handleAuth(action, req, res) {
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
       setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false, device: deviceLabel(req) }), body.remember !== false ? REMEMBER_S : 0);
       platform.touchLogin(u.id).catch(() => {});
+      await afterLogin(req, res, u.id);
       const a = accountView(u.id);
       return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
     }
@@ -703,17 +727,19 @@ async function handleAuth(action, req, res) {
       try { g = await google.verify(String(body.credential || ''), { nonce: parseCookies(req.headers.cookie).g_nonce || '' }); }
       catch (err) { console.warn('[google] rejected token:', err.message); return json(res, 401, { error: 'تعذر التحقق من حساب Google. حدّث الصفحة وحاول مرة أخرى.' }); }
       const current = accountSession(req);
-      let user = await platform.findByGoogle(g.sub);
-      if (!user && current && body.link === true) user = await platform.linkGoogle(current.userId, g);
+      let user = await platform.findByGoogle(g.sub), created = false;
+      if (!user && current && body.link === true) { user = await platform.linkGoogle(current.userId, g); economy?.settleReferral(user.id).catch(() => {}); }
       if (!user) {
         if (await platform.findByEmail(g.email)) return json(res, 409, { error: 'يوجد حساب SPONGE LIVE بهذا البريد. سجّل الدخول بكلمة المرور، ثم اربط Google من صفحة «حسابي» — لا نربط الحسابات تلقائيًا بالبريد وحده.', needsLink: true });
         user = await platform.createFromGoogle(g);
+        created = true;
       }
       if (user.disabled_at) return json(res, 403, { error: 'هذا الحساب موقوف. تواصل مع الدعم.' });
       await platform.refresh(user.id);
       const old = sessionOf(req); if (old) sessions.destroy(old.id);
       setSession(res, req, sessions.create('acct', { userId: user.id, remember: body.remember !== false, device: deviceLabel(req) }), body.remember !== false ? REMEMBER_S : 0);
       await platform.touchLogin(user.id, { picture: g.picture }).catch(() => {});
+      if (created) await afterSignup(req, res, user.id); else await afterLogin(req, res, user.id);
       const a = accountView(user.id);
       return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
     }
@@ -740,6 +766,8 @@ async function handleMe(action, req, res) {
       const p = await platform.profile(userId);
       return json(res, 200, { linked: p.linked, platforms: { tiktok: linkableNow('tiktok'), kick: linkableNow('kick'), twitch: false }, entitled: platform.entitlement(userId).active });
     }
+    if (action === 'wallet' && req.method === 'GET') return json(res, 200, await economy.wallet(userId));
+    if (action === 'invites' && req.method === 'GET') { const u = platform.cached(userId).user; return json(res, 200, await economy.invitations(userId, u.public_id, appUrl)); }
     if (action === 'skins' && req.method === 'GET') return json(res, 200, await platform.skins(userId));
     if (action === 'friends' && req.method === 'GET') return json(res, 200, await platform.community(userId));
     if (action === 'find' && req.method === 'GET') {
@@ -756,6 +784,8 @@ async function handleMe(action, req, res) {
     if (action === 'update') { await platform.updateProfile(userId, { displayName: body.displayName, avatar: body.avatar }); return json(res, 200, { ok: true, account: accountView(userId) }); }
     /* ---- «الإعدادات» ---- */
     if (action === 'privacy') return json(res, 200, { ok: true, privacy: await platform.setPrivacy(userId, String(body.key || ''), body.value) });
+    /* ---- «عملات الإسفنجة»: nothing about amounts or timing is read from the browser ---- */
+    if (action === 'daily-claim') { const r = await economy.claimDaily(userId); if (r.granted) await afterLogin(req, res, userId); return json(res, 200, { ok: true, ...r }); }
     /* ---- «السكنات» (the skin id is the only input; ownership is checked on the server) ---- */
     if (action === 'skin-claim') return json(res, 200, { ok: true, ...(await platform.claimSkin(userId, body.id)) });
     if (action === 'skin-equip') return json(res, 200, { ok: true, ...(await platform.equipSkin(userId, body.id)) });
@@ -813,7 +843,7 @@ async function handleMe(action, req, res) {
       let g;
       try { g = await google.verify(String(body.credential || ''), { nonce: parseCookies(req.headers.cookie).g_nonce || '' }); }
       catch { return json(res, 401, { error: 'تعذر التحقق من حساب Google' }); }
-      await platform.linkGoogle(userId, g);
+      await platform.linkGoogle(userId, g); economy?.settleReferral(userId).catch(() => {});
       return json(res, 200, { ok: true, account: accountView(userId) });
     }
     if (action === 'trial-activate') { const r = await platform.activateTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, account: accountView(userId) }); }
@@ -863,6 +893,7 @@ async function handleManage(action, req, res) {
       if (action === 'partners') return json(res, 200, { partners: await platform.partners({ all: true }) });
       if (action === 'prizes') return json(res, 200, await platform.listPrizes());
       if (action === 'reports') return json(res, 200, { reports: await platform.listReports(url.searchParams.get('status') || 'open') });
+      if (action === 'economy') return json(res, 200, await economy.adminOverview());
       if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
       return json(res, 404, { error: 'Not found' });
     }
@@ -880,11 +911,13 @@ async function handleManage(action, req, res) {
     const userId = await platform.userByPublicId(body.publicId || '');
     if (!userId) return json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
     const log = (what, details = {}) => platform.audit(admin.name, what, { target: userId, details, ip });
+    if (action === 'wallet-adjust') { const w = await economy.adjust(userId, { amount: Number(body.amount), bucket: body.bucket === 'purchased' ? 'purchased' : 'earned', reason: body.reason, actor: admin.name }); await log('wallet-adjust', { amount: Number(body.amount), reason: String(body.reason || '').slice(0, 200) }); return json(res, 200, { ok: true, wallet: w }); }
+    if (action === 'referral-decide') { const r = await economy.decideReferral(userId, body.approve === true, admin.name, body.reason); return json(res, 200, { ok: true, result: r }); }
     if (action === 'skin-grant') { const r = await platform.grantSkin(userId, body.skin, admin.name); await log('skin-grant', { skin: String(body.skin || '').slice(0, 32) }); return json(res, 200, r); }
     if (action === 'grant') { const r = await platform.grant(userId, body); await log('subscription-grant', { days: Number(body.days), plan: body.plan || 'manual', note: String(body.note || '').slice(0, 200) }); return json(res, 200, { ok: true, access: r }); }
     if (action === 'extend') { const r = await platform.extend(userId, body); await log('subscription-extend', { days: Number(body.days) }); return json(res, 200, { ok: true, access: r }); }
     if (action === 'stop') { const r = await platform.stop(userId); await log('subscription-stop', r); return json(res, 200, { ok: true, ...r }); }
-    if (action === 'verify') { await platform.setVerified(userId); await log('email-verify-manual'); return json(res, 200, { ok: true }); }
+    if (action === 'verify') { await platform.setVerified(userId); await economy?.settleReferral(userId).catch(() => {}); await log('email-verify-manual'); return json(res, 200, { ok: true }); }
     if (action === 'disable') { await platform.setDisabled(userId, body.disabled !== false); if (body.disabled !== false) sessions.destroyWhere((x) => x.userId === userId); await log(body.disabled !== false ? 'account-disable' : 'account-enable'); return json(res, 200, { ok: true }); }
     if (action === 'trial-code-revoke') { const r = await platform.revokeTrialCode(userId); await log('trial-code-revoke', r); return json(res, 200, { ok: true, ...r }); }
     return json(res, 404, { error: 'Not found' });
@@ -1021,7 +1054,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -1095,6 +1128,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/billing/webhook' && req.method === 'POST') return await handleWebhook(req, res);
     if (url.pathname === '/verify' && req.method === 'GET') {
       const user = platform ? await platform.verifyEmail(url.searchParams.get('token') || '') : null;
+      if (user && economy) await economy.settleReferral(user.id).catch((err) => console.warn('[economy] referral', err.message));
       res.writeHead(302, { Location: user ? '/account?verified=1' : '/account?verified=0', 'Cache-Control': 'no-store' }); return res.end();
     }
     if (url.pathname.startsWith('/api/draw/')) return await handleDraw(url.pathname.slice('/api/draw/'.length), req, res);
@@ -1143,6 +1177,9 @@ const server = http.createServer(async (req, res) => {
     if (!viewer && !actorFor(req)) { res.writeHead(302, { Location: '/?next=' + encodeURIComponent(url.pathname + url.search), 'Cache-Control': 'no-store' }); return res.end(); }
     if (url.pathname === '/play' && !viewer) { res.writeHead(302, { Location: '/studio' + (url.search || ''), 'Cache-Control': 'no-store' }); return res.end(); }
   }
+  // invitation links (/signup?ref=SPG-XXXXXX): remembered for 30 days until an account is created here
+  if ((url.pathname === '/signup' || url.pathname === '/login') && /^SPG-[A-HJ-NP-Z2-9]{6}$/i.test(url.searchParams.get('ref') || '') && !accountSession(req))
+    appendCookie(res, `sl_ref=${url.searchParams.get('ref').toUpperCase()}; HttpOnly; Path=/; SameSite=Lax; Max-Age=2592000${isHttps(req) ? '; Secure' : ''}`);
   if ((url.pathname === '/login' || url.pathname === '/signup') && accountSession(req)) {
     const intent = url.searchParams.get('intent'), next = url.searchParams.get('next') || '';
     const a = accountView(accountSession(req).userId);
