@@ -8,8 +8,10 @@
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
   const SVG = 'http://www.w3.org/2000/svg';
   const icon = (href, cls, size) => { const s = document.createElementNS(SVG, 'svg'); if (cls) s.setAttribute('class', cls); if (size) { s.setAttribute('width', size); s.setAttribute('height', size); } s.setAttribute('aria-hidden', 'true'); const u = document.createElementNS(SVG, 'use'); u.setAttribute('href', href); s.append(u); return s; };
-  const gameIcon = (mode, cls) => icon('/game-icons.svg#g-' + mode, cls);
-  const ui = (name, cls, size) => icon('/icons.svg#i-' + name, cls, size);
+  // versioned sprite addresses: a new icon reaches returning visitors at once (unversioned SVGs are kept for days)
+  const SPRITE = '/icons.svg?v=20261106', GAME_SPRITE = '/game-icons.svg?v=20261105';
+  const gameIcon = (mode, cls) => icon(GAME_SPRITE + '#g-' + mode, cls);
+  const ui = (name, cls, size) => icon(SPRITE + '#i-' + name, cls, size);
   const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } } };
   const fmtDate = (d) => { try { return new Intl.DateTimeFormat('ar-SA-u-nu-latn-ca-gregory', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d + 'T12:00:00')); } catch { return d; } };
   const daysAgo = (d) => Math.floor((Date.now() - new Date(d + 'T00:00:00').getTime()) / 86_400_000);

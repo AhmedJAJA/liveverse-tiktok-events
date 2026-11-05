@@ -1564,7 +1564,7 @@ async function serveStatic(req, res, relative) {
   const cache = ['me.html', 'studio.html', 'admin.html', 'auth.html', 'index.html'].includes(relative) ? 'no-store'
     : asset.ext === '.html' ? 'no-cache'
     : versioned ? 'public, max-age=31536000, immutable'
-    : ['.css', '.js'].includes(asset.ext) ? 'public, max-age=300, must-revalidate'
+    : ['.css', '.js'].includes(asset.ext) || ['icons.svg', 'game-icons.svg'].includes(relative) ? 'public, max-age=300, must-revalidate' // icon sprites change with releases
     : 'public, max-age=604800';
   const headers = { 'Content-Type': asset.type, 'Cache-Control': cache, ETag: asset.etag, Vary: 'Accept-Encoding' };
   if (req.headers['if-none-match'] === asset.etag) { res.writeHead(304, headers); return res.end(); }
