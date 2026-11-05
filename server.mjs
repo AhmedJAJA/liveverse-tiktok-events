@@ -47,6 +47,7 @@ const ROOM_IDLE_MS = 3 * 60 * 60_000;
 const rooms = new Map();
 const HOST_TIMEOUT_MS = Math.max(5_000, Number(process.env.SKY_HOST_TIMEOUT_MS) || 45_000); // a studio window that stops beating is gone after this
 const sameHandle = (a, b) => String(a || '').replace(/^@/, '').toLowerCase() === String(b || '').replace(/^@/, '').toLowerCase();
+const skinCache = new Map(); // 'platform:handle' → { skin, at }
 class Room {
   constructor(id, kind, ownerId = null) {
     this.id = id; this.kind = kind; this.ownerId = ownerId; this.clients = new Set(); this.touched = Date.now();
@@ -84,7 +85,29 @@ class Room {
     this.engine.setConnection('disconnected', '', reason);
   }
   hostTab() { const t = this.primaryTab && this.tabs.get(this.primaryTab); return t && Date.now() - t.at <= HOST_TIMEOUT_MS ? t : null; }
-  view() { return { ...this.engine.snapshot(), flow: this.flow.snapshot(), tools: this.tools.snapshot(), roomCode: this.joinCode && roomCodes.get(this.joinCode) === this.id ? this.joinCode : null, viewers: this.clients.size }; }
+  view() { return { ...this.engine.snapshot(), flow: this.flow.snapshot(), tools: this.tools.snapshot(), roomCode: this.joinCode && roomCodes.get(this.joinCode) === this.id ? this.joinCode : null, viewers: this.clients.size, skins: this.skinView() }; }
+  /** Equipped skins of players whose TikTok / Kick account is officially linked to a SPONGE LIVE account.
+      Read from a shared 60-second cache, so building the state never waits on the database. */
+  skinView() {
+    const where = this.engine.connection.platform;
+    if (!platform || !['tiktok', 'kick'].includes(where)) return {};
+    const out = {}, missing = [], now = Date.now();
+    for (const p of this.engine.players.values()) {
+      if (!p.handle) continue;
+      const hit = skinCache.get(where + ':' + p.handle);
+      if (!hit || now - hit.at > 60_000) missing.push(p.handle);
+      if (hit?.skin) { out['n:' + p.number] = hit.skin; out['i:' + p.id] = hit.skin; }
+    }
+    if (missing.length && !this.skinLookup) {
+      this.skinLookup = platform.skinsForHandles(where, missing).then((found) => {
+        let any = false;
+        for (const [h, skin] of found) { const prev = skinCache.get(where + ':' + h); skinCache.set(where + ':' + h, { skin, at: Date.now() }); if (skin && prev?.skin?.id !== skin.id) any = true; }
+        if (skinCache.size > 20_000) skinCache.clear();
+        if (any) this.scheduleBroadcast();
+      }).catch(() => {}).finally(() => { this.skinLookup = null; });
+    }
+    return out;
+  }
   scheduleBroadcast() {
     this.noteGameEnd();
     if (this.flushTimer) return;
@@ -909,12 +932,13 @@ async function handleManage(action, req, res) {
       if (action === 'reports') return json(res, 200, { reports: await platform.listReports(url.searchParams.get('status') || 'open') });
       if (action === 'economy') return json(res, 200, await economy.adminOverview());
       if (action === 'wheel') return json(res, 200, await economy.wheelReport());
+      if (action === 'skins') return json(res, 200, { skins: await platform.adminSkins() });
       if (action === 'purchases') return json(res, 200, { purchases: await economy.adminPurchases(url.searchParams.get('status') || ''), packages: await economy.packages() });
       if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
       return json(res, 404, { error: 'Not found' });
     }
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
-    const body = await readBody(req, action === 'partner-save' ? 600_000 : 4096);
+    const body = await readBody(req, action === 'partner-save' ? 600_000 : action === 'skin-upload' ? 6_200_000 : 4096);
     if (action === 'partner-save') { const partners = await platform.savePartner(body); await platform.audit(admin.name, 'partner-save', { details: { name: String(body.name || '').slice(0, 40) }, ip }); return json(res, 200, { ok: true, partners }); }
     if (action === 'partner-delete') { const partners = await platform.deletePartner(body.id); await platform.audit(admin.name, 'partner-delete', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, partners }); }
     if (action === 'prize-save') { const r = await platform.savePrize(body); await platform.audit(admin.name, 'prize-save', { details: { title: String(body.title || '').slice(0, 80) }, ip }); return json(res, 200, { ok: true, ...r }); }
@@ -924,6 +948,8 @@ async function handleManage(action, req, res) {
     if (action === 'voucher-create') { const codes = await platform.createVouchers(String(body.plan), body.count, { label: body.label, createdBy: admin.name }); await platform.audit(admin.name, 'voucher-create', { details: { plan: body.plan, count: codes.length, label: String(body.label || '').slice(0, 60) }, ip }); return json(res, 200, { ok: true, codes }); }
     if (action === 'voucher-revoke') { const r = await platform.revokeVoucher(String(body.code || '')); await platform.audit(admin.name, 'voucher-revoke', { details: { hint: String(body.code).slice(0, 4) + '…' + String(body.code).slice(-4) }, ip }); return json(res, 200, { ok: true, ...r }); }
     if (action === 'code-revoke') { const code = promos.update(String(body.id), { active: false }); sessions.destroyWhere((x) => x.codeId === body.id); await platform.audit(admin.name, 'promo-revoke', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, code }); }
+    if (action === 'skin-save') { const skins = await platform.saveSkin(body); await platform.catalog(true); return json(res, 200, { ok: true, skins }); }
+    if (action === 'skin-upload') { const skins = await platform.uploadSkin(body); await platform.catalog(true); return json(res, 200, { ok: true, skins }); }
     if (action === 'order-decide') return json(res, 200, { ok: true, ...(await economy.decideOrder(body.ref, String(body.decision || ''), { actor: admin.name, reason: body.reason })) });
     if (action === 'wheel-odds') return json(res, 200, { ok: true, config: await economy.setWheelOdds(body.odds, { cost1: body.cost1, cost10: body.cost10, actor: admin.name, reason: body.reason }) });
     if (action === 'wheel-simulate') return json(res, 200, await economy.simulate(body.n));
@@ -1073,7 +1099,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -1096,6 +1122,13 @@ const server = http.createServer(async (req, res) => {
       if (!platform) return json(res, 404, { error: 'غير موجود' });
       const p = await platform.publicProfile(decodeURIComponent(url.pathname.slice(7)), accountSession(req)?.userId || null);
       return p ? json(res, 200, p) : json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
+    }
+    const up = /^\/skins\/u\/([a-z0-9_]{2,32})\.(glb|webp)$/.exec(url.pathname);
+    if (up && req.method === 'GET' && platform) {
+      const f = await platform.skinFile(up[1], up[2] === 'glb' ? 'model' : 'thumb');
+      if (!f) return json(res, 404, { error: 'Not found' });
+      res.writeHead(200, { 'Content-Type': f.type, 'Cache-Control': url.searchParams.get('v') ? 'public, max-age=31536000, immutable' : 'public, max-age=300', 'X-Content-Type-Options': 'nosniff', 'Content-Length': f.data.length });
+      return res.end(f.data);
     }
     if (url.pathname === '/api/streams' && req.method === 'GET') return json(res, 200, streams());
     if (url.pathname === '/api/room-code' && req.method === 'GET') {

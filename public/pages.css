@@ -103,3 +103,11 @@ form.pg-row{align-items:flex-end}
 .pg-games dt{margin-top:12px;font-weight:900;font-size:18px;color:var(--sun)}
 .pg-games dd{margin:0;line-height:1.85;color:rgba(234,248,255,.85)}
 .pg-legal ol{padding-inline-start:22px;line-height:1.9}
+/* owner tables with inline controls (economy) */
+.pg-table input:not([type=checkbox]):not([type=file]),.pg-table select{min-width:96px;height:38px;padding:4px 10px;border-radius:10px;border:1px solid rgba(140,232,255,.3);background:rgba(2,10,34,.6);color:var(--foam);font:600 14px "Tajawal",system-ui,sans-serif}
+.pg-table input[type=number]{width:110px}
+.pg-table input[type=checkbox]{width:20px;height:20px;accent-color:#2C8BFF}
+.pg-table td img{display:block;width:44px;height:44px;object-fit:contain;border-radius:10px;background:rgba(2,10,34,.6)}
+.pg-table td .pg-row{flex-wrap:nowrap;gap:6px;align-items:center}
+.pg-table td .pg-row input{min-width:150px}
+#oddsSum.is-ok{color:#7DF0C6;font-weight:900}#oddsSum.is-err{color:#FF8FA6;font-weight:900}

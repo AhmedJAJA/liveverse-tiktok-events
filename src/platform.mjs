@@ -901,6 +901,78 @@ export class Platform {
     await this.refresh(userId);
     return this.skins(userId);
   }
+  /** Skins of viewers playing in a stream: their platform handle → the equipped skin of the SPONGE LIVE account
+      that officially linked that same platform account (verified). Used by the game screens. */
+  async skinsForHandles(platformName, handles) {
+    await this.catalog();
+    const list = [...new Set(handles.map((h) => String(h || '').toLowerCase()).filter((h) => /^[a-z0-9_.]{1,40}$/.test(h)))].slice(0, 300);
+    const out = new Map(list.map((h) => [h, null]));
+    if (!list.length || !['tiktok', 'kick'].includes(platformName)) return out;
+    const rows = (await this.pool.query(`SELECT lower(la.handle) handle, u.skin FROM linked_accounts la JOIN users u ON u.id = la.user_id
+      WHERE la.platform=$1 AND la.verified AND lower(la.handle) = ANY($2) AND u.disabled_at IS NULL`, [platformName, list])).rows;
+    for (const r of rows) {
+      const s = this.skinCatalog.byId(this.equippedSkin({ skin: r.skin }));
+      if (s) out.set(r.handle, { id: s.id, name: s.name, rarity: s.rarity, accent: s.accent, thumb: s.thumb, model: s.model, lose: s.model.startsWith('/skins/u/') ? s.thumb : `/skins/${s.id}-lose.webp` });
+    }
+    return out;
+  }
+  /* ---- owner: the skins table ---- */
+  async adminSkins() {
+    await this.catalog(true);
+    const counts = Object.fromEntries((await this.pool.query('SELECT skin_id, count(*)::int n FROM user_skins GROUP BY skin_id')).rows.map((r) => [r.skin_id, r.n]));
+    const rows = (await this.pool.query('SELECT id, name, blurb, rarity, access, is_default, accent, in_wheel, price_coins, active, sort, builtin, (model IS NOT NULL) has_model, (thumb IS NOT NULL) has_thumb FROM skins ORDER BY sort, id')).rows;
+    return rows.map((r) => ({ id: r.id, name: r.name, blurb: r.blurb, rarity: r.rarity, access: r.access, default: r.is_default, accent: r.accent, inWheel: r.in_wheel, price: r.price_coins, active: r.active, sort: r.sort,
+      builtin: r.builtin, uploaded: r.has_model, ready: !!(r.builtin || (r.has_model && r.has_thumb)), owners: counts[r.id] || 0, thumb: this.skinCatalog.anyById(r.id)?.thumb || null }));
+  }
+  async saveSkin(input) {
+    const id = String(input.id || '');
+    const cur = (await this.pool.query('SELECT * FROM skins WHERE id=$1', [id])).rows[0];
+    if (!cur) fail('السكن غير موجود', 404);
+    const name = String(input.name ?? cur.name).replace(/[\u0000-\u001f<>]/g, '').trim();
+    if (name.length < 2 || name.length > 40) fail('الاسم من 2 إلى 40 حرفًا');
+    const blurb = String(input.blurb ?? cur.blurb).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 160);
+    const rarity = String(input.rarity ?? cur.rarity); if (!(rarity in RARITIES)) fail('درجة ندرة غير معروفة');
+    const raw = input.price === undefined ? cur.price_coins : input.price;
+    const price = raw === null || raw === '' ? null : Number(raw);
+    if (price !== null && (!Number.isInteger(price) || price < 1 || price > 1000000)) fail('سعر غير صالح');
+    const access = ['free', 'wheel', 'grant'].includes(input.access) ? input.access : cur.access;
+    if (cur.is_default && (input.active === false || access !== 'free')) fail('السكن الافتراضي يبقى متاحًا مجانًا للجميع');
+    await this.pool.query(`UPDATE skins SET name=$2, blurb=$3, rarity=$4, access=$5, in_wheel=$6, price_coins=$7, active=$8, updated_at=now() WHERE id=$1`,
+      [id, name, blurb, rarity, access, input.inWheel === undefined ? cur.in_wheel : !!input.inWheel && access === 'wheel', access === 'wheel' ? price : null, input.active === undefined ? cur.active : !!input.active]);
+    await this.audit('owner', 'skin-save', { details: { id, name, rarity, inWheel: !!input.inWheel, price, active: input.active } });
+    return this.adminSkins();
+  }
+  /** Owner upload: a GLB (checked by its header, ≤ 4 MB) and a poster (WebP / PNG by its bytes, ≤ 400 KB). */
+  async uploadSkin(input) {
+    const id = String(input.id || '').toLowerCase();
+    if (!SkinCatalog.validId(id)) fail('المعرّف: حروف إنجليزية صغيرة وأرقام و _ (2–32)');
+    const decode = (d, max) => { const m = /^data:([\w/+.-]+);base64,([A-Za-z0-9+/=]+)$/.exec(String(d || '')); if (!m) return null; const b = Buffer.from(m[2], 'base64'); if (b.length > max) fail('الملف أكبر من المسموح'); return b; };
+    const model = decode(input.model, 4 * 1024 * 1024), thumb = decode(input.thumb, 400 * 1024);
+    if (model && !(model.readUInt32LE(0) === 0x46546c67 && model.readUInt32LE(4) === 2)) fail('ملف النموذج ليس GLB صالحًا');
+    let thumbType = null;
+    if (thumb) {
+      if (thumb.subarray(0, 4).toString('latin1') === 'RIFF' && thumb.subarray(8, 12).toString('latin1') === 'WEBP') thumbType = 'image/webp';
+      else if (thumb.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) thumbType = 'image/png';
+      else fail('صورة المعاينة يجب أن تكون WebP أو PNG');
+    }
+    const exists = (await this.pool.query('SELECT builtin FROM skins WHERE id=$1', [id])).rows[0];
+    if (!exists) {
+      if (!model || !thumb) fail('سكن جديد يحتاج النموذج وصورة المعاينة معًا');
+      const name = String(input.name || '').trim(); if (name.length < 2 || name.length > 40) fail('الاسم من 2 إلى 40 حرفًا');
+      const rarity = String(input.rarity || 'common'); if (!(rarity in RARITIES)) fail('درجة ندرة غير معروفة');
+      await this.pool.query(`INSERT INTO skins (id, name, blurb, rarity, access, accent, in_wheel, price_coins, active, sort, model, thumb, thumb_type, model_v, thumb_v)
+        VALUES ($1,$2,$3,$4,'wheel',$5,false,$6,false,200,$7,$8,$9,1,1)`, [id, name, String(input.blurb || '').slice(0, 160), rarity, /^#[0-9A-Fa-f]{6}$/.test(input.accent || '') ? input.accent : RARITIES[rarity].color, RARITIES[rarity].price, model, thumb, thumbType]);
+    } else {
+      if (model) await this.pool.query('UPDATE skins SET model=$2, model_v=model_v+1, updated_at=now() WHERE id=$1', [id, model]);
+      if (thumb) await this.pool.query('UPDATE skins SET thumb=$2, thumb_type=$3, thumb_v=thumb_v+1, updated_at=now() WHERE id=$1', [id, thumb, thumbType]);
+    }
+    await this.audit('owner', 'skin-upload', { details: { id, model: model?.length || 0, thumb: thumb?.length || 0 } });
+    return this.adminSkins();
+  }
+  async skinFile(id, kind) {
+    const r = (await this.pool.query(kind === 'model' ? 'SELECT model AS data, model_v AS v FROM skins WHERE id=$1' : 'SELECT thumb AS data, thumb_type AS type, thumb_v AS v FROM skins WHERE id=$1', [String(id)])).rows[0];
+    return r?.data ? { data: r.data, type: kind === 'model' ? 'model/gltf-binary' : r.type, v: r.v } : null;
+  }
   async grantSkin(userId, id, by) {
     await this.catalog();
     const skin = this.skinCatalog.anyById(String(id || ''));

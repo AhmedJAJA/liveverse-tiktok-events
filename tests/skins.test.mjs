@@ -140,3 +140,57 @@ test('catalog in PostgreSQL, owner edits survive restarts, direct purchase is at
     await assert.rejects(eco.buySkin(u.id, 'sponge_gold'), /غير موجود/);
   } finally { await pool.end(); }
 });
+
+test('game screens: a linked TikTok / Kick account shows its owner\'s equipped skin', { skip }, async () => {
+  const pool = createPool(dbUrl); await migrate(pool, { log: null });
+  const p = new Platform({ pool, hashCode: (c) => c, mail: { send: async () => ({ sent: false }) }, gateway: { configured: false } });
+  const u = await p.register({ username: 'gamer1', email: 'gamer1@example.com', password: 'reef2026go', confirm: 'reef2026go' });
+  try {
+    await pool.query(`INSERT INTO linked_accounts (user_id, platform, handle, verified, verify_method, platform_user_id) VALUES ($1,'tiktok','Gamer_One',true,'oauth','open-g1')`, [u.id]);
+    await pool.query(`INSERT INTO user_skins (user_id, skin_id, source) VALUES ($1,'deep_king','grant')`, [u.id]);
+    await p.equipSkin(u.id, 'deep_king');
+    const m = await p.skinsForHandles('tiktok', ['gamer_one', 'stranger', '<bad>']);
+    assert.deepEqual([m.get('gamer_one').id, m.get('gamer_one').rarity, m.get('gamer_one').lose], ['deep_king', 'legendary', '/skins/deep_king-lose.webp']);
+    assert.equal(m.get('stranger'), null);
+    assert.equal(m.has('<bad>'), false);
+    assert.equal((await p.skinsForHandles('kick', ['gamer_one'])).get('gamer_one'), null, 'only the platform that was linked');
+    // an unverified link shows nothing
+    await pool.query(`UPDATE linked_accounts SET verified=false WHERE user_id=$1`, [u.id]);
+    assert.equal((await p.skinsForHandles('tiktok', ['gamer_one'])).get('gamer_one'), null);
+    for (const s of SKINS) assert.ok(fs.statSync(pub('/skins/' + s.id + '-lose.webp')).size > 2000, s.id + ' lose pose');
+  } finally { await pool.end(); }
+});
+
+test('owner: edit skins, upload a new one (checked files), it stays hidden until switched on', { skip }, async () => {
+  const pool = createPool(dbUrl); await migrate(pool, { log: null });
+  const p = new Platform({ pool, hashCode: (c) => c, mail: { send: async () => ({ sent: false }) }, gateway: { configured: false } });
+  try {
+    await p.catalog(true);
+    await assert.rejects(p.saveSkin({ id: 'knight', active: false }), /الافتراضي/);
+    await assert.rejects(p.saveSkin({ id: 'sponge_ice', rarity: 'ultra' }), /ندرة/);
+    let list = await p.saveSkin({ id: 'sponge_ice', name: 'إسفنجة الثلج', rarity: 'epic', inWheel: false, price: 2400 });
+    const ice = list.find((s) => s.id === 'sponge_ice');
+    assert.deepEqual([ice.name, ice.rarity, ice.inWheel, ice.price], ['إسفنجة الثلج', 'epic', false, 2400]);
+    await p.catalog(true);
+    assert.equal(p.skinCatalog.wheelPool().some((s) => s.id === 'sponge_ice'), false, 'out of the wheel');
+
+    const glb = 'data:model/gltf-binary;base64,' + fs.readFileSync(pub('/skins/knight.glb')).toString('base64');
+    const webp = 'data:image/webp;base64,' + fs.readFileSync(pub('/skins/knight.webp')).toString('base64');
+    await assert.rejects(p.uploadSkin({ id: 'Bad Id', name: 'x', model: glb, thumb: webp }), /المعرّف/);
+    await assert.rejects(p.uploadSkin({ id: 'coral_knight', name: 'فارس المرجان', model: 'data:model/gltf-binary;base64,' + Buffer.from('not a glb at all').toString('base64'), thumb: webp }), /GLB/);
+    await assert.rejects(p.uploadSkin({ id: 'coral_knight', name: 'فارس المرجان', model: glb, thumb: 'data:image/webp;base64,' + Buffer.from('<svg/>').toString('base64') }), /WebP أو PNG/);
+    await assert.rejects(p.uploadSkin({ id: 'coral_knight', name: 'فارس المرجان', model: glb }), /معًا/);
+    list = await p.uploadSkin({ id: 'coral_knight', name: 'فارس المرجان', rarity: 'rare', model: glb, thumb: webp });
+    assert.deepEqual([list.find((s) => s.id === 'coral_knight').active, list.find((s) => s.id === 'coral_knight').ready], [false, true]);
+    await p.catalog(true);
+    assert.equal(p.skinCatalog.byId('coral_knight'), null, 'hidden until switched on');
+    await p.saveSkin({ id: 'coral_knight', active: true, inWheel: true, access: 'wheel', price: 900 });
+    await p.catalog(true);
+    const coral = p.skinCatalog.byId('coral_knight');
+    assert.match(coral.model, /^\/skins\/u\/coral_knight\.glb\?v=1$/);
+    assert.ok(p.skinCatalog.wheelPool().some((s) => s.id === 'coral_knight'));
+    const f = await p.skinFile('coral_knight', 'model');
+    assert.equal(f.type, 'model/gltf-binary'); assert.equal(f.data.readUInt32LE(0), 0x46546c67);
+    assert.equal((await p.skinFile('coral_knight', 'thumb')).type, 'image/webp');
+  } finally { await pool.end(); }
+});

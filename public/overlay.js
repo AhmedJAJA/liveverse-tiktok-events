@@ -115,7 +115,43 @@ function updateStandings(players) {
   });
 }
 const memberColors = ['#A96C87','#6B8D9D','#8E83AD','#588D9E','#699787','#A87965','#7489B2'];
+/* Skins: viewers whose TikTok / Kick account is linked to a SPONGE LIVE account appear as their equipped
+   character (a rendered image — light even with dozens of players); eliminated players show the «lose» pose;
+   the round winner gets the real 3D character doing its win move. */
+let skinMap = {};
+const skinOf = (p) => p ? (skinMap['i:' + p.id] || skinMap['n:' + p.number] || null) : null;
+function paintSkin(container, player, skin) {
+  const out = !!container.closest('.bomb-out-avatar, .is-eliminated, .is-out, .result-row.is-out');
+  const key = JSON.stringify(['skin', skin.id, out]);
+  if (container.dataset.person === key) return;
+  container.dataset.person = key;
+  container.classList.remove('is-loading-avatar', 'has-loaded-avatar', 'is-fallback-avatar');
+  container.classList.add('has-skin'); container.dataset.rarity = skin.rarity;
+  const img = document.createElement('img'); img.alt = ''; img.decoding = 'async'; img.className = 'avatar-skin';
+  img.addEventListener('load', () => img.classList.add('is-loaded'), { once: true }); // the shared avatar CSS shows images once loaded
+  img.src = out ? skin.lose : skin.thumb;
+  img.addEventListener('error', () => { if (img.src.indexOf(skin.thumb) < 0) img.src = skin.thumb; }, { once: true });
+  container.title = (player?.name || '') + ' • ' + skin.name;
+  container.replaceChildren(img);
+}
+let winnerViewer = null, winnerViewerFor = '';
+async function winner3d(host, player) {
+  const skin = skinOf(player);
+  if (!host) return;
+  if (!skin) { winnerViewer?.dispose(); winnerViewer = null; winnerViewerFor = ''; host.hidden = true; return; }
+  if (winnerViewerFor === skin.id + host.id && winnerViewer) { winnerViewer.play('win'); return; }
+  winnerViewer?.dispose(); winnerViewer = null; winnerViewerFor = skin.id + host.id; host.hidden = false; host.replaceChildren();
+  try {
+    const mod = await import('/skin-viewer.js');
+    if (winnerViewerFor !== skin.id + host.id) return;
+    winnerViewer = await mod.mountViewer(host, { model: skin.model, animations: { idle: 'idle', walk: 'walk', win: 'win', lose: 'lose' }, rarity: skin.rarity, accent: skin.accent, autoRotate: false, label: skin.name });
+    winnerViewer.reveal(); setTimeout(() => winnerViewer?.play('win'), 500);
+  } catch { host.hidden = true; }
+}
 function paintAvatar(container, player) {
+  const skin = skinOf(player);
+  if (skin) return paintSkin(container, player, skin);
+  container.classList.remove('has-skin'); delete container.dataset.rarity;
   const key=JSON.stringify([player?.name,player?.avatar]);
   if (container.dataset.person === key) return;
   container.dataset.person=key;
@@ -488,6 +524,7 @@ function showBombVictory(b,delay){
     if(won){
       bombDebris();
       bombPerson($('bombWinnerAvatar'),b.winner);
+      winner3d($('bombSkin3d'),b.winner);
       $('bombWinnerName').textContent=b.winner.name;
       $('bombWinnerNumber').textContent='#'+b.winner.number;
       $('bombWinnerStats').textContent='نجا من بين '+number(b.total)+' لاعبًا بعد '+number(b.eliminated.length)+' انفجارات';
@@ -784,6 +821,7 @@ function update(data) {
   paintRoomCode(arguments[0]?.roomCode);
   if (!data || !data.status) return;
   window.lastLiveverseState=data;
+  skinMap = data.skins || {};
   const s=data.status, mode=modeInfo[s.mode]||modeInfo.quiz;
   const phase=['open','idle'].includes(data.registration?.phase)?'registration':s.results?'results':s.active?'active':'waiting';
   const arena=$('arena');arena.dataset.mode=s.mode;arena.dataset.phase=phase;
@@ -871,10 +909,11 @@ function update(data) {
       $('winnerName').textContent=s.lastEvent.winner.name;
       $('winnerPoints').textContent=`+${number(s.lastEvent.winner.score||5)} نقاط`;
       paintAvatar($('winnerAvatar'),s.lastEvent.winner);
+      winner3d($('winnerSkin3d'),s.lastEvent.winner);
       showSpotlight(s.lastEvent.winner,'+'+number(s.lastEvent.winner.score||5)+' نقاط');
       banner.hidden=false;restartAnimation(banner,'appear');
     }
-  }else banner.hidden=true;
+  }else{ if(!banner.hidden&&winnerViewerFor.endsWith('winnerSkin3d'))winner3d($('winnerSkin3d'),null); banner.hidden=true; }
 }
 function showSketch(data) {
   sketchData = /^data:image\/png;base64,/.test(data) ? data : '';

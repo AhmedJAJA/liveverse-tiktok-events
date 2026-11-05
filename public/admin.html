@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/pages.css">
 <script defer src="/admin.js"></script>
+<script defer src="/admin-economy.js"></script>
 </head>
 <body class="hm pg">
 <div class="hm-sea" aria-hidden="true"><span class="hm-glow"></span><span class="hm-rays"></span>
@@ -115,6 +116,74 @@
    <div class="pg-row"><label class="pg-field"><span>الحالة</span><select id="reportStatus"><option value="open">جديدة</option><option value="reviewed">تمت المراجعة</option><option value="dismissed">مرفوضة</option></select></label></div>
    <p class="pg-msg" id="reportMsg" hidden></p>
    <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>الحساب المُبلَّغ عنه</th><th>السبب</th><th>التفاصيل</th><th>المُبلِّغ</th><th>الإجراء</th></tr></thead><tbody id="reportRows"></tbody></table></div>
+  </section>
+
+  <!-- ================= الاقتصاد: العملات والمكافآت والسكنات والعجلة ================= -->
+  <section class="pg-card pg-span" aria-labelledby="ecoTitle">
+   <h2 id="ecoTitle">اقتصاد عملات الإسفنجة</h2>
+   <p class="pg-sub" id="ecoTotals">…</p>
+   <h3>تعديل رصيد (يتطلب سببًا ويُسجَّل)</h3>
+   <form class="pg-form" id="adjustForm">
+    <div class="pg-row"><label class="pg-field"><span>المعرف الدائم</span><input name="publicId" dir="ltr" placeholder="SPG-XXXXXX" required></label>
+    <label class="pg-field"><span>المبلغ (+ أو −)</span><input name="amount" type="number" step="1" required></label>
+    <label class="pg-field"><span>الرصيد</span><select name="bucket"><option value="earned">مكتسب</option><option value="purchased">مشترى</option></select></label></div>
+    <label class="pg-field"><span>السبب</span><input name="reason" maxlength="200" required minlength="5"></label>
+    <button class="pg-btn2" type="submit">تنفيذ</button>
+   </form>
+   <p class="pg-msg" id="adjustMsg" hidden></p>
+  </section>
+
+  <section class="pg-card pg-span" aria-labelledby="ordersTitle">
+   <h2 id="ordersTitle">طلبات شراء العملات</h2>
+   <p class="pg-sub">طلبات واتساب: أكّد الدفع فقط بعد وصول المبلغ فعلًا، واكتب مرجع التحويل. طلبات الدفع الإلكتروني تؤكدها البوابة وحدها. الطلبات الفاشلة تظهر هنا مع سبب الفشل.</p>
+   <div class="pg-row"><label class="pg-field"><span>الحالة</span><select id="ordersStatus"><option value="pending">بانتظار الدفع</option><option value="">الكل</option><option value="paid">مكتمل</option><option value="failed">فشل</option><option value="cancelled">ملغي</option></select></label></div>
+   <p class="pg-msg" id="ordersMsg" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>الطلب</th><th>الحساب</th><th>الباقة</th><th>المبلغ</th><th>الطريقة</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody id="ordersRows"></tbody></table></div>
+  </section>
+
+  <section class="pg-card pg-span" aria-labelledby="wheelAdminTitle">
+   <h2 id="wheelAdminTitle">عجلة السكنات</h2>
+   <p class="pg-sub">النسب تُعرض للمستخدمين كما هي، ويجب أن يكون مجموعها 100%. كل لفة تحفظ نسخة من الجدول المستخدم. العجلة تعمل بالعملات المكتسبة فقط.</p>
+   <form class="pg-form" id="oddsForm">
+    <div class="pg-row">
+     <label class="pg-field"><span>عادي %</span><input name="common" type="number" step="0.01" min="0" max="100"></label>
+     <label class="pg-field"><span>نادر %</span><input name="rare" type="number" step="0.01" min="0" max="100"></label>
+     <label class="pg-field"><span>ملحمي %</span><input name="epic" type="number" step="0.01" min="0" max="100"></label>
+     <label class="pg-field"><span>أسطوري %</span><input name="legendary" type="number" step="0.01" min="0" max="100"></label>
+     <label class="pg-field"><span>خرافي %</span><input name="mythic" type="number" step="0.01" min="0" max="100"></label>
+    </div>
+    <div class="pg-row"><label class="pg-field"><span>لفة واحدة</span><input name="cost1" type="number" min="1"></label><label class="pg-field"><span>10 لفات</span><input name="cost10" type="number" min="1"></label><label class="pg-field"><span>المجموع</span><output id="oddsSum">—</output></label></div>
+    <label class="pg-field"><span>سبب التعديل</span><input name="reason" maxlength="200"></label>
+    <div class="pg-row"><button class="pg-btn2" type="submit">حفظ النسب</button><button class="pg-btn2" type="button" id="simulateBtn">محاكاة 100,000 لفة</button></div>
+   </form>
+   <p class="pg-msg" id="oddsMsg" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الندرة</th><th>المعلن</th><th>المحاكاة</th><th>الفعلي (كل الجوائز)</th><th>مكررة</th></tr></thead><tbody id="distRows"></tbody></table></div>
+   <h3>آخر اللفات</h3>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>الحساب</th><th>اللفات</th><th>التكلفة</th></tr></thead><tbody id="spinRows"></tbody></table></div>
+  </section>
+
+  <section class="pg-card pg-span" aria-labelledby="skinsAdminTitle">
+   <h2 id="skinsAdminTitle">السكنات</h2>
+   <p class="pg-sub">عدّل الاسم والندرة والسعر والظهور في العجلة. السكن الذي ترفعه يبقى مخفيًا حتى تفعّله. النموذج GLB حتى 4 ميجابايت، وصورة المعاينة WebP أو PNG حتى 400 كيلوبايت.</p>
+   <p class="pg-msg" id="skinsMsg" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th></th><th>المعرّف</th><th>الاسم</th><th>الندرة</th><th>الحصول</th><th>في العجلة</th><th>السعر</th><th>مفعّل</th><th>المالكون</th><th></th></tr></thead><tbody id="skinRows"></tbody></table></div>
+   <h3>رفع سكن جديد أو استبدال ملفات سكن</h3>
+   <form class="pg-form" id="skinUpload">
+    <div class="pg-row"><label class="pg-field"><span>المعرّف</span><input name="id" dir="ltr" pattern="[a-z0-9_]{2,32}" required></label><label class="pg-field"><span>الاسم (لسكن جديد)</span><input name="name" maxlength="40"></label>
+    <label class="pg-field"><span>الندرة</span><select name="rarity"><option value="common">عادي</option><option value="rare">نادر</option><option value="epic">ملحمي</option><option value="legendary">أسطوري</option><option value="mythic">خرافي</option></select></label></div>
+    <div class="pg-row"><label class="pg-field"><span>النموذج (GLB)</span><input name="model" type="file" accept=".glb,model/gltf-binary"></label><label class="pg-field"><span>صورة المعاينة</span><input name="thumb" type="file" accept="image/webp,image/png"></label></div>
+    <button class="pg-btn2" type="submit">رفع</button>
+   </form>
+  </section>
+
+  <section class="pg-card pg-span" aria-labelledby="refAdminTitle">
+   <h2 id="refAdminTitle">الدعوات والمكافآت اليومية</h2>
+   <p class="pg-sub" id="dailyStat">…</p>
+   <p class="pg-sub">الدعوات «قيد المراجعة» جاءت من نفس متصفح أو نفس شبكة تسجيل الداعي. القرار يتطلب سببًا، ويبقى حد العشر دعوات ساريًا.</p>
+   <p class="pg-msg" id="refMsg" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>المدعو</th><th>الداعي</th><th>الحالة</th><th>السبب</th><th>القرار</th></tr></thead><tbody id="refRows"></tbody></table></div>
+   <h3>سجل عمليات الاقتصاد</h3>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>المنفّذ</th><th>العملية</th><th>الحساب</th><th>السبب</th></tr></thead><tbody id="ecoLogRows"></tbody></table></div>
   </section>
 
   <section class="pg-card" aria-labelledby="auditTitle">
