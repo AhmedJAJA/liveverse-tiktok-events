@@ -29,7 +29,7 @@ const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
 if (!process.env.ADMIN_TOKEN) { if (process.env.NODE_ENV === 'production') console.warn('ADMIN_TOKEN is unset; configure it in the hosting environment.'); else console.log('\n[LOCAL ADMIN TOKEN] ' + authToken + '\nSet ADMIN_TOKEN in hosting environment before publishing.'); }
 const safeToken = Buffer.from(authToken, 'utf8');
 const matchesToken = (raw) => { const incoming = Buffer.from(String(raw||''), 'utf8'); return incoming.length === safeToken.length && timingSafeEqual(incoming, safeToken); };
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8', '.glb': 'model/gltf-binary' };
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.SKY_DATA_DIR || path.join(here, 'data', 'runtime');
 const COOKIE = 'sky_session';
@@ -267,7 +267,7 @@ function secureHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin'); // Google Identity Services needs the origin
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com https://files.kick.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' blob: ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: blob: https://*.googleusercontent.com https://files.kick.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
 }
 
 /** One question of «تحدي المعرفة» from the bank; when the chosen category/level runs out, any question will do. */
@@ -740,6 +740,7 @@ async function handleMe(action, req, res) {
       const p = await platform.profile(userId);
       return json(res, 200, { linked: p.linked, platforms: { tiktok: linkableNow('tiktok'), kick: linkableNow('kick'), twitch: false }, entitled: platform.entitlement(userId).active });
     }
+    if (action === 'skins' && req.method === 'GET') return json(res, 200, await platform.skins(userId));
     if (action === 'friends' && req.method === 'GET') return json(res, 200, await platform.community(userId));
     if (action === 'find' && req.method === 'GET') {
       if (!findLimiter.hit('find:' + userId)) return json(res, 429, { error: 'بحث كثير — انتظر دقيقة' });
@@ -755,6 +756,9 @@ async function handleMe(action, req, res) {
     if (action === 'update') { await platform.updateProfile(userId, { displayName: body.displayName, avatar: body.avatar }); return json(res, 200, { ok: true, account: accountView(userId) }); }
     /* ---- «الإعدادات» ---- */
     if (action === 'privacy') return json(res, 200, { ok: true, privacy: await platform.setPrivacy(userId, String(body.key || ''), body.value) });
+    /* ---- «السكنات» (the skin id is the only input; ownership is checked on the server) ---- */
+    if (action === 'skin-claim') return json(res, 200, { ok: true, ...(await platform.claimSkin(userId, body.id)) });
+    if (action === 'skin-equip') return json(res, 200, { ok: true, ...(await platform.equipSkin(userId, body.id)) });
     /* ---- «المجتمع» (the other account is named only by its SPG ID; who I am comes from the session) ---- */
     if (action === 'friend-request') return json(res, 200, { ok: true, ...(await platform.friendRequest(userId, body.id)) });
     if (action === 'friend-accept') return json(res, 200, { ok: true, ...(await platform.friendRespond(userId, body.id, true)) });
@@ -876,6 +880,7 @@ async function handleManage(action, req, res) {
     const userId = await platform.userByPublicId(body.publicId || '');
     if (!userId) return json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
     const log = (what, details = {}) => platform.audit(admin.name, what, { target: userId, details, ip });
+    if (action === 'skin-grant') { const r = await platform.grantSkin(userId, body.skin, admin.name); await log('skin-grant', { skin: String(body.skin || '').slice(0, 32) }); return json(res, 200, r); }
     if (action === 'grant') { const r = await platform.grant(userId, body); await log('subscription-grant', { days: Number(body.days), plan: body.plan || 'manual', note: String(body.note || '').slice(0, 200) }); return json(res, 200, { ok: true, access: r }); }
     if (action === 'extend') { const r = await platform.extend(userId, body); await log('subscription-extend', { days: Number(body.days) }); return json(res, 200, { ok: true, access: r }); }
     if (action === 'stop') { const r = await platform.stop(userId); await log('subscription-stop', r); return json(res, 200, { ok: true, ...r }); }
@@ -1016,10 +1021,12 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
+  // 3D skins (optimized GLB + poster) and the pinned, self-hosted three.js (no CDN — the CSP allows only 'self')
+  ...['skins', 'vendor/three'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(glb|webp|js|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt']);
 
 const server = http.createServer(async (req, res) => {
@@ -1145,7 +1152,7 @@ const server = http.createServer(async (req, res) => {
    every local CSS/JS link (?v=…), so those files can be cached for a year and a deploy is picked up
    immediately — an old design can never stick in a browser cache. */
 const fileCache = new Map();
-const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.svg', '.txt', '.json']);
+const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.svg', '.txt', '.json', '.glb']);
 async function loadAsset(relative) {
   const filename = path.join(root, relative);
   const stat = await fs.promises.stat(filename);
