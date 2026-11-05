@@ -57,6 +57,11 @@
       if (me.account.picture) { const img = document.createElement('img'); img.className = 'hm-bar-pic'; img.src = me.account.picture; img.alt = ''; img.width = 26; img.height = 26; img.referrerPolicy = 'no-referrer'; $('barAccount').querySelector('svg')?.replaceWith(img); }
       $('barAccount').title = me.account.publicId;
       $('menuSecond').hidden = true; $('menuLogout').hidden = false;
+      // Sponge Coins: the balance in the header, and today's reward if it is due (the server decides)
+      if (window.SpongeCoins) fetch('/api/me/wallet', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((w) => {
+        if (!w) return; $('barCoins').hidden = false; window.SpongeCoins.setBalance(w.balance);
+        return window.SpongeCoins.claimDaily().then((d) => { if (d.granted) window.SpongeCoins.celebrate({ amount: d.amount, balance: d.balance, nextAt: d.daily.nextAt, serverNow: d.serverNow }); });
+      }).catch(() => {});
       if (me.account.entitled) { $('barTrial').hidden = true; $('barStudio').hidden = false; $('heroStudio').querySelector('span').textContent = 'ادخل الاستوديو'; $('heroStudio').href = '/studio'; }
       else { $('heroStudio').querySelector('span').textContent = 'حسابي'; $('heroStudio').href = '/account'; }
     } else if (me.signedIn) {

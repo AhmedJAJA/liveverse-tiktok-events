@@ -8,7 +8,7 @@
   const STATUS = { active: ['فعّال', 'is-on'], expired: ['منتهي', 'is-off'], scheduled: ['يبدأ لاحقًا', 'is-warn'], cancelled: ['موقوف', 'is-bad'] };
   const PAY = { paid: ['مدفوعة ✓', 'is-on'], pending: ['بانتظار التأكيد', 'is-warn'], failed: ['فشلت', 'is-bad'], expired: ['منتهية', 'is-off'], refunded: ['مستردة', 'is-off'] };
   const SOURCE = { trial: 'تجربة مجانية', voucher: 'كود اشتراك', payment: 'دفع إلكتروني', admin: 'الإدارة', manual: 'الإدارة' };
-  const SECTIONS = ['settings', 'profile', 'bag', 'skins', 'billing', 'community', 'challenge'];
+  const SECTIONS = ['settings', 'profile', 'bag', 'skins', 'wallet', 'billing', 'community', 'challenge'];
   const params = new URLSearchParams(location.search);
   const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Riyadh' });
   const fmtDate = (iso) => (iso ? fmt.format(new Date(iso)) : '—');
@@ -55,6 +55,7 @@
     closeMenu();
     if (sec === 'settings') loadSessions();
     if (sec === 'community') loadCommunity();
+    if (sec === 'wallet') loadWallet();
     syncViewers(sec);
   }
   addEventListener('hashchange', () => { const h = location.hash.slice(1); if (SECTIONS.includes(h)) { show(h); scrollTo({ top: 0 }); } else if (document.getElementById(h)) { show('settings'); document.getElementById(h).scrollIntoView({ block: 'start' }); } });
@@ -83,6 +84,7 @@
     $('statusDot').classList.toggle('is-on', !!a.active); $('statusDot').title = a.active ? 'الاشتراك فعّال' : 'لا يوجد اشتراك فعّال';
     $('publicId2').textContent = u.publicId; $('cmMyId').textContent = u.publicId;
     paintMySkin(p);
+    if (wallet) paintDaily(wallet);
     badge($('profEmailBadge'), u.verified ? 'موثّق' : 'غير موثّق', u.verified ? 'is-on' : 'is-warn');
     $('profLinked').textContent = links.length ? Object.entries(p.linked).filter(([, l]) => l && !l.needsReauth).map(([k, l]) => (k === 'kick' ? 'Kick' : 'TikTok') + ' @' + l.handle).join('، ') : 'لا توجد منصات مرتبطة';
     $('profEnds').textContent = a.active ? fmtDate(a.endsAt) : '—';
@@ -636,6 +638,66 @@
       say($('skMsg'), `تم تجهيز «${now.name}» ✓ — تظهر الآن في ملفك.`, 'is-ok'); views.sk?.play('win');
     } catch (err) { say($('skMsg'), err.message, 'is-err'); }
   }));
+
+  /* ---------- «عملات الإسفنجة»: wallet, daily reward (server clock), invitations ----------
+     Every number comes from the server; the page only shows it. The daily reward is asked for when the
+     dashboard opens and when the timer reaches zero — the server pays it at most once per 24 hours. */
+  const SC = window.SpongeCoins;
+  const TX_KIND = { daily: 'مكافأة يومية', referral: 'دعوة صديق', purchase: 'شراء عملات', spin: 'عجلة السكنات', skin_buy: 'شراء سكن', admin: 'تعديل من الإدارة' };
+  const INV = { pending: ['بانتظار تأكيد البريد', 'is-warn'], granted: ['+50 ✓', 'is-on'], held: ['قيد المراجعة', 'is-warn'], rejected: ['غير مؤهلة', 'is-off'], capped: ['بعد اكتمال الحد', 'is-off'] };
+  let wallet = null, dailyBusy = false;
+  function paintWallet(w) {
+    wallet = w; SC.setBalance(w.balance);
+    $('wEarned').textContent = SC.nf(w.earned); $('wPurchased').textContent = SC.nf(w.purchased);
+    $('wTotEarned').textContent = SC.nf(w.totalEarned); $('wTotBought').textContent = SC.nf(w.totalBought); $('wTotSpent').textContent = SC.nf(w.totalSpent);
+    paintDaily(w);
+    if (w.transactions) $('txList').replaceChildren(...(w.transactions.length ? w.transactions.map((t) => {
+      const li = el('li'); const left = el('span'); left.append(el('b', '', TX_KIND[t.kind] || t.kind), el('small', '', fmtDate(t.at) + (t.note && t.note !== TX_KIND[t.kind] ? ' — ' + t.note : '')));
+      const amt = el('b', 'wl-amt ' + (t.amount > 0 ? 'is-plus' : 'is-minus'), (t.amount > 0 ? '+' : '') + SC.nf(t.amount)); amt.dir = 'ltr';
+      li.append(left, amt); return li;
+    }) : [el('li', 'ds-empty', 'لا توجد معاملات بعد — مكافأتك اليومية الأولى تظهر هنا.')]));
+  }
+  function paintDaily(w) {
+    const verified = profile?.user?.verified !== false;
+    const ready = !w.daily.nextAt || Date.parse(w.daily.nextAt) <= Date.parse(w.serverNow);
+    for (const [label, timer] of [['dailyLabel', 'dailyTimer'], ['stripDailyLabel', 'stripDaily']]) {
+      if (!verified) { $(label).textContent = 'أكّد بريدك لتبدأ مكافآتك اليومية'; $(timer).textContent = '—'; continue; }
+      $(label).textContent = ready ? 'مكافأتك جاهزة' : 'مكافأتك اليومية القادمة';
+      if (ready) $(timer).textContent = '00:00:00';
+      else SC.countdown($(timer), w.daily.nextAt, w.serverNow, () => claimDaily(false));
+    }
+    $('dailyClaim').hidden = !(verified && ready);
+    $('navDaily').hidden = !(verified && ready);
+    if (!verified) say($('dailyMsg'), 'المكافأة اليومية للحسابات المؤكدة فقط — أكّد بريدك من الإعدادات أو سجّل الدخول بـ Google.', 'is-info'); else say($('dailyMsg'), '', '');
+  }
+  async function claimDaily(manual) {
+    if (dailyBusy) return; dailyBusy = true;
+    try {
+      const r = await SC.claimDaily();
+      if (r.granted) SC.celebrate({ amount: r.amount, balance: r.balance, nextAt: r.daily.nextAt, serverNow: r.serverNow });
+      else if (manual && r.reason === 'wait') toast('استلمت مكافأتك — موعد القادمة في العدّاد');
+      paintWallet(r);
+    } catch (e) { if (manual) toast(e.message, true); } finally { dailyBusy = false; }
+  }
+  $('dailyClaim').addEventListener('click', (e) => act(e.currentTarget, () => claimDaily(true)));
+  async function loadWallet() {
+    try { paintWallet(await api('GET', '/api/me/wallet')); } catch (e) { if (e.message !== 'login') toast(e.message, true); }
+    try {
+      const v = await api('GET', '/api/me/invites');
+      $('inviteLink').value = v.link;
+      $('inviteCount').textContent = `${v.completed} من ${v.cap} دعوات`;
+      $('inviteEarned').textContent = `ربحت ${SC.nf(v.earned)} عملة إسفنجة`;
+      $('inviteFill').style.setProperty('--pct', Math.round((v.completed / v.cap) * 100) + '%');
+      $('inviteBar').setAttribute('aria-valuenow', String(v.completed));
+      $('inviteMore').textContent = v.remaining ? `باقي ${v.remaining} دعوات مكافأة${v.pending ? ` • ${v.pending} بانتظار تأكيد البريد` : ''}${v.held ? ` • ${v.held} قيد المراجعة` : ''}` : 'اكتملت دعواتك العشر — شكرًا لنشر SPONGE LIVE! 🎉';
+      $('inviteCard').classList.toggle('is-complete', !v.remaining);
+      $('inviteList').replaceChildren(...v.list.map((r) => { const li = el('li'); const [t, c] = INV[r.status] || [r.status, 'is-off']; li.append(el('span', '', r.name), el('span', 'pg-badge ' + c, t)); return li; }));
+    } catch {}
+  }
+  $('inviteCopy').addEventListener('click', (e) => copy($('inviteLink').value, e.currentTarget));
+  if (navigator.share) { $('inviteShare').hidden = false; $('inviteShare').addEventListener('click', () => navigator.share({ title: 'SPONGE LIVE', text: 'انضم إلي في SPONGE LIVE — ألعاب البث التفاعلية', url: $('inviteLink').value }).catch(() => {})); }
+  // the wallet strip in «ملفي» and the side panel badge need the wallet on every visit; the reward is asked for once
+  api('GET', '/api/me/wallet').then(paintWallet).then(() => claimDaily(false)).catch(() => {});
   const findParam = (params.get('find') || '').toUpperCase();
   if (/^SPG-[A-Z0-9]{6}$/.test(findParam)) { $('findId').value = findParam; findMember(findParam); history.replaceState(null, '', location.pathname + location.hash); }
   initialSection();
