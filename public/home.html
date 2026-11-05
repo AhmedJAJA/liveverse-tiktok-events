@@ -30,6 +30,8 @@
   <nav class="hm-nav" aria-label="أقسام الموقع">
    <a href="#top" aria-current="true">الرئيسية</a>
    <a href="#live">البثوث النشطة</a>
+   <a href="#leaders">المتصدرون</a>
+   <a href="#room">دخول الغرفة</a>
    <a href="#games">الألعاب</a>
    <a href="#enter">الدخول بالرمز</a>
    <a href="#faq">الأسئلة الشائعة</a>
@@ -49,6 +51,8 @@
   <nav class="hm-menu-nav" aria-label="أقسام الصفحة">
    <a href="#top"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-home"></use></svg>الرئيسية</a>
    <a href="#live"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg>البثوث النشطة</a>
+   <a href="#leaders"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-trophy"></use></svg>المتصدرون</a>
+   <a href="#room"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg>دخول الغرفة</a>
    <a href="#games"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg>الألعاب</a>
    <a href="#enter"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg>دخول الاستوديو بالرمز</a>
    <a href="#connect"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-plug"></use></svg>ربط البث</a>
@@ -90,7 +94,7 @@
  <h1 class="hm-logo"><img src="/brand/sponge-256.webp" srcset="/brand/sponge-128.webp 128w, /brand/sponge-256.webp 256w, /brand/sponge-512.webp 512w" sizes="56px" alt="" width="56" height="56"><span class="hm-word" dir="ltr"><span class="hm-lb hm-lb-back" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i><i class="x"></i></span><span class="hm-name"><b>SPONGE</b> LIVE</span><span class="hm-lb hm-lb-front" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="x"></i><i class="x"></i></span></span></h1>
  <p class="hm-kicker"><i aria-hidden="true"></i>ألعاب البث التفاعلية</p>
  <h2 class="hm-hero-title" id="heroTitle"><span class="hm-t1">حوّل بثك إلى لعبة.</span><span class="hm-t2">وجمهورك إلى لاعبين.</span></h2>
- <p class="hm-hero-text">اختر لعبة من 12 لعبة جاهزة، يكتب متابعوك «انضم» في التعليقات، وتبدأ الجولة مباشرة على شاشة بثك.</p>
+ <p class="hm-hero-text">اختر لعبة من 14 لعبة جاهزة، يكتب متابعوك «انضم» في التعليقات، وتبدأ الجولة مباشرة على شاشة بثك.</p>
  <div class="hm-hero-cta">
   <a class="hm-enter" id="heroStudio" href="/login?intent=studio" data-action="studio"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span>الدخول لحسابك</span></a>
   <a class="hm-ghost" href="#games"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg><span>تصفح الألعاب</span></a>
@@ -138,7 +142,7 @@
   <div class="hm-box-head">
    <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-signal"></use></svg></span>
    <div class="hm-box-text"><h2 id="liveTitle">البثوث النشطة</h2><p>بثوث متصلة الآن بـ SPONGE LIVE — ادخل وشاهد اللعبة مباشرة.</p></div>
-   <div class="hm-stats"><span class="hm-stat" title="بثوث متصلة"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg><b id="liveCount">0</b></span><span class="hm-stat" title="لاعبون الآن"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-users"></use></svg><b id="livePlayers">0</b></span></div>
+   <div class="hm-stats"><span class="hm-stat"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg><b id="liveCount">0</b><small>بث نشط الآن</small></span><span class="hm-stat"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-users"></use></svg><b id="livePlayers">0</b><small>لاعب الآن</small></span></div>
   </div>
   <div class="hm-car-nav"><label class="hm-filter"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg><span class="sr-only">اختر لعبة</span><select id="liveGame"><option value="">كل الألعاب</option></select></label><button type="button" class="hm-icon-btn" data-scroll="liveTrack" data-dir="prev" aria-label="السابق"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-chevron"></use></svg></button><button type="button" class="hm-icon-btn is-flip" data-scroll="liveTrack" data-dir="next" aria-label="التالي"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-chevron"></use></svg></button></div>
   <ul class="hm-track" id="liveTrack" aria-live="polite"></ul>
@@ -146,8 +150,50 @@
  </div>
 </section>
 
+<section class="hm-sec" id="leaders" aria-labelledby="leadersTitle">
+ <div class="hm-panelbox hm-lb">
+  <div class="hm-box-head">
+   <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-trophy"></use></svg></span>
+   <div class="hm-box-text"><h2 id="leadersTitle">متصدرو الأسبوع</h2><p>أفضل خمسة هذا الأسبوع في ألعاب SPONGE LIVE — تُحسب من الجولات الحقيقية في البثوث الموثقة فقط.</p></div>
+   <div class="hm-lb-clock" aria-live="off"><small>أسبوع جديد خلال</small><b id="lbClock" dir="ltr">—</b></div>
+  </div>
+  <div class="hm-lb-bar">
+   <div class="hm-seg" role="tablist" aria-label="نوع اللوحة">
+    <button type="button" role="tab" class="hm-seg-btn" data-board="players" aria-selected="true">اللاعبون</button>
+    <button type="button" role="tab" class="hm-seg-btn" data-board="streamers" aria-selected="false">الستريمرز</button>
+   </div>
+   <div class="hm-seg hm-seg-sm" id="lbMetrics" role="group" aria-label="الترتيب حسب"></div>
+  </div>
+  <ol class="hm-lb-list" id="lbList" aria-live="polite"></ol>
+  <div class="hm-empty" id="lbEmpty" hidden><span aria-hidden="true">🏆</span><b>لا أحد في اللوحة بعد هذا الأسبوع</b><p>العب في بث موثّق لتظهر هنا.</p></div>
+  <form class="hm-lb-find" id="lbFind" novalidate hidden>
+   <label for="lbFindInput" class="sr-only">ابحث بمعرف SPG</label>
+   <input id="lbFindInput" type="text" placeholder="ابحث بمعرف SPG-XXXXXX" dir="ltr" maxlength="12" autocapitalize="characters" spellcheck="false" autocomplete="off">
+   <button type="submit" class="hm-pill hm-pill-blue"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-search"></use></svg><span>بحث</span></button>
+  </form>
+  <p class="hm-lb-found" id="lbFound" role="status" hidden></p>
+  <p class="hm-lb-note">الانتصارات: الفائز الأول في كل جولة منتهية. المشاركات: كل جولة شارك فيها اللاعب. الساعات: وقت البث الموثّق أثناء تشغيل لعبة.</p>
+ </div>
+</section>
+
+<section class="hm-sec" id="room" aria-labelledby="roomTitle">
+ <div class="hm-panelbox hm-room">
+  <div class="hm-box-head">
+   <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg></span>
+   <div class="hm-box-text"><h2 id="roomTitle">معاك كود غرفة؟</h2><p>الستريمر يعرض كود الغرفة على شاشة بثه — اكتبه هنا وتفتح لك صفحة لعبته مباشرة على جوالك.</p></div>
+  </div>
+  <form class="hm-room-form" id="roomForm" novalidate>
+   <label for="roomInput" class="sr-only">كود الغرفة</label>
+   <input id="roomInput" type="text" inputmode="text" maxlength="4" placeholder="مثال: K7QM" dir="ltr" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="roomHint roomError">
+   <button type="submit" class="hm-enter hm-enter-sm"><span>دخول الغرفة</span><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-arrow"></use></svg></button>
+  </form>
+  <p class="hm-room-hint" id="roomHint">الكود 4 خانات (حروف إنجليزية وأرقام) كما يظهر في البث.</p>
+  <p class="hm-room-error" id="roomError" role="alert" hidden></p>
+ </div>
+</section>
+
 <section class="hm-strip" id="games" aria-labelledby="gamesTitle">
- <h2 class="hm-strip-title" id="gamesTitle">12 لعبة جاهزة لبثّك</h2>
+ <h2 class="hm-strip-title" id="gamesTitle">14 لعبة جاهزة لبثّك</h2>
  <ul class="hm-cards" id="gameStrip">
   <li><img src="/games/01-knowledge-challenge-120.webp" srcset="/games/01-knowledge-challenge-120.webp 120w, /games/01-knowledge-challenge-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="تحدي المعرفة" decoding="async"></li>
   <li><img src="/games/02-guess-drawing-120.webp" srcset="/games/02-guess-drawing-120.webp 120w, /games/02-guess-drawing-200.webp 200w" sizes="(max-width:600px) 64px, 88px" width="88" height="113" alt="خمن الرسمة" decoding="async"></li>
@@ -202,7 +248,7 @@
 <section class="hm-sec" id="why" aria-labelledby="whyTitle">
  <h2 class="hm-h" id="whyTitle">لماذا <bdi dir="ltr">SPONGE LIVE</bdi>؟</h2>
  <ul class="hm-grid hm-why">
-  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg><h3>12 لعبة تفاعلية</h3><p>من تحدي المعرفة وخمن الرسمة إلى الكراسي الموسيقية والقنبلة الموقوتة — كلها تُلعب من شات البث.</p></li>
+  <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg><h3>14 لعبة تفاعلية</h3><p>من تحدي المعرفة وخمن الرسمة إلى الكراسي الموسيقية والقنبلة الموقوتة — كلها تُلعب من شات البث.</p></li>
   <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg><h3>انضمام بكلمة واحدة</h3><p>يكتب المشاهد «انضم» في الشات فيدخل اللعبة تلقائيًا، بلا رموز غرف ولا تطبيقات إضافية.</p></li>
   <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg><h3>TikTok LIVE و Kick</h3><p>اربط بثك على أي من المنصتين من نفس الاستوديو.</p></li>
   <li class="hm-tile" data-reveal><svg width="28" height="28" aria-hidden="true"><use href="/icons.svg#i-screen"></use></svg><h3>شاشة جاهزة لـ OBS</h3><p>رابط شاشة عرض بمقاس 1920×1080 تضيفه كمصدر متصفح في برنامج البث.</p></li>
@@ -315,7 +361,8 @@
   <div class="hm-foot-brand"><img src="/brand/sponge-128.webp" alt="" width="44" height="44" loading="lazy" decoding="async"><b dir="ltr">SPONGE LIVE</b></div>
   <p class="hm-foot-desc">منصة ألعاب تفاعلية للبث المباشر: جمهورك يلعب من التعليقات، وأنت تدير كل شيء من استوديو واحد.</p>
   <div class="hm-foot-cols">
-   <nav aria-label="روابط الموقع"><h3>الموقع</h3><a href="#live">البثوث النشطة</a><a href="#games">الألعاب</a><a href="#connect">ربط البث</a><a href="#start">كيف تبدأ</a><a href="#faq">الأسئلة الشائعة</a></nav>
+   <nav aria-label="روابط الموقع"><h3>الموقع</h3><a href="#live">البثوث النشطة</a><a href="#leaders">المتصدرون</a><a href="#games">الألعاب</a><a href="#connect">ربط البث</a><a href="#faq">الأسئلة الشائعة</a></nav>
+   <nav aria-label="الأدلة"><h3>الأدلة</h3><a href="/guide/games">دليل الألعاب</a><a href="/guide/tiktok-live">دليل تيك توك لايف</a><a href="/guide/tools">أدوات البث</a></nav>
    <nav aria-label="الحساب"><h3>الحساب</h3><a href="/login">تسجيل الدخول</a><a href="/signup">إنشاء حساب جديد</a><a href="/account">حسابي</a><a href="#plans">الاشتراكات</a></nav>
    <nav aria-label="تواصل"><h3>تواصل معنا</h3><a href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener">واتساب</a><a href="#" id="supportLink" hidden rel="noopener" target="_blank">الدعم</a></nav>
   </div>

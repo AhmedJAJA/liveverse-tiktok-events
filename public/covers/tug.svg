@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="SPONGE LIVE — شد الحبل">
+<defs>
+<radialGradient id="tug-sky" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="#0E2E6E"/><stop offset=".55" stop-color="#071A44"/><stop offset="1" stop-color="#020A22"/></radialGradient>
+<linearGradient id="tug-rope" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C98B3C"/><stop offset=".5" stop-color="#F2C27A"/><stop offset="1" stop-color="#C98B3C"/></linearGradient>
+<radialGradient id="tug-glowb" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#38D4FF" stop-opacity=".7"/><stop offset="1" stop-color="#38D4FF" stop-opacity="0"/></radialGradient>
+<radialGradient id="tug-glowy" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFD62A" stop-opacity=".7"/><stop offset="1" stop-color="#FFD62A" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="512" height="512" fill="url(#tug-sky)"/>
+<circle cx="120" cy="250" r="150" fill="url(#tug-glowb)"/>
+<circle cx="392" cy="250" r="150" fill="url(#tug-glowy)"/>
+<rect x="250" y="120" width="12" height="260" rx="6" fill="#EAF8FF" opacity=".55"/>
+<path d="M40 262 Q256 236 472 262" stroke="url(#tug-rope)" stroke-width="18" fill="none" stroke-linecap="round"/>
+<path d="M40 262 Q256 236 472 262" stroke="#7A4B17" stroke-width="18" fill="none" stroke-dasharray="6 14" opacity=".45"/>
+<rect x="244" y="232" width="24" height="40" rx="6" fill="#FF4A6A"/>
+<g fill="#38D4FF"><circle cx="96" cy="196" r="30"/><rect x="70" y="228" width="52" height="86" rx="22"/><circle cx="168" cy="206" r="26"/><rect x="146" y="234" width="44" height="76" rx="20"/></g>
+<g fill="#FFD62A"><circle cx="416" cy="196" r="30"/><rect x="390" y="228" width="52" height="86" rx="22"/><circle cx="344" cy="206" r="26"/><rect x="322" y="234" width="44" height="76" rx="20"/></g>
+<g fill="#020A22"><circle cx="88" cy="192" r="4"/><circle cx="104" cy="192" r="4"/><circle cx="408" cy="192" r="4"/><circle cx="424" cy="192" r="4"/><circle cx="161" cy="202" r="3.5"/><circle cx="175" cy="202" r="3.5"/><circle cx="337" cy="202" r="3.5"/><circle cx="351" cy="202" r="3.5"/></g>
+<rect x="40" y="350" width="432" height="10" rx="5" fill="#EAF8FF" opacity=".12"/>
+<text x="256" y="430" text-anchor="middle" font-family="Tajawal,system-ui,sans-serif" font-size="56" font-weight="900" fill="#EAF8FF">شد الحبل</text>
+</svg>

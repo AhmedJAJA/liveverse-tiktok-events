@@ -8,6 +8,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { Engine, liveUrlFor } from './src/engine.mjs';
 import { LiveBridge } from './src/bridge.mjs';
 import { KickBridge, validKickSlug } from './src/kick.mjs';
+import { StreamTools } from './src/stream-tools.mjs';
 import { QuestionBank, loadDefaultQuestions } from './src/question-bank.mjs';
 import { siteConfig, ALL_GAMES, UPDATES } from './src/catalog.mjs';
 import { AccountStore, Sessions, RateLimiter, FieldError, parseCookies, roomId, PLANS } from './src/accounts.mjs';
@@ -63,10 +64,12 @@ class Room {
     this.tabs = new Map();     // studio windows of the host: tab id -> {at, screen}
     this.primaryTab = null;    // the one window allowed to control the room
     this.gameSessionId = null; this.saved = { state: '', at: 0 };
+    this.tools = new StreamTools();  // OBS tools: countdown, chat draw, active chatters
   }
   receiveChat(chat) {
     // An account room only plays with a stream whose account was linked by signing in with the platform.
     if (this.kind === 'acct' && !this.engine.connMeta.verified) return;
+    if (this.tools.chat(chat)) this.scheduleBroadcast();
     this.engine.receiveChat(chat);
   }
   revokeStream(reason) {
@@ -75,8 +78,9 @@ class Room {
     this.engine.setConnection('disconnected', '', reason);
   }
   hostTab() { const t = this.primaryTab && this.tabs.get(this.primaryTab); return t && Date.now() - t.at <= HOST_TIMEOUT_MS ? t : null; }
-  view() { return { ...this.engine.snapshot(), viewers: this.clients.size }; }
+  view() { return { ...this.engine.snapshot(), tools: this.tools.snapshot(), roomCode: this.joinCode && roomCodes.get(this.joinCode) === this.id ? this.joinCode : null, viewers: this.clients.size }; }
   scheduleBroadcast() {
+    this.noteGameEnd();
     if (this.flushTimer) return;
     const wait = Math.max(0, BROADCAST_MS - (Date.now() - this.lastFlush));
     this.flushTimer = setTimeout(() => this.flush(), wait);
@@ -88,6 +92,18 @@ class Room {
     const raw = JSON.stringify({ type: 'state', data: this.view() });
     for (const ws of this.clients) if (ws.readyState === WebSocket.OPEN && (ws.bufferedAmount || 0) < 4_000_000) ws.send(raw);
   }
+  /** Weekly leaderboard: a finished game in a real, listed session gives each real player an entry and the winner a win. */
+  noteGameEnd() {
+    const st = this.engine.status, ev = st.lastEvent;
+    if (!ev || st.active || ev.at === this.lastGameAt || !(ev.winner || st.results)) return;
+    this.lastGameAt = ev.at;
+    if (this.kind !== 'acct' || !platform || !this.sessionCounted) return;
+    const where = this.engine.connection.platform;
+    const participants = [...this.engine.players.values()].filter((p) => !p.manual && !/^(demo|host|manual):/.test(p.id)).map((p) => ({ id: p.id, name: p.name, avatar: p.avatar }));
+    if (!participants.length) return;
+    const winnerId = ev.winner?.id && participants.some((p) => p.id === ev.winner.id) ? ev.winner.id : null;
+    platform.recordGameResult({ platform: where, winnerId, participants }).catch(() => {});
+  }
   async disconnectAll() { this.kickOfficial = null; await this.tiktok.disconnect(false); await this.kick.disconnect(false); this.engine.setConnection('disconnected', '', 'تم الفصل'); }
 }
 const mainRoom = new Room('main', 'main');
@@ -96,7 +112,7 @@ function evictIdleRooms(force = false) {
   const t = Date.now();
   for (const [id, room] of rooms) {
     if (id === 'main' || room.clients.size || ['connected', 'connecting'].includes(room.engine.connection.state)) continue;
-    if (force || t - room.touched > ROOM_IDLE_MS) { room.disconnectAll().catch(() => {}); rooms.delete(id); }
+    if (force || t - room.touched > ROOM_IDLE_MS) { room.disconnectAll().catch(() => {}); rooms.delete(id); if (room.joinCode) roomCodes.delete(room.joinCode); }
   }
 }
 function ensureRoom(id, kind, ownerId) {
@@ -150,6 +166,16 @@ const OPEN_SIGNUP = process.env.SKY_OPEN_SIGNUP === '1';
 const redeemIp = new RateLimiter({ limit: 8, windowMs: 10 * 60_000 });
 const redeemAll = new RateLimiter({ limit: 300, windowMs: 10 * 60_000 });
 const authLimiter = new RateLimiter({ limit: 12, windowMs: 10 * 60_000 });
+const roomCodeLimiter = new RateLimiter({ limit: 30, windowMs: 10 * 60_000 });
+/** «كود الغرفة»: a short code viewers type on the home page to open a room's game page. Kept in memory, per room. */
+const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const roomCodes = new Map(); // code -> room id
+function roomCodeFor(room) {
+  if (room.joinCode && roomCodes.get(room.joinCode) === room.id) return room.joinCode;
+  let code; do { code = Array.from({ length: 4 }, () => ROOM_CODE_ALPHABET[randomInt(ROOM_CODE_ALPHABET.length)]).join(''); } while (roomCodes.has(code));
+  roomCodes.set(code, room.id); room.joinCode = code;
+  return code;
+}
 const draw = new DrawHub();
 const isHttps = (req) => req.socket.encrypted || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
 const clientIp = (req) => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'ip';
@@ -291,6 +317,8 @@ async function handleAction(action, body, actor) {
       if (body.start === true) engine.start();
       return { ok: true, question: q, bank: questionBank.stats() };
     }
+    case 'room-code': return { ok: true, code: roomCodeFor(room) };
+    case 'tools': { const tools = room.tools.command(String(body.action || ''), body); room.scheduleBroadcast(); return { ok: true, tools }; }
     case 'bank-reset': return { ok: true, bank: questionBank.reset() };
     case 'start': engine.start(); return { ok: true };
     case 'stop': engine.stop(); return { ok: true };
@@ -905,10 +933,19 @@ function sweepLive() {
     if (inGame && !room.gameSessionId) room.gameSessionId = randomUUID();
     // streamer statistics count only real sessions: every listing condition holds (a hidden stream still counts)
     const real = inGame && st.reasons.every((x) => x === 'hidden');
-    if (real && room.kind === 'acct' && platform && !room.sessionCounted) { room.sessionCounted = true; room.sessionPeak = 0; platform.recordStreamSession(room.ownerId, room.engine.status.mode).catch(() => {}); }
-    if (room.sessionCounted) room.sessionPeak = Math.max(room.sessionPeak || 0, room.engine.realPlayerCount());
+    if (real && room.kind === 'acct' && platform && !room.sessionCounted) {
+      room.sessionCounted = true; room.sessionPeak = 0; room.minuteAt = now;
+      platform.recordStreamSession(room.ownerId, room.engine.status.mode).catch(() => {});
+      platform.addWeeklyStreamer(room.ownerId, { sessions: 1 }).catch(() => {});
+    }
+    if (room.sessionCounted) {
+      room.sessionPeak = Math.max(room.sessionPeak || 0, room.engine.realPlayerCount());
+      const minutes = Math.floor((now - room.minuteAt) / 60_000); // streaming time, counted only while every listing condition holds
+      if (minutes > 0 && real) { room.minuteAt += minutes * 60_000; platform.addWeeklyStreamer(room.ownerId, { minutes }).catch(() => {}); }
+      else if (!real) room.minuteAt = now;
+    }
     if (!inGame) {
-      if (room.sessionCounted && platform) platform.addStreamPlayers(room.ownerId, room.sessionPeak).catch(() => {});
+      if (room.sessionCounted && platform) { platform.addStreamPlayers(room.ownerId, room.sessionPeak).catch(() => {}); platform.addWeeklyStreamer(room.ownerId, { players: room.sessionPeak }).catch(() => {}); }
       room.gameSessionId = null; room.sessionCounted = false; room.sessionPeak = 0;
     }
     if (room.kind !== 'acct' || !platform) continue;
@@ -924,7 +961,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -947,6 +984,26 @@ const server = http.createServer(async (req, res) => {
       return p ? json(res, 200, p) : json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
     }
     if (url.pathname === '/api/streams' && req.method === 'GET') return json(res, 200, streams());
+    if (url.pathname === '/api/room-code' && req.method === 'GET') {
+      if (!roomCodeLimiter.hit('ip:' + clientIp(req))) return json(res, 429, { error: 'محاولات كثيرة — انتظر قليلًا ثم حاول مرة أخرى' });
+      const code = String(url.searchParams.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const id = code.length === 4 ? roomCodes.get(code) : null;
+      if (!id || !rooms.has(id)) return json(res, 404, { error: 'الكود غير صحيح أو انتهت الغرفة — تأكد منه من شاشة البث' });
+      return json(res, 200, { room: id, url: '/play?room=' + encodeURIComponent(id) });
+    }
+    if (url.pathname === '/api/leaderboard' && req.method === 'GET') {
+      if (!platform) return json(res, 503, { error: 'اللوحة غير متاحة الآن' });
+      const board = url.searchParams.get('board') === 'streamers' ? 'streamers' : 'players';
+      const metric = String(url.searchParams.get('metric') || '').slice(0, 12);
+      const find = url.searchParams.get('find');
+      if (find) {
+        if (!/^SPG-[A-Z0-9]{4,8}$/i.test(find)) return json(res, 400, { error: 'اكتب معرف SPG بالشكل SPG-XXXXXX' });
+        const hit = await platform.leaderboardFind(find, metric);
+        return hit ? json(res, 200, { found: hit }) : json(res, 404, { error: 'لا يوجد ستريمر بهذا المعرف أو إحصاءاته مخفية' });
+      }
+      res.setHeader('Cache-Control', 'public, max-age=30');
+      return json(res, 200, await platform.leaderboard(board, metric));
+    }
     if (url.pathname === '/api/sketch' && req.method === 'GET') { const room = publicRoom(url.searchParams.get('room')); return room ? json(res, 200, room.sketch || { data: '', v: 0 }) : json(res, 404, { error: 'الغرفة غير موجودة' }); }
     if (url.pathname.startsWith('/api/role/')) return await handleRole(url.pathname.slice('/api/role/'.length), url, req, res);
     if (url.pathname.startsWith('/api/access/')) return await handleAccess(url.pathname.slice('/api/access/'.length), req, res);
@@ -988,7 +1045,7 @@ const server = http.createServer(async (req, res) => {
   } catch (err) { return json(res, err.status || 500, { error: String(err.message || err).slice(0, 200) }); }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
   // Studio pages need a signed-in session (promo code, owner or account). Viewers keep /overlay and /role.
-  const STUDIO_PAGES = new Set(['/studio', '/dashboard', '/event', '/bomb', '/play']);
+  const STUDIO_PAGES = new Set(['/studio', '/dashboard', '/event', '/bomb', '/play', '/tools']);
   if (STUDIO_PAGES.has(url.pathname)) {
     const viewer = url.pathname === '/play' && url.searchParams.has('room');
     const acct = !viewer && !actorFor(req) ? accountSession(req) : null;
@@ -1004,7 +1061,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/admin' && !adminActor(req)) { res.writeHead(302, { Location: '/login?next=/admin', 'Cache-Control': 'no-store' }); return res.end(); }
   if (url.pathname === '/account' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/account' + encodeURIComponent(url.search), 'Cache-Control': 'no-store' }); return res.end(); }
-  const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/sponge-512.webp' };
+  const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/sponge-512.webp' };
   const relative = fileMap[url.pathname] || (/^\/u\/SPG-[A-Z0-9]{6}$/i.test(url.pathname) ? 'profile.html' : url.pathname.slice(1));
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });

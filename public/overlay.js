@@ -20,11 +20,13 @@ const modeInfo = {
   roles: { en:'HIDDEN ROLES', short:'ROLES', ar:'الأدوار المخفية', instruction:'افتح صفحة دورك • في النهار اكتب «صوت» ورقم اللاعب' },
   roulette: { en:'ROULETTE', short:'ROULETTE', ar:'الروليت', instruction:'العجلة تدور وتتوقف على نتيجة يحددها الخادم بعدل' },
   country: { en:'GUESS THE COUNTRY', short:'COUNTRY', ar:'خمن الدولة', instruction:'اكتب اسم الدولة — الإجابة المبكرة تربح نقاطًا أكثر' },
-  flag: { en:'GUESS THE FLAG', short:'FLAG', ar:'خمن العلم', instruction:'اكتب اسم الدولة صاحبة العلم في الشات' }
+  flag: { en:'GUESS THE FLAG', short:'FLAG', ar:'خمن العلم', instruction:'اكتب اسم الدولة صاحبة العلم في الشات' },
+  tug: { en:'TUG OF WAR', short:'TUG', ar:'شد الحبل', instruction:'اكتب «شد» في الشات لتسحب الحبل لفريقك' },
+  outsider: { en:'OUT OF THE LOOP', short:'OUTSIDER', ar:'برا السالفة', instruction:'افتح صفحتك واكتب الرمز • لمّحوا للكلمة • صوّتوا بـ«صوت» ورقم اللاعب' }
 };
 modeInfo.rps = { en:'ROCK PAPER SCISSORS', short:'RPS', ar:'حجرة ورقة مقص', instruction:'مواجهات ثنائية: اكتب حجرة أو ورقة أو مقص — يُكشف الاختياران معًا' };
 modeInfo.quiz.ar = 'تحدي المعرفة'; modeInfo.bomb.ar = 'القنبلة الموقوتة';
-const PARTY = new Set(['rps','minority','higherlower','truefalse','redlight','bowling','drawguess','chairs','categories','roles','roulette','country','flag']);
+const PARTY = new Set(['rps','minority','higherlower','truefalse','redlight','bowling','drawguess','chairs','categories','roles','roulette','country','flag','tug','outsider']);
 const RPS_ICON = ['✊','✋','✌️'];
 let sketchData = '';
 const fxPlay = (name) => window.SpongeFx?.play(name);
@@ -651,6 +653,39 @@ const SEA_RENDER = {
     (party.players||[]).forEach(p=>{const c=chip(p,p.roleLabel?node('small','sea-role is-'+p.role,p.roleLabel):p.votes?node('b','sea-votes num',p.votes+' صوت'):node('small','num','#'+p.number));if(!p.alive)c.classList.add('is-out');grid.append(c);});
     panel.append(grid);
   },
+  tug(panel, party, r) {
+    const teams=party.teams||[];
+    const score=node('div','tug-score');
+    teams.forEach((t,i)=>{const s=node('div','tug-team is-t'+i);s.append(node('strong','',`الفريق ${t.name}`),node('b','num',number(t.score)),node('small','',`${number(t.size)} لاعب • ${number(t.pulls)} شدّة`));score.append(s);});
+    panel.append(score);
+    const field=node('div','tug-field'); const rope=node('div','tug-rope'); const knot=node('i','tug-knot');
+    // −target (blue side) … +target (yellow side); RTL screen: blue on the right
+    const pos=(party.target?party.rope/party.target:0);
+    knot.style.setProperty('--pos',String(pos));
+    field.append(node('span','tug-line is-t0'),node('span','tug-line is-t1'),rope,knot);
+    panel.append(field);
+    if(party.phase==='reveal'&&r) panel.append(banner('الشدّة '+number(party.round),r.team?'للفريق '+r.team:'تعادل',`النتيجة ${number(r.score[0])} – ${number(r.score[1])}`,r.winner===0?'is-t0':r.winner===1?'is-t1':''));
+    if(party.finished) panel.append(banner('النتيجة',party.winner==null?'تعادل':'فاز الفريق '+teams[party.winner]?.name,'',party.winner===0?'is-t0':'is-t1'));
+    const lists=node('div','tug-lists');
+    teams.forEach((t,i)=>{const ol=node('ol','tug-top is-t'+i);(t.top||[]).forEach(p=>{const li=node('li','');li.append(chip(p,node('b','num',number(p.pulls))));ol.append(li);});lists.append(ol);});
+    panel.append(lists);
+  },
+  outsider(panel, party, r) {
+    const head=node('div','sea-roles-head '+('is-'+(party.phase||'')));
+    head.append(node('strong','',{assign:'توزيع الكلمة',talk:'💬 وقت التلميح',vote:'🗳️ التصويت',reveal:'الكشف',guess:'🎯 فرصته الأخيرة',finished:'انتهت اللعبة'}[party.phase]||''),
+      node('span','',party.phase==='assign'?`افتح ${location.host}/role واكتب الرمز في الشات • ${number(party.linked||0)} ربطوا صفحاتهم`:party.prompt||''));
+    panel.append(head);
+    panel.append(banner('الفئة',party.category||'',party.word?'الكلمة كانت: '+party.word:'الكل يعرف الكلمة… إلا واحد'));
+    if(party.phase==='reveal'&&r){
+      if(r.accused) panel.append(banner(r.caught?'انكشف!':'خطأ! بريء',r.accused.name,r.caught?'هو اللي برا السالفة — عنده فرصة يكتب الكلمة':'اللي برا السالفة نجا',r.caught?'is-good':'is-bad'));
+      else panel.append(banner(r.tie?'تعادل في التصويت':'لا أصوات','ما أحد انكشف','اللي برا السالفة نجا','is-bad'));
+    }
+    if(party.outsider&&party.phase==='guess') panel.append(bigAvatar(party.outsider,'is-out'));
+    if(party.winner) panel.append(banner('النتيجة',party.winner==='outsider'?'فاز اللي برا السالفة':'فاز اللي داخل السالفة',party.outsider?'كان برا السالفة: '+party.outsider.name:'',party.winner==='outsider'?'is-bad':'is-good'));
+    const grid=node('div','party-grid sea-roles');
+    (party.players||[]).forEach(p=>{const isOut=party.outsider&&party.outsider.id===p.id;const c=chip(p,isOut?node('small','sea-role is-impostor','برا السالفة'):p.votes?node('b','sea-votes num',p.votes+' صوت'):node('small','num','#'+p.number));grid.append(c);});
+    panel.append(grid);
+  },
   roulette(panel, party, r) {
     const wrap=node('div','party-split sea-roulette');
     const stage=node('div','sea-wheel-stage'); stage.append(node('i','sea-pointer'));
@@ -741,6 +776,7 @@ function renderMascot(branding) {
   box.replaceChildren(window.SkyMascot.element(branding?.mascot||{}, { size: 40 }));
 }
 function update(data) {
+  paintRoomCode(arguments[0]?.roomCode);
   if (!data || !data.status) return;
   window.lastLiveverseState=data;
   const s=data.status, mode=modeInfo[s.mode]||modeInfo.quiz;
@@ -848,6 +884,13 @@ function connect() {
   ws.addEventListener('message',event=>{try{const packet=JSON.parse(event.data);if(packet.type==='state')update(packet.data);else if(packet.type==='sketch')showSketch(packet.data?.data||'');}catch(error){console.warn('Invalid live data',error);}});
   ws.addEventListener('close',()=>{$('connectionNotice').hidden=false;setTimeout(connect,3000);});
   ws.addEventListener('error',()=>ws.close());
+}
+/** «كود الغرفة»: viewers type it on the home page to open this room's game page on their phone. */
+function paintRoomCode(code) {
+  let badge=document.getElementById('roomCodeBadge');
+  if(!code){ if(badge) badge.hidden=true; return; }
+  if(!badge){ badge=node('div','ov-roomcode'); badge.id='roomCodeBadge'; badge.append(node('small','','كود الغرفة'),node('b','num','')); document.body.append(badge); }
+  badge.hidden=false; badge.querySelector('b').textContent=code;
 }
 function guardOverlayImages() {
   const onFail = img => {

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020A22">
+<meta name="robots" content="noindex">
+<title>أدوات البث | SPONGE LIVE</title>
+<link rel="icon" href="/brand/favicon-64.png" type="image/png">
+<link rel="stylesheet" href="/royal-core.css">
+<link rel="stylesheet" href="/play.css">
+<link rel="stylesheet" href="/sponge.css">
+<link rel="stylesheet" href="/tools.css">
+<script defer src="/session.js"></script>
+<script defer src="/sponge.js"></script>
+<script defer src="/sponge-ui.js"></script>
+<script defer src="/tools.js"></script>
+</head>
+<body class="pl-page tl-page" data-category="luck">
+<header class="pl-bar tl-bar">
+ <a class="sp-brand pl-brand" href="/" aria-label="SPONGE LIVE"><img src="/brand/sponge-128.webp" alt="" width="34" height="34"><span dir="ltr"><b>SPONGE</b> LIVE</span></a>
+ <nav class="tl-nav" aria-label="روابط"><a href="/studio">الاستوديو</a><a href="/guide/tools">كيف أضيفها في OBS؟</a></nav>
+</header>
+<main class="tl-main">
+ <header class="tl-head">
+  <h1>أدوات البث</h1>
+  <p>أدوات تشتغل مع شات بثك المربوط بجانب الألعاب. كل أداة لها رابط أوفرلاي تضيفه في OBS أو TikTok LIVE Studio كـ«مصدر متصفح» بخلفية شفافة.</p>
+  <p class="tl-warn" id="linkWarn" hidden>بثك غير مربوط الآن — السحب وعرض المتفاعلين يحتاجان شات بث موثّق. اربطه من <a href="/studio">الاستوديو</a>.</p>
+ </header>
+
+ <section class="tl-card" aria-labelledby="cdTitle">
+  <div class="tl-card-head"><svg width="26" height="26" aria-hidden="true"><use href="/icons.svg#i-timer"></use></svg><h2 id="cdTitle">العد التنازلي</h2><span class="tl-state" id="cdState">متوقف</span></div>
+  <p class="tl-desc">عدّاد كبير على الشاشة لبداية فقرة، استراحة، أو نهاية تحدٍّ.</p>
+  <div class="tl-row">
+   <label class="tl-field"><span>العنوان (اختياري)</span><input id="cdLabel" maxlength="40" placeholder="مثال: الجولة تبدأ بعد"></label>
+   <label class="tl-field tl-field-sm"><span>المدة</span><select id="cdSeconds"><option value="30">30 ثانية</option><option value="60" selected>دقيقة</option><option value="180">3 دقائق</option><option value="300">5 دقائق</option><option value="600">10 دقائق</option><option value="900">15 دقيقة</option><option value="1800">30 دقيقة</option></select></label>
+  </div>
+  <p class="tl-big num" id="cdPreview" dir="ltr">01:00</p>
+  <div class="tl-actions"><button type="button" class="pl-btn pl-btn-gold" data-tool="countdown-start">ابدأ</button><button type="button" class="pl-btn pl-btn-ghost" data-tool="countdown-pause">إيقاف مؤقت / متابعة</button><button type="button" class="pl-btn pl-btn-ghost" data-tool="countdown-stop">إنهاء</button></div>
+  <div class="tl-link"><span>رابط الأوفرلاي</span><code id="link-countdown" dir="ltr">—</code><button type="button" class="pl-btn pl-btn-ghost tl-copy" data-copy="countdown">نسخ</button></div>
+ </section>
+
+ <section class="tl-card" aria-labelledby="drawTitle">
+  <div class="tl-card-head"><svg width="26" height="26" aria-hidden="true"><use href="/icons.svg#i-gift"></use></svg><h2 id="drawTitle">السحب العشوائي</h2><span class="tl-state" id="drawState">مغلق</span></div>
+  <p class="tl-desc">افتح السحب بكلمة، كل من يكتبها في الشات يدخل مرة واحدة، والخادم يختار فائزًا بعدل.</p>
+  <div class="tl-row"><label class="tl-field"><span>كلمة الدخول</span><input id="drawKeyword" maxlength="20" value="سحب"></label><p class="tl-count"><b class="num" id="drawCount">0</b> مشارك</p></div>
+  <ul class="tl-chips" id="drawRecent" aria-label="آخر المشاركين"></ul>
+  <p class="tl-winner" id="drawWinner" hidden></p>
+  <div class="tl-actions"><button type="button" class="pl-btn pl-btn-gold" data-tool="draw-open">افتح السحب</button><button type="button" class="pl-btn pl-btn-ghost" data-tool="draw-close">أغلق الدخول</button><button type="button" class="pl-btn pl-btn-gold" data-tool="draw-pick">اسحب فائزًا</button><button type="button" class="pl-btn pl-btn-ghost" data-tool="draw-reset">تصفير</button></div>
+  <div class="tl-link"><span>رابط الأوفرلاي</span><code id="link-draw" dir="ltr">—</code><button type="button" class="pl-btn pl-btn-ghost tl-copy" data-copy="draw">نسخ</button></div>
+ </section>
+
+ <section class="tl-card" aria-labelledby="wallTitle">
+  <div class="tl-card-head"><svg width="26" height="26" aria-hidden="true"><use href="/icons.svg#i-users"></use></svg><h2 id="wallTitle">عرض المتفاعلين</h2><span class="tl-state" id="wallState">يعمل</span></div>
+  <p class="tl-desc">صور وأسماء آخر من كتبوا في الشات، مع عدد رسائلهم — يكافئ المتفاعلين ويشجع الباقين.</p>
+  <ul class="tl-chips" id="wallList" aria-label="آخر المتفاعلين"></ul>
+  <div class="tl-actions"><button type="button" class="pl-btn pl-btn-ghost" id="wallToggle">إيقاف</button><button type="button" class="pl-btn pl-btn-ghost" id="wallClear">مسح القائمة</button></div>
+  <div class="tl-link"><span>رابط الأوفرلاي</span><code id="link-wall" dir="ltr">—</code><button type="button" class="pl-btn pl-btn-ghost tl-copy" data-copy="wall">نسخ</button></div>
+ </section>
+ <p class="pl-feedback" id="toolFeedback" role="status" aria-live="polite"></p>
+</main>
+</body>
+</html>
