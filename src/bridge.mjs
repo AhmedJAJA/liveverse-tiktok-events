@@ -21,6 +21,8 @@ export function backoffDelay(attempt, random = Math.random) {
   return Math.round(raw * (1 - RETRY.jitter + 2 * RETRY.jitter * random()));
 }
 /** Errors that another attempt cannot fix (a wrong or banned account): retrying stops at once. */
+/** TikTok says the account is not live: retrying will not help until the host starts the LIVE. */
+export const offlineError = (err) => /offline|isn't online|not online|UserOffline|LIVE has ended|live has ended/i.test(String(err?.message || err));
 export const permanentError = (err) => /user ?not ?found|invalid user|banned|private account|unauthori[sz]ed|forbidden|401|403/i.test(String(err?.message || err));
 // The app works in demo mode without any LIVE connection.
 export class LiveBridge {
@@ -37,8 +39,8 @@ export class LiveBridge {
     try { await this.attempt(generation); }
     catch(err) {
       if (generation === this.generation) {
-        this.engine.setConnection('error', username, String(err?.message || err).slice(0,140), 'tiktok');
-        this.schedule(generation, err);
+        if (offlineError(err)) this.engine.setConnection('disconnected', username, 'بثك على TikTok غير مباشر الآن — ابدأ البث ثم اتصل', 'tiktok');
+        else { this.engine.setConnection('error', username, String(err?.message || err).slice(0,140), 'tiktok'); this.schedule(generation, err); }
       }
       throw err;
     }
@@ -97,6 +99,7 @@ export class LiveBridge {
   /** One pending retry at a time per bridge; the old connection is always closed before a new one is made (attempt()). */
   schedule(generation, err) {
     if (this.retry || generation !== this.generation) return;
+    if (offlineError(err)) { this.nextRetryAt = null; this.engine.setConnection('disconnected', this.username, 'انتهى البث أو أصبح غير مباشر — اضغط «اتصال» بعد بدء البث', 'tiktok'); return; }
     if (permanentError(err) || this.failures >= RETRY.maxAttempts) {
       this.nextRetryAt = null;
       this.engine.setConnection('error', this.username, permanentError(err) ? 'تعذر الاتصال بهذا الحساب — لن تُعاد المحاولة تلقائيًا' : 'توقفت إعادة المحاولة بعد عدة محاولات — اضغط «إعادة الاتصال»', 'tiktok');

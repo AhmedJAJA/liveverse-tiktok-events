@@ -139,6 +139,8 @@ export async function prepareLobby(room, ctx) {
     if (err instanceof Cancelled || !alive()) return { ok: false, cancelled: true };
     const code = classify(err), meta = LOBBY_ERRORS[code] || LOBBY_ERRORS.prepare_failed;
     if (current) flow.step(current, 'failed', err.message);
+    // a chat connection that could not be made is closed (no retries left running behind an error screen)
+    if (current === 'listener') try { ctx.release?.(meta.title); } catch {}
     flow.failLobby({ code, message: err instanceof LobbyError && err.message !== meta.title ? err.message : (meta.hint || ''), action: meta.action, step: current });
     if (!(err instanceof LobbyError) && code === 'chat_failed') console.warn('[lobby] prepare', err?.message);
     return { ok: false, code };

@@ -194,3 +194,59 @@ body.st-page[data-screen=lobby]{padding-bottom:0}
   .lb-btn .i{display:none}
 }
 @media (prefers-reduced-motion:reduce){.pp-orbit i,.pp-steps li::before,.lb-status i,.lb-player,.lb-count b,.lb-word-badge,.lb-btn.is-busy::after{animation:none!important}.pp-bar i{transition:none}}
+
+/* ---------- the round on full screen (image 2): slim bar, the game fills the screen ---------- */
+body:not([data-screen=game]) .gm-top,body:not([data-screen=game]) .gm-toast{display:none!important}
+body[data-screen=game] .st-top,body[data-screen=game] .st-notices .is-plan,body[data-screen=game] #adminBar,
+body[data-screen=game] .st-crumbs,body[data-screen=game] .st-hero,body[data-screen=game] #joinCall,body[data-screen=game] .pl-roster,
+body[data-screen=game] .pl-live-head,body[data-screen=game] #lateNote,body[data-screen=game] #feedback{display:none!important}
+body.st-page[data-screen=game]{padding-bottom:0;overflow-x:hidden}
+.gm-top{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:10px 14px;min-height:56px;padding:8px max(14px,env(safe-area-inset-right));background:rgba(3,12,34,.92);border-bottom:1px solid rgba(56,212,255,.16);backdrop-filter:blur(8px)}
+.gm-brand{display:inline-flex;align-items:center;gap:8px;flex:none;color:#EAF8FF;text-decoration:none;font-size:14px}
+.gm-brand b{color:#FFE14D}
+.gm-info{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 8px;flex:1;min-width:0}
+.gm-info>b{font-size:15px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:999px;background:rgba(2,10,34,.7);border:1px solid rgba(140,232,255,.2);font-size:12.5px;font-weight:800;color:#EAF8FF;white-space:nowrap}
+.gm-chip .i{width:15px;height:15px}
+.gm-chip[hidden]{display:none}
+#gmStage{background:rgba(255,61,127,.14);border-color:rgba(255,61,127,.45);color:#FFC2D5}
+#gmStage[data-done]{background:rgba(47,217,160,.14);border-color:rgba(47,217,160,.45);color:#C9FFE9}
+.gm-conn{max-width:280px}.gm-conn span{overflow:hidden;text-overflow:ellipsis}
+.gm-conn i{width:8px;height:8px;flex:none;border-radius:50%;background:#64748b}
+.gm-conn[data-tone=ok] i{background:#2FD9A0;box-shadow:0 0 8px #2FD9A0}
+.gm-conn[data-tone=bad] i{background:#FF6A8A}.gm-conn[data-tone=bad]{border-color:rgba(255,106,138,.45)}
+.gm-conn[data-tone=wait] i{background:#FFD21F}
+.gm-conn[data-tone=demo] i{background:#B18CFF}.gm-conn[data-tone=demo]{border-color:rgba(177,140,255,.5)}
+.gm-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;flex:none}
+.gm-actions .pl-admin-inner{display:contents}
+.gm-actions .pl-admin-join,.gm-actions .pl-admin-live,.gm-actions .pl-admin-done{display:flex;flex-wrap:nowrap;gap:8px}
+.gm-actions [hidden]{display:none!important}
+.gm-actions .pl-btn{min-height:40px;height:40px;padding:0 14px;font-size:14px;flex:none}
+.gm-actions .pl-btn .i{width:16px;height:16px}
+.gm-toast{position:fixed;top:66px;left:50%;translate:-50% 0;z-index:45;margin:0;padding:8px 16px;border-radius:12px;background:rgba(3,12,34,.95);border:1px solid rgba(140,232,255,.3);font-weight:800;max-width:calc(100vw - 32px)}
+.gm-toast.is-error{border-color:rgba(255,106,138,.6);color:#FFD6DF}
+body[data-screen=game] .st-layout{display:block;max-width:none;padding:10px 12px 12px}
+body[data-screen=game] .st-main{display:grid;gap:12px;justify-items:center}
+body[data-screen=game] .pl-live{width:100%;align-items:center}
+body[data-screen=game] .pl-frame{width:min(100%,calc((100dvh - 86px) * 16 / 9));border-radius:18px}
+/* host tools (drawing board, judging, roles) beside the game on wide screens */
+@media (min-width:1100px){
+  body[data-screen=game] .st-main:has(#hostTools:not([hidden])){grid-template-columns:minmax(0,1fr) minmax(320px,30%);align-items:start}
+  body[data-screen=game] .st-main:has(#hostTools:not([hidden])) .pl-frame{width:100%}
+}
+/* «التحكم»: the round's drawer floats over the game */
+body[data-screen=game] .st-drawer{position:fixed;top:64px;inset-inline-end:12px;bottom:auto;z-index:42;width:min(360px,calc(100vw - 24px));max-height:calc(100dvh - 80px);margin:0;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.65)}
+body[data-screen=game]:not([data-drawer=open]) .st-drawer{display:none!important}
+@media (max-width:760px){
+  .gm-top{flex-wrap:wrap}
+  .gm-brand span{display:none}
+  .gm-info{order:3;flex-basis:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .gm-actions{flex:1;justify-content:flex-end}
+  .gm-actions .pl-btn{padding:0 10px;font-size:13px}
+  .gm-tools span{display:none}
+  .gm-toast{top:104px}
+  body[data-screen=game] .st-drawer{top:104px}
+  /* phones: the game screen takes the whole height (the overlay lays itself out for tall screens) */
+  body[data-screen=game] .st-layout{padding:6px}
+  body[data-screen=game] .pl-frame{width:100%;aspect-ratio:auto;height:calc(100dvh - 120px);border-radius:14px}
+}
