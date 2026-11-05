@@ -9,6 +9,8 @@ import { Engine, liveUrlFor } from './src/engine.mjs';
 import { LiveBridge } from './src/bridge.mjs';
 import { KickBridge, validKickSlug } from './src/kick.mjs';
 import { StreamTools } from './src/stream-tools.mjs';
+import { GameFlow } from './src/flow.mjs';
+import { settingsSchema, JOIN_WORD_SUGGESTIONS, LATE_JOIN_MODES } from './src/game-settings.mjs';
 import { QuestionBank, loadDefaultQuestions } from './src/question-bank.mjs';
 import { siteConfig, ALL_GAMES, UPDATES } from './src/catalog.mjs';
 import { AccountStore, Sessions, RateLimiter, FieldError, parseCookies, roomId, PLANS } from './src/accounts.mjs';
@@ -65,6 +67,9 @@ class Room {
     this.primaryTab = null;    // the one window allowed to control the room
     this.gameSessionId = null; this.saved = { state: '', at: 0 };
     this.tools = new StreamTools();  // OBS tools: countdown, chat draw, active chatters
+    // the game session's launch flow (library → setup → join word → lobby → round → results), kept on the server
+    this.flow = new GameFlow({ engine: this.engine, games: ALL_GAMES });
+    this.engine.questionSource = (filter) => drawQuestion(this.questionBank, filter);
   }
   receiveChat(chat) {
     // An account room only plays with a stream whose account was linked by signing in with the platform.
@@ -78,7 +83,7 @@ class Room {
     this.engine.setConnection('disconnected', '', reason);
   }
   hostTab() { const t = this.primaryTab && this.tabs.get(this.primaryTab); return t && Date.now() - t.at <= HOST_TIMEOUT_MS ? t : null; }
-  view() { return { ...this.engine.snapshot(), tools: this.tools.snapshot(), roomCode: this.joinCode && roomCodes.get(this.joinCode) === this.id ? this.joinCode : null, viewers: this.clients.size }; }
+  view() { return { ...this.engine.snapshot(), flow: this.flow.snapshot(), tools: this.tools.snapshot(), roomCode: this.joinCode && roomCodes.get(this.joinCode) === this.id ? this.joinCode : null, viewers: this.clients.size }; }
   scheduleBroadcast() {
     this.noteGameEnd();
     if (this.flushTimer) return;
@@ -264,10 +269,32 @@ function secureHeaders(res) {
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: https://*.googleusercontent.com https://files.kick.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
 }
 
+/** One question of «تحدي المعرفة» from the bank; when the chosen category/level runs out, any question will do. */
+function drawQuestion(bank, { category = 'all', difficulty = 'all' } = {}) {
+  let q; try { q = bank.draw({ category, difficulty }); } catch { try { q = bank.draw({}); } catch { bank.reset(); q = bank.draw({}); } }
+  return { title: 'تحدي ' + (bank.stats().categories[q.category]?.title || 'المعلومات'), prompt: q.question, options: q.options, answer: q.answer };
+}
 async function handleAction(action, body, actor) {
   const { engine, questionBank } = actor.room;
   const room = actor.room;
   switch (action) {
+    // ---- the launch flow: every step is a separate command (see src/flow.mjs)
+    case 'flow-setup': room.flow.setup(String(body.mode || '')); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-settings': room.flow.saveSettings(room.flow.mode, body.settings, { lateJoin: body.lateJoin, keyword: body.keyword }); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-reset': room.flow.resetSettings(room.flow.mode); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-begin': room.flow.begin(); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-open': room.flow.open(body.keyword); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-close': room.flow.close(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-start': room.flow.start((s) => { const q = drawQuestion(questionBank, s); engine.configure({ mode: 'quiz', title: q.title, prompt: q.prompt, options: q.options, answer: q.answer }); }); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-again': room.flow.again(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-end': room.flow.end(); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-library': room.flow.library(); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-trial': {
+      room.flow.tryOut();
+      const added = engine.addDemoPlayers({ count: Math.max(4, engine.snapshot().registration.minPlayers || 1) });
+      engine.setSimulation({ autoplay: true });
+      return { ok: true, flow: room.flow.snapshot(), added };
+    }
     case 'configure': engine.configure(body); return { ok: true };
     case 'registration-open': engine.openRegistration(body); return { ok: true };
     case 'registration-settings': return { ok: true, registration: engine.updateRegistration({ ...body, ...(body.hostJoin ? { hostName: actor.user?.displayName || 'المشرف' } : {}) }) };
@@ -305,6 +332,7 @@ async function handleAction(action, body, actor) {
         const q = questionBank.draw({});
         engine.configure({ mode: 'quiz', title: 'تحدي ' + (questionBank.stats().categories[q.category]?.title || 'المعلومات'), prompt: q.question, options: q.options, answer: q.answer });
       }
+      room.flow.legacy('prepare', game.mode);
       return { ok: true, ...result };
     }
     case 'remove-player': return { ok: true, ...engine.removePlayer(body) };
@@ -320,7 +348,7 @@ async function handleAction(action, body, actor) {
     case 'room-code': return { ok: true, code: roomCodeFor(room) };
     case 'tools': { const tools = room.tools.command(String(body.action || ''), body); room.scheduleBroadcast(); return { ok: true, tools }; }
     case 'bank-reset': return { ok: true, bank: questionBank.reset() };
-    case 'start': engine.start(); return { ok: true };
+    case 'start': engine.start(); room.flow.legacy('start'); return { ok: true };
     case 'stop': engine.stop(); return { ok: true };
     case 'reset': engine.resetScores(); return { ok: true };
     case 'draw': return { ok: true, result: engine.drawWheel() };
@@ -977,7 +1005,7 @@ const server = http.createServer(async (req, res) => {
       const room = publicRoom(url.searchParams.get('room'));
       return room ? json(res, 200, room.view()) : json(res, 404, { error: 'الغرفة غير موجودة' });
     }
-    if (url.pathname === '/api/site' && req.method === 'GET') return json(res, 200, { ...siteConfig(), updates: UPDATES, plans: PLANS });
+    if (url.pathname === '/api/site' && req.method === 'GET') return json(res, 200, { ...siteConfig(), updates: UPDATES, plans: PLANS, gameSettings: settingsSchema(), joinWords: JOIN_WORD_SUGGESTIONS, lateJoinModes: LATE_JOIN_MODES });
     if (url.pathname.startsWith('/api/u/') && req.method === 'GET') {
       if (!platform) return json(res, 404, { error: 'غير موجود' });
       const p = await platform.publicProfile(decodeURIComponent(url.pathname.slice(7)));

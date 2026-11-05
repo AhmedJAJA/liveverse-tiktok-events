@@ -300,6 +300,11 @@ function renderRegistration(reg) {
   screen.dataset.phase=reg.phase;
   $('signupStateLabel').textContent=reg.phase==='open'?'التسجيل مفتوح':'بانتظار فتح التسجيل';
   $('signupEmptyHint').textContent=reg.phase==='open'?'اكتب كلمة الانضمام في شات البث وبيظهر اسمك وصورتك هنا مباشرة':'تبدأ المشاركة بعد فتح التسجيل. استعد للتحدي!';
+  // Before the host opens registration nothing invites viewers to type: no word is accepted yet.
+  const open=reg.phase==='open';
+  $('signupCmdLabel').textContent=open?'اكتب في تعليقات البث':'المشرف يجهّز اللعبة';
+  $('signupCmdSub').textContent=open?'للدخول إلى اللعبة باسمك وصورتك':'انتظر فتح التسجيل وكلمة الانضمام';
+  $('signupKeyword').hidden=!open;
   $('signupKeyword').textContent=reg.keyword||'انضم';
   $('signupKeyword').classList.toggle('is-long',(reg.keyword||'').length>8);
   $('signupTitle').textContent=window.lastLiveverseState?.status?.title||'تحدي المعلومات';

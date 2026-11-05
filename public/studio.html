@@ -76,6 +76,8 @@
   <div><h1 id="libTitle">ألعاب البث</h1><p>اختر لعبة وشغّلها — المشاهدون يدخلون بكتابة «انضم» في التعليقات.</p></div>
   <span class="st-lib-count" id="gameCount" aria-live="polite">0 لعبة</span>
  </div>
+ <p class="st-lib-note" id="libNote" role="status" hidden></p>
+ <button type="button" class="st-resume" id="resumeGame" hidden><span id="resumeText">لعبة جارية</span><b>العودة إليها</b></button>
  <div class="st-filters">
   <label class="st-search"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-search"/></svg><span class="sr-only">بحث</span><input type="search" id="gameSearch" placeholder="ابحث باسم اللعبة…" autocomplete="off" maxlength="40"></label>
   <div class="st-cats" id="gameCats" role="group" aria-label="التصنيفات"></div>
@@ -93,10 +95,99 @@
  </form>
 </dialog>
 
+<!-- ===== stage 2: game setup (nothing is opened and no timer runs here) ===== -->
+<section class="st-setup" id="setupView" aria-labelledby="setupTitle">
+ <div class="st-setup-in">
+  <header class="su-head">
+   <button type="button" class="su-back" id="setupBack" aria-label="رجوع إلى الألعاب"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></button>
+   <div class="su-id">
+    <span class="su-eyebrow">إعداد اللعبة</span>
+    <h1 id="setupTitle">—</h1>
+    <p id="setupSummary"></p>
+   </div>
+   <figure class="su-cover"><img id="setupCover" alt="" width="120" height="154"></figure>
+  </header>
+
+  <div class="su-grid">
+   <section class="su-card su-platform" aria-labelledby="platTitle">
+    <span class="su-icon" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-link"/></svg></span>
+    <div class="su-card-body">
+     <small id="platTitle">منصات البث</small>
+     <b id="platState">…</b>
+     <div class="su-accounts" id="platAccounts"></div>
+    </div>
+    <a class="su-edit" href="/account#settings">تعديل</a>
+   </section>
+
+   <section class="su-card su-join" aria-labelledby="joinTitle">
+    <div class="su-card-head"><small class="su-kicker">انضمام اللاعبين</small><h2 id="joinTitle">طريقة الانضمام للجولة</h2><p>يكتب المشاهدون كلمة الانضمام في تعليقات البث بعد فتح التسجيل.</p></div>
+    <div class="su-word">
+     <span class="su-word-label">كلمة الانضمام</span>
+     <b class="su-word-now" id="setupWord">انضم</b>
+     <small>تحددها أو تغيّرها في الخطوة التالية قبل فتح التسجيل.</small>
+    </div>
+    <div class="su-late">
+     <p class="su-late-title">الانضمام بعد بدء اللعبة <span class="su-warn" id="lateWarn" hidden>!</span></p>
+     <div class="su-options" role="radiogroup" aria-label="الانضمام بعد بدء اللعبة">
+      <button type="button" class="su-option" role="radio" data-late="click" aria-checked="true"><span class="su-option-ic" aria-hidden="true">☝</span><span><b>انقر للإضافة</b><small>تضيف اللاعبين الجدد بنفسك من «إضافة لاعب».</small></span></button>
+      <button type="button" class="su-option" role="radio" data-late="open" aria-checked="false"><span class="su-option-ic" aria-hidden="true">⇥</span><span><b>مفتوح دائمًا</b><small>من يكتب الكلمة أثناء الجولة يدخلها فورًا.</small></span></button>
+     </div>
+     <p class="su-note" id="lateHelp"></p>
+    </div>
+   </section>
+
+   <section class="su-card su-other" aria-labelledby="otherTitle">
+    <div class="su-card-body"><h2 id="otherTitle">تشغيل اللعبة على حساب آخر</h2><p id="otherHint">اختر حساب بث آخر موثّقًا ومربوطًا بحسابك — لا يمكن كتابة اسم حساب يدويًا.</p><div class="su-accounts" id="otherAccounts" hidden></div></div>
+    <button type="button" class="su-switch" id="otherToggle" role="switch" aria-checked="false" aria-labelledby="otherTitle"><i></i></button>
+   </section>
+
+   <details class="su-card su-adv" id="advanced" open>
+    <summary><h2>الإعدادات المتقدمة</h2><svg class="i su-caret" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></summary>
+    <div class="su-adv-head"><div><h3 id="advTitle">إعدادات اللعبة</h3><p>اختر ما يناسب بثك — تُحفظ فورًا وتُطبَّق عند بدء الجولة.</p></div><button type="button" class="su-reset" id="resetSettings">استعادة الافتراضي</button></div>
+    <div class="su-fields" id="advFields"></div>
+    <div class="su-guess" id="setupGuess" hidden>
+     <label><span>التلميح للجمهور</span><input id="guessPrompt" maxlength="200" dir="auto" placeholder="مثال: عاصمة فرنسا"></label>
+     <label><span>الإجابة السرية</span><input id="guessAnswer" maxlength="80" dir="auto" placeholder="باريس" autocomplete="off"></label>
+    </div>
+    <p class="su-none" id="advNone" hidden>هذه اللعبة لا تحتاج إعدادات إضافية.</p>
+   </details>
+  </div>
+
+  <footer class="su-foot">
+   <p class="su-foot-hint" id="setupHint"><i aria-hidden="true"></i><span>جرّب اللعبة الآن بلاعبين تجريبيين، أو ابدأها لتحديد كلمة الانضمام.</span></p>
+   <div class="su-foot-btns">
+    <button type="button" class="su-btn su-btn-ghost" id="tryButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span>تجربة اللعبة</span></button>
+    <button type="button" class="su-btn su-btn-main" id="beginButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span>ابدأ اللعبة</span></button>
+   </div>
+  </footer>
+ </div>
+</section>
+
+<!-- ===== stage 3: «تجهيز المتسابقين» — the join word; registration opens only on the button ===== -->
+<section class="st-register" id="registerView" aria-labelledby="regTitle">
+ <div class="rg-in">
+  <button type="button" class="su-back rg-back" id="registerBack"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg><span>العودة للإعدادات</span></button>
+  <div class="rg-card">
+   <span class="rg-game" id="regGame">—</span>
+   <h1 id="regTitle">تجهيز المتسابقين</h1>
+   <p class="rg-sub">حدد الكلمة التي سيكتبها المشاهدون في تعليقات البث</p>
+   <form id="wordForm" class="rg-form" novalidate>
+    <label for="wordInput" class="rg-label">ما الكلمة التي سيكتبها المشاهدون في الشات للانضمام؟</label>
+    <input id="wordInput" class="rg-input" maxlength="32" value="انضم" autocomplete="off" spellcheck="false" enterkeyhint="go">
+    <div class="rg-chips" id="wordChips" role="group" aria-label="كلمات مقترحة"></div>
+    <p class="rg-preview">سيظهر على شاشة البث: «اكتب <b id="wordPreview">انضم</b> في تعليقات البث للدخول إلى اللعبة»</p>
+    <p class="rg-conn" id="regConn" data-on="false"></p>
+    <button type="submit" class="su-btn su-btn-main rg-open" id="openButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg><span>حفظ الكلمة وفتح التسجيل</span></button>
+   </form>
+  </div>
+ </div>
+</section>
+
 <div class="st-layout" id="gameScreen">
  <!-- ===== the selected game ===== -->
  <main class="st-main">
-  <div class="st-crumbs"><button type="button" class="pl-chip" id="backToGames"><svg class="i st-flip" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg><span>كل الألعاب</span></button><span class="st-crumb-now" id="crumbTitle"></span></div>
+  <div class="st-crumbs"><button type="button" class="pl-chip" id="backToGames"><svg class="i st-flip" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg><span>كل الألعاب</span></button><span class="st-crumb-now" id="crumbTitle"></span>
+   <button type="button" class="pl-chip st-tosetup" id="toSetup"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>العودة للإعدادات</span></button></div>
   <section class="pl-hero st-hero" aria-labelledby="gameTitle">
    <figure class="pl-cover is-art"><img id="gameCover" src="/games/01-knowledge-challenge-200.webp" alt="" width="200" height="256"></figure>
    <div class="pl-id">
@@ -109,18 +200,29 @@
   </section>
 
   <section class="pl-call" id="joinCall" aria-live="polite">
-   <p class="pl-call-main">اكتب «<b class="pl-word" id="joinWord">انضم</b>» في تعليقات البث للدخول إلى اللعبة</p>
+   <p class="st-stage-tag" id="stageTag">التسجيل مفتوح</p>
+   <p class="pl-call-main">اكتب «<b class="pl-word" id="joinWord">انضم</b>» في تعليقات البث للمشاركة!</p>
    <p class="pl-call-sub" id="callSub"><span class="pl-pulse" aria-hidden="true"></span><span id="callSubText">بانتظار انضمام اللاعبين</span></p>
    <div class="st-call-stats">
     <div class="pl-count"><b id="playerCount">0</b><span id="playerCountLabel">لاعب منضم</span></div>
-    <div class="st-reg"><span class="st-reg-state" id="regState">الانضمام مفتوح</span><button type="button" class="pl-btn pl-btn-line" id="regToggle">إغلاق الانضمام</button></div>
+    <div class="st-reg"><span class="st-reg-state" id="regState">الانضمام مفتوح</span><button type="button" class="pl-btn pl-btn-line" id="regToggle">إغلاق التسجيل</button></div>
+   </div>
+   <ul class="st-lobby-facts">
+    <li id="factReg" data-on="true"><span>حالة التسجيل</span><b>مفتوح</b></li>
+    <li id="factConn" data-on="false"><span>اتصال البث</span><b>غير متصل</b></li>
+    <li id="factCount" data-on="false"><span>المنضمون</span><b>0</b></li>
+   </ul>
+   <p class="st-noconn" id="noConn" hidden>البث غير متصل — لن تصل تعليقات حقيقية حتى تتصل بحسابك المربوط من الأعلى. يمكنك إضافة لاعبين يدويًا أو تجربة اللعبة.</p>
+   <div class="st-lobby-tools">
+    <form class="st-inline" id="lobbyAdd"><label class="sr-only" for="lobbyAddName">اسم اللاعب</label><input id="lobbyAddName" maxlength="32" placeholder="إضافة لاعب يدويًا" autocomplete="off"><button type="submit" class="pl-btn pl-btn-ghost">إضافة</button></form>
+    <form class="st-inline" id="lobbyWord"><label class="sr-only" for="lobbyWordInput">كلمة الانضمام</label><input id="lobbyWordInput" maxlength="32" autocomplete="off" placeholder="كلمة جديدة"><button type="submit" class="pl-btn pl-btn-ghost">تغيير الكلمة</button></form>
    </div>
   </section>
 
   <section class="pl-live" id="liveView" hidden aria-label="اللعبة الجارية">
    <div class="pl-live-head"><span class="pl-live-tag"><i aria-hidden="true"></i>اللعبة جارية</span><p id="liveNotice"></p></div>
    <div class="pl-frame"><iframe id="liveFrame" title="شاشة اللعبة" src="about:blank" loading="lazy"></iframe></div>
-   <p class="pl-late" id="lateNote">وصلت متأخرًا؟ اكتب <b class="pl-word-sm">انضم</b> وستدخل الجولة التالية تلقائيًا<span id="lateCount"></span></p>
+   <p class="pl-late" id="lateNote">وصلت متأخرًا؟ اكتب <b class="pl-word-sm">انضم</b><span id="lateCount"> وستدخل الجولة التالية</span></p>
   </section>
 
   <section class="pl-tools" id="hostTools" hidden aria-label="أدوات المشرف للعبة">
@@ -156,10 +258,10 @@
    <label class="pl-check"><input type="checkbox" id="autoHost"><span>دخّلني تلقائياً في كل لعبة</span></label>
    <div class="pl-row st-round-btns">
     <button type="button" class="pl-btn pl-btn-ghost" id="stopButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-stop"/></svg><span>إيقاف الجولة</span></button>
-    <button type="button" class="pl-btn pl-btn-ghost" id="restartButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg><span>إعادة الجولة</span></button>
+
     <button type="button" class="pl-btn pl-btn-danger" id="endButton"><span>إنهاء اللعبة</span></button>
    </div>
-   <a class="pl-link" id="setupLink" href="/dashboard">لوحة الإعدادات المتقدمة</a>
+
   </div>
   <div class="st-pane" role="tabpanel" id="pane-players" aria-labelledby="tab-players" hidden>
    <form class="pl-row" id="addForm"><label><span>إضافة لاعب يدويًا</span><input id="addName" maxlength="32" placeholder="اسم اللاعب" autocomplete="off"></label><button type="submit" class="pl-btn pl-btn-ghost">إضافة</button></form>
@@ -169,15 +271,9 @@
    <ol class="st-leaders" id="leaders"></ol>
   </div>
   <div class="st-pane" role="tabpanel" id="pane-settings" aria-labelledby="tab-settings" hidden>
-   <form class="pl-row" id="keywordForm"><label><span>كلمة الانضمام</span><input id="keywordInput" maxlength="32" value="انضم" autocomplete="off"></label>
-    <label><span>عدد المتسابقين</span><input id="maxInput" type="number" min="1" max="1500" value="1500" inputmode="numeric"></label>
+   <form class="pl-row" id="keywordForm"><label><span>الحد الأقصى للمتسابقين</span><input id="maxInput" type="number" min="1" max="1500" value="1500" inputmode="numeric"></label>
     <button type="submit" class="pl-btn pl-btn-ghost">حفظ</button></form>
-   <div class="pl-guess" id="guessFields" hidden>
-    <label><span>التلميح للجمهور</span><input id="guessPrompt" maxlength="200" dir="auto" placeholder="مثال: عاصمة فرنسا"></label>
-    <label><span>الإجابة السرية</span><input id="guessAnswer" maxlength="80" dir="auto" placeholder="باريس" autocomplete="off"></label>
-   </div>
-   <label class="pl-select" id="variantWrap" hidden><span id="variantLabel">القاعدة</span><select id="variantSelect"></select></label>
-   <label class="pl-select" id="roundsWrap" hidden><span>عدد الجولات</span><select id="roundsSelect"></select></label>
+   <p class="pl-hint">إعدادات اللعبة نفسها في شاشة «إعداد اللعبة» — <button type="button" class="st-link-btn" id="drawerToSetup">افتحها</button>.</p>
    <div class="pl-row"><button type="button" class="pl-chip" data-sp-toggle="sound"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-volume"/></svg><span data-sp-label>الصوت</span></button>
     <button type="button" class="pl-chip" data-sp-toggle="fx"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-sparkle"/></svg><span data-sp-label>المؤثرات</span></button></div>
    <label class="pl-select" id="kickWrap" hidden><span>رقم غرفة شات Kick (اختياري)</span><input id="kickChatroom" inputmode="numeric" maxlength="12" dir="ltr"></label>
@@ -202,7 +298,7 @@
  <div class="pl-admin-inner">
   <div class="pl-admin-join" id="adminJoin">
    <button type="button" class="pl-btn pl-btn-line" id="hostSeatButton" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user-plus"/></svg><span id="hostSeatLabel">دخّلني أنا</span></button>
-   <button type="button" class="pl-btn pl-btn-gold" id="startButton" disabled><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span id="startLabel">ابدأ اللعبة</span></button>
+   <button type="button" class="pl-btn pl-btn-gold" id="startButton" disabled><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span id="startLabel">بدء الجولة الآن</span></button>
    <button type="button" class="pl-btn pl-btn-ghost st-reset" id="resetButton" title="تصفير النقاط وقائمة المتسابقين"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg><span>إعادة تعيين</span></button>
   </div>
   <div class="pl-admin-live" id="adminLive" hidden>
@@ -212,6 +308,8 @@
   </div>
   <div class="pl-admin-done" id="adminDone" hidden>
    <button type="button" class="pl-btn pl-btn-gold" id="againButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-refresh"/></svg><span>جولة جديدة</span></button>
+   <button type="button" class="pl-btn pl-btn-ghost" id="doneSetup"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>العودة للإعدادات</span></button>
+   <button type="button" class="pl-btn pl-btn-danger" id="doneEnd"><span>إنهاء اللعبة</span></button>
   </div>
  </div>
 </div>

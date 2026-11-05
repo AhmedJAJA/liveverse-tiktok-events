@@ -1,6 +1,7 @@
 import { randomInt } from 'node:crypto';
 import { BombGame, parsePassCommand } from './bomb.mjs';
 import { PARTY_MODES, PARTY_MIN_PLAYERS, PARTY_DEFAULTS, createPartyGame } from './party.mjs';
+import { OUTSIDER_WORDS } from './team-games.mjs';
 import { ALL_GAMES as GAMES } from './catalog.mjs';
 import { CATEGORY_WORDS } from './word-banks.mjs';
 const botWord = (category, letter) => (CATEGORY_WORDS[category] || []).find(w => normalizeAnswer(w).replace(/^ال/, '').startsWith(normalizeAnswer(letter)));
@@ -16,6 +17,8 @@ const MAX_PLAYERS = 1500;
 const MAX_ENTRIES = 500;
 const KEEP_CHAT = 35;
 const QUIZ_POINTS = [10, 7, 5, 3, 2, 1];
+const QUIZ_NEXT_MS = 6000; // results of a question stay on screen before the next one
+const LATE_JOIN = ['quiz', 'guess']; // rules that let a newcomer join a running round
 const REGISTRATION_PREVIEW = 10;
 const MAX_WAITING = 300;
 /** Minimum contestants each game needs before it can start (one source: the catalogue). */
@@ -79,7 +82,7 @@ export class Engine {
     this.wheelEntries = new Map();
     this.lastChatAt = new Map();
     this.round = 0;
-    this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0, maxPlayers: MAX_PLAYERS, audience: 'all', hostJoin: 'manual' };
+    this.registration = { phase: 'idle', keyword: 'انضم', openedAt: null, closedAt: null, session: 0, maxPlayers: MAX_PLAYERS, audience: 'all', hostJoin: 'manual', lateJoin: 'click' };
     this.glass = { steps: 10, stepDuration: 10, step: 0, safeSide: 0, survivors: new Set(), choices: new Map(), choiceTimes: new Map() };
     this.registrationRecent = [];
     // Viewers who wrote the join word after kick-off: they enter the next round automatically.
@@ -101,6 +104,26 @@ export class Engine {
     this.branding = { mascot: { visor: MASCOT_PRESETS.visor[0], crown: 'gold' } };
     this.bomb = new BombGame({ now: () => this.now(), random: n => this.random(n) });
     this.demoSerial = 0;
+    // «تحدي المعرفة» as a series of questions; the next one is drawn by questionSource (set by the room).
+    this.quiz = { total: 1, index: 0, scoring: 'speed', category: 'all', difficulty: 'all', nextAt: null };
+    this.questionSource = null;
+  }
+  setQuizSeries({ total = 1, scoring = 'speed', category = 'all', difficulty = 'all' } = {}) {
+    if (this.status.active) throw new Error('أنهِ الجولة قبل تغيير إعداداتها');
+    this.quiz = { total: Math.max(1, Math.min(50, total | 0)), index: 0, scoring: scoring === 'flat' ? 'flat' : 'speed', category, difficulty, nextAt: null };
+  }
+  /** After a question ends on its own, the next one of the series starts a few seconds later (results stay on screen). */
+  nextQuestion() {
+    this.quiz.nextAt = null;
+    if (!this.questionSource || this.status.mode !== 'quiz' || !this.players.size) return false;
+    const q = this.questionSource({ category: this.quiz.category, difficulty: this.quiz.difficulty });
+    if (!q) return false;
+    const keep = { ...this.quiz };
+    this.configure({ mode: 'quiz', title: q.title, prompt: q.prompt, options: q.options, answer: q.answer });
+    this.quiz = keep;
+    this.quizContinuing = true;
+    try { this.start(); } finally { this.quizContinuing = false; }
+    return true;
   }
   setConnection(state, username = '', detail = '', platform = this.connection.platform || 'tiktok') {
     const previousState = this.connection.state;
@@ -111,11 +134,7 @@ export class Engine {
     }
     this.connection = { state, username: safeLine(username, 50), detail: safeLine(detail, 180), platform: platform === 'kick' ? 'kick' : 'tiktok' };
     if (state === 'connected' && this.registration.phase === 'open' && this.registration.hostJoin === 'auto') this.joinHost(false);
-    // First successful LIVE connection opens signups. Reconnects do not wipe a session.
-    if (state === 'connected' && previousState !== 'connected' && this.registration.phase === 'idle' && this.round === 0 && !this.players.size) {
-      this.openRegistration({ keyword: this.registration.keyword });
-      return;
-    }
+    // Connecting the stream never opens signups by itself: the host opens them from «تجهيز المتسابقين».
     this.emit();
   }
   /** Players who joined from the real chat (no demo bots, no names typed by the host). */
@@ -161,6 +180,7 @@ export class Engine {
       roster: [...this.players.values()].slice(0, 300).map(p => ({ number: p.number, name: p.name, score: p.score, ...(p.avatar ? { avatar: p.avatar } : {}), ...(p.host ? { host: true } : {}), ...(p.manual ? { manual: true } : {}), ...(p.id.startsWith('demo:bot-') ? { bot: true } : {}) })),
       registration: { ...this.registration, count: this.players.size, minPlayers: minPlayersFor(this.status.mode), hostSeated: !!this.hostSeat(),
         waitingCount: this.waiting.size, waitingRecent: [...this.waiting.values()].slice(-5).reverse().map(w => w.name), recent: [...this.registrationRecent], participants: [...this.players.values()].slice(-100).map((p, i, tail) => ({ name: p.name, number: this.players.size - tail.length + i + 1, ...(p.avatar ? { avatar: p.avatar } : {}) })) },
+      series: this.status.mode === 'quiz' ? { index: this.quiz.index, total: this.quiz.total, nextAt: this.quiz.nextAt } : null,
       serverTime: this.now()
     };
   }
@@ -250,7 +270,7 @@ export class Engine {
       this.party = null;
     }
     if (!reset) this.pruneForAudience(audience);
-    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience, hostJoin: this.registration.hostJoin || 'manual', hostName: this.registration.hostName };
+    this.registration = { phase: 'open', keyword: clean, openedAt: this.now(), closedAt: null, session: this.registration.session + 1, maxPlayers, audience, hostJoin: this.registration.hostJoin || 'manual', hostName: this.registration.hostName, lateJoin: this.registration.lateJoin || 'click' };
     if (this.registration.hostJoin === 'auto') this.joinHost(false);
     this.status.results = null; this.status.winner = null; this.status.endsAt = null;
     this.status.notice = `التسجيل مفتوح! اكتب ${clean} في شات البث`;
@@ -289,6 +309,16 @@ export class Engine {
     if (notify) this.emit();
     return true;
   }
+  registerLate(id, name, avatar, who) {
+    const phase = this.registration.phase;
+    this.registration.phase = 'open';
+    try { return this.register(id, name, avatar, who, false); } finally { this.registration.phase = phase; }
+  }
+  /** «الانضمام بعد بدء اللعبة»: 'click' — the host adds newcomers by hand; 'open' — the join word works during the round. */
+  setLateJoin(mode) {
+    if (!['click', 'open'].includes(mode)) throw new Error('خيار الانضمام غير صالح');
+    this.registration.lateJoin = mode;
+  }
   hasValidJoinWord(text) {
     return normalizeAnswer(text) === normalizeAnswer(this.registration.keyword);
   }
@@ -322,7 +352,7 @@ export class Engine {
     const partyMode = PARTY_MODES.includes(mode ?? this.status.mode) ? (mode ?? this.status.mode) : null;
     if (partyMode && variant !== undefined) {
       // Per-game rule switches, validated against a fixed list.
-      const allowed = { rps: { format: ['duel', 'sky'] }, roulette: { rule: ['eliminate', 'winner'] }, categories: { scoring: ['elimination', 'points'] }, drawguess: { winners: [1, 2, 3] } }[partyMode] || {};
+      const allowed = { rps: { format: ['duel', 'sky'] }, roulette: { rule: ['eliminate', 'winner'] }, categories: { scoring: ['elimination', 'points'] }, drawguess: { winners: [1, 2, 3] }, outsider: { category: ['random', ...Object.keys(OUTSIDER_WORDS)] } }[partyMode] || {};
       const clean = {};
       for (const [k, v] of Object.entries(variant || {})) { if (!allowed[k]?.includes(v)) throw new Error('خيار غير صالح لهذه اللعبة'); clean[k] = v; }
       this.partyConfig[partyMode] = { ...this.partyConfig[partyMode], ...clean };
@@ -336,10 +366,10 @@ export class Engine {
       }
       if (roundSeconds !== undefined) {
         const sec = Number(roundSeconds);
-        if (!Number.isInteger(sec) || sec < 4 || sec > 60) throw new Error('وقت الجولة من 4 إلى 60 ثانية');
+        if (!Number.isInteger(sec) || sec < 4 || sec > 180) throw new Error('وقت الجولة من 4 إلى 180 ثانية');
         cfg.seconds = sec;
       }
-      this.partyConfig[partyMode] = { rounds: cfg.rounds, seconds: cfg.seconds };
+      this.partyConfig[partyMode] = { ...this.partyConfig[partyMode], rounds: cfg.rounds, seconds: cfg.seconds }; // rule switches (variant) are kept
     }
     if (glassSteps !== undefined) {
       if (![5, 10, 15].includes(glassSteps)) throw new Error('طول الجسر يجب أن يكون 5 أو 10 أو 15 خطوة');
@@ -380,6 +410,7 @@ export class Engine {
     const need = minPlayersFor(this.status.mode);
     if (this.players.size < need) throw new Error(`هذه اللعبة تحتاج ${need} متسابقين على الأقل`);
     if (this.registration.phase === 'open') this.closeRegistration();
+    if (this.status.mode === 'quiz') { this.quiz.index = this.quizContinuing ? this.quiz.index + 1 : 1; this.quiz.nextAt = null; }
     this.round++;
     this.status.active = true;
     this.firstAnswers.clear(); this.correctAnswers = []; this.answerSequence = 0;
@@ -417,6 +448,7 @@ export class Engine {
     this.emit();
   }
   stop() {
+    if (this.quiz.nextAt) { this.quiz.nextAt = null; this.status.notice = 'انتهت أسئلة الجولة'; if (!this.status.active) { this.emit(); return; } }
     if (this.status.active && this.status.mode === 'bomb') { this.bomb.end('manual'); this.finishBomb(); return; }
     if (this.status.active && this.status.mode === 'glass') { this.endGlassGame('manual'); return; }
     if (this.status.active && ['quiz', 'guess'].includes(this.status.mode)) return this.finishTimedRound('manual');
@@ -439,6 +471,9 @@ export class Engine {
     }
     if (this.status.active && this.status.endsAt !== null && this.now() >= this.status.endsAt) {
       if (this.status.mode === 'glass') this.finishGlassStep(); else this.finishTimedRound('timer'); return true;
+    }
+    if (!this.status.active && this.quiz.nextAt && this.now() >= this.quiz.nextAt) {
+      try { return this.nextQuestion(); } catch (err) { this.quiz.nextAt = null; this.status.notice = safeLine(err.message, 180); this.emit(); return true; }
     }
     return false;
   }
@@ -557,7 +592,7 @@ export class Engine {
     const ranking = [...this.correctAnswers].sort((a, b) => a.at - b.at || a.order - b.order)
       .map((entry, index) => {
         const player = this.players.get(entry.id);
-        const points = QUIZ_POINTS[Math.min(index, QUIZ_POINTS.length - 1)];
+        const points = this.status.mode === 'quiz' && this.quiz.scoring === 'flat' ? 5 : QUIZ_POINTS[Math.min(index, QUIZ_POINTS.length - 1)];
         if (player) { this.addScore(player, points); player.correctRounds++; player.totalResponseMs += entry.elapsedMs; }
         return { rank: index + 1, id: entry.id, name: player?.name ?? entry.name, ...(player?.avatar ? { avatar: player.avatar } : {}), elapsedMs: entry.elapsedMs, points, totalScore: player?.score ?? points };
       });
@@ -569,6 +604,10 @@ export class Engine {
     this.status.results = { round: this.round, completedAt: this.now(), reason, totalAnswers: this.firstAnswers.size,
       correctCount: ranking.length, correctAnswer: answerText, rankings: ranking.slice(0, 20) };
     this.status.notice = winner ? `🏆 الأول في السرعة: ${winner.name}` : 'انتهت الجولة، لا توجد إجابات صحيحة';
+    if (this.status.mode === 'quiz' && reason !== 'manual' && this.quiz.index < this.quiz.total && this.questionSource) {
+      this.quiz.nextAt = this.now() + QUIZ_NEXT_MS;
+      this.status.notice += ` • السؤال ${this.quiz.index + 1} من ${this.quiz.total} بعد لحظات`;
+    } else this.quiz.nextAt = null;
     this.status.lastEvent = { text: this.status.notice, at: this.now(), winner: this.status.winner };
     this.emit();
     return true;
@@ -624,6 +663,8 @@ export class Engine {
     // Joining the TikTok room does NOT enroll the viewer. Only the chosen chat word does.
     if (this.registration.phase === 'open') {
       if (this.hasValidJoinWord(message)) this.register(identity, name, avatar, {isFollower,isSubscriber});
+    } else if (this.registration.phase === 'closed' && this.status.active && this.registration.lateJoin === 'open' && LATE_JOIN.includes(this.status.mode) && !this.players.has(identity) && this.hasValidJoinWord(message)) {
+      this.registerLate(identity, name, avatar, { isFollower, isSubscriber }); // «مفتوح دائمًا»: joins the running round
     } else if (this.registration.phase === 'closed' && !this.players.has(identity) && this.hasValidJoinWord(message)) {
       if (!this.waiting.has(identity) && this.waiting.size < MAX_WAITING) this.waiting.set(identity, { name, avatar, isFollower, isSubscriber });
     } else if (this.registration.phase === 'closed' && this.status.active && this.players.has(identity)) {
@@ -718,13 +759,13 @@ export class Engine {
   }
   /** Host control: add a contestant by name (no chat needed). */
   addManualPlayer({ name, host = false } = {}) {
-    if (this.status.active) throw new Error('أنهِ الجولة قبل إضافة لاعب');
+    if (this.status.active && !LATE_JOIN.includes(this.status.mode)) throw new Error('قواعد هذه اللعبة لا تسمح بإضافة لاعب أثناء الجولة');
     const clean = safeLine(name, 32).replace(/^@/, '').trim();
     if (!clean || !normalizeAnswer(clean)) throw new Error('اكتب اسم اللاعب');
     const id = host ? 'host:' + clean.toLowerCase() : 'manual:' + normalizeAnswer(clean);
     if (this.players.has(id)) throw new Error(host ? 'المضيف مسجل بالفعل' : 'هذا الاسم مسجل بالفعل');
     if (this.players.size >= this.registration.maxPlayers) throw new Error('اكتمل عدد المتسابقين');
-    if (this.registration.phase === 'idle') this.openRegistration({});
+    if (this.registration.phase === 'idle' && !this.status.active) this.openRegistration({});
     const player = this.player(id, host ? '@' + clean : clean);
     if (!player) throw new Error('اكتمل عدد المتسابقين');
     player.manual = true; player.host = host; player.isFollower = true; player.isSubscriber = true;

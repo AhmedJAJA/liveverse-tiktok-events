@@ -74,11 +74,13 @@ test('subscriber mode also excludes follower-only users and unknown subscription
   assert.equal(e.snapshot().registration.participants[0].name,'Subscriber');
 });
 
-test('saving audience before LIVE starts also protects the automatic registration',()=>{
+test('saving audience before LIVE starts carries over when the host opens registration',()=>{
   const e=new Engine();
   const result=e.updateRegistration({audience:'followers',maxPlayers:30});
   assert.equal(result.phase,'idle');
   e.setConnection('connected','broadcaster','connected');
+  assert.equal(e.snapshot().registration.phase,'idle','connecting never opens registration');
+  e.openRegistration({});
   assert.equal(e.snapshot().registration.phase,'open');
   assert.equal(e.snapshot().registration.audience,'followers');
   e.receiveChat({id:'n',username:'NoFollow',text:'انضم'});
