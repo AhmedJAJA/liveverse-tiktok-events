@@ -14,6 +14,11 @@ export const REFERRAL_CAP = 10;
    prizes are never bought with money (see the notes shown next to the wheel). */
 export const WHEEL_DEFAULT = Object.freeze({ odds: { common: 5500, rare: 2700, epic: 1200, legendary: 500, mythic: 100 }, cost1: 100, cost10: 900 });
 const RARITY_ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+/* «متجر العملات»: spending limits that protect buyers (owner-adjustable in economy_settings 'store'). */
+export const STORE_DEFAULT = Object.freeze({ monthlyCapHalalas: 30000, maxPending: 3 });
+export const WHATSAPP_URL = 'https://wa.me/qr/7GOY3ACMFYQCK1';
+const REF_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const newRef = () => 'SC-' + Array.from({ length: 8 }, () => REF_ALPHABET[randomInt(REF_ALPHABET.length)]).join('');
 
 export class EconomyError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 const fail = (m, s) => { throw new EconomyError(m, s); };
@@ -292,6 +297,126 @@ export class Economy {
       distribution: dist.rows.map((r) => ({ rarity: r.rarity, n: r.n, pct: total ? Math.round((r.n / total) * 10000) / 100 : 0, duplicates: r.dups })),
       spins: spins.rows.map((s) => ({ id: s.id, count: s.count, cost: s.cost, at: iso(s.created_at), publicId: s.public_id })),
     };
+  }
+
+  /* ---------------------------------------------------------------- «متجر العملات»
+     Prices come only from coin_packages; an order copies them at creation. Coins are added only after a
+     trusted confirmation — the payment gateway's own record (amount, currency, reference all match) or the
+     owner confirming a WhatsApp payment — never because a "success" page was opened. Crediting is idempotent
+     (wallet ref 'purchase:<id>' + the order row locked), so a repeated webhook or click pays once. */
+  async packages() {
+    return (await this.pool.query('SELECT id, coins, price_halalas, currency, label, badge, blurb, featured FROM coin_packages WHERE active ORDER BY sort')).rows
+      .map((p) => ({ id: p.id, coins: p.coins, price: p.price_halalas / 100, priceHalalas: p.price_halalas, currency: p.currency, label: p.label, badge: p.badge, blurb: p.blurb, featured: p.featured }));
+  }
+  async storeConfig() { const r = (await this.pool.query(`SELECT value FROM economy_settings WHERE key='store'`)).rows[0]; return { ...STORE_DEFAULT, ...(r?.value || {}) }; }
+  purchaseView(p) { return { id: p.id, ref: p.ref, packageId: p.package_id, coins: p.coins, amount: p.amount_halalas / 100, currency: p.currency, status: p.status, provider: p.provider, createdAt: iso(p.created_at), paidAt: iso(p.paid_at) }; }
+  async store(userId) {
+    const [pk, cfg, rows, spent] = await Promise.all([
+      this.packages(), this.storeConfig(),
+      this.pool.query('SELECT * FROM purchases WHERE user_id=$1 ORDER BY created_at DESC LIMIT 20', [userId]),
+      this.pool.query(`SELECT COALESCE(sum(amount_halalas),0)::int n FROM purchases WHERE user_id=$1 AND (status='paid' AND paid_at > now() - interval '30 days' OR status='pending')`, [userId]),
+    ]);
+    const gw = this.platform?.gateway;
+    return {
+      packages: pk, payment: gw?.configured ? 'online' : 'whatsapp', whatsapp: WHATSAPP_URL,
+      limits: { monthlyCap: cfg.monthlyCapHalalas / 100, used30d: spent.rows[0].n / 100, maxPending: cfg.maxPending },
+      orders: rows.rows.map((p) => this.purchaseView(p)),
+    };
+  }
+  async createOrder(userId, packageId, { adult } = {}) {
+    if (adult !== true) fail('أكّد أن عمرك 18 سنة أو أكثر، أو أن ولي أمرك وافق على الشراء', 400);
+    const pkg = (await this.pool.query('SELECT * FROM coin_packages WHERE id=$1 AND active', [String(packageId || '')])).rows[0];
+    if (!pkg) fail('الباقة غير متاحة', 404);
+    const cfg = await this.storeConfig(), gw = this.platform?.gateway;
+    const u = (await this.pool.query('SELECT disabled_at FROM users WHERE id=$1', [userId])).rows[0];
+    if (!u || u.disabled_at) fail('الحساب غير متاح', 403);
+    const order = await tx(this.pool, async (c) => {
+      await this.lock(c, userId); // one order of an account at a time (limits are checked consistently)
+      const st = (await c.query(`SELECT count(*) FILTER (WHERE status='pending')::int pending,
+          COALESCE(sum(amount_halalas) FILTER (WHERE status='paid' AND paid_at > now() - interval '30 days' OR status='pending'),0)::int used
+        FROM purchases WHERE user_id=$1`, [userId])).rows[0];
+      if (st.pending >= cfg.maxPending) fail(`لديك ${st.pending} طلبات بانتظار الدفع — أكملها أو ألغِها أولًا`, 409);
+      if (st.used + pkg.price_halalas > cfg.monthlyCapHalalas) fail(`حد الشراء ${cfg.monthlyCapHalalas / 100} ريال كل 30 يومًا لحماية حسابك — المتاح الآن ${Math.max(0, (cfg.monthlyCapHalalas - st.used) / 100)} ريال`, 409);
+      for (let i = 0; i < 5; i++) {
+        try {
+          return (await c.query(`INSERT INTO purchases (ref, user_id, package_id, coins, amount_halalas, currency, provider) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+            [newRef(), userId, pkg.id, pkg.coins, pkg.price_halalas, pkg.currency, gw?.configured ? 'moyasar' : 'whatsapp'])).rows[0];
+        } catch (err) { if (err.code !== '23505') throw err; }
+      }
+      fail('تعذر إنشاء الطلب، حاول مرة أخرى', 500);
+    });
+    if (order.provider === 'moyasar') {
+      const app = this.platform.appUrl;
+      try {
+        const inv = await gw.createInvoice({ amount: order.amount_halalas, currency: order.currency, description: `SPONGE LIVE — ${pkg.coins} عملة إسفنجة (${order.ref})`,
+          callback_url: `${app}/api/billing/webhook`, success_url: `${app}/account?coins=${order.id}#store`, back_url: `${app}/account#store`, metadata: { purchase_id: order.id } });
+        await this.pool.query('UPDATE purchases SET provider_ref=$2, raw_status=$3, updated_at=now() WHERE id=$1', [order.id, inv.id, String(inv.status || '')]);
+        return { order: this.purchaseView(order), url: inv.url };
+      } catch (err) {
+        await this.pool.query(`UPDATE purchases SET status='failed', note=$2, updated_at=now() WHERE id=$1`, [order.id, 'gateway: ' + String(err.message).slice(0, 150)]);
+        fail('تعذر فتح صفحة الدفع الآن — لم يُخصم شيء. حاول لاحقًا.', 502);
+      }
+    }
+    return { order: this.purchaseView(order), whatsapp: WHATSAPP_URL };
+  }
+  /** Credits a confirmed order exactly once. */
+  async creditOrder(c, p, by) {
+    const locked = (await c.query('SELECT * FROM purchases WHERE id=$1 FOR UPDATE', [p.id])).rows[0];
+    if (locked.status === 'paid') return { status: 'paid', already: true };
+    await c.query(`UPDATE purchases SET status='paid', paid_at=now(), raw_status='paid', confirmed_by=$2, updated_at=now() WHERE id=$1`, [p.id, by]);
+    await this.move(c, p.user_id, { amount: locked.coins, bucket: 'purchased', kind: 'purchase', ref: 'purchase:' + p.id, note: `شراء ${locked.coins} عملة (${locked.ref})` });
+    return { status: 'paid' };
+  }
+  /** Gateway path: the gateway's own record decides (webhook or the buyer coming back). */
+  async confirmPurchase({ purchaseId = null, providerRef = null } = {}) {
+    const p = (await this.pool.query('SELECT * FROM purchases WHERE ' + (purchaseId ? 'id=$1' : 'provider_ref=$1'), [purchaseId || providerRef])).rows[0];
+    if (!p) return { status: 'unknown' };
+    if (p.status === 'paid') return { status: 'paid', already: true };
+    const gw = this.platform?.gateway;
+    if (p.provider !== 'moyasar' || !p.provider_ref || !gw?.configured) return { status: p.status };
+    const inv = await gw.fetchInvoice(p.provider_ref);
+    const paid = inv && inv.status === 'paid' && Number(inv.amount) === p.amount_halalas && String(inv.currency || '').toUpperCase() === p.currency && String(inv.id) === p.provider_ref;
+    if (!paid) {
+      const status = inv?.status === 'expired' ? 'expired' : inv?.status === 'failed' ? 'failed' : 'pending';
+      await this.pool.query(`UPDATE purchases SET status=$2, raw_status=$3, updated_at=now() WHERE id=$1 AND status<>'paid'`, [p.id, status, String(inv?.status || '')]);
+      return { status };
+    }
+    return tx(this.pool, (c) => this.creditOrder(c, p, 'gateway'));
+  }
+  async orderStatus(userId, id) {
+    const p = (await this.pool.query('SELECT * FROM purchases WHERE id=$1 AND user_id=$2', [String(id || ''), userId])).rows[0];
+    if (!p) fail('الطلب غير موجود', 404);
+    if (p.status === 'pending' && p.provider === 'moyasar') { try { await this.confirmPurchase({ purchaseId: p.id }); } catch {} }
+    const fresh = (await this.pool.query('SELECT * FROM purchases WHERE id=$1', [p.id])).rows[0];
+    return { order: this.purchaseView(fresh), wallet: await this.wallet(userId) };
+  }
+  /** The buyer cancels a WhatsApp order they have not paid (gateway orders simply expire). */
+  async cancelOrder(userId, ref) {
+    const r = await this.pool.query(`UPDATE purchases SET status='cancelled', note='cancelled by buyer', updated_at=now() WHERE ref=$1 AND user_id=$2 AND status='pending' AND provider='whatsapp' RETURNING id`, [String(ref || ''), userId]);
+    if (!r.rowCount) fail('لا يوجد طلب معلّق بهذا الرقم', 404);
+    return this.store(userId);
+  }
+  /** Owner: a WhatsApp payment received (or refused). A reason / reference is always recorded. */
+  async decideOrder(ref, decision, { actor, reason }) {
+    const why = String(reason || '').trim(); if (why.length < 3) fail('اكتب مرجع الدفع أو سبب القرار');
+    const p = (await this.pool.query('SELECT * FROM purchases WHERE ref=$1', [String(ref || '').toUpperCase()])).rows[0];
+    if (!p) fail('لا يوجد طلب بهذا الرقم', 404);
+    let out;
+    if (decision === 'paid') {
+      if (p.provider !== 'whatsapp') fail('طلبات الدفع الإلكتروني تؤكدها البوابة فقط', 409);
+      if (!['pending', 'expired'].includes(p.status) && p.status !== 'paid') fail('لا يمكن تأكيد طلب ' + p.status, 409);
+      out = await tx(this.pool, (c) => this.creditOrder(c, p, actor));
+    } else if (decision === 'failed' || decision === 'cancelled') {
+      const r = await this.pool.query(`UPDATE purchases SET status=$2, note=$3, confirmed_by=$4, updated_at=now() WHERE id=$1 AND status='pending' RETURNING id`, [p.id, decision, why, actor]);
+      if (!r.rowCount) fail('الطلب ليس معلّقًا', 409);
+      out = { status: decision };
+    } else fail('قرار غير معروف');
+    await this.log(actor, 'order-' + decision, p.user_id, why, { ref: p.ref, coins: p.coins, amount: p.amount_halalas / 100 });
+    return out;
+  }
+  async adminPurchases(status = '') {
+    const r = await this.pool.query(`SELECT p.*, u.public_id FROM purchases p JOIN users u ON u.id=p.user_id ${status ? 'WHERE p.status=$1' : ''} ORDER BY p.created_at DESC LIMIT 200`, status ? [status] : []);
+    return r.rows.map((p) => ({ ...this.purchaseView(p), publicId: p.public_id, confirmedBy: p.confirmed_by, note: p.note }));
   }
 
   /* ---------------------------------------------------------------- owner tools */
