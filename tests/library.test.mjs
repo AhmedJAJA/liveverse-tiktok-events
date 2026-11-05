@@ -45,7 +45,16 @@ test('every link on the page goes somewhere real, and the self-hosted fonts are 
     assert.ok(fs.existsSync(new URL('../public/fonts/' + f, import.meta.url)), f);
     assert.ok(server.includes("'fonts/" + f + "'"), 'served: ' + f);
   }
-  for (const id of ['i-lock', 'i-arrow-b']) assert.match(pub('icons.svg'), new RegExp('id="' + id + '"'));
+  // every icon the page uses exists, and comes from a versioned sprite address (the plain one is cached for days)
+  const sprite = pub('icons.svg'), games = pub('game-icons.svg');
+  const used = new Set([...html.matchAll(/icons\.svg\?v=\d+#(i-[a-z-]+)/g)].map((m) => m[1]));
+  for (const [, name] of js.matchAll(/ui\('([a-z-]+)'/g)) used.add('i-' + name);
+  for (const name of ['note', 'kick']) used.add('i-' + name); // the platform icons, chosen from a table
+  for (const id of used) assert.match(sprite, new RegExp('<symbol id="' + id + '"'), id);
+  assert.doesNotMatch(html, /\/icons\.svg#/, 'html uses the versioned sprite');
+  assert.match(js, /SPRITE = '\/icons\.svg\?v=\d+'/); assert.match(js, /GAME_SPRITE = '\/game-icons\.svg\?v=\d+'/);
+  for (const g of [...GAMES, ...EXTRA_GAMES]) assert.match(games, new RegExp('<symbol id="g-' + g.mode + '"'), g.mode);
+  assert.match(server, /\['icons\.svg', 'game-icons\.svg'\]\.includes\(relative\) \? 'public, max-age=300, must-revalidate'/);
 });
 
 test('design tokens: violet-black page, 4 columns of 3D cards, violet buttons, phone layouts, calm motion', () => {
@@ -117,6 +126,9 @@ test('in a real browser: desktop layout, filters with search, card states, live 
     assert.equal(m.bg, 'rgb(8, 6, 16)'); assert.equal(m.sw, m.iw);
     assert.equal(m.cards, playable.length, 'every finished game, free');
     assert.ok(m.links.every((h) => /^\/game\/[a-z]+$/.test(h)), '«العب الآن» opens the game page directly');
+    // the icons really draw (a missing sprite symbol leaves an empty box)
+    const drawn = await p.evaluate(() => ['.gl-card .gl-play svg use', '.gl-card .gl-tile svg use', '.gl-cta svg use', '.gl-upd-play svg use'].map((s) => { const u = document.querySelector(s); const b = u && u.getBBox(); return s + ':' + (b ? Math.round(b.width) : 0); }));
+    for (const d of drawn) assert.ok(!d.endsWith(':0'), 'icon drawn: ' + d);
     // card states
     const badges = await p.evaluate(() => Object.fromEntries([...document.querySelectorAll('.gl-card')].map((c) => [c.dataset.mode, [...c.querySelectorAll('.gl-badge')].map((b) => b.textContent)])));
     assert.deepEqual(badges.chain, ['جديد']);
