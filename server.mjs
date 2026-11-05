@@ -1319,6 +1319,8 @@ function streams() {
     list.push({ room: room.id, platform: s.connection.platform, username: handle, displayName: who.name || handle,
       avatarUrl: who.avatar || '', liveUrl: liveUrlFor(s.connection.platform, handle), state: st.state, verified: true,
       players: room.engine.realPlayerCount(), active: !!s.status.active, mode: s.status.mode,
+      // registration open: viewers join by typing the room's join word in the stream comments (shown on the overlay too)
+      joinOpen: st.state === 'waiting', ...(st.state === 'waiting' && s.registration?.keyword ? { keyword: String(s.registration.keyword).slice(0, 32) } : {}),
       currentGame: game?.title || s.status.title, game: game?.title || s.status.title, cover: game?.cover || '/covers/quiz.svg' });
   }
   list.sort((a, b) => b.players - a.players);
@@ -1373,7 +1375,8 @@ const STATIC = new Set(['setup.css','games.html','games.js','games.css','game-ic
   ...['cards', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   // 3D skins (optimized GLB + poster) and the pinned, self-hosted three.js (no CDN — the CSP allows only 'self')
   ...['skins', 'vendor/three'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(glb|webp|js|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
-  'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt']);
+  'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt',
+  'fonts/noto-kufi-arabic-700.woff','fonts/ibm-plex-arabic-400.woff','fonts/ibm-plex-arabic-600.woff','fonts/ibm-plex-arabic-700.woff','fonts/readex-pro-700.woff','fonts/OFL-library-fonts.txt']);
 
 const server = http.createServer(async (req, res) => {
   secureHeaders(res);

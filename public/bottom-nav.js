@@ -38,7 +38,8 @@
 
   function paintActive() {
     const sec = onAccount() ? (location.hash.slice(1) || document.body?.dataset.sec || '') : '';
-    const active = SECTION_ITEM[sec] || null;
+    // «ألعاب البث» is the games library and every game page
+    const active = SECTION_ITEM[sec] || (/^\/games?(\/|$)/.test(location.pathname) ? 'studio' : null);
     for (const a of nav.children) {
       a.href = hrefFor(a.dataset.key);
       if (a.dataset.key === active) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
