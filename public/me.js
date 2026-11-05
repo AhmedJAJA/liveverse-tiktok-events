@@ -573,8 +573,9 @@
         if (st === 'ready') { stageStatus(pre, ''); paintAnims(pre, info.animations); }
         if (st === 'error') { stageStatus(pre, 'تعذر تحميل الشخصية — تحقق من الاتصال ثم أعد المحاولة.'); stage.dataset.state = 'poster'; }
       };
-      if (!views[pre]) views[pre] = await viewerMod.mountViewer(stage, { model: skin.model, animations, label: skin.name, onState });
-      else await views[pre].setModel(skin.model, animations);
+      const look = { rarity: skin.rarity, accent: skin.accent };
+      if (!views[pre]) views[pre] = await viewerMod.mountViewer(stage, { model: skin.model, animations, label: skin.name, onState, ...look });
+      else await views[pre].setModel(skin.model, animations, look);
     } catch { stageStatus(pre, 'تعذر تشغيل العرض ثلاثي الأبعاد.'); }
   }
   function syncViewers(sec) {
@@ -598,18 +599,22 @@
     if (!skPicked || !skinState.skins.some((x) => x.id === skPicked)) skPicked = skinState.equipped;
     paintSkins();
   }
-  function skinBadge(x) { return x.equipped ? ['مُجهّز', 'is-on'] : x.owned ? ['في مجموعتك', 'is-warn'] : x.access === 'free' ? ['مجاني', 'is-off'] : ['قريبًا', 'is-off']; }
+  function skinBadge(x) { return x.equipped ? ['مُجهّز', 'is-on'] : x.owned ? ['في مجموعتك', 'is-warn'] : x.access === 'free' ? ['مجاني', 'is-off'] : x.price ? [SC.nf(x.price) + ' عملة', 'is-off'] : ['من العجلة', 'is-off']; }
+  const rarityTag = (x) => { const t = el('span', 'sk-rarity is-r-' + x.rarity, x.rarityName || ''); return t; };
   function paintSkins() {
     const st = skinState, owned = st.skins.filter((x) => x.owned);
     $('skAll').textContent = st.skins.length; $('skOwned').textContent = owned.length;
     $('skCredit').textContent = Object.values(st.packs).map((p) => 'الشخصيات: ' + p.credit).join(' • ');
-    const list = skFilter === 'owned' ? owned : st.skins;
+    const list = skFilter === 'owned' ? owned : skFilter === 'all' ? st.skins : st.skins.filter((x) => x.rarity === skFilter);
+    $('skShards').hidden = !st.shards; $('skShards').textContent = `نسخ مكررة من العجلة: ${st.shards} — محفوظة في حسابك كشظايا، وسيُعلن استخدامها لاحقًا قبل تفعيله.`;
     $('skGrid').replaceChildren(...list.map((x) => {
       const li = el('li'), b = el('button', 'sk-item'); b.type = 'button'; b.dataset.id = x.id;
-      b.setAttribute('aria-pressed', String(x.id === skPicked)); b.style.setProperty('--sk-accent', x.accent);
+      b.setAttribute('aria-pressed', String(x.id === skPicked)); b.style.setProperty('--sk-accent', x.rarityColor || x.accent); b.dataset.rarity = x.rarity;
+      if (!x.owned) b.classList.add('is-locked');
       const img = el('img'); img.src = x.thumb; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async'; img.width = 160; img.height = 160;
       const [t, c] = skinBadge(x); const badge = el('span', 'pg-badge ' + c, t);
-      b.append(img, el('b', '', x.name), badge);
+      b.append(rarityTag(x), img, el('b', '', x.name), badge);
+      if (x.copies > 1) b.append(el('small', 'sk-copies', '×' + x.copies));
       b.addEventListener('click', () => { skPicked = x.id; paintSkins(); });
       li.append(b); return li;
     }));
@@ -617,8 +622,14 @@
     $('skPreviewName').textContent = pick.name; $('skPreviewBlurb').textContent = pick.blurb;
     $('skPreviewTag').textContent = pick.equipped ? 'السكن المُجهّز حاليًا' : 'معاينة';
     const [t, c] = skinBadge(pick); badge($('skPreviewBadge'), t, c); $('skPreviewBadge').hidden = false;
+    $('skPreviewTag').textContent = (pick.equipped ? 'السكن المُجهّز حاليًا' : 'معاينة') + ' • ' + pick.rarityName;
     $('skClaim').hidden = pick.owned || pick.access !== 'free';
     $('skEquip').hidden = !pick.owned || pick.equipped;
+    const buyable = !pick.owned && pick.access === 'wheel' && pick.price;
+    $('skBuy').hidden = !buyable; $('skBuy').dataset.confirm = '';
+    if (buyable) $('skBuyText').textContent = `شراء مباشر — ${SC.nf(pick.price)} عملة`;
+    $('skHow').hidden = pick.owned || pick.access !== 'wheel';
+    $('skHow').textContent = 'تحصل عليها من «عجلة السكنات» بالعملات المكتسبة، أو بشرائها مباشرة بالسعر الثابت المعلن (من العملات المشتراة أولًا ثم المكتسبة). السكنات تجميلية فقط.';
     if (document.body.dataset.sec === 'skins' && $('skStage').dataset.skin !== pick.id) { $('skStage').dataset.skin = pick.id; showModel('sk', pick, st.animations); }
   }
   for (const b of document.querySelectorAll('.sk-filter [role=tab]')) b.addEventListener('click', () => {
@@ -626,10 +637,28 @@
     for (const x of document.querySelectorAll('.sk-filter [role=tab]')) { const on = x === b; x.setAttribute('aria-selected', String(on)); x.tabIndex = on ? 0 : -1; }
     if (skinState) paintSkins();
   });
+  // low graphics: saved on this device; the 3D views are rebuilt with the new setting
+  try { $('lowGfx').checked = localStorage.getItem('sl_gfx') === 'low' || (!localStorage.getItem('sl_gfx') && ((navigator.deviceMemory || 8) <= 2)); } catch {}
+  $('lowGfx').addEventListener('change', async () => {
+    viewerMod ||= await import('/skin-viewer.js'); viewerMod.setLowGraphics($('lowGfx').checked);
+    for (const [pre, v] of Object.entries(views)) { v.dispose(); delete views[pre]; }
+    $('skStage').dataset.skin = ''; if (skinState) paintSkins();
+  });
   $('skClaim').addEventListener('click', (e) => act(e.currentTarget, async () => {
     try { skinState = await api('POST', '/api/me/skin-claim', { id: skPicked }); paintSkins(); say($('skMsg'), 'أُضيفت الشخصية إلى مجموعتك ✓ — يمكنك تجهيزها الآن.', 'is-ok'); }
     catch (err) { say($('skMsg'), err.message, 'is-err'); }
   }));
+  $('skBuy').addEventListener('click', (e) => {
+    const b = e.currentTarget, pick = skinState?.skins.find((x) => x.id === skPicked); if (!pick) return;
+    if (b.dataset.confirm !== '1') { b.dataset.confirm = '1'; $('skBuyText').textContent = `اضغط للتأكيد — يُخصم ${SC.nf(pick.price)} عملة`; return; }
+    act(b, async () => {
+      try {
+        const r = await api('POST', '/api/me/skin-buy', { id: pick.id });
+        skinState = r; SC.setBalance(r.wallet.balance); if (wallet) paintWallet(r.wallet); paintSkins();
+        say($('skMsg'), `أُضيفت «${pick.name}» إلى مجموعتك ✓ — يمكنك تجهيزها الآن.`, 'is-ok'); views.sk?.reveal(); views.sk?.play('win');
+      } catch (err) { say($('skMsg'), err.status === 402 ? err.message + ' — اجمع المزيد من مكافآتك اليومية والدعوات.' : err.message, 'is-err'); paintSkins(); }
+    });
+  });
   $('skEquip').addEventListener('click', (e) => act(e.currentTarget, async () => {
     try {
       skinState = await api('POST', '/api/me/skin-equip', { id: skPicked }); paintSkins();

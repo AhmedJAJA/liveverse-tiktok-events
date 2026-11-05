@@ -3,11 +3,13 @@
    Usage: node scripts/build-skins.mjs <path to Characters/gltf> [skin id …]
    For each skin in src/skins.mjs it keeps only the listed meshes (one loadout) and the four animations
    (idle / walk / win / lose), drops every buffer, accessor and mesh nothing uses any more, and writes a
-   compact GLB. The skeleton, the embedded texture and the materials are kept as they are. No dependencies. */
+   compact GLB. The skeleton and materials are kept; skins with `recolor` get a recoloured palette texture
+   (skin-tone cells untouched). Recolouring needs sharp (resolved through NODE_PATH, e.g. a global install). */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SKINS, SKIN_ANIMATIONS } from '../src/skins.mjs';
+import { createRequire } from 'node:module';
+import { SKINS } from '../src/skins.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(here, '..', 'public', 'skins');
@@ -74,6 +76,45 @@ export function slim({ json: src, bin }, keepMeshes, keepAnims) {
   return { json: j, bin: out };
 }
 
+/* ---------- palette recolouring (KayKit textures are an 8 × 4 grid of colour swatches) ---------- */
+const rgb2hsl = (r, g, b) => { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; if (mx === mn) return [0, 0, l]; const d = mx - mn, s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); let h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; return [h * 60, s, l]; };
+const hsl2rgb = (h, s, l) => { h = ((h % 360) + 360) % 360 / 360; if (!s) { const v = Math.round(l * 255); return [v, v, v]; } const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; const f = (t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; return [f(h + 1 / 3), f(h), f(h - 1 / 3)].map((v) => Math.round(v * 255)); };
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+/** Skin tones (faces, hands) are never recoloured. */
+const isSkin = (r, g, b) => r > 170 && g > 110 && b > 80 && r > g && g > b && r - b > 35 && r - b < 120 && g - b < 70;
+export async function recolorPng(png, rc) {
+  const sharp = createRequire(import.meta.url)('sharp');
+  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height, cw = W / 8, ch = H / 4;
+  for (let cy = 0; cy < 4; cy++) for (let cx = 0; cx < 8; cx++) {
+    const mid = (((cy * ch + ch / 2) | 0) * W + ((cx * cw + cw / 2) | 0)) * 4;
+    if (isSkin(data[mid], data[mid + 1], data[mid + 2])) continue;
+    const cell = cy * 8 + cx;
+    for (let y = cy * ch; y < (cy + 1) * ch; y++) for (let x = cx * cw; x < (cx + 1) * cw; x++) {
+      const i = (y * W + x) * 4; let [h, sat, l] = rgb2hsl(data[i], data[i + 1], data[i + 2]);
+      if (sat < 0.14) { // greys, metal, white: tinted like a metal
+        if (rc.metal) { h = rc.metal[0]; sat = rc.metal[1] * (0.55 + 0.45 * (1 - Math.abs(l - 0.5) * 2)); }
+        l = clamp(l * (rc.metalLight || 1));
+      } else {
+        if (rc.hue !== undefined) { const rel = ((h - 30 + 540) % 360) - 180; h = rc.hue + rel * (rc.spread ?? 0.28) + (rc.cycle ? ((cell * 47) % 140) - 70 : 0); }
+        else if (rc.shift) h += rc.shift;
+        sat = clamp(sat * (rc.sat || 1)); l = clamp(l * (rc.light || 1), 0.04, 0.96);
+      }
+      const [r, g, b] = hsl2rgb(h, sat, l); data[i] = r; data[i + 1] = g; data[i + 2] = b;
+    }
+  }
+  return sharp(data, { raw: { width: W, height: H, channels: 4 } }).png({ compressionLevel: 9 }).toBuffer();
+}
+/** Replaces the embedded texture: the new PNG is appended to the binary; slim() then drops the old bytes. */
+export async function withRecolor({ json, bin }, rc) {
+  const j = structuredClone(json), img = j.images[0], view = j.bufferViews[img.bufferView];
+  const png = await recolorPng(bin.subarray(view.byteOffset || 0, (view.byteOffset || 0) + view.byteLength), rc);
+  const pad = (4 - (bin.length % 4)) % 4;
+  j.bufferViews.push({ buffer: 0, byteOffset: bin.length + pad, byteLength: png.length });
+  img.bufferView = j.bufferViews.length - 1; img.mimeType = 'image/png';
+  return { json: j, bin: Buffer.concat([bin, Buffer.alloc(pad), png]) };
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [srcDir, ...only] = process.argv.slice(2);
   if (!srcDir) { console.error('usage: node scripts/build-skins.mjs <KayKit Characters/gltf folder> [skin id …]'); process.exit(2); }
@@ -81,7 +122,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   for (const skin of SKINS) {
     if (only.length && !only.includes(skin.id)) continue;
     const input = fs.readFileSync(path.join(srcDir, skin.source));
-    const { json, bin } = slim(readGlb(input), new Set(skin.keep), SKIN_ANIMATIONS);
+    let src = readGlb(input);
+    if (skin.recolor) src = await withRecolor(src, skin.recolor);
+    const { json, bin } = slim(src, new Set(skin.keep), skin.anims);
     const glb = writeGlb(json, bin);
     fs.writeFileSync(path.join(OUT, skin.id + '.glb'), glb);
     console.log(`${skin.id}.glb  ${(input.length / 1024).toFixed(0)} KB → ${(glb.length / 1024).toFixed(0)} KB  (${json.meshes.length} meshes, ${json.animations.length} animations)`);

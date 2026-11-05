@@ -444,3 +444,34 @@ body.ds{min-height:100svh}
 @media (max-width:980px){.wl-grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:520px){.wl-balance{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}.wl-coin{width:104px;height:104px}.wl-totals{grid-template-columns:minmax(0,1fr)}.wl-strip{grid-template-columns:auto minmax(0,1fr)}.wl-strip-daily{grid-column:1 / -1;text-align:start;display:flex;justify-content:space-between;align-items:center}}
 @media (prefers-reduced-motion:reduce){.wl-coin{animation:none}}
+
+/* ---------- السكنات: درجات الندرة ---------- */
+:root{--r-common:#C9D3E3;--r-rare:#3FA3FF;--r-epic:#B06BFF;--r-legendary:#FFC83A;--r-mythic:#FF3D6E}
+.sk-rarity{position:absolute;top:8px;inset-inline-start:8px;z-index:1;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:900;color:#06122E;background:var(--r-common)}
+.sk-rarity.is-r-rare{background:var(--r-rare);color:#fff}
+.sk-rarity.is-r-epic{background:var(--r-epic);color:#fff}
+.sk-rarity.is-r-legendary{background:linear-gradient(90deg,#FFE680,var(--r-legendary));color:#3A2300}
+.sk-rarity.is-r-mythic{background:linear-gradient(90deg,#FF3D6E,#B06BFF,#38D4FF);background-size:200% 100%;color:#fff;animation:sk-myth 3s linear infinite}
+@keyframes sk-myth{to{background-position:200% 0}}
+.sk-item[data-rarity=legendary]{box-shadow:0 0 22px -10px var(--r-legendary)}
+.sk-item[data-rarity=mythic]{box-shadow:0 0 26px -8px var(--r-mythic)}
+.sk-item.is-locked img{filter:saturate(.75) brightness(.85)}
+.sk-copies{position:absolute;top:8px;inset-inline-end:8px;padding:1px 7px;border-radius:999px;background:rgba(2,10,34,.8);border:1px solid var(--line);font-weight:900;font-size:12px}
+.sk-filter{flex-wrap:wrap}
+.sk-filter button.is-r-common[aria-selected=true]{background:var(--r-common);color:#06122E}
+.sk-filter button.is-r-rare[aria-selected=true]{background:var(--r-rare)}
+.sk-filter button.is-r-epic[aria-selected=true]{background:var(--r-epic)}
+.sk-filter button.is-r-legendary[aria-selected=true]{background:var(--r-legendary);color:#3A2300}
+.sk-filter button.is-r-mythic[aria-selected=true]{background:linear-gradient(90deg,#FF3D6E,#B06BFF)}
+.sk-filter button[class*=is-r-]{border-inline-start:3px solid var(--rc,var(--line))}
+.sk-filter .is-r-common{--rc:var(--r-common)}.sk-filter .is-r-rare{--rc:var(--r-rare)}.sk-filter .is-r-epic{--rc:var(--r-epic)}.sk-filter .is-r-legendary{--rc:var(--r-legendary)}.sk-filter .is-r-mythic{--rc:var(--r-mythic)}
+.sk-gfx{display:flex;align-items:center;gap:8px;margin:0 0 12px;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer}
+.sk-gfx input{width:18px;height:18px;accent-color:#2C8BFF}
+.sk-buy img{width:22px;height:22px}
+.sk-how,.sk-shards{margin-top:8px}
+/* the 3D stage takes the colour of the rarity; mythic gets its own animated backdrop */
+.sv-stage[data-rarity=rare]{background:radial-gradient(110% 90% at 50% 20%,rgba(63,163,255,.38),transparent 60%),linear-gradient(180deg,#0E2558,#06122E)}
+.sv-stage[data-rarity=epic]{background:radial-gradient(110% 90% at 50% 20%,rgba(176,107,255,.4),transparent 60%),linear-gradient(180deg,#1A1550,#07102E)}
+.sv-stage[data-rarity=legendary]{background:radial-gradient(110% 90% at 50% 25%,rgba(255,200,58,.38),transparent 60%),radial-gradient(60% 40% at 50% 95%,rgba(255,200,58,.25),transparent 70%),linear-gradient(180deg,#2A2050,#0A0F2A)}
+.sv-stage[data-rarity=mythic]{background:conic-gradient(from 0deg at 50% 60%,rgba(255,61,110,.35),rgba(176,107,255,.35),rgba(56,212,255,.35),rgba(255,61,110,.35)),radial-gradient(80% 70% at 50% 40%,#1A0B3A,#05041A);background-blend-mode:screen}
+@media (prefers-reduced-motion:reduce){.sk-rarity.is-r-mythic{animation:none}}

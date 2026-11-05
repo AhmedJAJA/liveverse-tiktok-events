@@ -11,6 +11,12 @@ const loadLibs = () => (libs ||= Promise.all([
   import('/vendor/three/OrbitControls.js'),
 ]).then(([THREE, { GLTFLoader }, { OrbitControls }]) => ({ THREE, GLTFLoader, OrbitControls })));
 
+/** Low graphics: chosen by the visitor (saved on this device), or a device with little memory / few cores. */
+export function lowGraphics() {
+  try { const v = localStorage.getItem('sl_gfx'); if (v === 'low') return true; if (v === 'high') return false; } catch {}
+  return (navigator.deviceMemory && navigator.deviceMemory <= 2) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) || false;
+}
+export function setLowGraphics(on) { try { localStorage.setItem('sl_gfx', on ? 'low' : 'high'); } catch {} }
 export function webglAvailable() {
   try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl'))); } catch { return false; }
 }
@@ -28,16 +34,20 @@ async function loadGltf(url, GLTFLoader) {
 
 /**
  * @param {HTMLElement} host  element the canvas goes into (sized by CSS)
- * @param {{ model: string, animations?: Record<string,string>, autoRotate?: boolean, onState?: (s: string, info?: any) => void }} opts
- */
+ * @param {{ model: string, animations?: Record<string,string>, autoRotate?: boolean, rarity?: string, accent?: string,
+ *           low?: boolean, onState?: (s: string, info?: any) => void }} opts
+ * Rarity effects are cosmetic: rare = coloured rim light; epic = + rising particles; legendary = + golden aura
+ * rings; mythic = + colour-cycling aura, many particles and a slow camera orbit. `low` (or a weak device)
+ * keeps only the lights — no particles or aura. */
 export async function mountViewer(host, opts) {
   const { THREE, GLTFLoader, OrbitControls } = await loadLibs();
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const phone = matchMedia('(max-width: 760px), (pointer: coarse)').matches;
   const say = (s, info) => { host.dataset.state = s; opts.onState?.(s, info); };
 
-  const renderer = new THREE.WebGLRenderer({ antialias: !phone, alpha: true, powerPreference: 'low-power' });
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, phone ? 1.5 : 2));
+  const low = !!opts.low || lowGraphics();
+  const renderer = new THREE.WebGLRenderer({ antialias: !phone && !low, alpha: true, powerPreference: 'low-power' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, low ? 1 : phone ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   const canvas = renderer.domElement; canvas.className = 'sv-canvas';
@@ -55,6 +65,69 @@ export async function mountViewer(host, opts) {
   const shadowTex = new THREE.CanvasTexture(g);
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.002; scene.add(shadow);
+
+  /* ---- rarity effects ---- */
+  const COLORS = { common: 0xc9d3e3, rare: 0x3fa3ff, epic: 0xb06bff, legendary: 0xffc83a, mythic: 0xff3d6e };
+  const spriteTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  let fx = null; // { group, particles, rings, glow, rarity, t }
+  function clearFx() {
+    if (!fx) return;
+    scene.remove(fx.group);
+    fx.group.traverse((o) => { o.geometry?.dispose(); if (o.material) o.material.dispose(); });
+    rim.color.set(0x6fd8ff); rim.intensity = 1.3; fx = null;
+  }
+  function applyFx(rarity, h, accent) {
+    clearFx(); host.dataset.rarity = rarity || 'common';
+    if (!rarity || rarity === 'common') return;
+    const col = new THREE.Color(COLORS[rarity] || 0xffffff), group = new THREE.Group();
+    rim.color.copy(col); rim.intensity = rarity === 'rare' ? 2.2 : 2.8;
+    // coloured glow on the floor
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: spriteTex, color: col, transparent: true, opacity: rarity === 'rare' ? 0.45 : 0.7, depthWrite: false, blending: THREE.AdditiveBlending }));
+    glow.rotation.x = -Math.PI / 2; glow.position.y = 0.004; glow.scale.setScalar(h * (rarity === 'mythic' ? 1.6 : 1.2)); group.add(glow);
+    const out = { group, glow, rarity, t: 0, particles: null, rings: [] };
+    if (!low && rarity !== 'rare') {
+      const n = { epic: 46, legendary: 64, mythic: 110 }[rarity], pos = new Float32Array(n * 3), speed = new Float32Array(n), colors = new Float32Array(n * 3);
+      const accentCol = new THREE.Color(accent || col);
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, r = h * (0.22 + Math.random() * 0.32);
+        pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = Math.random() * h * 1.1; pos[i * 3 + 2] = Math.sin(a) * r; speed[i] = 0.12 + Math.random() * 0.3;
+        const c = rarity === 'mythic' ? new THREE.Color().setHSL(Math.random(), 0.9, 0.65) : (i % 3 ? col : accentCol);
+        colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+      }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      const pts = new THREE.Points(geo, new THREE.PointsMaterial({ size: h * (rarity === 'mythic' ? 0.05 : 0.04), map: spriteTex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      group.add(pts); out.particles = { pts, speed, h };
+    }
+    if (!low && (rarity === 'legendary' || rarity === 'mythic')) {
+      for (const [r, y, w] of [[0.42, 0.05, 0.012], [0.5, h * 0.45 / h, 0.008]]) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(h * r, h * w, 8, 64), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }));
+        ring.rotation.x = Math.PI / 2; ring.position.y = h * y; group.add(ring); out.rings.push(ring);
+      }
+    }
+    scene.add(group); fx = out;
+  }
+  function updateFx(dt) {
+    if (!fx) return;
+    fx.t += dt;
+    if (fx.particles) {
+      const { pts, speed, h } = fx.particles, a = pts.geometry.attributes.position;
+      for (let i = 0; i < speed.length; i++) { let y = a.getY(i) + speed[i] * dt * h * 0.5; if (y > h * 1.15) y = 0; a.setY(i, y); }
+      a.needsUpdate = true; pts.rotation.y += dt * 0.25;
+    }
+    fx.rings.forEach((r, i) => { r.rotation.z += dt * (i ? -0.8 : 0.6); r.position.y += Math.sin(fx.t * 1.6 + i) * 0.0008; r.material.opacity = 0.5 + 0.3 * Math.sin(fx.t * 2 + i); });
+    if (fx.rarity === 'mythic') { const c = new THREE.Color().setHSL((fx.t * 0.08) % 1, 0.85, 0.6); rim.color.copy(c); fx.glow.material.color.copy(c); fx.rings.forEach((r) => r.material.color.copy(c)); }
+    else if (fx.glow) fx.glow.material.opacity = (fx.rarity === 'rare' ? 0.4 : 0.6) + 0.15 * Math.sin(fx.t * 2.2);
+  }
+  // the «reveal»: the character grows in with a short bounce (wheel prizes, equipping)
+  let reveal = 0;
+  function startReveal() { if (!model || reduced) return; reveal = 0.0001; model.scale.setScalar(0.01); wake(); }
+  function updateReveal(dt) {
+    if (!reveal || !model) return;
+    reveal = Math.min(1, reveal + dt / 0.9);
+    const k = reveal, e = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2); // back-out ease
+    model.scale.setScalar(Math.max(0.01, e)); model.rotation.y = (1 - k) * Math.PI * 2;
+    if (reveal >= 1) { reveal = 0; model.scale.setScalar(1); model.rotation.y = 0; }
+  }
 
   const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 50);
   const controls = new OrbitControls(camera, canvas);
@@ -96,7 +169,7 @@ export async function mountViewer(host, opts) {
     scene.remove(model); model = null; mixer = null; actions = {}; current = null;
   }
 
-  async function setModel(url, animations = opts.animations || {}) {
+  async function setModel(url, animations = opts.animations || {}, look = { rarity: opts.rarity, accent: opts.accent }) {
     say('loading');
     let gltf;
     try { gltf = await loadGltf(url, GLTFLoader); } catch (e) { say('error', e); return false; }
@@ -107,6 +180,8 @@ export async function mountViewer(host, opts) {
     model = clone ? clone(gltf.scene) : gltf.scene;
     model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; if (o.material) o.material.envMapIntensity = 0.6; } });
     scene.add(model); fit(model);
+    applyFx(look.rarity, new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3()).y, look.accent);
+    if (look.rarity === 'mythic' && !reduced && opts.autoRotate !== false) { controls.autoRotate = true; controls.autoRotateSpeed = 0.9; }
     mixer = new THREE.AnimationMixer(model);
     for (const [key2] of Object.entries(animations)) {
       const clip = gltf.animations.find((c) => c.name === key2) || gltf.animations.find((c) => c.name === animations[key2]);
@@ -150,7 +225,7 @@ export async function mountViewer(host, opts) {
     if (minGap && now - last < minGap) { requestAnimationFrame(frame); return; }
     last = now;
     const dt = Math.min(clock.getDelta(), 0.1);
-    mixer?.update(dt);
+    mixer?.update(dt); updateFx(dt); updateReveal(dt);
     const moved = controls.update();
     renderer.render(scene, camera);
     // with an animation playing we keep going; a still model stops rendering after a short while
@@ -160,14 +235,14 @@ export async function mountViewer(host, opts) {
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); say('error', new Error('context lost')); });
 
   const api = {
-    setModel, play,
+    setModel, play, reveal: startReveal,
     zoom(f) { const d = camera.position.clone().sub(controls.target); const len = THREE.MathUtils.clamp(d.length() * f, controls.minDistance, controls.maxDistance); camera.position.copy(controls.target).add(d.setLength(len)); controls.update(); wake(); },
     rotate(rad) { controls.autoRotate = false; const d = camera.position.clone().sub(controls.target); d.applyAxisAngle(new THREE.Vector3(0, 1, 0), rad); camera.position.copy(controls.target).add(d); controls.update(); wake(); },
     reset() { goHome(); },
     setAutoRotate(on) { controls.autoRotate = !!on && !reduced; wake(); },
     dispose() {
       disposed = true; io.disconnect(); ro.disconnect(); document.removeEventListener('visibilitychange', onVis);
-      disposeModel(); controls.dispose(); shadow.geometry.dispose(); shadow.material.dispose(); shadowTex.dispose();
+      disposeModel(); clearFx(); spriteTex.dispose(); controls.dispose(); shadow.geometry.dispose(); shadow.material.dispose(); shadowTex.dispose();
       renderer.dispose(); renderer.forceContextLoss(); canvas.remove();
     },
   };

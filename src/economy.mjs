@@ -19,7 +19,7 @@ export const hashDevice = (raw) => (/^[A-Za-z0-9_-]{16,64}$/.test(String(raw || 
 export const hashIp = (ip) => (ip ? createHash('sha256').update('net:' + ip).digest('base64url').slice(0, 16) : null);
 
 export class Economy {
-  constructor({ pool, audit = async () => {} }) { this.pool = pool; this.audit = audit; }
+  constructor({ pool, platform = null }) { this.pool = pool; this.platform = platform; }
 
   /* ---------------------------------------------------------------- wallet */
   async ensure(c, userId) { await c.query('INSERT INTO wallets (user_id) VALUES ($1) ON CONFLICT DO NOTHING', [userId]); }
@@ -155,6 +155,26 @@ export class Economy {
       pending: rows.filter((r) => r.status === 'pending').length, held: rows.filter((r) => r.status === 'held').length,
       list: rows.map((r) => ({ name: r.display_name, publicId: r.public_id, status: r.status, at: iso(r.decided_at || r.created_at) })),
     };
+  }
+
+  /* ---------------------------------------------------------------- direct skin purchase (fixed, listed price)
+     Paid from purchased coins first, then earned ones. Owned skins cannot be bought twice; one transaction. */
+  async buySkin(userId, skinId) {
+    const p = this.platform; await p.catalog();
+    const skin = p.skinCatalog.byId(String(skinId || ''));
+    if (!skin) fail('السكن غير موجود', 404);
+    if (!skin.price || skin.access === 'grant' || skin.default) fail('هذا السكن غير معروض للشراء', 403);
+    const price = Number(skin.price);
+    await tx(this.pool, async (c) => {
+      const w = await this.lock(c, userId);
+      if ((await c.query('SELECT 1 FROM user_skins WHERE user_id=$1 AND skin_id=$2', [userId, skin.id])).rowCount) fail('السكن في مجموعتك بالفعل', 409);
+      const fromPurchased = Math.min(price, Number(w.purchased)), fromEarned = price - fromPurchased;
+      if (fromEarned > Number(w.earned)) fail('رصيدك لا يكفي لشراء هذا السكن', 402);
+      if (fromPurchased) await this.move(c, userId, { amount: -fromPurchased, bucket: 'purchased', kind: 'skin_buy', ref: 'skin:' + skin.id, note: 'شراء سكن: ' + skin.name });
+      if (fromEarned) await this.move(c, userId, { amount: -fromEarned, bucket: 'earned', kind: 'skin_buy', ref: 'skin:' + skin.id, note: 'شراء سكن: ' + skin.name });
+      await c.query(`INSERT INTO user_skins (user_id, skin_id, source) VALUES ($1,$2,'buy')`, [userId, skin.id]);
+    });
+    return { ok: true, skin: skin.id, price };
   }
 
   /* ---------------------------------------------------------------- owner tools */
