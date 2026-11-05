@@ -51,7 +51,7 @@
     document.body.dataset.sec = sec;
     for (const s of document.querySelectorAll('.ds-sec')) s.hidden = s.dataset.sec !== sec;
     const navSec = sec === 'billing' ? 'settings' : sec === 'skins' ? 'bag' : sec;
-    for (const a of document.querySelectorAll('.ds-nav a[data-sec], .ds-bottom a[data-sec]')) { if (a.dataset.sec === navSec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
+    for (const a of document.querySelectorAll('.ds-nav a[data-sec]')) { if (a.dataset.sec === navSec) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); }
     closeMenu();
     if (sec === 'settings') loadSessions();
     if (sec === 'community') loadCommunity();
@@ -130,8 +130,6 @@
   });
 
   // the bottom bar steps aside while the keyboard is up
-  addEventListener('focusin', (e) => { if (e.target.matches('input,textarea,select')) document.body.classList.add('is-typing'); });
-  addEventListener('focusout', () => document.body.classList.remove('is-typing'));
   /* ---------- render ---------- */
   function render(p) {
     profile = p;
