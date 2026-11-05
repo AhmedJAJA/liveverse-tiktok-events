@@ -68,7 +68,7 @@
     }
   }).catch(() => {}).finally(() => document.documentElement.classList.remove('me-pending'));
   /* ---------------------------------------------- the games list: every game opens its own page (all free) */
-  const coverAt = (g, w) => (/\.webp$/.test(g.cover || '') && g.cover.startsWith('/games/') ? g.cover.replace(/\.webp$/, '-' + w + '.webp') : g.cover);
+  const coverAt = (g, w) => (/\.webp$/.test(g.cover || '') && g.cover.startsWith('/cards/') ? g.cover.replace(/\.webp$/, '-' + w + '.webp') : g.cover);
   function paintGames(games) {
     const ul = $('gameStrip'); if (!ul || !games?.length) return;
     ul.replaceChildren(...games.map((g, i) => {

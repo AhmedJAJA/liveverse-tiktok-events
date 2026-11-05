@@ -139,7 +139,7 @@ test('static files: gzip, ETag revalidation and content-hashed links in HTML', a
     const etag = css.headers.get('etag');
     assert.equal((await fetch(srv.base + '/home.css', { headers: { 'If-None-Match': etag } })).status, 304);
     assert.equal((await fetch(srv.base + '/')).headers.get('cache-control'), 'no-cache', 'pages always revalidate so a deploy shows at once');
-    for (const f of ['/games/01-knowledge-challenge-120.webp', '/games/12-guess-flag-200.webp', '/brand/sponge-256.webp']) {
+    for (const f of ['/cards/01-knowledge-challenge-120.webp', '/cards/12-guess-flag-200.webp', '/brand/sponge-256.webp']) {
       const r = await fetch(srv.base + f); assert.equal(r.status, 200, f); assert.ok((await r.arrayBuffer()).byteLength < 30000, f + ' is small');
     }
   } finally { await srv.stop(); }

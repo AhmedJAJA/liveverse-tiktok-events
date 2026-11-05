@@ -80,7 +80,7 @@
     $('sideTitle').textContent = game.title || '';
     $('sideCover').src = game.cover ? coverAt(game, 120) : cover;
     if ($('gameNav').children.length) markCurrent();
-    $('gameCover').closest('.pl-cover').classList.toggle('is-art', cover.startsWith('/games/'));
+    $('gameCover').closest('.pl-cover').classList.toggle('is-art', cover.startsWith('/cards/'));
     $('setupTitle').textContent = game.title || ''; $('setupSummary').textContent = game.summary || '';
     $('setupCover').src = game.cover ? coverAt(game, 200) : cover;
     $('lbGame').textContent = game.title || '';
@@ -807,7 +807,7 @@
 
   /* ---------- game library: category filters, search and a grid of cards ---------- */
   const allGames = () => [...(site?.games || []), ...(site?.extraGames || [])];
-  const coverAt = (g, w) => (g.cover?.startsWith('/games/') ? g.cover.replace('.webp', '-' + w + '.webp') : g.cover || '/covers/' + g.mode + '.svg');
+  const coverAt = (g, w) => (g.cover?.startsWith('/cards/') ? g.cover.replace('.webp', '-' + w + '.webp') : g.cover || '/covers/' + g.mode + '.svg');
   let filterCat = 'all';
   function gameCard(g, i, extra) {
     const li = el('li', 'st-card'); li.dataset.mode = g.mode; li.dataset.cat = g.category || 'smart'; li.dataset.tone = String(i % 6);

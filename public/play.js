@@ -53,7 +53,7 @@
     $('gameRules').replaceChildren(...(game.rules || []).map((r) => el('li', '', r)));
     const cover = game.cover || '/covers/' + mode + '.svg';
     for (const id of ['gameCover', 'backdropCover']) $(id).src = cover;
-    $('gameCover').closest('.pl-cover').classList.toggle('is-art', cover.startsWith('/games/'));
+    $('gameCover').closest('.pl-cover').classList.toggle('is-art', cover.startsWith('/cards/'));
     $('setupLink').href = game.setup || '/game/' + game.mode;
     $('guessFields').hidden = mode !== 'guess';
     const v = VARIANTS[mode];
