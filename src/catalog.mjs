@@ -13,7 +13,7 @@ const g = (mode, title, category, summary, rules, extra = {}) => Object.freeze({
   mode, title, category, categoryLabel: CATEGORIES[category], summary, rules: Object.freeze(rules),
   href: `/play?mode=${mode}`, setup: extra.setup || `/event?mode=${mode}`, cover: `/covers/${mode}.svg`, status: 'available', minPlayers: extra.minPlayers || 1, ...extra
 });
-const art = (file) => ({ cover: `/games/${file}.webp`, art: `/games/${file}.png` });
+const art = (file) => ({ cover: `/cards/${file}.webp`, art: `/cards/${file}.png` });
 
 /** The سبونج لايف games, in gallery order, each with its card art. */
 export const GAMES = Object.freeze([
