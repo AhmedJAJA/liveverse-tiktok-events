@@ -89,16 +89,20 @@ function triggerRoundStartCountdown(mode = 'quiz') {
   countdownTimers.push(setTimeout(() => { overlay.hidden = true; }, 1760));
 }
 function renderClock() {
+  if ($('arena').dataset.phase === 'reveal') { $('overlaySeconds').textContent = '0'; $('timerFace').style.setProperty('--timer-angle', '0deg'); $('topProgress').style.width = '0%'; $('overlayTimer').classList.remove('urgent', 'is-warn'); return; }
   const seconds = clock.active && clock.endsAt != null
     ? Math.max(0, Math.ceil((clock.endsAt - (Date.now() + clock.offset)) / 1000))
     : clock.duration;
   const pct = clock.active && clock.endsAt != null ? Math.max(0, Math.min(1, (clock.endsAt - (Date.now() + clock.offset))/(clock.duration*1000))) : 1;
   const label = $('arena').dataset.mode === 'quiz' ? String(seconds) : `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
   if ($('overlaySeconds').textContent !== label) $('overlaySeconds').textContent = label;
+  $('overlaySeconds').classList.toggle('is-wide', label.length > 2);
   $('timerFace').style.setProperty('--timer-angle', `${Math.round(pct*360)}deg`);
   $('topProgress').style.width = (clock.active ? Math.round(pct*100) : 0) + '%';
-  const urgent = clock.active && seconds<=10;
+  // cyan → yellow in the last 10 seconds → red with a pulse in the last 5 (the time always comes from the server)
+  const urgent = clock.active && seconds<=5, warn = clock.active && seconds<=10 && !urgent;
   $('overlayTimer').classList.toggle('urgent',urgent);
+  $('overlayTimer').classList.toggle('is-warn',warn);
   $('clockStatus').textContent = !clock.active?'بانتظار بدء التحدي':urgent?'الثواني الأخيرة!':'جميع الإجابات تُسجل الآن';
 }
 setInterval(renderClock,200);
@@ -118,7 +122,9 @@ const memberColors = ['#A96C87','#6B8D9D','#8E83AD','#588D9E','#699787','#A87965
 /* Skins: viewers whose TikTok / Kick account is linked to a SPONGE LIVE account appear as their equipped
    character (a rendered image — light even with dozens of players); eliminated players show the «lose» pose;
    the round winner gets the real 3D character doing its win move. */
-let skinMap = {};
+let skinMap = {}, frameMap = {};
+/** «إطارات الأسماء»: only for players whose linked account equipped one (the server decides; guests get none). */
+const frameOf = (p) => p ? (frameMap['i:' + p.id] || (p.number ? frameMap['n:' + p.number] : null) || null) : null;
 const skinOf = (p) => p ? (skinMap['i:' + p.id] || skinMap['n:' + p.number] || null) : null;
 function paintSkin(container, player, skin) {
   const out = !!container.closest('.bomb-out-avatar, .is-eliminated, .is-out, .result-row.is-out');
@@ -187,7 +193,7 @@ function renderOptions(items) {
     // Jewel medallion: a distinct cut per answer so viewers can tell them apart at a glance.
     const badge=node('span','choice-index');
     badge.append(icon('g-'+(i+1),'choice-gem'),node('span','choice-num',String(i+1)));
-    const label=node('span','choice-label',option);
+    const label=node('span','choice-label',option);label.setAttribute('dir','auto');
     label.classList.toggle('is-long',option.length>22);label.classList.toggle('is-very-long',option.length>48);
     const votes=node('span','choice-mark');
     votes.append(node('span','choice-avatars'),node('span','choice-count','0'));
@@ -275,7 +281,10 @@ function podiumCard(p, rank) {
   const time=node('span','podium-time');if(p.detail)time.append(icon('i-star','i i-sm'),node('span','',p.detail));else time.append(icon('i-timer','i i-sm'),node('span','num',formatMs(p.elapsedMs)));
   const points=node('span','podium-points',`+${p.points} نقاط`);
   const base=node('div','podium-base');base.append(node('b','num',String(rank)),node('small','caps',['Gold','Silver','Bronze'][rank-1]||''));
-  card.append(avatar,node('strong','podium-name',p.name),time,points,base);
+  const fr = frameOf(p);
+  const avBox = fr && window.SpongeFrames ? window.SpongeFrames.avatar(avatar, fr) : avatar;
+  const name = fr && window.SpongeFrames ? window.SpongeFrames.plate(p.name, fr, 'podium-name') : node('strong','podium-name',p.name);
+  card.append(avBox,name,time,points,base);
   return card;
 }
 /** Centre-stage moment for the champion: big photo, name, «الفائز بالمركز الأول», sea celebration. */
@@ -290,7 +299,8 @@ function showSpotlight(p, detail) {
   fxPlay('win'); triggerConfetti(); window.SpongeFx?.burst($('spotAvatar'),20);
   clearTimeout(spotTimer); spotTimer=setTimeout(()=>{box.hidden=true;},5200);
 }
-function renderResults(status, round) {
+const REVEAL_MS=3000;
+function renderResults(status, round, data) {
   const results=status.results;
   const show=!!results && (['quiz','guess','glass'].includes(status.mode)||PARTY.has(status.mode));
   const screen=$('roundResultsOverlay');
@@ -300,7 +310,9 @@ function renderResults(status, round) {
   if (stateCache.resultsKey===key) return;
   stateCache.resultsKey=key;
   const partyMode=PARTY.has(status.mode);
-  $('resultsRoundLabel').textContent=partyMode?`نتائج ${modeInfo[status.mode].ar}`:`نتائج السؤال ${round}`;
+  const ser=status.mode==='quiz'&&data?.series?.total>1?data.series:null, last=!partyMode&&(!ser||!ser.nextAt);
+  $('resultsRoundLabel').textContent=partyMode?`نتائج ${modeInfo[status.mode].ar}`:ser?(last?`انتهت الجولة • ${ser.total} أسئلة`:`نتائج السؤال ${ser.index} من ${ser.total}`):`نتائج السؤال ${round}`;
+  screen.classList.toggle('is-final',!!last);
   $('resultsSubtitle').textContent=partyMode?'الترتيب النهائي للعبة':results.correctCount?'الترتيب حسب أسرع إجابة صحيحة وصلت إلى السيرفر':'انتهى الوقت — هذه الجولة بدون إجابات صحيحة';
   $('resultsCorrect').textContent=results.correctAnswer||'—';
   $('resultsAnswers').textContent=`${number(results.correctCount)} صحيحة من ${number(results.totalAnswers)}`;
@@ -821,14 +833,24 @@ function update(data) {
   paintRoomCode(arguments[0]?.roomCode);
   if (!data || !data.status) return;
   window.lastLiveverseState=data;
-  skinMap = data.skins || {};
+  skinMap = data.skins || {}; frameMap = data.frames || {};
   const s=data.status, mode=modeInfo[s.mode]||modeInfo.quiz;
   const phase=['open','idle'].includes(data.registration?.phase)?'registration':s.results?'results':s.active?'active':'waiting';
-  const arena=$('arena');arena.dataset.mode=s.mode;arena.dataset.phase=phase;
+  const arena=$('arena');
+  // the answer reveal: when a quiz question ends, the board stays ~3 s with the right answer before the results
+  if(!data._recv)data._recv=Date.now();
+  const doneAgo=s.results?((Number(data.serverTime)||data._recv)+(Date.now()-data._recv)-s.results.completedAt):Infinity;
+  const revealing=phase==='results'&&s.mode==='quiz'&&Number.isInteger(s.results?.correctIndex)&&doneAgo<REVEAL_MS;
+  clearTimeout(update.revealTimer);
+  if(revealing) update.revealTimer=setTimeout(()=>update(window.lastLiveverseState),REVEAL_MS-doneAgo+40);
+  arena.dataset.mode=s.mode;arena.dataset.phase=revealing?'reveal':phase;
   const bombMode=s.mode==='bomb';
-  arena.querySelector('.arena-body').hidden=phase==='registration'||phase==='results'||bombMode;
+  arena.querySelector('.arena-body').hidden=phase==='registration'||(phase==='results'&&!revealing)||bombMode;
   if(bombMode&&phase!=='registration'&&data.bomb){$('bombStage').hidden=false;renderBomb(data.bomb,data.serverTime);}else hideBomb();
-  $('overlayRound').replaceChildren(document.createTextNode(s.mode==='quiz'?'السؤال ':'الجولة '),node('b','num',String(data.round||1).padStart(2,'0')));
+  const ser=s.mode==='quiz'&&data.series&&data.series.total>1?data.series:null;
+  $('overlayRound').replaceChildren(document.createTextNode(s.mode==='quiz'?'السؤال ':'الجولة '),node('b','num',String(ser?ser.index||1:data.round||1)),...(ser?[document.createTextNode(' من '),node('b','num',String(ser.total))]:[]));
+  $('gxGame').textContent=s.title||mode.ar||'';
+  $('gxPlayers').textContent=number(data.registration?.count ?? data.playerCount ?? 0);
   renderProgressDots(data.round||1);
   $('footerRound').textContent=String(data.round||1).padStart(3,'0');
   $('overlayLive').classList.toggle('is-live',phase==='active'||phase==='registration');
@@ -861,6 +883,12 @@ function update(data) {
     restartAnimation($('overlayOptions'),'choices-enter');
   }
   if(s.mode==='quiz') updateVoteCounts(s.choiceCounts||[],s.choiceVoters||[]);
+  if(s.mode==='quiz'){
+    const ci=revealing?s.results.correctIndex:-1;
+    $('overlayOptions').querySelectorAll('.choice').forEach((c,i)=>{c.classList.toggle('is-correct',ci===i);c.classList.toggle('is-dim',ci>=0&&ci!==i);});
+    $('gxReveal').hidden=!revealing;
+    if(revealing)$('gxRevealText').textContent=`الإجابة الصحيحة: ${s.results.correctAnswer||''} • ${number(s.results.correctCount)} إجابة صحيحة من ${number(s.results.totalAnswers)}`;
+  } else $('gxReveal').hidden=true;
    if(s.mode==='glass') updateVoteCounts(data.glass?.choiceCounts||[0,0],[[],[]]);
   if(PARTY.has(s.mode)&&partyOptions.length){updateVoteCounts(party?.counts||[],[]);markPartyChoices(party,s.mode);}
   $('overlayPrompt').classList.toggle('is-long',(s.prompt||'').length>70);
@@ -881,12 +909,13 @@ function update(data) {
   renderClock();
   $('overlayTimer').hidden=['race','wheel'].includes(s.mode);
   updateStandings(data.leaderboard||[]);
-  renderResults(s,data.round);
+  if(!revealing) renderResults(s,data.round,data); else $('roundResultsOverlay').hidden=true;
   // Signup takes priority over a stale results screen from the previous round.
   if(phase==='registration') $('roundResultsOverlay').hidden=true;
   renderRegistration(data.registration);
   if(phase==='active'&&update.previousPhase&&update.previousPhase!==phase&&!bombMode){
     triggerRoundStartCountdown(s.mode);
+    restartAnimation($('gxLogo'),'gx-shine');
     requestAnimationFrame(fitBroadcastText);
   } else if (phase !== 'active') {
     $('roundStartCountdown').hidden = true;

@@ -283,8 +283,14 @@
  </div>
  <div class="gm-actions" id="gmActions">
   <button type="button" class="pl-btn pl-btn-ghost gm-tools" id="gmTools" aria-controls="hostPanel" aria-expanded="false"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>التحكم</span></button>
+  <button type="button" class="pl-btn gm-full" id="gmFull" aria-pressed="false"><span class="gm-full-ic" aria-hidden="true">⛶</span><span>ملء الشاشة</span></button>
  </div>
 </header>
+<!-- full screen: only the game, with two small buttons (the round's controls stay one tap away) -->
+<div class="gm-float" id="gmFloat" hidden>
+ <button type="button" class="gm-fbtn" id="gmFloatTools" aria-controls="hostPanel"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>التحكم</span></button>
+ <button type="button" class="gm-fbtn gm-fexit" id="gmExit"><span aria-hidden="true">✕</span><span>الخروج من ملء الشاشة</span></button>
+</div>
 <p class="gm-toast" id="gmToast" role="status" aria-live="polite" hidden></p>
 
 <div class="st-layout" id="gameScreen">
