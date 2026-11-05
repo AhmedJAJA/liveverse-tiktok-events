@@ -271,6 +271,22 @@
  </form>
 </dialog>
 
+<!-- ===== the round on full screen: a slim bar on top, the game fills the rest ===== -->
+<header class="gm-top" id="gmTop">
+ <a class="gm-brand" href="/" aria-label="SPONGE LIVE — الرئيسية"><img src="/brand/sponge-128.webp" alt="" width="30" height="30"><span dir="ltr"><b>SPONGE</b> LIVE</span></a>
+ <div class="gm-info" aria-live="polite">
+  <b id="gmTitle">—</b>
+  <span class="gm-chip" id="gmStage">الجولة جارية</span>
+  <span class="gm-chip" id="gmSeries" hidden></span>
+  <span class="gm-chip" id="gmPlayers"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-users"/></svg><b id="gmCount">0</b></span>
+  <span class="gm-chip gm-conn" id="gmConn" data-tone="off" title=""><i aria-hidden="true"></i><span id="gmConnText">—</span></span>
+ </div>
+ <div class="gm-actions" id="gmActions">
+  <button type="button" class="pl-btn pl-btn-ghost gm-tools" id="gmTools" aria-controls="hostPanel" aria-expanded="false"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>التحكم</span></button>
+ </div>
+</header>
+<p class="gm-toast" id="gmToast" role="status" aria-live="polite" hidden></p>
+
 <div class="st-layout" id="gameScreen">
  <!-- ===== the selected game ===== -->
  <main class="st-main">

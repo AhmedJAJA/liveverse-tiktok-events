@@ -605,6 +605,7 @@ function lobbyContext(actor, room, platformPref = '') {
     linkable: (p) => linkableNow(p),
     connect: (a, r, p) => connectLinked(a, r, p),
     flush: () => room.flush(),
+    release: (why) => { if (room.engine.connection.state !== 'connected') { room.tiktok.disconnect(false).catch(() => {}); room.engine.setConnection('disconnected', room.engine.connection.username, why, room.engine.connection.platform); } },
     addDemo: () => { const added = room.engine.addDemoPlayers({ count: Math.max(4, minPlayersOf(room)) }); room.engine.setSimulation({ autoplay: true }); return added; },
   };
 }

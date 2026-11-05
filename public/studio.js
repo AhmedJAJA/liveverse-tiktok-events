@@ -27,7 +27,15 @@
   const num = (n) => Number(n || 0).toLocaleString('en-US');
   const initial = (n) => Array.from(String(n || '؟').replace(/^@/, '').trim())[0] || '؟';
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
-  function feedback(msg, error = false) { const f = $('feedback'); f.textContent = msg || ''; f.classList.toggle('is-error', !!error); }
+  let toastTimer = 0;
+  function feedback(msg, error = false) {
+    const f = $('feedback'); f.textContent = msg || ''; f.classList.toggle('is-error', !!error);
+    // on the full-screen round the message shows as a short toast under the bar
+    const t = $('gmToast'); clearTimeout(toastTimer);
+    t.hidden = !msg || document.body.dataset.screen !== 'game'; t.textContent = msg || ''; t.classList.toggle('is-error', !!error);
+    if (msg) toastTimer = setTimeout(() => { t.hidden = true; }, error ? 6000 : 3500);
+  }
+  $('gmActions').prepend($('adminBar').firstElementChild); // the round's buttons live in the slim top bar
 
   /** The subscription ended while the studio was open: the round on screen is kept (viewers and OBS still see it),
       but the server refuses new commands until the account is renewed. */
@@ -192,10 +200,30 @@
       codeAt = Date.now();
       admin('room-code').then((r) => { $('roomCode').textContent = r.code; $('roomCodeChip').hidden = false; }).catch(() => { codeAt = 0; });
     }
+    paintRoundBar(s, view);
     if (host) paintHost(s, view, need);
     else $('hostTools').hidden = true;
     paintSetup(s); paintPrepare(s); paintLobbyView(s);
   }
+  /** The slim bar of the full-screen round: game, stage, question, players and the honest stream state. */
+  function paintRoundBar(s, view) {
+    if (document.body.dataset.screen !== 'game') return;
+    const c = s.connection || {}, demo = !!(s.flow?.lobby?.demo || s.flow?.trial);
+    $('gmTitle').textContent = game.title || s.status.title || '';
+    $('gmStage').textContent = view === 'done' ? 'النتائج' : view === 'busy' ? 'لعبة أخرى جارية' : 'الجولة جارية';
+    if (view === 'done') $('gmStage').dataset.done = '1'; else delete $('gmStage').dataset.done;
+    const ser = s.series && s.series.total > 1 ? 'السؤال ' + num(s.series.index || 1) + ' من ' + num(s.series.total) : '';
+    $('gmSeries').hidden = !ser; $('gmSeries').textContent = ser;
+    $('gmCount').textContent = num(s.playerCount || 0);
+    const live = c.state === 'connected' && (c.liveConfirmed || c.verified || me.owner || ownerToken());
+    const tone = demo ? 'demo' : live ? 'ok' : c.state === 'connecting' ? 'wait' : 'bad';
+    $('gmConn').dataset.tone = tone;
+    $('gmConnText').textContent = demo ? 'وضع التجربة — بلا بث' : live ? 'متصل · ' + (c.platform === 'kick' ? 'Kick' : 'TikTok')
+      : c.state === 'connecting' ? 'جارٍ الاتصال…' : (c.detail || 'البث غير متصل');
+    $('gmConn').title = c.detail || '';
+    $('gmTools').setAttribute('aria-expanded', String(document.body.dataset.drawer === 'open'));
+  }
+  $('gmTools').addEventListener('click', () => $('drawerToggle').click());
   function paintHost(s, view, need) {
     const reg = s.registration || {}, active = !!s.status.active, stage = s.flow?.stage;
     const waiting = stage === 'WAITING_FOR_PLAYERS';
@@ -811,6 +839,7 @@
     else if (name === 'lobby') document.title = 'غرفة الانتظار — ' + (game.title || '') + ' | SPONGE LIVE';
     if (changed && name === 'setup') { advFor = ''; if (state) paintSetup(state); }
     if (changed && name !== 'lobby') { lbFirst = true; }
+    if (changed && name === 'game' && document.body.dataset.drawer === 'open') $('drawerToggle').click(); // the game gets the whole screen
     if (changed && name === 'lobby') { $('lbWordForm').hidden = true; $('lbWordEdit').hidden = false; $('lbWord').hidden = false; }
   }
   function openRules(m) {
@@ -922,7 +951,7 @@
     $('connText').textContent = { connected: 'متصل' + (c.username ? ' @' + c.username : '') + (c.verified ? ' ✓' : ''), connecting: 'جارٍ الاتصال…', error: 'خطأ في الاتصال', disconnected: 'غير متصل' }[st] || st;
     $('connState').title = c?.detail || '';
     $('sideDot').dataset.state = st;
-    $('sideConn').textContent = (c?.platform === 'kick' ? 'Kick' : 'TikTok') + ' — ' + $('connText').textContent;
+    $('sideConn').textContent = state?.flow?.lobby?.demo ? 'وضع التجربة — بلا بث' : (c?.platform === 'kick' ? 'Kick' : 'TikTok') + ' — ' + $('connText').textContent;
     $('disconnectButton').hidden = !['connected', 'connecting'].includes(st);
     $('connectButton').hidden = st === 'connected';
     if (st === 'connected' && c.username && !$('manualConnect').hidden && document.activeElement !== $('handleInput')) $('handleInput').value = c.username;
