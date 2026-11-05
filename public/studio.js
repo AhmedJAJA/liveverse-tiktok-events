@@ -4,6 +4,8 @@
    joins, and only «بدء الجولة الآن» starts a round. Every node is built with createElement/textContent. */
 (() => {
   'use strict';
+  // a page restored from the back/forward cache is checked again (the session may have ended meanwhile)
+  addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const MODES = ['quiz', 'drawguess', 'chairs', 'bowling', 'bomb', 'categories', 'rps', 'roles', 'roulette', 'redlight', 'country', 'flag', 'tug', 'outsider',
@@ -1022,7 +1024,7 @@
   $('logoutButton').addEventListener('click', async () => {
     try { await fetch('/api/access/logout', { method: 'POST', credentials: 'same-origin' }); } catch {}
     try { sessionStorage.removeItem('liveverse_admin'); } catch {}
-    location.href = '/';
+    location.href = '/login?signed_out=1';
   });
 
   async function boot() {

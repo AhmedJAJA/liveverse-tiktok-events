@@ -1,10 +1,12 @@
 /* SPONGE LIVE — admin panel. Every action is checked and logged on the server (/api/manage/*). */
 (() => {
   'use strict';
+  // a page restored from the back/forward cache is checked again (the session may have ended meanwhile)
+  addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short' });
   const fmtDate = (iso) => (iso ? fmt.format(new Date(iso)) : '—');
-  const ACTIONS = { 'subscription-grant': 'منح اشتراك', 'subscription-extend': 'تمديد اشتراك', 'subscription-stop': 'إيقاف اشتراك', 'email-verify-manual': 'تأكيد بريد يدويًا', 'account-disable': 'إيقاف حساب', 'account-enable': 'إعادة تفعيل حساب', 'trial-code-revoke': 'إلغاء رمز تجربة', 'promo-create': 'إنشاء رمز', 'promo-revoke': 'إلغاء رمز', 'promo-update': 'تعديل رمز', 'promo-delete': 'حذف رمز', 'voucher-create': 'إنشاء رموز اشتراك', 'voucher-revoke': 'إلغاء رمز اشتراك', 'partner-save': 'حفظ شريك', 'partner-delete': 'حذف شريك', 'prize-save': 'حفظ جائزة', 'award-status': 'تحديث استلام جائزة' };
+  const ACTIONS = { 'subscription-grant': 'منح اشتراك', 'subscription-extend': 'تمديد اشتراك', 'subscription-stop': 'إيقاف اشتراك', 'email-verify-manual': 'تأكيد بريد يدويًا', 'account-disable': 'إيقاف حساب', 'account-enable': 'إعادة تفعيل حساب', 'trial-code-revoke': 'إلغاء رمز تجربة', 'password-reset-link': 'رابط إعادة تعيين كلمة المرور', 'password-reset': 'إعادة تعيين كلمة المرور', 'google-link': 'ربط Google', 'promo-create': 'إنشاء رمز', 'promo-revoke': 'إلغاء رمز', 'promo-update': 'تعديل رمز', 'promo-delete': 'حذف رمز', 'voucher-create': 'إنشاء رموز اشتراك', 'voucher-revoke': 'إلغاء رمز اشتراك', 'partner-save': 'حفظ شريك', 'partner-delete': 'حذف شريك', 'prize-save': 'حفظ جائزة', 'award-status': 'تحديث استلام جائزة' };
   const STATUS = { active: 'فعّال', expired: 'منتهي', scheduled: 'لاحقًا', cancelled: 'موقوف', disabled: 'ملغى', used: 'مستخدم' };
   let current = null;
   const api = async (method, url, body) => {
@@ -54,6 +56,17 @@
   $('stopButton').addEventListener('click', () => { if (confirm('إيقاف كل اشتراكات هذا الحساب الفعّالة؟')) userAction('stop', {}, 'تم إيقاف الاشتراك')(); });
   $('verifyButton').addEventListener('click', userAction('verify', {}, 'تم تأكيد البريد'));
   $('trialRevokeButton').addEventListener('click', userAction('trial-code-revoke', {}, 'تم'));
+  // «نسيت كلمة المرور» without an e-mail service: a one-time link for the owner to send to the person (WhatsApp)
+  $('resetLinkButton').addEventListener('click', async () => {
+    if (!current) return;
+    try {
+      const r = await api('POST', '/api/manage/password-reset-link', { publicId: current });
+      const out = $('resetLinkOut'); out.replaceChildren(document.createTextNode('أرسل هذا الرابط لصاحب الحساب فقط — يعمل مرة واحدة خلال 30 دقيقة: '));
+      const code = document.createElement('code'); code.dir = 'ltr'; code.textContent = r.link; out.append(code); out.hidden = false;
+      try { await navigator.clipboard.writeText(r.link); out.append(document.createTextNode(' (نُسخ)')); } catch {}
+      audit();
+    } catch (e) { msg(e.message, false); }
+  });
   $('disableButton').addEventListener('click', () => { if (confirm('إيقاف هذا الحساب وتسجيل خروجه؟')) userAction('disable', { disabled: true }, 'تم إيقاف الحساب')(); });
 
   async function codes() {

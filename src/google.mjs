@@ -58,3 +58,35 @@ export class GoogleVerifier {
     };
   }
 }
+
+/**
+ * «المتابعة باستخدام Google» as a full-page OpenID Connect Authorization Code flow (no popup, works in mobile
+ * browsers): our server sends the browser to Google with state (CSRF), nonce and PKCE (S256); Google sends it back
+ * with a one-time code; the server exchanges the code with the client secret (never sent to the browser) and
+ * verifies the returned ID token with GoogleVerifier (signature, issuer, audience, expiry, nonce).
+ */
+export class GoogleOAuth {
+  constructor({ clientId, clientSecret, verifier, authUrl = 'https://accounts.google.com/o/oauth2/v2/auth', tokenUrl = 'https://oauth2.googleapis.com/token', fetchImpl = fetch } = {}) {
+    this.clientId = clientId || ''; this.clientSecret = clientSecret || ''; this.verifier = verifier;
+    this.authUrl = authUrl; this.tokenUrl = tokenUrl; this.fetch = fetchImpl;
+  }
+  get enabled() { return !!(this.clientId && this.clientSecret && this.verifier?.enabled); }
+  authorizeUrl({ redirectUri, state, challenge, nonce, loginHint = '' }) {
+    const q = new URLSearchParams({ client_id: this.clientId, response_type: 'code', scope: 'openid email profile', redirect_uri: redirectUri,
+      state, nonce, code_challenge: challenge, code_challenge_method: 'S256', prompt: 'select_account', include_granted_scopes: 'false', access_type: 'online' });
+    if (loginHint) q.set('login_hint', loginHint);
+    return this.authUrl + '?' + q;
+  }
+  /** Exchange the one-time code; returns the verified identity (throws on any problem). */
+  async exchange({ code, codeVerifier, redirectUri, nonce }) {
+    if (!this.enabled) throw new Error('google code flow is not configured');
+    if (!code || typeof code !== 'string' || code.length > 2048) throw new Error('missing code');
+    const res = await this.fetch(this.tokenUrl, { method: 'POST', signal: AbortSignal.timeout(10_000),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: new URLSearchParams({ code, client_id: this.clientId, client_secret: this.clientSecret, redirect_uri: redirectUri, grant_type: 'authorization_code', code_verifier: codeVerifier }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.id_token) throw Object.assign(new Error('token exchange failed: ' + (data.error || res.status)), { code: data.error === 'invalid_grant' ? 'expired' : 'temporary' });
+    // only the ID token is used; Google's access token is never kept or used as our session
+    return this.verifier.verify(data.id_token, { nonce });
+  }
+}
