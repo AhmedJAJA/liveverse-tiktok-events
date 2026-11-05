@@ -19,7 +19,7 @@ const sharp = require('sharp');
       document.getElementById('s').replaceChildren();
       const { mountViewer } = await import('/skin-viewer.js');
       window.__v?.dispose();
-      window.__v = await mountViewer(document.getElementById('s'), { model, autoRotate: false, animations: { idle: 'idle' }, rarity, accent, low: false });
+      window.__v = await mountViewer(document.getElementById('s'), { model, autoRotate: false, animations: { idle: 'idle', lose: 'lose' }, rarity, accent, low: false });
       window.__v.rotate(-0.45); window.__v.zoom(0.92);
       await new Promise((r) => setTimeout(r, 900));
     }, { model: skin.model, rarity: skin.rarity, accent: skin.accent });
@@ -27,6 +27,11 @@ const sharp = require('sharp');
     const out = path.join(__dirname, '..', 'public', 'skins', skin.id + '.webp');
     await sharp(png).webp({ quality: 82, alphaQuality: 90, effort: 6 }).toFile(out);
     console.log('poster', skin.id + '.webp', require('node:fs').statSync(out).size, 'bytes');
+    // the «lose» pose (last frame of the lose animation) — used for eliminated players in the games
+    await page.evaluate(async () => { window.__v.play('lose'); await new Promise((r) => setTimeout(r, 1500)); });
+    const lose = await page.locator('#s').screenshot({ omitBackground: true });
+    const outLose = path.join(__dirname, '..', 'public', 'skins', skin.id + '-lose.webp');
+    await sharp(lose).webp({ quality: 78, alphaQuality: 85, effort: 6 }).toFile(outLose);
   }
   await browser.close();
 })().catch((e) => { console.error(e); process.exit(1); });

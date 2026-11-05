@@ -88,3 +88,19 @@ html.fx-off .sp-curtain{display:none}
 @media (max-width:640px){.sp-gallery{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sp-connect{flex-basis:100%}.sp-demo{flex:1 1 100%}}
 @media (max-width:340px){.sp-gallery{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.sp-gallery .sp-game{animation:none}}
+
+/* ---------- skins in the games (players linked to SPONGE LIVE accounts) ---------- */
+.has-skin{background:radial-gradient(circle at 50% 35%,rgba(140,232,255,.35),rgba(6,26,68,.9) 70%)!important;overflow:hidden;box-shadow:0 0 0 2px var(--skin-ring,#C9D3E3),0 0 12px -2px var(--skin-ring,#C9D3E3)}
+.has-skin[data-rarity=rare]{--skin-ring:#3FA3FF}.has-skin[data-rarity=epic]{--skin-ring:#B06BFF}
+.has-skin[data-rarity=legendary]{--skin-ring:#FFC83A}.has-skin[data-rarity=mythic]{--skin-ring:#FF3D6E}
+.avatar-skin{width:100%;height:100%;object-fit:cover;object-position:50% 18%;transform:scale(1.35);transform-origin:50% 22%}
+.bomb-out-avatar .avatar-skin,.is-out .avatar-skin{object-position:50% 60%;transform:scale(1.1);filter:grayscale(.6) brightness(.8)}
+.winner-skin3d{position:relative;width:min(240px,32vw);aspect-ratio:1;margin:0 auto;border-radius:24px;overflow:hidden;background:radial-gradient(circle at 50% 40%,rgba(255,214,42,.25),transparent 65%)}
+.winner-skin3d[hidden]{display:none}
+.winner-skin3d .sv-canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.winner-skin3d[data-rarity=legendary]{background:radial-gradient(circle at 50% 40%,rgba(255,200,58,.4),transparent 65%)}
+.winner-skin3d[data-rarity=mythic]{background:conic-gradient(from 0deg at 50% 55%,rgba(255,61,110,.3),rgba(176,107,255,.3),rgba(56,212,255,.3),rgba(255,61,110,.3))}
+/* when the winner has a skin, the 3D character takes the place of the round photo */
+.winner-banner-avatar:has(+ .winner-skin3d:not([hidden])),.bomb-winner-avatar:has(+ .winner-skin3d:not([hidden])){display:none}
+.winner-crest .winner-skin3d{z-index:2;width:calc(var(--u,1px)*290);height:calc(var(--u,1px)*290);border-radius:50%;box-shadow:0 0 calc(var(--u,1px)*80) rgba(255,200,58,.45)}
+.victory-crest .winner-skin3d{z-index:2;width:min(220px,30vw);border-radius:50%}
