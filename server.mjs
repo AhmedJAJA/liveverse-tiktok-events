@@ -1021,7 +1021,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -1123,6 +1123,17 @@ const server = http.createServer(async (req, res) => {
     }
   } catch (err) { return json(res, err.status || 500, { error: String(err.message || err).slice(0, 200) }); }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
+  // Bottom navigation (bottom-nav.js): the server picks the destination from the session — never the page.
+  //   /go/studio → the studio while access is active, the renewal page when the plan ended, sign-in otherwise.
+  //   /go/profile|community|bag|challenge → that section of «لوحة التحكم», or sign-in that comes back to it.
+  if (url.pathname.startsWith('/go/')) {
+    const target = url.pathname.slice(4), SECTION = { profile: 'profile', community: 'community', bag: 'bag', challenge: 'challenge' };
+    let to = null;
+    if (target === 'studio') to = actorFor(req) ? '/studio' : accountSession(req) ? '/account?need=plan#billing' : '/login?intent=studio&next=' + encodeURIComponent('/studio');
+    else if (SECTION[target]) { const dest = '/account#' + SECTION[target]; to = accountSession(req) ? dest : '/login?next=' + encodeURIComponent(dest); }
+    if (!to) return json(res, 404, { error: 'Not found' });
+    res.writeHead(302, { Location: to, 'Cache-Control': 'no-store' }); return res.end();
+  }
   // Studio pages need a signed-in session (promo code, owner or account). Viewers keep /overlay and /role.
   const STUDIO_PAGES = new Set(['/studio', '/dashboard', '/event', '/bomb', '/play', '/tools']);
   if (STUDIO_PAGES.has(url.pathname)) {

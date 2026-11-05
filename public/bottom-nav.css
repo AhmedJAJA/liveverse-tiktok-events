@@ -1,0 +1,44 @@
+/* SPONGE LIVE — shared mobile bottom navigation (see bottom-nav.js). Phones and tablets only. */
+:root{--bn-h:72px;--bn-gap:8px}
+.bn{display:none}
+@media (max-width:980px){
+  .bn{position:fixed;z-index:40;inset-inline:var(--bn-gap);bottom:calc(var(--bn-gap) + env(safe-area-inset-bottom));
+    display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;height:var(--bn-h);padding:6px;border-radius:24px;
+    background:linear-gradient(180deg,rgba(14,32,74,.78),rgba(6,16,42,.86));
+    -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);
+    border:1px solid rgba(91,170,255,.38);box-shadow:0 -1px 0 rgba(140,232,255,.12) inset,0 14px 40px -14px #000,0 0 30px -18px rgba(56,212,255,.6);
+    transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .2s;max-width:620px;margin-inline:auto;contain:layout paint}
+  .bn-item{position:relative;display:grid;justify-items:center;align-content:center;gap:3px;min-width:0;padding:4px 2px;border-radius:18px;
+    color:#A9B9DC;text-decoration:none;font:800 12px/1.15 "Tajawal",system-ui,sans-serif;text-align:center;-webkit-tap-highlight-color:transparent;
+    transition:background-color .25s,color .25s,box-shadow .25s}
+  .bn-ic{display:grid;place-items:center;width:40px;height:34px;border-radius:12px;background:rgba(16,35,77,.9);border:1px solid rgba(91,170,255,.18);transition:background-color .25s,transform .25s,box-shadow .25s}
+  .bn-svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
+  .bn-label{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bn-item:hover{color:#E3F1FF}
+  .bn-item:focus-visible{outline:3px solid #FFE14D;outline-offset:1px}
+  /* active: follows the real URL (aria-current), sky-blue fill with a soft glow */
+  .bn-item[aria-current=page]{color:#fff;background:linear-gradient(180deg,#2C8BFF,#176DF0);box-shadow:0 0 24px -6px #2C8BFF,0 0 0 1px rgba(140,232,255,.35) inset}
+  .bn-item[aria-current=page] .bn-ic{background:rgba(255,255,255,.16);border-color:transparent;box-shadow:0 0 14px -2px rgba(140,232,255,.85);transform:translateY(-1px)}
+  .bn-item.is-pressed .bn-ic{animation:bn-press .32s cubic-bezier(.3,1.6,.5,1)}
+  .bn-item:active{transform:scale(.96)}
+  .bn-badge{position:absolute;top:-7px;inset-inline-end:2px;padding:1px 7px;border-radius:999px;font-size:10px;line-height:16px;font-weight:900;color:#fff;background:#FF4A6A;box-shadow:0 2px 8px -2px rgba(255,74,106,.8)}
+  .bn-badge[hidden]{display:none}
+  /* room for the bar: page content, the support button and toasts sit above it */
+  html.has-bn body{padding-bottom:calc(var(--bn-h) + var(--bn-gap) * 2 + env(safe-area-inset-bottom))}
+  html.has-bn .hm-fab{bottom:calc(var(--bn-h) + var(--bn-gap) * 2 + 10px + env(safe-area-inset-bottom))}
+  html.has-bn .ds-toast{bottom:calc(var(--bn-h) + var(--bn-gap) * 2 + 10px + env(safe-area-inset-bottom))}
+  /* the keyboard is open: the bar steps aside */
+  html.bn-typing .bn{transform:translateY(calc(100% + 24px));opacity:0;pointer-events:none}
+  html.bn-typing body{padding-bottom:0}
+}
+@media (max-width:360px){
+  :root{--bn-h:66px;--bn-gap:6px}
+  .bn{padding:5px;gap:2px;border-radius:20px}
+  .bn-item{font-size:11px;border-radius:15px;padding-inline:0}
+  .bn-ic{width:34px;height:30px;border-radius:10px}
+  .bn-svg{width:18px;height:18px}
+}
+@media (max-width:340px){ .bn-item{font-size:10.5px;letter-spacing:-.2px} .bn-ic{width:32px} }
+@keyframes bn-press{0%{transform:scale(1)}40%{transform:scale(.86) translateY(1px)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){ .bn,.bn-item,.bn-ic{transition:none} .bn-item.is-pressed .bn-ic{animation:none} .bn-item:active{transform:none} }
+@media print{ .bn{display:none} }
