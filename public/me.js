@@ -2,6 +2,8 @@
    access, plans, ownership or privacy — it only asks and shows the answer. Sections switch without reloading. */
 (() => {
   'use strict';
+  // a page restored from the back/forward cache is checked again (the session may have ended meanwhile)
+  addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const $ = (id) => document.getElementById(id);
   const AVATARS = { sponge: '🧽', star: '⭐', crab: '🦀', squid: '🦑', shell: '🐚', fish: '🐠', whale: '🐳', jelly: '🪼' };
   const PLAN_NAMES = { trial: 'التجربة المجانية', weekly: 'شفيق العادي', monthly: 'أمير الهامور', manual: 'اشتراك من الإدارة' };
@@ -315,7 +317,7 @@
     window.SpongeGoogle.render($('reauthGoogle'), async (credential) => {
       try { await api('POST', '/api/me/reauth', { credential }); reauthDone(); }
       catch (err) { say($('reauthMsg'), err.message, 'is-err'); }
-    }, { text: 'continue_with' }).then((shown) => { if (!shown) $('reauthGoogleWrap').hidden = true; });
+    }, { text: 'continue_with', mode: 'reauth', next: '/account#settings' }).then((shown) => { if (!shown) $('reauthGoogleWrap').hidden = true; });
   }
 
   /* ---------- e-mail & password ---------- */
@@ -399,7 +401,9 @@
     window.SpongeGoogle.render($('googleBox'), async (credential) => {
       try { await window.SpongeGoogle.signIn(credential, { link: true }); say($('securityMsg'), 'تم ربط Google ✓ معرّفك الدائم لم يتغير.', 'is-ok'); reauthMounted = false; await load(); }
       catch (err) { say($('securityMsg'), err.message, 'is-err'); }
-    }, { text: 'continue_with' }).then((shown) => { $('googleLinkWrap').hidden = !shown; });
+    }, { text: 'continue_with', mode: 'link', next: '/account#settings',
+      // linking adds a way into this account: the owner confirms with the password first (when there is one)
+      before: () => (profile?.user?.hasPassword ? new Promise((ok) => needIdentity('أكّد هويتك لربط حساب Google', () => ok(true))) : Promise.resolve(true)) }).then((shown) => { $('googleLinkWrap').hidden = !shown; });
   }
 
   /* ---------- profile ---------- */
@@ -415,13 +419,18 @@
       catch (err) { say($('editMsg'), err.message, 'is-err'); }
     });
   });
-  $('logoutButton').addEventListener('click', async () => { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {}); location.replace('/'); });
+  $('logoutButton').addEventListener('click', async () => { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {}); location.replace('/login?signed_out=1'); });
 
   /* ---------- messages from the URL ---------- */
   const LINK_ERRORS = { denied: 'أُلغي التفويض — لم يُربط أي حساب.', state: 'انتهت صلاحية طلب الربط أو فُتح في متصفح آخر. حاول مرة أخرى.', plan: 'تحتاج إلى اشتراك فعال لربط بثك المباشر.', unavailable: 'هذا الربط غير مفعّل على الموقع بعد.', network: 'تعذر الوصول إلى المنصة. حاول بعد قليل.', failed: 'تعذر إكمال الربط مع المنصة. حاول مرة أخرى.', busy: 'الخادم مشغول، حاول بعد قليل.' };
   if (params.get('linked')) notice('تم ربط ' + (params.get('linked') === 'kick' ? 'Kick' : 'TikTok') + ' رسميًا ✓', 'is-ok');
   else if (params.get('link_error')) notice(LINK_ERRORS[params.get('link_error')] || LINK_ERRORS.failed, 'is-err');
   if (params.get('linked') || params.get('link_error')) history.replaceState(null, '', '/account#settings');
+  // back from Google (the server already linked / confirmed — or says why not)
+  if (params.get('google') === 'linked') notice('تم ربط حساب Google ✓ معرّفك الدائم وبياناتك كما هي.', 'is-ok');
+  else if (params.get('reauth') === 'ok') notice('تم تأكيد هويتك ✓ أكمل التعديل الآن (خلال 10 دقائق).', 'is-ok');
+  else if (params.get('google_error')) notice(window.SpongeGoogle?.ERRORS?.[params.get('google_error')] || 'تعذر الربط مع Google.', 'is-err');
+  if (params.get('google') || params.get('reauth') || params.get('google_error')) history.replaceState(null, '', '/account#settings');
   if (params.get('verified') === '1') notice('تم توثيق بريدك الإلكتروني ✓', 'is-ok');
   else if (params.get('verified') === '0') notice('رابط التوثيق غير صالح أو منتهي. اطلب رابطًا جديدًا من «البريد وكلمة المرور».', 'is-err');
   else if (params.get('verify') === 'trial') notice('لتفعيل التجربة المجانية وثّق بريدك الإلكتروني أو اربط حساب Google.');

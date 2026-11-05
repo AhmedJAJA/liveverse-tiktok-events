@@ -243,6 +243,41 @@ export class Platform {
     });
     return { sent: !!result.sent, devLink: result.sent ? null : link };
   }
+  /** «نسيت كلمة المرور»: a one-time link (30 minutes). Sent by e-mail when a mail service exists; otherwise the
+      site owner creates it from the owner panel and sends it to the person (by WhatsApp). */
+  async createPasswordReset(userId) {
+    const token = randomBytes(32).toString('base64url');
+    await this.pool.query("UPDATE email_tokens SET used_at=now() WHERE user_id=$1 AND purpose='reset' AND used_at IS NULL", [userId]);
+    await this.pool.query("INSERT INTO email_tokens (token_hash, user_id, purpose, expires_at) VALUES ($1,$2,'reset',$3)", [sha(token), userId, new Date(this.now() + 30 * 60_000)]);
+    return token;
+  }
+  async requestPasswordReset(identifier, base) {
+    const id = String(identifier ?? '').trim().toLowerCase().slice(0, 254);
+    const u = id ? (await this.pool.query('SELECT * FROM users WHERE lower(username)=$1 OR canonical_email=$2 LIMIT 1', [id, canonicalEmail(id)])).rows[0] : null;
+    if (!u || u.disabled_at || !this.mail.configured) return { sent: false }; // the answer never says whether an account exists
+    const link = `${(base || this.appUrl).replace(/\/$/, '')}/reset?token=${await this.createPasswordReset(u.id)}`;
+    const r = await this.mail.send({ to: u.email, subject: 'إعادة تعيين كلمة المرور — SPONGE LIVE',
+      text: `مرحبًا ${u.display_name}،\n\nلإعادة تعيين كلمة مرور حسابك (${u.public_id}) افتح الرابط خلال 30 دقيقة:\n${link}\n\nإذا لم تطلب ذلك فتجاهل الرسالة — كلمة مرورك لم تتغير.`,
+      html: `<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;line-height:1.8"><p>مرحبًا ${escapeHtml(u.display_name)}،</p><p>لإعادة تعيين كلمة مرور حسابك <b dir="ltr">${u.public_id}</b> اضغط الزر خلال 30 دقيقة:</p><p><a href="${link}" style="display:inline-block;padding:12px 22px;border-radius:12px;background:#FFD62A;color:#0A1A3D;font-weight:bold;text-decoration:none">تعيين كلمة مرور جديدة</a></p><p style="color:#666">إذا لم تطلب ذلك فتجاهل الرسالة — كلمة مرورك لم تتغير.</p></div>` });
+    return { sent: !!r.sent };
+  }
+  /** Uses the link once: sets the new password and returns the account (the caller signs out its other devices). */
+  async resetPassword(token, password) {
+    const row = (await this.pool.query("SELECT * FROM email_tokens WHERE token_hash=$1 AND purpose='reset'", [sha(String(token || ''))])).rows[0];
+    if (!row || row.used_at || new Date(row.expires_at).getTime() < this.now()) fail('الرابط غير صالح أو انتهت صلاحيته — اطلب رابطًا جديدًا', 400);
+    const me = (await this.refresh(row.user_id))?.user;
+    if (!me || me.disabled_at) fail('تعذر التحقق من الحساب', 400);
+    const problem = passwordProblem(password, me.username);
+    if (problem) fail(problem, 400, { password: problem });
+    const hash = await hashPassword(password);
+    await tx(this.pool, async (c) => {
+      const used = await c.query("UPDATE email_tokens SET used_at=now() WHERE token_hash=$1 AND used_at IS NULL", [row.token_hash]);
+      if (!used.rowCount) fail('الرابط استُخدم بالفعل', 400);
+      await c.query('UPDATE users SET password_hash=$2 WHERE id=$1', [row.user_id, hash]);
+    });
+    await this.audit('system', 'password-reset', { target: row.user_id });
+    return (await this.refresh(row.user_id)).user;
+  }
   async verifyEmail(token) {
     const row = (await this.pool.query('SELECT * FROM email_tokens WHERE token_hash=$1 AND purpose=$2', [sha(token), 'verify'])).rows[0];
     if (!row || row.used_at || new Date(row.expires_at).getTime() < this.now()) return null;

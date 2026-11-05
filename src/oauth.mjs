@@ -92,23 +92,24 @@ export class Providers {
   }
   enabled(p) { return !!(this.cfg[p]?.id && this.cfg[p]?.secret); }
   status() { return { tiktok: this.enabled('tiktok'), kick: this.enabled('kick'), twitch: false }; }
-  redirectUri(p) { return this.appUrl + '/api/oauth/' + p + '/callback'; }
+  /** The callback on the site the visitor is using (each address must be registered with the platform). */
+  redirectUri(p, base = this.appUrl) { return String(base || this.appUrl).replace(/\/$/, '') + '/api/oauth/' + p + '/callback'; }
 
   /** Where the browser goes to sign in with the platform. */
-  authorizeUrl(p, { state, challenge }) {
+  authorizeUrl(p, { state, challenge, base }) {
     const c = this.cfg[p];
     if (p === 'tiktok') {
-      const q = new URLSearchParams({ client_key: c.id, response_type: 'code', scope: SCOPES.tiktok, redirect_uri: this.redirectUri(p), state });
+      const q = new URLSearchParams({ client_key: c.id, response_type: 'code', scope: SCOPES.tiktok, redirect_uri: this.redirectUri(p, base), state });
       return ENDPOINTS.tiktok.authorize + '?' + q;
     }
-    const q = new URLSearchParams({ client_id: c.id, response_type: 'code', redirect_uri: this.redirectUri(p), scope: SCOPES.kick, state, code_challenge: challenge, code_challenge_method: 'S256' });
+    const q = new URLSearchParams({ client_id: c.id, response_type: 'code', redirect_uri: this.redirectUri(p, base), scope: SCOPES.kick, state, code_challenge: challenge, code_challenge_method: 'S256' });
     return ENDPOINTS.kick.authorize + '?' + q;
   }
-  async exchange(p, { code, verifier }) {
+  async exchange(p, { code, verifier, base }) {
     const c = this.cfg[p], now = this.now();
     const fields = p === 'tiktok'
-      ? { client_key: c.id, client_secret: c.secret, code, grant_type: 'authorization_code', redirect_uri: this.redirectUri(p) }
-      : { client_id: c.id, client_secret: c.secret, code, grant_type: 'authorization_code', redirect_uri: this.redirectUri(p), code_verifier: verifier };
+      ? { client_key: c.id, client_secret: c.secret, code, grant_type: 'authorization_code', redirect_uri: this.redirectUri(p, base) }
+      : { client_id: c.id, client_secret: c.secret, code, grant_type: 'authorization_code', redirect_uri: this.redirectUri(p, base), code_verifier: verifier };
     const r = await postForm(ENDPOINTS[p].token, fields, this.fetch);
     if (!r.ok || r.data.error) {
       // The provider's own error code helps tell a wrong key from an expired code; it carries no secrets.

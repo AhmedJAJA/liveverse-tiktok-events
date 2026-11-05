@@ -20,10 +20,10 @@ import { DrawHub } from './src/draw.mjs';
 import { PromoStore, PROMO_LEVELS } from './src/promo.mjs';
 import { createPool, migrate } from './src/db.mjs';
 import { PromoMirror, SessionMirror } from './src/persist.mjs';
-import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS, privacyOf, weekOf } from './src/platform.mjs';
+import { Platform, PlatformError, canonicalEmail, PLANS as PLATFORM_PLANS, AVATARS, privacyOf, weekOf } from './src/platform.mjs';
 import { createMailer, createGateway } from './src/services.mjs';
-import { Economy, EconomyError, hashDevice, hashIp } from './src/economy.mjs';
-import { GoogleVerifier } from './src/google.mjs';
+import { Economy, EconomyError, hashDevice, hashIp, WHATSAPP_URL } from './src/economy.mjs';
+import { GoogleVerifier, GoogleOAuth } from './src/google.mjs';
 import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -258,6 +258,18 @@ const appUrl = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http:
 const providers = new Providers({ appUrl });
 const tokenBox = new TokenBox();
 const google = new GoogleVerifier({ clientId: process.env.GOOGLE_CLIENT_ID || '', jwksUrl: process.env.GOOGLE_JWKS_URL || undefined });
+const googleOAuth = new GoogleOAuth({ clientId: process.env.GOOGLE_CLIENT_ID || '', clientSecret: process.env.GOOGLE_CLIENT_SECRET || '', verifier: google,
+  ...(process.env.GOOGLE_AUTH_URL ? { authUrl: process.env.GOOGLE_AUTH_URL } : {}), ...(process.env.GOOGLE_TOKEN_URL ? { tokenUrl: process.env.GOOGLE_TOKEN_URL } : {}) });
+/** The site's own addresses (APP_URL, PUBLIC_HOSTS, Render's address). OAuth callbacks are built for the address the
+    visitor is on — but only for these hosts, never for an arbitrary Host header. */
+const PUBLIC_HOSTS = new Set([appUrl, process.env.RENDER_EXTERNAL_URL || '', ...String(process.env.PUBLIC_HOSTS || '').split(',').map((h) => 'https://' + h.trim())]
+  .map((u) => { try { return new URL(u).host.toLowerCase(); } catch { return ''; } }).filter(Boolean));
+function baseFor(req) {
+  const host = String(req.headers.host || '').toLowerCase();
+  if (PUBLIC_HOSTS.has(host)) return (isHttps(req) || process.env.NODE_ENV === 'production' ? 'https://' : 'http://') + host;
+  if (process.env.NODE_ENV !== 'production' && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return 'http://' + host;
+  return appUrl;
+}
 const OPEN_SIGNUP = process.env.SKY_OPEN_SIGNUP === '1';
 const redeemIp = new RateLimiter({ limit: 8, windowMs: 10 * 60_000 });
 const redeemAll = new RateLimiter({ limit: 300, windowMs: 10 * 60_000 });
@@ -658,8 +670,9 @@ async function handleOAuth(p, step, req, res, url) {
     for (const [k, v] of oauthStates) if (v.expires < now) oauthStates.delete(k);
     if (oauthStates.size > 5000) return back('link_error=busy&p=' + p);
     const state = randomBytes(24).toString('base64url'), { verifier, challenge } = pkcePair();
-    oauthStates.set(state, { userId: s.userId, platform: p, verifier, sessionKey: sessions.key(s.id), expires: now + OAUTH_STATE_MS });
-    res.writeHead(302, { Location: providers.authorizeUrl(p, { state, challenge }), 'Cache-Control': 'no-store',
+    const base = baseFor(req);
+    oauthStates.set(state, { userId: s.userId, platform: p, verifier, base, sessionKey: sessions.key(s.id), expires: now + OAUTH_STATE_MS });
+    res.writeHead(302, { Location: providers.authorizeUrl(p, { state, challenge, base }), 'Cache-Control': 'no-store',
       'Set-Cookie': `oa_state=${state}; HttpOnly; Path=/api/oauth/; Max-Age=600; SameSite=Lax${isHttps(req) ? '; Secure' : ''}` });
     return res.end();
   }
@@ -675,7 +688,7 @@ async function handleOAuth(p, step, req, res, url) {
   if (!code) return back('link_error=denied&p=' + p);
   if (!platform.entitlement(s.userId).active) return back('link_error=plan&p=' + p);
   try {
-    const t = await providers.exchange(p, { code, verifier: entry.verifier });
+    const t = await providers.exchange(p, { code, verifier: entry.verifier, base: entry.base });
     const who = await providers.identity(p, t.accessToken);
     if (p === 'tiktok' && t.platformUserId && t.platformUserId !== who.platformUserId) throw new OAuthError('mismatch', 'userinfo');
     const { previousOwners } = await platform.saveOAuthLink(s.userId, p, { platformUserId: who.platformUserId, handle: who.handle, displayName: who.displayName, avatar: who.avatar,
@@ -685,6 +698,98 @@ async function handleOAuth(p, step, req, res, url) {
   } catch (err) {
     console.warn('[oauth]', p, err.code || '', String(err.message).slice(0, 120));
     return back('link_error=' + (err.code === 'network' ? 'network' : 'failed') + '&p=' + p);
+  }
+}
+/* ------------------------------------------------ «المتابعة باستخدام Google» (OpenID Connect, code flow)
+   GET /api/oauth/google/start?mode=login|link|reauth&next=…&remember=1 → Google → GET /api/oauth/google/callback
+   state: single use, 10 minutes, bound to this browser (og_bind cookie) — two tabs can sign in at once;
+   nonce + PKCE; the account is found by Google's subject ID only. */
+const GOOGLE_MODES = new Set(['login', 'link', 'reauth']);
+const googleLimiter = new RateLimiter({ limit: 30, windowMs: 10 * 60_000 });
+const pendingGoogle = new Map(); // id -> { g, expires }: a Google identity waiting for the password of the account with its e-mail
+const safeNext = (n) => (typeof n === 'string' && /^\/(account|studio|admin|u\/|go\/|tools|event)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : '');
+async function handleGoogleOAuth(step, req, res, url) {
+  const secure = isHttps(req) ? '; Secure' : '';
+  const go = (to, cookies = []) => { res.writeHead(302, { Location: to, 'Cache-Control': 'no-store', ...(cookies.length ? { 'Set-Cookie': cookies } : {}) }); res.end(); };
+  const fail = (mode, code, next = '') => go(mode === 'login' ? '/login?google_error=' + code + (next ? '&next=' + encodeURIComponent(next) : '') : '/account?google_error=' + code + '#settings');
+  if (!platform) return fail('login', 'unavailable');
+  if (step === 'start') {
+    const mode = GOOGLE_MODES.has(url.searchParams.get('mode')) ? url.searchParams.get('mode') : 'login';
+    const next = safeNext(url.searchParams.get('next') || '');
+    if (!googleOAuth.enabled) return fail(mode, 'unavailable', next);
+    if (!googleLimiter.hit('g:' + clientIp(req))) return fail(mode, 'busy', next);
+    const s = accountSession(req);
+    if (mode !== 'login' && !s) return go('/login?next=' + encodeURIComponent('/account#settings'));
+    // linking adds a way into the account: the account owner confirms first (password or Google again)
+    if (mode === 'link' && String(platform.cached(s.userId)?.user?.password_hash || '').startsWith('scrypt$') && !sessions.reauthed(s.id)) return fail(mode, 'reauth');
+    const now = Date.now();
+    for (const [k, v] of oauthStates) if (v.expires < now) oauthStates.delete(k);
+    if (oauthStates.size > 5000) return fail(mode, 'busy', next);
+    let bind = parseCookies(req.headers.cookie).og_bind || '';
+    if (!/^[A-Za-z0-9_-]{24}$/.test(bind)) bind = randomBytes(18).toString('base64url');
+    const state = randomBytes(24).toString('base64url'), nonce = randomBytes(18).toString('base64url'), { verifier, challenge } = pkcePair();
+    const redirectUri = baseFor(req) + '/api/oauth/google/callback';
+    oauthStates.set(state, { platform: 'google', mode, bind, verifier, nonce, redirectUri, next, remember: url.searchParams.get('remember') !== '0',
+      userId: s?.userId || null, sessionKey: s ? sessions.key(s.id) : null, expires: now + OAUTH_STATE_MS });
+    const hint = s && mode !== 'login' ? platform.cached(s.userId)?.user?.email || '' : '';
+    return go(googleOAuth.authorizeUrl({ redirectUri, state, challenge, nonce, loginHint: mode === 'reauth' ? hint : '' }),
+      [`og_bind=${bind}; HttpOnly; Path=/api/oauth/google/; Max-Age=900; SameSite=Lax${secure}`]);
+  }
+  // callback: one use of the state, the same browser, within 10 minutes
+  const state = url.searchParams.get('state') || '', entry = oauthStates.get(state);
+  oauthStates.delete(state);
+  const bind = parseCookies(req.headers.cookie).og_bind || '';
+  if (!entry || entry.platform !== 'google') return fail('login', 'state');
+  const { mode, next } = entry;
+  if (entry.expires < Date.now()) return fail(mode, 'expired', next);
+  if (!bind || bind !== entry.bind) return fail(mode, 'state', next);
+  const gErr = url.searchParams.get('error');
+  if (gErr) return fail(mode, gErr === 'access_denied' ? 'cancelled' : 'denied', next);
+  let g;
+  try { g = await googleOAuth.exchange({ code: url.searchParams.get('code') || '', codeVerifier: entry.verifier, redirectUri: entry.redirectUri, nonce: entry.nonce }); }
+  catch (err) { console.warn('[google] callback:', String(err.message).slice(0, 120)); return fail(mode, err.code === 'expired' ? 'expired' : /nonce|signature|issuer|audience|expired|subject|malformed|algorithm|key/.test(err.message) ? 'verify' : 'temporary', next); }
+  try {
+    if (mode !== 'login') {
+      const s = accountSession(req);
+      if (!s || s.userId !== entry.userId || sessions.key(s.id) !== entry.sessionKey) return fail(mode, 'state');
+      if (mode === 'reauth') {
+        const me = platform.cached(s.userId).user;
+        if (!me.google_sub || me.google_sub !== g.sub) return fail(mode, 'other_google');
+        sessions.markReauth(s.id);
+        return go('/account?reauth=ok#settings');
+      }
+      const owner = await platform.findByGoogle(g.sub);
+      if (owner && owner.id !== s.userId) return fail(mode, 'taken');
+      if (platform.cached(s.userId).user.google_sub && platform.cached(s.userId).user.google_sub !== g.sub) return fail(mode, 'other_google');
+      await platform.linkGoogle(s.userId, g); economy?.settleReferral(s.userId).catch(() => {});
+      await platform.audit('user:' + s.userId, 'google-link', { target: s.userId }).catch(() => {});
+      return go('/account?google=linked#settings');
+    }
+    let user = await platform.findByGoogle(g.sub), created = false;
+    if (!user) {
+      if (!g.email) return fail(mode, 'no_email', next);
+      if (await platform.findByEmail(g.email)) {
+        // an account with this e-mail exists but is not linked: never merge on the e-mail alone. Its password proves
+        // ownership; then this Google identity is linked to it (the account, its SPG ID and everything in it stay).
+        const id = randomBytes(18).toString('base64url');
+        for (const [k, v] of pendingGoogle) if (v.expires < Date.now()) pendingGoogle.delete(k);
+        pendingGoogle.set(id, { g, expires: Date.now() + 10 * 60_000 });
+        return go('/login?google_error=link_needed' + (next ? '&next=' + encodeURIComponent(next) : ''), [`g_pending=${id}; HttpOnly; Path=/api/auth/; Max-Age=600; SameSite=Lax${secure}`]);
+      }
+      user = await platform.createFromGoogle(g); created = true;
+    }
+    if (user.disabled_at) return fail(mode, 'disabled', next);
+    await platform.refresh(user.id);
+    const old = sessionOf(req); if (old) sessions.destroy(old.id);
+    setSession(res, req, sessions.create('acct', { userId: user.id, remember: entry.remember, device: deviceLabel(req) }), entry.remember ? REMEMBER_S : 0);
+    await platform.touchLogin(user.id, { picture: g.picture }).catch(() => {});
+    if (created) await afterSignup(req, res, user.id); else await afterLogin(req, res, user.id);
+    const a = accountView(user.id);
+    res.writeHead(302, { Location: next || (created ? '/account?welcome=1' : a.entitled ? '/studio' : '/account'), 'Cache-Control': 'no-store' });
+    return res.end();
+  } catch (err) {
+    console.warn('[google] sign-in:', String(err.message).slice(0, 120));
+    return fail(mode, err.status === 409 ? 'taken' : 'temporary', next);
   }
 }
 /** Kick event webhook (chat.message.sent): signed by Kick; routed to the room of the linked broadcaster. */
@@ -829,7 +934,7 @@ async function handleAuth(action, req, res) {
     if (!platform || !google.enabled) return json(res, 200, { enabled: false });
     const nonce = randomBytes(18).toString('base64url');
     res.setHeader('Set-Cookie', `g_nonce=${nonce}; HttpOnly; Path=/api/; SameSite=Lax; Max-Age=600${isHttps(req) ? '; Secure' : ''}`);
-    return json(res, 200, { enabled: true, clientId: google.clientId, nonce });
+    return json(res, 200, { enabled: true, clientId: google.clientId, nonce, codeFlow: googleOAuth.enabled });
   }
   if (action === 'config' && req.method === 'GET') return json(res, 200, { enabled: !!platform, mail: !!platform?.mail.configured, billing: !!platform?.gateway.configured, google: !!(platform && google.enabled), trialNeedsVerifiedEmail: !!platform?.trialNeedsVerifiedEmail, plans: Object.values(PLATFORM_PLANS).filter((p) => p.id !== 'manual').map((p) => ({ id: p.id, name: p.name, price: p.priceHalalas / 100, duration: p.duration })) });
   if (!platform) return platformOff(res);
@@ -858,8 +963,17 @@ async function handleAuth(action, req, res) {
       setSession(res, req, sessions.create('acct', { userId: u.id, remember: body.remember !== false, device: deviceLabel(req) }), body.remember !== false ? REMEMBER_S : 0);
       platform.touchLogin(u.id).catch(() => {});
       await afterLogin(req, res, u.id);
+      // «ربط Google بعد إثبات الملكية»: a Google identity that found this account's e-mail waits here for its password
+      let googleLinked = false;
+      const pid = parseCookies(req.headers.cookie).g_pending, pend = pid && pendingGoogle.get(pid);
+      if (pend) {
+        pendingGoogle.delete(pid); appendCookie(res, `g_pending=; HttpOnly; Path=/api/auth/; Max-Age=0; SameSite=Lax${isHttps(req) ? '; Secure' : ''}`);
+        if (pend.expires > Date.now() && canonicalEmail(pend.g.email) === u.canonical_email && !(await platform.findByGoogle(pend.g.sub))) {
+          try { await platform.linkGoogle(u.id, pend.g); googleLinked = true; platform.audit('user:' + u.id, 'google-link', { target: u.id, details: { via: 'password' } }).catch(() => {}); } catch {}
+        }
+      }
       const a = accountView(u.id);
-      return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
+      return json(res, 200, { ok: true, account: a, googleLinked, next: a.entitled ? '/studio' : '/account' });
     }
     if (action === 'logout') { const s = sessionOf(req); if (s) sessions.destroy(s.id); clearCookie(req, res); return json(res, 200, { ok: true }); }
     if (action === 'google') {
@@ -885,6 +999,19 @@ async function handleAuth(action, req, res) {
       if (created) await afterSignup(req, res, user.id); else await afterLogin(req, res, user.id);
       const a = accountView(user.id);
       return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
+    }
+    if (action === 'forgot') {
+      if (!authLimiter.hit('forgot:' + ip)) return json(res, 429, { error: 'محاولات كثيرة. انتظر قليلًا ثم حاول.' });
+      await platform.requestPasswordReset(body.identifier, baseFor(req));
+      // the same answer whether or not the account exists
+      return json(res, 200, { ok: true, mail: !!platform.mail.configured, support: { url: siteConfig().support?.url || WHATSAPP_URL } });
+    }
+    if (action === 'reset') {
+      if (!authLimiter.hit('reset:' + ip)) return json(res, 429, { error: 'محاولات كثيرة. انتظر قليلًا ثم حاول.' });
+      if (String(body.password || '') !== String(body.confirm || '')) return json(res, 400, { error: 'كلمتا المرور غير متطابقتين', fields: { confirm: 'غير متطابقة' } });
+      const u = await platform.resetPassword(String(body.token || ''), String(body.password || ''));
+      sessions.destroyWhere((x) => x.userId === u.id); // every device signs in again with the new password
+      return json(res, 200, { ok: true, next: '/login?reset=1' });
     }
     if (action === 'resend') {
       const s = accountSession(req); if (!s) return json(res, 401, { error: 'سجّل الدخول أولًا' });
@@ -1083,6 +1210,7 @@ async function handleManage(action, req, res) {
     const log = (what, details = {}) => platform.audit(admin.name, what, { target: userId, details, ip });
     if (action === 'wallet-adjust') { const w = await economy.adjust(userId, { amount: Number(body.amount), bucket: body.bucket === 'purchased' ? 'purchased' : 'earned', reason: body.reason, actor: admin.name }); await log('wallet-adjust', { amount: Number(body.amount), reason: String(body.reason || '').slice(0, 200) }); return json(res, 200, { ok: true, wallet: w }); }
     if (action === 'referral-decide') { const r = await economy.decideReferral(userId, body.approve === true, admin.name, body.reason); return json(res, 200, { ok: true, result: r }); }
+    if (action === 'password-reset-link') { const t = await platform.createPasswordReset(userId); await log('password-reset-link'); return json(res, 200, { ok: true, link: baseFor(req) + '/reset?token=' + t, expiresInMinutes: 30 }); }
     if (action === 'frame-grant') { const r = await frames.grant(userId, body.frame, admin.name); frameCache.clear(); await log('frame-grant', { frame: String(body.frame || '').slice(0, 32) }); return json(res, 200, r); }
     if (action === 'skin-grant') { const r = await platform.grantSkin(userId, body.skin, admin.name); await log('skin-grant', { skin: String(body.skin || '').slice(0, 32) }); return json(res, 200, r); }
     if (action === 'grant') { const r = await platform.grant(userId, body); await log('subscription-grant', { days: Number(body.days), plan: body.plan || 'manual', note: String(body.note || '').slice(0, 200) }); return json(res, 200, { ok: true, access: r }); }
@@ -1225,7 +1353,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -1307,6 +1435,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/account/')) return await handleAccount(url.pathname.slice('/api/account/'.length), req, res);
     if (url.pathname.startsWith('/api/auth/')) return await handleAuth(url.pathname.slice('/api/auth/'.length), req, res);
     { const m = /^\/api\/oauth\/(tiktok|kick)\/(start|callback)$/.exec(url.pathname); if (m && req.method === 'GET') return await handleOAuth(m[1], m[2], req, res, url); }
+    { const m = /^\/api\/oauth\/google\/(start|callback)$/.exec(url.pathname); if (m && req.method === 'GET') return await handleGoogleOAuth(m[1], req, res, url); }
     if (url.pathname === '/api/kick/webhook' && req.method === 'POST') return await handleKickWebhook(req, res);
     if (url.pathname.startsWith('/api/me/')) return await handleMe(url.pathname.slice('/api/me/'.length), req, res);
     if (url.pathname.startsWith('/api/manage/')) return await handleManage(url.pathname.slice('/api/manage/'.length), req, res);
@@ -1373,7 +1502,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/admin' && !adminActor(req)) { res.writeHead(302, { Location: '/login?next=/admin', 'Cache-Control': 'no-store' }); return res.end(); }
   if (url.pathname === '/account' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/account' + encodeURIComponent(url.search), 'Cache-Control': 'no-store' }); return res.end(); }
-  const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/og-512.webp' };
+  const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/forgot': 'auth.html', '/reset': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/og-512.webp' };
   const relative = fileMap[url.pathname] || (/^\/u\/SPG-[A-Z0-9]{6}$/i.test(url.pathname) ? 'profile.html' : url.pathname.slice(1));
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });
@@ -1407,7 +1536,9 @@ async function loadAsset(relative) {
 async function serveStatic(req, res, relative) {
   const asset = await loadAsset(relative);
   const versioned = /[?&]v=/.test(req.url);
-  const cache = asset.ext === '.html' ? 'no-cache'
+  // signed-in pages are never kept by the browser: after «تسجيل الخروج» the back button cannot show them again
+  const cache = ['me.html', 'studio.html', 'admin.html', 'auth.html', 'index.html'].includes(relative) ? 'no-store'
+    : asset.ext === '.html' ? 'no-cache'
     : versioned ? 'public, max-age=31536000, immutable'
     : ['.css', '.js'].includes(asset.ext) ? 'public, max-age=300, must-revalidate'
     : 'public, max-age=604800';
