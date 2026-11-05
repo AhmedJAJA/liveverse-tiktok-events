@@ -1,0 +1,40 @@
+/* SPONGE LIVE — stream tools control page */
+.tl-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tl-nav{display:flex;gap:16px;flex-wrap:wrap}
+.tl-nav a{color:#8CE8FF;font-weight:800;text-decoration:none}
+.tl-nav a:hover{text-decoration:underline}
+.tl-main{width:min(880px,100% - 32px);margin:0 auto;padding:18px 0 60px;display:grid;gap:18px}
+.tl-head h1{margin:0 0 6px;font-size:clamp(28px,5vw,40px);font-weight:900}
+.tl-head p{margin:0;color:rgba(234,248,255,.75);line-height:1.8}
+.tl-warn{margin-top:10px!important;padding:10px 14px;border-radius:12px;background:rgba(255,106,138,.12);border:1px solid rgba(255,106,138,.5);color:#FFD6DF!important}
+.tl-warn a{color:#fff}
+.tl-card{display:grid;gap:12px;padding:clamp(16px,3vw,24px);border-radius:24px;background:linear-gradient(160deg,rgba(14,42,104,.72),rgba(4,16,46,.88));border:1px solid rgba(140,232,255,.38)}
+.tl-card-head{display:flex;align-items:center;gap:10px}
+.tl-card-head svg{fill:none;stroke:#38D4FF;flex:none}
+.tl-card-head h2{margin:0;font-size:22px;font-weight:900;flex:1}
+.tl-state{padding:4px 10px;border-radius:999px;font-size:13px;font-weight:800;background:rgba(234,248,255,.1);color:rgba(234,248,255,.8)}
+.tl-state.is-on{background:rgba(47,217,160,.18);color:#9FFFD9}
+.tl-desc{margin:0;color:rgba(234,248,255,.72);line-height:1.7}
+.tl-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.tl-field{display:grid;gap:6px;flex:1 1 220px}
+.tl-field-sm{flex:0 1 180px}
+.tl-field span{font-size:14px;font-weight:800;color:#8CE8FF}
+.tl-field input,.tl-field select{height:46px;padding:0 12px;border-radius:12px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.6);color:#EAF8FF;font:700 16px "Tajawal",system-ui,sans-serif}
+.tl-field input:focus,.tl-field select:focus{outline:2px solid #38D4FF;outline-offset:1px}
+.tl-field select option{background:#061A44}
+.tl-big{margin:0;text-align:center;font-size:clamp(48px,12vw,84px);font-weight:900;color:#FFD62A;font-variant-numeric:tabular-nums;line-height:1}
+.tl-count{margin:0 0 8px;font-weight:800}
+.tl-count b{font-size:26px;color:#FFD62A}
+.tl-actions{display:flex;flex-wrap:wrap;gap:8px}
+.tl-actions .pl-btn{flex:1 1 150px}
+.tl-chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px;min-height:8px}
+.tl-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:999px;background:rgba(2,10,34,.6);border:1px solid rgba(140,232,255,.22);font-weight:700}
+.tl-chip small{color:#8CE8FF}
+.tl-ava{position:relative;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,#FFE14D,#FFC21F);color:#0A1A3D;font-weight:900;font-size:14px}
+.tl-ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tl-winner{margin:0;padding:12px;border-radius:14px;text-align:center;font-size:22px;font-weight:900;background:rgba(255,214,42,.14);border:1px solid rgba(255,214,42,.6);color:#FFE7A0}
+.tl-link{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(2,10,34,.55);border:1px dashed rgba(140,232,255,.35)}
+.tl-link span{font-size:13px;font-weight:800;color:#8CE8FF}
+.tl-link code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:#EAF8FF}
+.tl-copy{min-height:38px;padding:0 14px}
+@media (max-width:560px){.tl-link{grid-template-columns:1fr}.tl-link code{white-space:normal;word-break:break-all}}

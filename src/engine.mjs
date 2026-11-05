@@ -456,7 +456,7 @@ export class Engine {
     this.status.endsAt = null;
     const winner = b.winner ? this.bomb.winner : null;
     if (winner && this.players.has(winner)) this.addScore(this.players.get(winner), 10);
-    this.status.winner = b.winner ? { name: b.winner.name, number: b.winner.number, score: 10, ...(b.winner.avatar ? { avatar: b.winner.avatar } : {}) } : null;
+    this.status.winner = b.winner ? { id: winner || undefined, name: b.winner.name, number: b.winner.number, score: 10, ...(b.winner.avatar ? { avatar: b.winner.avatar } : {}) } : null;
     this.status.notice = b.winner ? 'الناجي الأخير: ' + b.winner.name + ' (#' + b.winner.number + ')' : 'تم إنهاء مباراة القنبلة يدويًا';
     this.status.lastEvent = { text: this.status.notice, at: this.now(), winner: this.status.winner };
     this.emit();
@@ -538,12 +538,12 @@ export class Engine {
       const player = this.players.get(id);
       const points = QUIZ_POINTS[Math.min(i, QUIZ_POINTS.length-1)];
       if (player) this.addScore(player,points);
-      return { rank:i+1, name:player?.name||'متسابق', ...(player?.avatar?{avatar:player.avatar}:{}), points, totalScore:player?.score||points };
+      return { rank:i+1, id, name:player?.name||'متسابق', ...(player?.avatar?{avatar:player.avatar}:{}), points, totalScore:player?.score||points };
     });
     const winner=rankings[0];
     this.status.active=false;
     this.status.endsAt=null;
-    this.status.winner=winner?{ name:winner.name, score:winner.points, ...(winner.avatar?{avatar:winner.avatar}:{}) }:null;
+    this.status.winner=winner?{ id:winner.id, name:winner.name, score:winner.points, ...(winner.avatar?{avatar:winner.avatar}:{}) }:null;
     this.status.results={ round:this.round, completedAt:this.now(), reason,
       totalAnswers:this.glass.choices.size, correctCount:rankings.length,
       correctAnswer:completed?'اكتمل عبور الجسر':'لم ينجُ أحد من الجسر', rankings:rankings.slice(0,20) };
@@ -794,10 +794,12 @@ export class Engine {
   requireParty(mode) { if (!this.party || this.status.mode !== mode || !this.status.active) throw new Error('هذه اللعبة ليست جارية'); return this.party; }
   partySecret() { return this.status.active && this.party?.secret ? this.party.secret() : null; }
   judgeAnswer(accept) { const g = this.requireParty('categories'); if (!g.judge(accept)) throw new Error('لا توجد إجابة بانتظار الحكم'); this.syncParty(); return true; }
-  rolesClaim() { return this.requireParty('roles').claim(); }
-  rolesPrivate(token) { if (this.status.mode !== 'roles' || !this.party) return { linked: false, idle: true }; return this.party.privateView(String(token || '')); }
-  rolesAct(token, number) { const g = this.requireParty('roles'); g.act(String(token || ''), number); this.emit(); return true; }
-  rolesAdmin() { const g = this.requireParty('roles'); return g.adminView(!!this.hostSeat()); }
+  // the private page serves both secret-role games: «الأدوار المخفية» and «برا السالفة»
+  get secretMode() { return this.status.mode === 'outsider' ? 'outsider' : 'roles'; }
+  rolesClaim() { return this.requireParty(this.secretMode).claim(); }
+  rolesPrivate(token) { if (!['roles', 'outsider'].includes(this.status.mode) || !this.party) return { linked: false, idle: true }; return { game: this.status.mode, ...this.party.privateView(String(token || '')) }; }
+  rolesAct(token, number) { const g = this.requireParty(this.secretMode); g.act(String(token || ''), number); this.emit(); return true; }
+  rolesAdmin() { const g = this.requireParty(this.secretMode); return g.adminView(!!this.hostSeat()); }
   /** Demo contestants act like real viewers so every rule can be tried without a stream. */
   botStep() {
     const t = this.now(), mode = this.status.mode;
@@ -825,8 +827,11 @@ export class Engine {
         else if (mode === 'higherlower') text = pick(['أعلى', 'أقل']);
         else if (mode === 'truefalse') text = pick(['صح', 'خطأ']);
         else if (mode === 'bowling') text = String(this.random(10) + 1);
+        else if (mode === 'tug') text = this.random(100) < 85 ? 'شد' : null;
         else if (mode === 'redlight') text = party.light === 'green' || this.random(100) < 6 ? String(this.random(5) + 1) : null;
       } else if (party && mode === 'chairs' && party.phase === 'music' && this.random(100) < 3) text = 'اجلس';
+      else if (party && mode === 'outsider' && party.phase === 'vote') { const others = party.players.filter(x => x.number !== bot.number); if (others.length) text = 'صوت ' + pick(others).number; }
+      else if (party && mode === 'outsider' && party.phase === 'talk' && this.random(100) < 10) text = pick(['شي نحبه', 'مشهور مرة', 'كلنا نعرفه', 'أحس إني عرفته']);
       else if (party && mode === 'roles' && party.phase === 'day') { const others = party.players.filter(x => x.alive && x.number !== bot.number); if (others.length) text = 'صوت ' + pick(others).number; }
       if (text) this.applyMessage(bot, text, t);
       if (!this.status.active) break;

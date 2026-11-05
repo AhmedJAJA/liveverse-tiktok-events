@@ -5,7 +5,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
-  const MODES = ['quiz', 'drawguess', 'chairs', 'bowling', 'bomb', 'categories', 'rps', 'roles', 'roulette', 'redlight', 'country', 'flag',
+  const MODES = ['quiz', 'drawguess', 'chairs', 'bowling', 'bomb', 'categories', 'rps', 'roles', 'roulette', 'redlight', 'country', 'flag', 'tug', 'outsider',
     'guess', 'race', 'glass', 'truefalse', 'higherlower', 'minority', 'wheel'];
   const mode = MODES.includes(params.get('mode')) ? params.get('mode') : 'quiz';
   const NO_TIMER = ['race', 'wheel'];
@@ -185,7 +185,7 @@
   let secretRound = -1, rolesAt = 0;
   async function paintTools(s, view) {
     const party = s.party, live = view === 'live';
-    const draw = live && mode === 'drawguess' && party, judge = live && mode === 'categories' && party?.judging, roles = live && mode === 'roles';
+    const draw = live && mode === 'drawguess' && party, judge = live && mode === 'categories' && party?.judging, roles = live && (mode === 'roles' || mode === 'outsider');
     $('hostTools').hidden = !(draw || judge || roles);
     $('sketchTool').hidden = !draw; $('judgeTool').hidden = !judge; $('rolesTool').hidden = !roles;
     if (draw && party.round !== secretRound) {
@@ -201,6 +201,11 @@
   function paintRoles(r) {
     const list = $('rolesList');
     if (r.hidden) { list.replaceChildren(el('li', 'pl-hint', 'أنت تلعب في هذه الجولة، لذلك أدوار اللاعبين مخفية عنك أيضًا.')); return; }
+    if (r.word) { // «برا السالفة»: the host sees the word and who is out of it
+      const a = el('li', 'is-citizen'); a.append(el('b', '', r.category), el('span', '', 'الكلمة: ' + r.word));
+      const b = el('li', 'is-impostor'); b.append(el('b', 'num', '#' + r.outsider.number), el('span', '', r.outsider.name), el('small', '', 'برا السالفة'));
+      list.replaceChildren(a, b); return;
+    }
     list.replaceChildren(...(r.roles || []).map((p) => { const li = el('li', 'is-' + p.role + (p.alive ? '' : ' is-out')); li.append(el('b', 'num', '#' + p.number), el('span', '', p.name), el('small', '', p.roleLabel)); return li; }));
   }
 

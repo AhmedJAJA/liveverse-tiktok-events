@@ -156,6 +156,19 @@ test('join page over HTTP: a guest host prepares, sits in, starts; anonymous vie
     assert.equal((await host('POST', '/api/admin/host-unseat', {})).status, 400, 'cannot leave after kick-off');
     st = (await viewer('GET', '/api/state?room=' + g.room)).data;
     assert.equal(st.status.active, true); assert.equal(st.registration.phase, 'closed');
+    // stream tools (OBS): host-only commands, shown to every screen through the room state
+    assert.equal((await viewer('POST', '/api/admin/tools', { action: 'countdown-start', seconds: 60 })).status, 401);
+    assert.equal((await host('POST', '/api/admin/tools', { action: 'countdown-start', seconds: 60, label: 'استراحة' })).status, 200);
+    assert.equal((await host('POST', '/api/admin/tools', { action: 'draw-pick' })).status, 400);
+    assert.equal((await viewer('GET', '/api/state?room=' + g.room)).data.tools.countdown.label, 'استراحة');
+    // «كود الغرفة»: the host gets a 4-character code that opens this room for viewers
+    const code = (await host('POST', '/api/admin/room-code', {})).data.code;
+    assert.match(code, /^[A-Z2-9]{4}$/);
+    assert.equal((await host('POST', '/api/admin/room-code', {})).data.code, code, 'stable for the room');
+    assert.equal((await viewer('GET', '/api/room-code?code=' + code.toLowerCase())).data.url, '/play?room=' + g.room);
+    assert.equal((await viewer('GET', '/api/room-code?code=ZZZZ')).status, 404);
+    assert.equal((await viewer('GET', '/api/state?room=' + g.room)).data.roomCode, code);
+    for (const page of ['/tool?tool=draw', '/guide/games', '/guide/tiktok-live', '/guide/tools']) assert.equal((await fetch(base + page)).status, 200, page);
     // the owner's main room was never touched by the guest
     assert.equal((await viewer('GET', '/api/state')).data.status.active, false);
   } finally { stop(); }
@@ -218,7 +231,7 @@ test('SPONGE LIVE over HTTP: host-only game tools, private role pages, sketch sy
     assert.equal((await fetch(base + '/api/role/act', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Role-Token': 'nope' }, body: '{"number":1}' })).status, 400);
     // every catalogue game opens its join page and every card image is served
     const site = await (await fetch(base + '/api/site')).json();
-    assert.equal(site.games.length, 12);
+    assert.equal(site.games.length, 14);
     for (const g of site.games) {
       assert.equal((await fetch(base + g.href)).status, 200, g.href);
       assert.equal((await fetch(base + g.cover)).headers.get('content-type'), 'image/webp', g.cover);

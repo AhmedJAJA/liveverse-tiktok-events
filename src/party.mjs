@@ -12,9 +12,10 @@
 
 import { ROUND_DEFAULTS, POINTS, norm, firstNumber, pub, card, RoundGame } from './round-game.mjs';
 import { SEA_GAMES, SEA_MIN_PLAYERS, SEA_DEFAULTS, RpsDuel } from './sea-games.mjs';
+import { TEAM_GAMES, TEAM_MIN_PLAYERS, TEAM_DEFAULTS } from './team-games.mjs';
 export { norm };
-export const PARTY_MODES = ['rps', 'minority', 'higherlower', 'truefalse', 'redlight', 'bowling', ...Object.keys(SEA_GAMES)];
-export const PARTY_MIN_PLAYERS = { rps: 2, minority: 3, higherlower: 1, truefalse: 1, redlight: 1, bowling: 1, ...SEA_MIN_PLAYERS };
+export const PARTY_MODES = ['rps', 'minority', 'higherlower', 'truefalse', 'redlight', 'bowling', ...Object.keys(SEA_GAMES), ...Object.keys(TEAM_GAMES)];
+export const PARTY_MIN_PLAYERS = { rps: 2, minority: 3, higherlower: 1, truefalse: 1, redlight: 1, bowling: 1, ...SEA_MIN_PLAYERS, ...TEAM_MIN_PLAYERS };
 export const PARTY_DEFAULTS = {
   rps: { rounds: 30, seconds: 15 },
   minority: { rounds: 10, seconds: 15 },
@@ -22,7 +23,8 @@ export const PARTY_DEFAULTS = {
   truefalse: { rounds: 8, seconds: 15 },
   redlight: { rounds: 16, seconds: 6, target: 20 },
   bowling: { rounds: 3, seconds: 12 },
-  ...SEA_DEFAULTS
+  ...SEA_DEFAULTS,
+  ...TEAM_DEFAULTS
 };
 Object.assign(ROUND_DEFAULTS, PARTY_DEFAULTS);
 
@@ -254,7 +256,7 @@ class Bowling extends RoundGame {
   }
 }
 
-const GAMES = { ...SEA_GAMES, rps: RockPaperScissors, minority: MinorityWins, higherlower: HigherLower, truefalse: TrueFalse, redlight: RedLight, bowling: Bowling };
+const GAMES = { ...SEA_GAMES, ...TEAM_GAMES, rps: RockPaperScissors, minority: MinorityWins, higherlower: HigherLower, truefalse: TrueFalse, redlight: RedLight, bowling: Bowling };
 export function createPartyGame(mode, options = {}) {
   // «حجرة ورقة مقص» runs as head-to-head duels; the original «vs Sky» format stays available.
   if (mode === 'rps' && options.format !== 'sky') return new RpsDuel(options);

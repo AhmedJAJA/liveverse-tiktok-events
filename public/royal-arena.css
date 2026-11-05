@@ -308,3 +308,26 @@
 /* chair tokens keep their seat positions (the generic chip entrance animation would reset transform) */
 .sea-token{animation:none!important}
 .sea-chairs.is-music .sea-token{animation:sea-counter 9s linear infinite!important}
+/* شد الحبل */
+.tug-score{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.tug-team{display:grid;justify-items:center;gap:2px;padding:12px;border-radius:18px;border:2px solid rgba(56,212,255,.5);background:rgba(4,20,60,.6)}
+.tug-team.is-t1{border-color:rgba(255,214,42,.65)}
+.tug-team b{font-size:clamp(34px,5vw,56px);line-height:1;color:#38D4FF}
+.tug-team.is-t1 b{color:#FFD62A}
+.tug-team small{opacity:.8}
+.tug-field{position:relative;height:72px;margin:6px 4% 14px;border-radius:36px;background:linear-gradient(90deg,rgba(255,214,42,.18),rgba(255,255,255,.04) 50%,rgba(56,212,255,.18))}
+.tug-rope{position:absolute;inset-inline:3%;top:50%;height:14px;margin-top:-7px;border-radius:7px;background:repeating-linear-gradient(115deg,#C98B3C 0 10px,#F2C27A 10px 20px)}
+.tug-line{position:absolute;top:8px;bottom:8px;width:4px;border-radius:2px;background:#38D4FF}
+.tug-line.is-t0{right:12%}
+.tug-line.is-t1{left:12%;background:#FFD62A}
+.tug-knot{--pos:0;position:absolute;top:50%;left:calc(50% - var(--pos) * 38%);width:30px;height:46px;margin:-23px 0 0 -15px;border-radius:10px;background:#FF4A6A;box-shadow:0 0 18px #FF4A6A;transition:left .25s ease-out}
+.tug-lists{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tug-top{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.party-banner.is-t0{border-color:#38D4FF}
+.party-banner.is-t1{border-color:#FFD62A}
+@media (prefers-reduced-motion:reduce){.tug-knot{transition:none}}
+/* «كود الغرفة» badge on the broadcast screen */
+.ov-roomcode{position:fixed;inset-block-end:14px;inset-inline-start:14px;z-index:40;display:grid;justify-items:center;gap:2px;padding:8px 14px;border-radius:14px;background:rgba(2,10,34,.85);border:2px solid rgba(255,214,42,.7);box-shadow:0 0 18px -6px #FFD62A}
+.ov-roomcode small{font-size:12px;font-weight:800;color:#8CE8FF}
+.ov-roomcode b{font-size:24px;letter-spacing:.18em;color:#FFD62A;direction:ltr}
+html.embedded .ov-roomcode{display:none}

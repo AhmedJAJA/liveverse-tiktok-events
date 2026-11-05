@@ -133,6 +133,22 @@ test('official TikTok/Kick sign-in, linked-only connections and the active-strea
     await host('POST', '/api/admin/demo-players', { count: 3 }, { 'X-Studio-Tab': T });
     assert.equal((await streams(anon)).totalPlayers, 1, 'demo players are never counted');
 
+    // weekly leaderboard: a finished round in this real, listed session counts — the real viewer only, never demo players
+    await waitFor(async () => { await host('POST', '/api/admin/heartbeat', { tab: T, screen: 'game' }); return (await pool.query('SELECT sessions FROM weekly_streamer_stats')).rows[0]?.sessions === 1; }, 10000, 'weekly session counted');
+    await host('POST', '/api/admin/configure', { mode: 'quiz', prompt: 'عاصمة السعودية؟', options: ['الرياض', 'جدة', 'الدمام', 'مكة'], answer: '1' }, { 'X-Studio-Tab': T });
+    assert.equal((await host('POST', '/api/admin/start', {}, { 'X-Studio-Tab': T })).status, 200);
+    await fake.kickWebhook(srv.base, { broadcasterUserId: 501, sender: { id: 9100, name: 'Real Viewer', slug: 'real_viewer' }, content: '1' });
+    await sleep(300);
+    assert.equal((await host('POST', '/api/admin/stop', {}, { 'X-Studio-Tab': T })).status, 200);
+    const board = await waitFor(async () => { const d = (await anon('GET', '/api/leaderboard?board=players&metric=wins')).data; return d.rows?.length && d; }, 5000, 'leaderboard row');
+    assert.deepEqual(board.rows.map((x) => [x.name, x.wins, x.entries, x.platform]), [['Real Viewer', 1, 1, 'kick']]);
+    assert.equal((await anon('GET', '/api/leaderboard?board=streamers&metric=sessions')).data.rows[0].publicId, host.publicId);
+    assert.equal((await anon('GET', '/api/leaderboard?board=streamers&find=bad id')).status, 400);
+    assert.equal((await anon('GET', '/api/leaderboard?board=streamers&metric=sessions&find=' + host.publicId)).data.found.rank, 1);
+    await host('POST', '/api/admin/heartbeat', { tab: T, screen: 'game' });
+    await host('POST', '/api/admin/prepare', { mode: 'quiz' }, { 'X-Studio-Tab': T }); // back to a waiting game
+    // the faker's unverified room below plays too, but never reaches the board
+
     // 20. forging from the browser changes nothing
     const faker = await account(srv.base, 'faker_user');
     await faker('POST', '/api/admin/configure', { connection: { state: 'connected', verified: true }, verified: true, liveConfirmed: true });

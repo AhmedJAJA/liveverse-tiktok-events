@@ -199,6 +199,9 @@ body.is-offline .pl-bar::after{content:"إعادة الاتصال…";position:a
 .role-card .pl-call-main{font-size:clamp(40px,10vw,72px)}
 body[data-role="impostor"] .role-card{box-shadow:0 0 0 2px #FF6A8A,0 0 50px rgba(255,106,138,.4)}
 body[data-role="detective"] .role-card{box-shadow:0 0 0 2px #FFD21F,0 0 50px rgba(255,210,31,.35)}
+body[data-role="outsider"] .role-card{box-shadow:0 0 0 2px #FF6A8A,0 0 50px rgba(255,106,138,.4)}
+body[data-role="insider"] .role-card{box-shadow:0 0 0 2px #38D4FF,0 0 50px rgba(56,212,255,.35)}
+.role-card .role-word{font-size:clamp(28px,7vw,48px);color:#FFD62A}
 .role-actions{display:grid;gap:10px;width:100%}
 .role-actions h2{font-size:20px}
 .role-targets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}

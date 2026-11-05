@@ -1,6 +1,6 @@
 const el = id => document.getElementById(id);
 const session = window.SkySession;
-const PARTY_MODES = ['rps','minority','higherlower','truefalse','redlight','bowling','drawguess','chairs','categories','roles','roulette','country','flag'];
+const PARTY_MODES = ['rps','minority','higherlower','truefalse','redlight','bowling','drawguess','chairs','categories','roles','roulette','country','flag','tug','outsider'];
 const STUDIO_MODES = ['quiz','guess','race','wheel','glass','bomb',...PARTY_MODES];
 let state;
 let site = null;

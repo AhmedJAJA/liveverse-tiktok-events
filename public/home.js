@@ -343,6 +343,103 @@
   loadStreams();
   document.addEventListener('visibilitychange', () => { if (!document.hidden) loadStreams(); });
 
+  /* ------------------------------------------- weekly leaderboard (counted by the server) */
+  const LB_METRICS = {
+    players: [['wins', 'الانتصارات'], ['entries', 'المشاركات']],
+    streamers: [['hours', 'الساعات'], ['players', 'اللاعبون'], ['sessions', 'الجلسات']],
+  };
+  const lb = { board: 'players', metric: 'wins', endsAt: 0, timer: 0 };
+  const lbMk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+  function lbAvatar(src, name) {
+    const ava = lbMk('span', 'hm-ava hm-lb-ava'); ava.setAttribute('aria-hidden', 'true');
+    ava.append(lbMk('span', 'hm-ava-letter', Array.from(String(name || '').trim())[0]?.toUpperCase() || '؟'));
+    if (src && /^https:\/\//.test(src)) {
+      const img = lbMk('img'); img.alt = ''; img.width = 48; img.height = 48; img.loading = 'lazy'; img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+      img.addEventListener('load', () => ava.classList.add('has-img'), { once: true });
+      img.addEventListener('error', () => img.remove(), { once: true });
+      img.src = src; ava.append(img);
+    }
+    return ava;
+  }
+  function lbValue(r) {
+    if (lb.board === 'players') return lb.metric === 'entries' ? [r.entries, 'مشاركة'] : [r.wins, 'فوز'];
+    if (lb.metric === 'players') return [r.players, 'لاعب'];
+    if (lb.metric === 'sessions') return [r.sessions, 'جلسة'];
+    return [r.hours, 'ساعة'];
+  }
+  function paintMetrics() {
+    $('lbMetrics').replaceChildren(...LB_METRICS[lb.board].map(([key, label]) => {
+      const b = lbMk('button', 'hm-seg-btn', label); b.type = 'button'; b.dataset.metric = key; b.setAttribute('aria-pressed', String(key === lb.metric));
+      return b;
+    }));
+    document.querySelectorAll('[data-board]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.board === lb.board)));
+    $('lbFind').hidden = lb.board !== 'streamers'; $('lbFound').hidden = true;
+  }
+  async function loadBoard() {
+    try {
+      const r = await fetch('/api/leaderboard?board=' + lb.board + '&metric=' + lb.metric);
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      lb.endsAt = Date.parse(d.endsAt) || 0; tickClock();
+      $('lbList').replaceChildren(...(d.rows || []).map((row) => {
+        const li = lbMk('li', 'hm-lb-row' + (row.rank <= 3 ? ' is-top' + row.rank : ''));
+        const who = lbMk('div', 'hm-lb-who');
+        const name = row.publicId ? lbMk('a', 'hm-lb-name', row.name) : lbMk('b', 'hm-lb-name', row.name);
+        if (row.publicId) name.href = '/u/' + encodeURIComponent(row.publicId);
+        who.append(name, lbMk('span', 'hm-lb-sub', row.publicId || (row.platform === 'kick' ? 'Kick' : 'TikTok')));
+        const [n, unit] = lbValue(row);
+        const val = lbMk('span', 'hm-lb-val'); val.append(lbMk('b', '', String(n)), document.createTextNode(' ' + unit));
+        li.append(lbMk('span', 'hm-lb-rank', String(row.rank)), lbAvatar(row.picture || row.avatar, row.name), who, val);
+        return li;
+      }));
+      $('lbEmpty').hidden = !!(d.rows || []).length;
+    } catch { $('lbList').replaceChildren(); $('lbEmpty').hidden = false; }
+  }
+  function tickClock() {
+    clearTimeout(lb.timer);
+    const left = Math.max(0, lb.endsAt - Date.now());
+    if (!lb.endsAt) return;
+    const d = Math.floor(left / 86400000), h = Math.floor(left / 3600000) % 24, m = Math.floor(left / 60000) % 60, s = Math.floor(left / 1000) % 60;
+    $('lbClock').textContent = d + 'd ' + String(h).padStart(2, '0') + 'h ' + String(m).padStart(2, '0') + 'm ' + String(s).padStart(2, '0') + 's';
+    if (left === 0) { loadBoard(); return; }
+    lb.timer = setTimeout(tickClock, 1000);
+  }
+  document.querySelector('.hm-lb-bar').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.board && b.dataset.board !== lb.board) { lb.board = b.dataset.board; lb.metric = LB_METRICS[lb.board][0][0]; paintMetrics(); loadBoard(); }
+    else if (b.dataset.metric && b.dataset.metric !== lb.metric) { lb.metric = b.dataset.metric; paintMetrics(); loadBoard(); }
+  });
+  $('lbFind').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const out = $('lbFound'), id = $('lbFindInput').value.trim().toUpperCase();
+    out.hidden = false;
+    if (!/^SPG-[A-Z0-9]{4,8}$/.test(id)) { out.textContent = 'اكتب المعرف بالشكل SPG-XXXXXX'; return; }
+    try {
+      const r = await fetch('/api/leaderboard?board=streamers&metric=' + lb.metric + '&find=' + encodeURIComponent(id));
+      const d = await r.json();
+      if (!r.ok) { out.textContent = d.error || 'لم نجد هذا المعرف'; return; }
+      const f = d.found, [n, unit] = lbValue(f);
+      out.textContent = f.rank ? `${f.name} — المركز ${f.rank} هذا الأسبوع (${n} ${unit})` : `${f.name} — لم يلعب في بث موثّق هذا الأسبوع بعد`;
+    } catch { out.textContent = 'تعذر البحث الآن، حاول مرة أخرى'; }
+  });
+  paintMetrics();
+
+  /* ------------------------------------------- «كود الغرفة»: opens the streamer's game page */
+  $('roomInput').addEventListener('input', (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4); $('roomError').hidden = true; });
+  $('roomForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const code = $('roomInput').value, err = $('roomError');
+    const fail = (m) => { err.textContent = m; err.hidden = false; $('roomInput').focus(); };
+    if (code.length !== 4) return fail('اكتب الكود كاملًا — 4 خانات');
+    try {
+      const r = await fetch('/api/room-code?code=' + encodeURIComponent(code), { cache: 'no-store' });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !/^\/play\?room=[a-z0-9]+$/.test(d.url || '')) return fail(d.error || 'الكود غير صحيح');
+      location.href = d.url;
+    } catch { fail('تعذر الاتصال — حاول مرة أخرى'); }
+  });
+  new IntersectionObserver((entries, obs) => { if (entries.some((x) => x.isIntersecting)) { obs.disconnect(); loadBoard(); } }, { rootMargin: '300px' }).observe($('leaders'));
+
   /* -------------------------------------------------------------- plan tabs */
   const planTabs = [...document.querySelectorAll('[data-plan-tab]')];
   function selectPlan(id, scroll) {

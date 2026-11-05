@@ -1,0 +1,23 @@
+/* SPONGE LIVE — OBS overlay for the stream tools: transparent background, readable on any video. */
+@font-face{font-family:"Tajawal";font-weight:800;font-display:swap;src:url(/fonts/tajawal-arabic-800-normal.woff2) format("woff2")}
+html,body{margin:0;background:transparent;color:#EAF8FF;font-family:"Tajawal",system-ui,sans-serif;overflow:hidden}
+.ov-stage{display:grid;place-items:center;min-height:100vh;padding:4vmin;box-sizing:border-box}
+.ov-card{display:grid;justify-items:center;gap:1.5vmin;padding:3vmin 5vmin;border-radius:4vmin;background:rgba(2,10,34,.82);border:.5vmin solid rgba(56,212,255,.7);box-shadow:0 0 6vmin -1vmin rgba(56,212,255,.6);text-shadow:0 .3vmin .8vmin rgba(0,0,0,.6)}
+.ov-label{font-size:6vmin;font-weight:800;color:#8CE8FF}
+.ov-time{font-size:24vmin;line-height:1;font-weight:800;color:#FFD62A;font-variant-numeric:tabular-nums;direction:ltr}
+.ov-time.is-low{color:#FF6A8A}
+.ov-brand{font-size:3vmin;opacity:.75;direction:ltr}
+.ov-brand b{color:#FFD62A}
+.ov-key{font-size:9vmin;font-weight:800;color:#FFD62A}
+.ov-count{font-size:5vmin}
+.ov-faces{display:flex;flex-wrap:wrap;justify-content:center;gap:1.5vmin;max-width:90vw;margin:0;padding:0;list-style:none}
+.ov-face{display:grid;justify-items:center;gap:.6vmin;width:15vmin;font-size:2.8vmin;font-weight:800;text-align:center}
+.ov-face bdi{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ov-face small{color:#8CE8FF;font-size:2.4vmin}
+.ov-ava{position:relative;display:grid;place-items:center;width:11vmin;height:11vmin;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,#FFE14D,#FFC21F);color:#0A1A3D;font-size:5vmin;box-shadow:0 0 0 .5vmin #38D4FF}
+.ov-ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ov-win .ov-ava{width:30vmin;height:30vmin;font-size:14vmin;box-shadow:0 0 0 1vmin #FFD62A,0 0 8vmin #FFD62A}
+.ov-win strong{font-size:10vmin;color:#FFD62A}
+.ov-pop{animation:ov-pop .6s cubic-bezier(.2,.8,.2,1.2)}
+@keyframes ov-pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ov-pop{animation:none}}

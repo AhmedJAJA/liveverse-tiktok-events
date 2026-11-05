@@ -720,3 +720,44 @@ html.menu-open{overflow:hidden}
 .hm-oauth-btn.is-kick{background:linear-gradient(180deg,#5CFF2A,#36D10B);color:#06210A}
 @media (min-width:980px){.hm-hero .hm-hero-title{font-size:clamp(34px,3.9vw,62px)}.hm-t1,.hm-t2{white-space:nowrap}.hm-chat{inset-inline-start:-10%;bottom:10%;width:min(240px,52%)}}
 @media (max-width:979px){.hm-hero{padding-bottom:72px;min-height:0}.hm-count-chip{left:50%;bottom:-13%;translate:-50% 0}.hm-play{padding-bottom:34px}.hm-play{gap:18px}}
+/* live counters labels */
+.hm-stat small{color:var(--muted);font-size:13px;font-weight:700}
+/* weekly leaderboard */
+.hm-lb-clock{display:grid;justify-items:center;gap:2px;padding:8px 14px;border-radius:14px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.5)}
+.hm-lb-clock small{color:var(--muted);font-size:12px;font-weight:700}
+.hm-lb-clock b{color:var(--foam);font:900 17px/1.2 "Tajawal",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.hm-lb-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:18px 0 14px}
+.hm-seg{display:inline-flex;gap:4px;padding:4px;border-radius:14px;border:1px solid rgba(140,232,255,.3);background:rgba(2,10,34,.55)}
+.hm-seg-btn{min-height:40px;padding:0 16px;border:0;border-radius:10px;background:transparent;color:var(--muted);font:800 15px/1 "Tajawal",system-ui,sans-serif;cursor:pointer;transition:background .2s,color .2s}
+.hm-seg-sm .hm-seg-btn{min-height:34px;padding:0 12px;font-size:14px}
+.hm-seg-btn:hover{color:var(--foam)}
+.hm-seg-btn[aria-selected="true"],.hm-seg-btn[aria-pressed="true"]{background:linear-gradient(180deg,#38D4FF,#1E5BFF);color:#fff}
+.hm-seg-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.hm-lb-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.hm-lb-row{display:grid;grid-template-columns:36px 48px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:rgba(2,10,34,.5);border:1px solid rgba(140,232,255,.18)}
+.hm-lb-row.is-top1{border-color:rgba(255,214,42,.7);box-shadow:0 0 22px -10px #FFD62A}
+.hm-lb-row.is-top2{border-color:rgba(214,228,255,.55)}
+.hm-lb-row.is-top3{border-color:rgba(255,166,92,.55)}
+.hm-lb-rank{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:rgba(140,232,255,.12);font-weight:900;font-variant-numeric:tabular-nums}
+.is-top1 .hm-lb-rank{background:var(--yellow);color:var(--ink)}
+.hm-lb-ava{width:48px;height:48px;font-size:20px;box-shadow:0 0 0 2px rgba(56,212,255,.6)}
+.hm-lb-who{display:grid;gap:2px;min-width:0}
+.hm-lb-name{color:var(--foam);font-weight:900;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none}
+a.hm-lb-name:hover{text-decoration:underline}
+.hm-lb-sub{color:var(--muted);font-size:13px;direction:ltr;text-align:start}
+.hm-lb-val{color:var(--aqua);font-weight:700;white-space:nowrap}
+.hm-lb-val b{color:var(--foam);font-size:18px;font-variant-numeric:tabular-nums}
+.hm-lb-find{display:flex;gap:8px;margin-top:14px}
+.hm-lb-find input{flex:1;min-width:0;height:44px;padding:0 14px;border-radius:12px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.6);color:var(--foam);font:700 15px "Tajawal",system-ui,sans-serif}
+.hm-lb-find input:focus{outline:2px solid var(--cyan);outline-offset:1px}
+.hm-lb-found{margin:10px 0 0;color:var(--foam);font-weight:700}
+.hm-lb-note{margin:14px 0 0;color:var(--muted);font-size:13px;line-height:1.7}
+@media (max-width:560px){.hm-lb-row{grid-template-columns:28px 40px minmax(0,1fr) auto;gap:8px;padding:8px 10px}.hm-lb-ava{width:40px;height:40px}.hm-lb-bar{flex-direction:column;align-items:stretch}.hm-seg{justify-content:center}.hm-stat small{display:none}}
+/* room code */
+.hm-room-form{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.hm-room-form input{flex:1 1 200px;min-width:0;height:62px;padding:0 18px;border-radius:18px;border:2px solid rgba(140,232,255,.45);background:rgba(2,10,34,.6);color:#FFD62A;font:900 30px/1 "Tajawal",system-ui,sans-serif;letter-spacing:.3em;text-align:center;text-transform:uppercase}
+.hm-room-form input::placeholder{color:rgba(234,248,255,.3);letter-spacing:.12em;font-size:22px}
+.hm-room-form input:focus{outline:3px solid var(--cyan);outline-offset:2px}
+.hm-room-form .hm-enter{flex:0 1 220px}
+.hm-room-hint{margin:10px 0 0;color:var(--muted);font-size:14px}
+.hm-room-error{margin:8px 0 0;color:#FFB3C2;font-weight:800}

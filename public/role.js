@@ -12,8 +12,11 @@
   const HELP = {
     impostor: 'أنت المخادع: في الليل اختر من يخرج، وفي النهار لا تنكشف.',
     detective: 'أنت المحقق: في كل ليلة افحص لاعبًا واحدًا لتعرف إن كان مخادعًا.',
-    citizen: 'أنت مواطن: راقب النقاش وصوّت في النهار لإخراج المخادع.'
+    citizen: 'أنت مواطن: راقب النقاش وصوّت في النهار لإخراج المخادع.',
+    insider: 'هذه الكلمة السرية — لمّح لها في الشات بدون ما تقولها، وصوّت على اللي تحس إنه برا السالفة.',
+    outsider: 'أنت برا السالفة! ما تعرف الكلمة — اقرأ تلميحاتهم وتظاهر إنك تعرفها، وإذا انكشفت اكتب الكلمة في الشات.'
   };
+  const GAME_NAME = { roles: 'الأدوار المخفية — صفحتك الخاصة', outsider: 'برا السالفة — صفحتك الخاصة' };
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
   const say = (m, err) => { $('roleFeedback').textContent = m || ''; $('roleFeedback').classList.toggle('is-error', !!err); };
 
@@ -29,6 +32,7 @@
     try {
       const res = await fetch(q('/api/role/me'), { headers: { 'X-Role-Token': token }, cache: 'no-store' });
       const v = await res.json();
+      if (v.game) $('gameName').textContent = GAME_NAME[v.game] || $('gameName').textContent;
       if (v.idle) { say('لا توجد لعبة أدوار جارية الآن — انتظر المشرف.'); }
       else if (!v.linked) { if (!token || $('codeText').textContent.includes('····')) await claim(); }
       else paint(v);
@@ -41,6 +45,8 @@
     $('roleLabel').textContent = v.roleLabel;
     document.body.dataset.role = v.role;
     $('roleHelp').textContent = HELP[v.role] || '';
+    $('roleWord').hidden = !v.category;
+    $('roleWord').textContent = v.category ? (v.word ? v.category + ': ' + v.word : 'الفئة: ' + v.category) : '';
     if (lastRole !== v.role) { lastRole = v.role; window.SpongeFx?.play('start'); }
     $('roleMates').hidden = !v.teammates?.length;
     $('roleMates').textContent = v.teammates?.length ? 'زملاؤك المخادعون: ' + v.teammates.map((p) => p.name).join('، ') : '';
@@ -54,7 +60,7 @@
     }));
     $('roleInspected').hidden = !v.inspected?.length;
     $('roleInspected').replaceChildren(...(v.inspected || []).map((p) => el('li', p.suspect ? 'is-bad' : 'is-good', p.name + ': ' + (p.suspect ? 'مخادع!' : 'بريء'))));
-    say(v.finished ? 'انتهت اللعبة.' : v.phase === 'night' ? 'الليل الآن.' : v.phase === 'day' ? 'النهار: صوّت من الشات بكتابة «صوت» ورقم اللاعب.' : '');
+    say(v.finished ? 'انتهت اللعبة.' : v.phase === 'night' ? 'الليل الآن.' : v.phase === 'day' || v.phase === 'vote' ? 'التصويت: اكتب في الشات «صوت» ورقم اللاعب.' : v.phase === 'talk' ? 'وقت التلميح في الشات.' : v.phase === 'guess' ? 'فرصة اللي برا السالفة: يكتب الكلمة في الشات.' : '');
   }
   async function act(number) {
     const res = await fetch(q('/api/role/act'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Role-Token': token }, body: JSON.stringify({ number }) });

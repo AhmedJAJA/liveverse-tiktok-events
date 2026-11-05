@@ -234,3 +234,4 @@ body[data-drawer=closed] .st-drawer{display:none!important}
 @media (prefers-reduced-motion:reduce){.st-card,.st-card:hover{transition:none;transform:none}}
 .st-expired{position:sticky;top:0;z-index:80;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 16px;padding:12px 16px;background:linear-gradient(90deg,#5A0F24,#3A0B2C);border-bottom:1px solid rgba(255,106,138,.6);color:#FFE3EA;font-weight:800;text-align:center}
 .st-expired a{padding:8px 14px;border-radius:12px;background:#FFD62A;color:#0A1A3D;text-decoration:none;font-weight:900}
+.st-code b{margin-inline-start:6px;color:#FFD62A;letter-spacing:.12em;font-variant-numeric:tabular-nums}
