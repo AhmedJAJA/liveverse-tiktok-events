@@ -48,7 +48,6 @@ async function account(base, name, trial = true) {
   const r = await b('POST', '/api/auth/register', { username: name, email: name + '@example.com', password: 'reef2026go', confirm: 'reef2026go' });
   assert.equal(r.status, 201, JSON.stringify(r.data));
   b.publicId = r.data.account.publicId; b.room = r.data.account.room;
-  if (trial) assert.equal((await b('POST', '/api/me/trial-start', {})).data.started, true);
   return b;
 }
 /** The whole sign-in round trip: our start → the platform's page (approved as `uid`) → our callback. */

@@ -1,0 +1,140 @@
+<!doctype html>
+<!-- سبونج لايف — game card art (580×742). Rendered by scripts/build-game-cards.mjs: one card per ?game=… .
+     Original drawings only: our sponge (brand/sponge-512.webp) and a prop drawn here in SVG for each game. -->
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:T;src:url(../public/fonts/tajawal-arabic-800-normal.woff2) format("woff2");font-weight:800}
+@font-face{font-family:TL;src:url(../public/fonts/tajawal-latin-700-normal.woff2) format("woff2");font-weight:700}
+html,body{margin:0;background:transparent}
+.card{position:relative;width:580px;height:742px;border-radius:46px;overflow:hidden;box-sizing:border-box;border:5px solid #38D4FF;
+  background:radial-gradient(70% 45% at 50% 30%,var(--glow,#1E5BFF) 0%,transparent 70%),linear-gradient(180deg,#0A2C78 0%,#06194B 48%,#030C2B 100%);
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.12),inset 0 0 60px rgba(56,212,255,.35)}
+.rays{position:absolute;inset:-10% -10% auto;height:70%;background:repeating-linear-gradient(100deg,transparent 0 46px,rgba(140,232,255,.06) 46px 70px);-webkit-mask:linear-gradient(180deg,#000,transparent)}
+.floor{position:absolute;left:0;right:0;bottom:0;height:300px}
+.bub{position:absolute;border-radius:50%;border:2px solid rgba(180,240,255,.75);background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.9) 0 8%,rgba(160,230,255,.25) 30%,rgba(60,170,255,.06) 70%)}
+.stage{position:absolute;inset:40px 26px 190px}
+.sponge{position:absolute;width:300px;filter:drop-shadow(0 18px 24px rgba(0,0,0,.55)) drop-shadow(0 0 26px rgba(56,212,255,.45))}
+.prop{position:absolute}
+.crown{position:absolute;top:22px;left:50%;translate:-50% 0;width:64px;filter:drop-shadow(0 0 10px rgba(255,214,42,.8))}
+.plate{position:absolute;left:28px;right:28px;bottom:26px;height:142px;border-radius:30px;display:grid;place-items:center;align-content:center;gap:6px;
+  background:linear-gradient(180deg,#0B2A6E,#061848);border:3px solid rgba(140,232,255,.85);box-shadow:0 0 24px rgba(56,212,255,.55),inset 0 2px 0 rgba(255,255,255,.25)}
+.plate h1{margin:0;font:800 var(--fs,54px)/1.1 T,sans-serif;color:#fff;text-shadow:0 3px 0 #031033,0 0 18px rgba(56,212,255,.65);white-space:nowrap}
+.plate p{margin:0;font:800 20px/1 T,sans-serif;color:#FFE14D;letter-spacing:0}
+</style></head><body>
+<div class="card" id="card">
+ <div class="rays"></div>
+ <svg class="floor" viewBox="0 0 580 300" preserveAspectRatio="none" aria-hidden="true">
+  <defs><linearGradient id="sand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#123A86"/><stop offset="1" stop-color="#061848"/></linearGradient></defs>
+  <path d="M0 210 Q140 170 290 196 T580 186 V300 H0Z" fill="url(#sand)" opacity=".85"/>
+  <g fill="none" stroke-linecap="round" stroke-width="12" opacity=".75">
+   <path d="M38 300 C20 250 60 220 40 170 C24 130 52 110 44 80" stroke="#1BA98A"/>
+   <path d="M70 300 C60 260 92 240 78 200" stroke="#25C49D"/>
+   <path d="M540 300 C560 250 520 220 540 170 C556 130 528 112 536 84" stroke="#1BA98A"/>
+   <path d="M508 300 C520 262 488 240 502 204" stroke="#25C49D"/>
+  </g>
+  <g fill="#FF7A9E" opacity=".8"><circle cx="120" cy="230" r="9"/><circle cx="134" cy="222" r="7"/><circle cx="460" cy="226" r="9"/><circle cx="446" cy="218" r="6"/></g>
+ </svg>
+ <i class="bub" style="width:26px;height:26px;left:60px;top:120px"></i><i class="bub" style="width:16px;height:16px;left:92px;top:84px"></i>
+ <i class="bub" style="width:30px;height:30px;right:56px;top:150px"></i><i class="bub" style="width:14px;height:14px;right:96px;top:110px"></i>
+ <i class="bub" style="width:20px;height:20px;left:48px;top:330px"></i><i class="bub" style="width:22px;height:22px;right:40px;top:380px"></i>
+ <svg class="crown" viewBox="0 0 64 44" aria-hidden="true"><path d="M4 40 L8 10 L22 24 L32 4 L42 24 L56 10 L60 40Z" fill="#FFD62A" stroke="#B97A00" stroke-width="3" stroke-linejoin="round"/><circle cx="32" cy="30" r="5" fill="#38D4FF"/></svg>
+ <div class="stage" id="stage"></div>
+ <div class="plate"><h1 id="title"></h1><p>سبونج لايف</p></div>
+</div>
+<script>
+const S = (x) => `<svg class="prop" xmlns="http://www.w3.org/2000/svg" ${x}`;
+const GAMES = {
+ 'knowledge-challenge': { title: 'تحدي المعرفة', glow: '#1E5BFF', sponge: 'left:-6px;top:150px;width:290px',
+  prop: S(`viewBox="0 0 260 300" style="right:0;top:40px;width:270px"><rect x="10" y="10" width="240" height="190" rx="22" fill="#0B1F55" stroke="#38D4FF" stroke-width="6"/>
+   <text x="130" y="88" text-anchor="middle" font-family="T" font-weight="800" font-size="84" fill="#FFE14D">؟</text>
+   <g font-family="TL" font-weight="700" font-size="22" fill="#fff"><rect x="30" y="112" width="92" height="30" rx="10" fill="#2F7BFF"/><rect x="138" y="112" width="92" height="30" rx="10" fill="#2FD9A0"/><rect x="30" y="152" width="92" height="30" rx="10" fill="#FF6B8B"/><rect x="138" y="152" width="92" height="30" rx="10" fill="#FFB020"/>
+   <text x="76" y="134" text-anchor="middle">1</text><text x="184" y="134" text-anchor="middle">2</text><text x="76" y="174" text-anchor="middle">3</text><text x="184" y="174" text-anchor="middle">4</text></g>
+   <path d="M60 210 h140 l-14 80 h-112z" fill="#123A86" stroke="#38D4FF" stroke-width="5"/><circle cx="130" cy="250" r="18" fill="#FFD62A"/>`)+'</svg>' },
+ 'guess-drawing': { title: 'خمن الرسمة', glow: '#7B4DFF', sponge: 'right:-10px;top:170px;width:280px',
+  prop: S(`viewBox="0 0 260 320" style="left:0;top:30px;width:260px"><path d="M60 300 L110 40 M200 300 L150 40 M130 300 V60" stroke="#C98B3C" stroke-width="12" stroke-linecap="round"/>
+   <rect x="30" y="30" width="200" height="170" rx="12" fill="#F4FBFF" stroke="#38D4FF" stroke-width="6"/>
+   <path d="M60 160 C70 100 110 80 130 120 S190 150 200 80" fill="none" stroke="#FF6B8B" stroke-width="9" stroke-linecap="round"/><circle cx="90" cy="80" r="18" fill="#FFD62A"/>
+   <g transform="rotate(-35 200 220)"><rect x="150" y="205" width="110" height="24" rx="6" fill="#FFB020"/><path d="M150 205 l-26 12 l26 12z" fill="#F2C27A"/><path d="M124 217 l8 -4 v8z" fill="#333"/><rect x="246" y="205" width="14" height="24" fill="#FF6B8B"/></g>`)+'</svg>' },
+ 'musical-chairs': { title: 'كراسي موسيقية', glow: '#C23BFF', sponge: 'left:140px;top:10px;width:250px',
+  prop: S(`viewBox="0 0 520 260" style="left:0;bottom:0;width:528px"><g stroke="#38D4FF" stroke-width="6" stroke-linejoin="round">
+   <g transform="translate(30 40)"><rect x="0" y="0" width="90" height="110" rx="14" fill="#FF6B8B"/><rect x="-6" y="110" width="102" height="26" rx="8" fill="#FF8FB3"/><path d="M8 136 v80 M82 136 v80" stroke="#FFD62A" stroke-width="10"/></g>
+   <g transform="translate(400 40)"><rect x="0" y="0" width="90" height="110" rx="14" fill="#2FD9A0"/><rect x="-6" y="110" width="102" height="26" rx="8" fill="#7DFFC8"/><path d="M8 136 v80 M82 136 v80" stroke="#FFD62A" stroke-width="10"/></g></g>
+   <g fill="#FFE14D"><path d="M200 120 v-80 l50 -12 v80" fill="none" stroke="#FFE14D" stroke-width="9"/><ellipse cx="190" cy="122" rx="16" ry="12"/><ellipse cx="240" cy="110" rx="16" ry="12"/>
+   <path d="M310 150 v-70" stroke="#C9A7FF" stroke-width="9"/><ellipse cx="298" cy="152" rx="16" ry="12" fill="#C9A7FF"/><path d="M310 80 q30 10 24 40" fill="none" stroke="#C9A7FF" stroke-width="9"/></g>`)+'</svg>' },
+ 'bowling': { title: 'لعبة البولينج', glow: '#1E8BFF', sponge: 'left:-10px;top:170px;width:270px',
+  prop: S(`viewBox="0 0 280 340" style="right:0;top:56px;width:280px"><defs><radialGradient id="ball" cx="35%" cy="30%"><stop offset="0" stop-color="#7FB0FF"/><stop offset="1" stop-color="#1238A8"/></radialGradient></defs>
+   <defs><g id="pin"><path d="M0 0 c-16 0 -20 22 -12 40 c-14 22 -18 60 -10 90 h44 c8 -30 4 -68 -10 -90 c8 -18 4 -40 -12 -40z" fill="#F7FBFF" stroke="#9FD8FF" stroke-width="3"/><rect x="-11" y="34" width="22" height="8" fill="#FF4D6A"/><rect x="-13" y="48" width="26" height="6" fill="#FF4D6A"/></g></defs>
+   <use href="#pin" x="140" y="10"/><use href="#pin" x="100" y="40"/><use href="#pin" x="180" y="40"/><use href="#pin" x="60" y="70"/><use href="#pin" x="220" y="70"/>
+   <circle cx="110" cy="262" r="56" fill="url(#ball)" stroke="#38D4FF" stroke-width="4"/><circle cx="96" cy="240" r="7" fill="#06194B"/><circle cx="118" cy="236" r="7" fill="#06194B"/><circle cx="108" cy="258" r="7" fill="#06194B"/>`)+'</svg>' },
+ 'time-bomb': { title: 'القنبلة الموقوتة', glow: '#FF5A36', sponge: 'left:-10px;top:180px;width:270px',
+  prop: S(`viewBox="0 0 280 320" style="right:0;top:24px;width:290px"><defs><radialGradient id="bomb" cx="35%" cy="30%"><stop offset="0" stop-color="#5A6A8A"/><stop offset="1" stop-color="#0B1020"/></radialGradient></defs>
+   <circle cx="140" cy="190" r="110" fill="url(#bomb)" stroke="#38D4FF" stroke-width="4"/><rect x="118" y="62" width="44" height="34" rx="8" fill="#3A4560"/>
+   <path d="M150 64 C160 30 200 30 210 10" fill="none" stroke="#C98B3C" stroke-width="8" stroke-linecap="round"/>
+   <g transform="translate(212 8)"><circle r="18" fill="#FFD62A"/><path d="M0 -30 L6 -8 L28 -10 L10 4 L20 26 L0 12 L-20 26 L-10 4 L-28 -10 L-6 -8z" fill="#FF7A1A"/></g>
+   <rect x="70" y="160" width="140" height="62" rx="12" fill="#1A0606" stroke="#FF4D6A" stroke-width="4"/><text x="140" y="207" text-anchor="middle" font-family="TL" font-weight="700" font-size="46" fill="#FF4D6A">00:15</text>`)+'</svg>' },
+ 'categories': { title: 'اسم حيوان جماد نبات', glow: '#1EB37A', fs: '44px', sponge: 'left:-14px;top:200px;width:250px',
+  prop: S(`viewBox="0 0 260 330" style="right:4px;top:30px;width:262px"><g font-family="T" font-weight="800" font-size="34" text-anchor="middle" fill="#fff">
+   <rect x="20" y="10" width="220" height="64" rx="18" fill="#2F7BFF" stroke="#38D4FF" stroke-width="4"/><text x="130" y="54">اسم</text>
+   <rect x="20" y="88" width="220" height="64" rx="18" fill="#FFB020" stroke="#FFE14D" stroke-width="4"/><text x="130" y="132">حيوان</text>
+   <rect x="20" y="166" width="220" height="64" rx="18" fill="#7B8AA8" stroke="#C9D6EE" stroke-width="4"/><text x="130" y="210">جماد</text>
+   <rect x="20" y="244" width="220" height="64" rx="18" fill="#1EB37A" stroke="#7DFFC8" stroke-width="4"/><text x="130" y="288">نبات</text></g>`)+'</svg>' },
+ 'rock-paper-scissors': { title: 'حجرة ورقة مقص', glow: '#FF3B7A', sponge: 'left:130px;top:150px;width:270px',
+  prop: S(`viewBox="0 0 520 220" style="left:0;top:0;width:528px"><g stroke="#38D4FF" stroke-width="5">
+   <circle cx="80" cy="90" r="72" fill="#0B1F55"/><circle cx="260" cy="70" r="62" fill="#0B1F55"/><circle cx="440" cy="90" r="72" fill="#0B1F55"/></g>
+   <path d="M44 110 L60 60 L100 52 L124 84 L112 126 L64 132z" fill="#9AA6BF" stroke="#5A6680" stroke-width="5" stroke-linejoin="round"/>
+   <g transform="rotate(-8 260 70)"><rect x="224" y="24" width="72" height="92" rx="6" fill="#F4FBFF" stroke="#9FD8FF" stroke-width="4"/><path d="M238 50h44M238 70h44M238 90h30" stroke="#9FB6D6" stroke-width="5" stroke-linecap="round"/></g>
+   <g stroke="#FF6B8B" stroke-width="10" stroke-linecap="round"><path d="M410 50 L470 120"/><path d="M470 50 L410 120"/></g><circle cx="404" cy="128" r="14" fill="none" stroke="#FFD62A" stroke-width="7"/><circle cx="476" cy="128" r="14" fill="none" stroke="#FFD62A" stroke-width="7"/>
+   <text x="170" y="98" text-anchor="middle" font-family="TL" font-weight="700" font-size="40" fill="#FFE14D">VS</text>`)+'</svg>' },
+ 'hidden-roles': { title: 'الأدوار المخفية', glow: '#5A3BFF', sponge: 'left:-6px;top:160px;width:280px',
+  prop: S(`viewBox="0 0 260 320" style="right:0;top:30px;width:270px"><path d="M30 90 c40 -60 160 -60 200 0 l-20 20 h-160z" fill="#3B2A6E" stroke="#C9A7FF" stroke-width="5"/>
+   <rect x="20" y="104" width="220" height="22" rx="10" fill="#2A1D52" stroke="#C9A7FF" stroke-width="4"/>
+   <path d="M60 150 c20 -14 50 -14 66 0 c16 -14 46 -14 66 0 c-6 34 -40 40 -66 22 c-26 18 -60 12 -66 -22z" fill="#0B1020" stroke="#C9A7FF" stroke-width="4"/>
+   <circle cx="150" cy="250" r="44" fill="rgba(140,232,255,.18)" stroke="#FFD62A" stroke-width="10"/><path d="M182 282 l46 44" stroke="#C98B3C" stroke-width="16" stroke-linecap="round"/>
+   <text x="150" y="268" text-anchor="middle" font-family="T" font-weight="800" font-size="56" fill="#FFE14D">؟</text>`)+'</svg>' },
+ 'roulette': { title: 'الروليت', glow: '#FFB020', sponge: 'left:-18px;top:220px;width:250px',
+  prop: S(`viewBox="0 0 300 300" style="right:0;top:16px;width:310px"><g transform="translate(150 160)"><circle r="122" fill="#0B1F55" stroke="#FFD62A" stroke-width="8"/>
+   <g stroke="#06194B" stroke-width="3"><path d="M0 0 L0 -112 A112 112 0 0 1 97 -56z" fill="#FF6B8B"/><path d="M0 0 L97 -56 A112 112 0 0 1 97 56z" fill="#2F7BFF"/><path d="M0 0 L97 56 A112 112 0 0 1 0 112z" fill="#2FD9A0"/><path d="M0 0 L0 112 A112 112 0 0 1 -97 56z" fill="#FFB020"/><path d="M0 0 L-97 56 A112 112 0 0 1 -97 -56z" fill="#C9A7FF"/><path d="M0 0 L-97 -56 A112 112 0 0 1 0 -112z" fill="#38D4FF"/></g>
+   <circle r="26" fill="#FFD62A" stroke="#B97A00" stroke-width="4"/></g><path d="M150 18 l-20 -16 h40z" fill="#FF4D6A" stroke="#fff" stroke-width="3" transform="translate(0 16) rotate(180 150 10)"/>`)+'</svg>' },
+ 'red-light': { title: 'الضوء الأحمر', glow: '#FF2E4D', sponge: 'left:-10px;top:180px;width:270px',
+  prop: S(`viewBox="0 0 200 330" style="right:30px;top:10px;width:200px"><rect x="90" y="250" width="20" height="80" fill="#3A4560"/>
+   <rect x="30" y="10" width="140" height="250" rx="34" fill="#0B1020" stroke="#38D4FF" stroke-width="6"/>
+   <circle cx="100" cy="64" r="34" fill="#FF2E4D"/><circle cx="100" cy="64" r="48" fill="none" stroke="rgba(255,46,77,.45)" stroke-width="10"/>
+   <circle cx="100" cy="136" r="30" fill="#4A3A10"/><circle cx="100" cy="206" r="30" fill="#0E3A2A"/>`)+'</svg>' },
+ 'guess-country': { title: 'خمن الدولة', glow: '#1E9BFF', sponge: 'left:-10px;top:190px;width:260px',
+  prop: S(`viewBox="0 0 280 300" style="right:0;top:24px;width:290px"><defs><radialGradient id="sea" cx="35%" cy="30%"><stop offset="0" stop-color="#6FC8FF"/><stop offset="1" stop-color="#0B4FB8"/></radialGradient></defs>
+   <circle cx="150" cy="160" r="110" fill="url(#sea)" stroke="#38D4FF" stroke-width="5"/>
+   <path d="M90 90 c30 -10 60 10 50 40 c-10 30 20 40 10 70 c-30 10 -70 -20 -66 -50 c-18 -10 -14 -50 6 -60z M180 110 c20 0 40 20 30 50 c-10 20 -40 10 -36 -14z" fill="#2FD9A0" stroke="#127A5A" stroke-width="4"/>
+   <ellipse cx="150" cy="160" rx="110" ry="40" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="3"/><path d="M150 50 v220" stroke="rgba(255,255,255,.3)" stroke-width="3"/>
+   <g transform="translate(232 40)"><path d="M0 0 v70" stroke="#E8EEF8" stroke-width="5"/><path d="M2 2 h40 l-10 14 l10 14 h-40z" fill="#FF4D6A"/></g>
+   <text x="40" y="70" font-family="T" font-weight="800" font-size="60" fill="#FFE14D">؟</text>`)+'</svg>' },
+ 'guess-flag': { title: 'لعبة خمن العلم', glow: '#1E5BFF', fs: '48px', sponge: 'left:-12px;top:190px;width:260px',
+  prop: S(`viewBox="0 0 280 320" style="right:0;top:20px;width:290px"><g stroke="#E8EEF8" stroke-width="5"><path d="M40 30 v260"/><path d="M150 60 v230"/></g>
+   <g transform="translate(42 32)"><rect width="96" height="64" fill="#fff"/><rect width="32" height="64" fill="#2F7BFF"/><rect x="64" width="32" height="64" fill="#FF4D6A"/></g>
+   <g transform="translate(152 62)"><rect width="104" height="70" fill="#1EB37A"/><rect y="46" width="104" height="24" fill="#FFD62A"/><circle cx="34" cy="24" r="12" fill="#fff"/></g>
+   <rect x="60" y="170" width="190" height="110" rx="20" fill="#0B1F55" stroke="#38D4FF" stroke-width="5"/>
+   <text x="155" y="250" text-anchor="middle" font-family="T" font-weight="800" font-size="76" fill="#FFE14D">؟</text>`)+'</svg>' },
+
+ 'tug-of-war': { title: 'شد الحبل', glow: '#2F7BFF', sponge: 'left:150px;top:0;width:230px',
+  prop: S(`viewBox="0 0 520 260" style="left:0;bottom:0;width:528px"><defs><linearGradient id="rope" x1="0" x2="1"><stop offset="0" stop-color="#C98B3C"/><stop offset=".5" stop-color="#F2C27A"/><stop offset="1" stop-color="#C98B3C"/></linearGradient></defs>
+   <path d="M20 150 H500" stroke="url(#rope)" stroke-width="18" stroke-linecap="round"/><path d="M20 150 H500" stroke="#8A5A22" stroke-width="18" stroke-dasharray="6 14" opacity=".45"/>
+   <rect x="250" y="120" width="20" height="60" rx="6" fill="#FF4D6A" stroke="#fff" stroke-width="3"/><path d="M260 40 V250" stroke="rgba(255,255,255,.5)" stroke-width="4" stroke-dasharray="10 10"/>
+   <g stroke="#38D4FF" stroke-width="4"><rect x="40" y="96" width="56" height="110" rx="28" fill="#2F7BFF"/><rect x="120" y="106" width="52" height="100" rx="26" fill="#5A9BFF"/>
+   <rect x="350" y="106" width="52" height="100" rx="26" fill="#FFB020" stroke="#FFE14D"/><rect x="424" y="96" width="56" height="110" rx="28" fill="#FFD62A" stroke="#FFE14D"/></g>`)+'</svg>' },
+ 'outsider': { title: 'برا السالفة', glow: '#C23B8A', sponge: 'left:-16px;top:200px;width:250px',
+  prop: S(`viewBox="0 0 280 330" style="right:0;top:24px;width:290px"><g font-family="T" font-weight="800" font-size="28" text-anchor="middle">
+   <g transform="rotate(-8 80 70)"><rect x="20" y="30" width="120" height="74" rx="14" fill="#FFE14D" stroke="#B97A00" stroke-width="4"/><text x="80" y="78" fill="#3A2600">كلمة</text></g>
+   <g transform="rotate(7 200 80)"><rect x="140" y="40" width="120" height="74" rx="14" fill="#FFE14D" stroke="#B97A00" stroke-width="4"/><text x="200" y="88" fill="#3A2600">كلمة</text></g>
+   <g transform="rotate(-4 90 170)"><rect x="30" y="134" width="120" height="74" rx="14" fill="#FFE14D" stroke="#B97A00" stroke-width="4"/><text x="90" y="182" fill="#3A2600">كلمة</text></g>
+   <g transform="rotate(10 200 230)"><rect x="140" y="190" width="120" height="96" rx="14" fill="#FF4D8A" stroke="#fff" stroke-width="5"/><text x="200" y="258" font-size="64" fill="#fff">؟</text></g></g>`)+'</svg>' },
+};
+const key = new URLSearchParams(location.search).get('game');
+const g = GAMES[key];
+document.getElementById('title').textContent = g.title;
+if (g.fs) document.documentElement.style.setProperty('--fs', g.fs);
+document.getElementById('card').style.setProperty('--glow', g.glow);
+const stage = document.getElementById('stage');
+stage.innerHTML = g.prop + `<img class="sponge" src="../public/brand/sponge-512.webp" alt="" style="${g.sponge}">`;
+window.__ready = document.fonts.ready.then(() => Promise.all([...document.images].map((i) => i.decode().catch(() => {}))));
+window.__keys = Object.keys(GAMES);
+</script>
+</body></html>

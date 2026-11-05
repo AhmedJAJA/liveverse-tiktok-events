@@ -138,7 +138,7 @@ test('in a real browser: Google sign-in is remembered across tabs, browser resta
     await p3.reload(); assert.equal((await whoAmI(p3)).account, undefined, 'expired after 30 days without use');
     await stop(); await start();
 
-    // 11 + 12 + 13. signing in again finds the same account, ID and trial history
+    // 11 + 12 + 13. signing in again finds the same account and ID
     const ctx2 = await browser.newContext(); await ctx2.exposeFunction('tokenFor', (claims) => idToken(claims));
     const p4 = await ctx2.newPage(); await p4.goto(base + '/');
     const signIn = () => p4.evaluate(async () => {
@@ -148,12 +148,10 @@ test('in a real browser: Google sign-in is remembered across tabs, browser resta
     });
     const again = await signIn();
     assert.equal(again.account.publicId, id, 'same permanent ID');
-    const t1 = await p4.evaluate(() => fetch('/api/me/trial-start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json()));
-    assert.equal(t1.started, true);
     const relog = await signIn();
-    assert.equal(relog.account.publicId, id); assert.equal(relog.account.plan, 'trial');
+    assert.equal(relog.account.publicId, id); assert.equal(relog.account.plan, 'free', 'every game is free');
     const t2 = await p4.evaluate(() => fetch('/api/me/trial-start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json()));
-    assert.notEqual(t2.started, true, 'no second trial after signing in again');
+    assert.notEqual(t2.started, true, 'no trial is ever created');
     const pool = new pg.Pool({ connectionString: dbUrl });
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM users WHERE google_sub='g-sub-1'")).rows[0].n, 1, 'no duplicate account');
     assert.ok((await pool.query("SELECT last_login_at FROM users WHERE google_sub='g-sub-1'")).rows[0].last_login_at, 'last sign-in is recorded');

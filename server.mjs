@@ -22,7 +22,7 @@ import { createPool, migrate } from './src/db.mjs';
 import { PromoMirror, SessionMirror } from './src/persist.mjs';
 import { Platform, PlatformError, canonicalEmail, PLANS as PLATFORM_PLANS, AVATARS, privacyOf, weekOf } from './src/platform.mjs';
 import { createMailer, createGateway } from './src/services.mjs';
-import { Economy, EconomyError, hashDevice, hashIp, WHATSAPP_URL } from './src/economy.mjs';
+import { Economy, EconomyError, hashDevice, hashIp, WHATSAPP_URL, DAILY_REWARD, REFERRAL_REWARD, REFERRAL_CAP } from './src/economy.mjs';
 import { GoogleVerifier, GoogleOAuth } from './src/google.mjs';
 import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
 
@@ -517,7 +517,7 @@ async function handleAction(action, body, actor) {
       const now = Date.now();
       if (body.closing === true) { room.tabs.delete(tab); if (room.primaryTab === tab) room.primaryTab = null; return { ok: true }; }
       for (const [id, t] of room.tabs) if (now - t.at > HOST_TIMEOUT_MS) room.tabs.delete(id);
-      if (room.tabs.size >= 12 && !room.tabs.has(tab)) throw new Error('نوافذ كثيرة مفتوحة للاستوديو');
+      if (room.tabs.size >= 12 && !room.tabs.has(tab)) throw new Error('نوافذ كثيرة مفتوحة للعبة');
       room.tabs.set(tab, { at: now, screen: body.screen === 'game' ? 'game' : 'games' });
       if (!room.hostTab() || body.takeover === true) room.primaryTab = tab;
       const st = liveStatus(room);
@@ -704,6 +704,8 @@ async function handleOAuth(p, step, req, res, url) {
    GET /api/oauth/google/start?mode=login|link|reauth&next=…&remember=1 → Google → GET /api/oauth/google/callback
    state: single use, 10 minutes, bound to this browser (og_bind cookie) — two tabs can sign in at once;
    nonce + PKCE; the account is found by Google's subject ID only. */
+/** The games list (no separate studio): every game opens from here. */
+const GAMES_LIST = '/#games';
 const GOOGLE_MODES = new Set(['login', 'link', 'reauth']);
 const googleLimiter = new RateLimiter({ limit: 30, windowMs: 10 * 60_000 });
 /** Same e-mail, exactly, and verified by Google → the existing account (Google linked to it). If that account's e-mail
@@ -717,7 +719,7 @@ async function autoLinkGoogle(g, req) {
   return hit.user;
 }
 const pendingGoogle = new Map(); // id -> { g, expires }: a Google identity waiting for the password of the account with its e-mail
-const safeNext = (n) => (typeof n === 'string' && /^\/(account|studio|admin|u\/|go\/|tools|event)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : '');
+const safeNext = (n) => (typeof n === 'string' && /^\/(account|game\/|admin|u\/|go\/|tools|event|#games)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : '');
 async function handleGoogleOAuth(step, req, res, url) {
   const secure = isHttps(req) ? '; Secure' : '';
   const go = (to, cookies = []) => { res.writeHead(302, { Location: to, 'Cache-Control': 'no-store', ...(cookies.length ? { 'Set-Cookie': cookies } : {}) }); res.end(); };
@@ -796,7 +798,7 @@ async function handleGoogleOAuth(step, req, res, url) {
     await platform.touchLogin(user.id, { picture: g.picture }).catch(() => {});
     if (created) await afterSignup(req, res, user.id); else await afterLogin(req, res, user.id);
     const a = accountView(user.id);
-    res.writeHead(302, { Location: next || (created ? '/account?welcome=1' : a.entitled ? '/studio' : '/account'), 'Cache-Control': 'no-store' });
+    res.writeHead(302, { Location: next || (created ? '/account?welcome=1' : GAMES_LIST), 'Cache-Control': 'no-store' });
     return res.end();
   } catch (err) {
     console.warn('[google] sign-in:', String(err.message).slice(0, 120));
@@ -845,7 +847,7 @@ async function handleAccess(action, req, res) {
   if (matchesToken(code)) {
     if (old) sessions.destroy(old.id);
     setSession(res, req, sessions.create('owner', {}), 30 * 86400);
-    return json(res, 200, { ok: true, access: 'owner', next: '/studio' });
+    return json(res, 200, { ok: true, access: 'owner', next: GAMES_LIST });
   }
   const promo = promos.redeem(code);
   if (!promo && platform) {
@@ -853,7 +855,7 @@ async function handleAccess(action, req, res) {
     const trial = await platform.findTrialCode(code);
     const acct = accountSession(req);
     if (trial && acct && trial.user_id === acct.userId) {
-      try { await platform.activateTrial(acct.userId, { code, ip }); return json(res, 200, { ok: true, access: 'account', trial: true, next: '/studio' }); }
+      try { await platform.activateTrial(acct.userId, { code, ip }); return json(res, 200, { ok: true, access: 'account', trial: true, next: GAMES_LIST }); }
       catch (err) { if (err instanceof PlatformError) return json(res, err.status, { error: err.message }); throw err; }
     }
     if (trial && !acct) return json(res, 401, { error: 'هذا رمز تجربة مجانية: سجّل الدخول بالحساب الذي حصل عليه ثم أدخله مجددًا', login: true });
@@ -861,14 +863,14 @@ async function handleAccess(action, req, res) {
     const voucher = trial ? null : await platform.findVoucher(code);
     if (voucher && !acct) return json(res, 401, { error: 'هذا رمز اشتراك: سجّل الدخول أو أنشئ حسابًا ثم أدخله مجددًا ليُضاف الاشتراك إلى حسابك', login: true, voucher: true });
     if (voucher) {
-      try { const r = await platform.redeemVoucher(acct.userId, code); return json(res, 200, { ok: true, access: 'account', voucher: r, next: '/studio' }); }
+      try { const r = await platform.redeemVoucher(acct.userId, code); return json(res, 200, { ok: true, access: 'account', voucher: r, next: GAMES_LIST }); }
       catch (err) { if (err instanceof PlatformError) return json(res, err.status, { error: err.message }); throw err; }
     }
   }
   if (!promo) { await new Promise((r) => setTimeout(r, 350)); return json(res, 401, { error: 'الرمز غير صحيح أو انتهت صلاحيته' }); }
   if (old) sessions.destroy(old.id);
   setSession(res, req, sessions.create('promo', { room: roomId('p'), codeId: promo.id, level: promo.level }), 30 * 86400);
-  return json(res, 200, { ok: true, access: 'promo', level: promo.level, next: '/studio' });
+  return json(res, 200, { ok: true, access: 'promo', level: promo.level, next: GAMES_LIST });
 }
 
 async function handleAccount(action, req, res) {
@@ -879,7 +881,7 @@ async function handleAccount(action, req, res) {
   if (origin) { try { if (new URL(origin).host !== req.headers.host) return json(res, 403, { error: 'طلب من مصدر غير مسموح' }); } catch { return json(res, 403, { error: 'طلب غير صالح' }); } }
   const body = await readBody(req).catch(() => null);
   if (!body) return json(res, 400, { error: 'طلب غير صالح' });
-  if ((action === 'register' || action === 'guest') && !OPEN_SIGNUP) return json(res, 403, { error: 'الدخول إلى الاستوديو يتم بالرمز الترويجي' });
+  if ((action === 'register' || action === 'guest') && !OPEN_SIGNUP) return json(res, 403, { error: 'الدخول يتم بالرمز الترويجي' });
   if (action === 'register') {
     if (!authLimiter.hit('reg:' + ip)) return json(res, 429, { error: 'محاولات كثيرة، انتظر قليلًا ثم حاول' });
     try {
@@ -984,7 +986,7 @@ async function handleAuth(action, req, res) {
         }
       }
       const a = accountView(u.id);
-      return json(res, 200, { ok: true, account: a, googleLinked, next: a.entitled ? '/studio' : '/account' });
+      return json(res, 200, { ok: true, account: a, googleLinked, next: GAMES_LIST });
     }
     if (action === 'logout') { const s = sessionOf(req); if (s) sessions.destroy(s.id); clearCookie(req, res); return json(res, 200, { ok: true }); }
     if (action === 'google') {
@@ -1010,7 +1012,7 @@ async function handleAuth(action, req, res) {
       await platform.touchLogin(user.id, { picture: g.picture }).catch(() => {});
       if (created) await afterSignup(req, res, user.id); else await afterLogin(req, res, user.id);
       const a = accountView(user.id);
-      return json(res, 200, { ok: true, account: a, next: a.entitled ? '/studio' : '/account' });
+      return json(res, 200, { ok: true, account: a, next: GAMES_LIST });
     }
     if (action === 'forgot') {
       if (!authLimiter.hit('forgot:' + ip)) return json(res, 429, { error: 'محاولات كثيرة. انتظر قليلًا ثم حاول.' });
@@ -1131,7 +1133,7 @@ async function handleMe(action, req, res) {
       return json(res, 200, { ok: true, removed: r.removed, revoked });
     }
     if (action === 'trial-claim') return json(res, 200, { ok: true, trial: await platform.claimTrial(userId) });
-    if (action === 'trial-start') { const r = await platform.startTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, next: '/studio', account: accountView(userId) }); }
+    if (action === 'trial-start') { const r = await platform.startTrial(userId, { ip }); return json(res, 200, { ok: true, ...r, next: GAMES_LIST, account: accountView(userId) }); }
     if (action === 'link-google') {
       if (!google.enabled) return json(res, 503, { error: 'تسجيل الدخول باستخدام Google غير مفعّل بعد' });
       let g;
@@ -1383,6 +1385,8 @@ const server = http.createServer(async (req, res) => {
       const room = publicRoom(url.searchParams.get('room'));
       return room ? json(res, 200, room.view()) : json(res, 404, { error: 'الغرفة غير موجودة' });
     }
+    // «المتجر» on the home page: the public coin price list (the only thing sold), read from coin_packages
+    if (url.pathname === '/api/store/packages' && req.method === 'GET') return json(res, 200, { packages: economy ? await economy.packages() : [], dailyReward: DAILY_REWARD, referralReward: REFERRAL_REWARD, referralCap: REFERRAL_CAP });
     if (url.pathname === '/api/site' && req.method === 'GET') return json(res, 200, { ...siteConfig(), updates: UPDATES, plans: PLANS, gameSettings: settingsSchema(), joinWords: JOIN_WORD_SUGGESTIONS, lateJoinModes: LATE_JOIN_MODES });
     if (url.pathname.startsWith('/api/u/') && req.method === 'GET') {
       if (!platform) return json(res, 404, { error: 'غير موجود' });
@@ -1471,7 +1475,7 @@ const server = http.createServer(async (req, res) => {
       actor.room.touched = Date.now();
       // Several studio windows: only the controlling one may change the room (the others can take over).
       const tab = String(req.headers['x-studio-tab'] || '');
-      if (tab && action !== 'heartbeat' && actor.room.hostTab() && actor.room.primaryTab !== tab) return json(res, 409, { error: 'الاستوديو مفتوح في نافذة أخرى — اضغط «التحكم من هنا» لنقل التحكم إلى هذه النافذة', otherWindow: true });
+      if (tab && action !== 'heartbeat' && actor.room.hostTab() && actor.room.primaryTab !== tab) return json(res, 409, { error: 'اللعبة مفتوحة في نافذة أخرى — اضغط «التحكم من هنا» لنقل التحكم إلى هذه النافذة', otherWindow: true });
       try { const result = await handleAction(action, await readBody(req, action === 'sketch' ? 200_000 : 16384), actor); return json(res, 200, result); }
       catch (err) { return json(res, err.status || 400, { error: String(err.message || err).slice(0, 240), ...(err.fields ? { fields: err.fields } : {}), ...(err.needPlan ? { needPlan: true } : {}) }); }
     }
@@ -1484,24 +1488,29 @@ const server = http.createServer(async (req, res) => {
   } catch (err) { return json(res, err.status || 500, { error: String(err.message || err).slice(0, 200) }); }
   if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Method not allowed' });
   // Bottom navigation (bottom-nav.js): the server picks the destination from the session — never the page.
-  //   /go/studio → the studio while access is active, the renewal page when the plan ended, sign-in otherwise.
+  //   /go/studio, /go/games → the games list (every game is free; a game asks for sign-in when opened).
   //   /go/profile|community|bag|challenge → that section of «لوحة التحكم», or sign-in that comes back to it.
   if (url.pathname.startsWith('/go/')) {
     const target = url.pathname.slice(4), SECTION = { profile: 'profile', community: 'community', bag: 'bag', challenge: 'challenge' };
     let to = null;
-    if (target === 'studio') to = actorFor(req) ? '/studio' : accountSession(req) ? '/account?need=plan#billing' : '/login?intent=studio&next=' + encodeURIComponent('/studio');
+    if (target === 'studio' || target === 'games') to = GAMES_LIST;
     else if (SECTION[target]) { const dest = '/account#' + SECTION[target]; to = accountSession(req) ? dest : '/login?next=' + encodeURIComponent(dest); }
     if (!to) return json(res, 404, { error: 'Not found' });
     res.writeHead(302, { Location: to, 'Cache-Control': 'no-store' }); return res.end();
   }
-  // Studio pages need a signed-in session (promo code, owner or account). Viewers keep /overlay and /role.
-  const STUDIO_PAGES = new Set(['/studio', '/dashboard', '/event', '/bomb', '/play', '/tools']);
-  if (STUDIO_PAGES.has(url.pathname)) {
-    const viewer = url.pathname === '/play' && url.searchParams.has('room');
-    const acct = !viewer && !actorFor(req) ? accountSession(req) : null;
-    if (acct) { res.writeHead(302, { Location: '/account?need=plan', 'Cache-Control': 'no-store' }); return res.end(); }
-    if (!viewer && !actorFor(req)) { res.writeHead(302, { Location: '/?next=' + encodeURIComponent(url.pathname + url.search), 'Cache-Control': 'no-store' }); return res.end(); }
-    if (url.pathname === '/play' && !viewer) { res.writeHead(302, { Location: '/studio' + (url.search || ''), 'Cache-Control': 'no-store' }); return res.end(); }
+  // No separate studio: a game opens on its own page — settings, then the waiting room, then the round.
+  // /studio and the host side of /play (old links and bookmarks) lead to that game, or to the games list.
+  const gameOf = (m) => (ALL_GAMES.some((x) => x.mode === m) ? m : null);
+  if (url.pathname === '/studio' || (url.pathname === '/play' && !url.searchParams.has('room'))) {
+    const m = gameOf(url.searchParams.get('mode'));
+    res.writeHead(302, { Location: m ? '/game/' + m : GAMES_LIST, 'Cache-Control': 'no-store' }); return res.end();
+  }
+  const gamePage = url.pathname.match(/^\/game\/([a-z]{2,20})$/);
+  if (gamePage && !gameOf(gamePage[1])) return json(res, 404, { error: 'Not found' });
+  // Host pages need a signed-in session (any account — every game is free —, the owner or a promo code). Viewers keep /overlay, /play?room and /role.
+  const HOST_PAGES = new Set(['/dashboard', '/event', '/bomb', '/tools']);
+  if (gamePage || HOST_PAGES.has(url.pathname)) {
+    if (!actorFor(req)) { res.writeHead(302, { Location: '/login?next=' + encodeURIComponent(url.pathname + url.search), 'Cache-Control': 'no-store' }); return res.end(); }
   }
   // invitation links (/signup?ref=SPG-XXXXXX): remembered for 30 days until an account is created here
   if ((url.pathname === '/signup' || url.pathname === '/login') && /^SPG-[A-HJ-NP-Z2-9]{6}$/i.test(url.searchParams.get('ref') || '') && !accountSession(req))
@@ -1509,13 +1518,13 @@ const server = http.createServer(async (req, res) => {
   if ((url.pathname === '/login' || url.pathname === '/signup') && accountSession(req)) {
     const intent = url.searchParams.get('intent'), next = url.searchParams.get('next') || '';
     const a = accountView(accountSession(req).userId);
-    const to = /^\/(account|studio|admin)(?:[/?#]|$)/.test(next) ? next : intent === 'studio' && a?.entitled ? '/studio' : intent === 'trial' ? '/account?verify=trial#trial' : '/account';
+    const to = /^\/(account|game\/[a-z]+|admin)(?:[/?#]|$)/.test(next) ? next : intent === 'studio' || intent === 'trial' ? GAMES_LIST : '/account';
     res.writeHead(302, { Location: to, 'Cache-Control': 'no-store' }); return res.end();
   }
   if (url.pathname === '/admin' && !adminActor(req)) { res.writeHead(302, { Location: '/login?next=/admin', 'Cache-Control': 'no-store' }); return res.end(); }
   if (url.pathname === '/account' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/account' + encodeURIComponent(url.search), 'Cache-Control': 'no-store' }); return res.end(); }
-  const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/forgot': 'auth.html', '/reset': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/studio': 'studio.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/og-512.webp' };
-  const relative = fileMap[url.pathname] || (/^\/u\/SPG-[A-Z0-9]{6}$/i.test(url.pathname) ? 'profile.html' : url.pathname.slice(1));
+  const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/forgot': 'auth.html', '/reset': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/og-512.webp' };
+  const relative = fileMap[url.pathname] || (gamePage ? 'studio.html' : null) || (/^\/u\/SPG-[A-Z0-9]{6}$/i.test(url.pathname) ? 'profile.html' : url.pathname.slice(1));
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });
   try { return await serveStatic(req, res, relative); }

@@ -117,7 +117,7 @@ test('Google code flow: state, nonce, PKCE, one account per Google identity, saf
     let g = await anon('GET', '/api/auth/google');
     assert.equal(g.data.codeFlow, true, 'the server offers the code flow');
     // 1. the request to Google: our client, code + PKCE S256, nonce, state, the callback on this site
-    let r = await anon('GET', '/api/oauth/google/start?mode=login&next=/studio');
+    let r = await anon('GET', '/api/oauth/google/start?mode=login&next=/game/quiz');
     const p = new URL(r.location).searchParams;
     assert.equal(p.get('client_id'), CLIENT_ID); assert.equal(p.get('response_type'), 'code'); assert.equal(p.get('scope'), 'openid email profile');
     assert.equal(p.get('code_challenge_method'), 'S256'); assert.ok(p.get('code_challenge') && p.get('nonce') && p.get('state'));
@@ -126,8 +126,8 @@ test('Google code flow: state, nonce, PKCE, one account per Google identity, saf
 
     // 2. a new person: an account with a permanent ID; the session is opened by the server, then the next page
     const nora = browser(srv.base);
-    let f = await googleFlow(fake, nora, { sub: 'g-100', email: 'nora@gmail.com', name: 'Nora' }, { next: '/studio' });
-    assert.equal(f.cb.status, 302); assert.equal(pathOf(f.cb.location), '/studio');
+    let f = await googleFlow(fake, nora, { sub: 'g-100', email: 'nora@gmail.com', name: 'Nora' }, { next: '/game/quiz' });
+    assert.equal(f.cb.status, 302); assert.equal(pathOf(f.cb.location), '/game/quiz');
     let me = (await nora('GET', '/api/auth/me')).data;
     assert.ok(me.account); const spg = me.account.publicId; assert.match(spg, /^SPG-/);
     assert.equal(me.session.remember, true, '«تذكرني» by default');
@@ -142,7 +142,7 @@ test('Google code flow: state, nonce, PKCE, one account per Google identity, saf
     const a1 = fake.approve(s1.location, { sub: 'g-200', email: 'tabs@gmail.com' }), a2 = fake.approve(s2.location, { sub: 'g-200', email: 'tabs@gmail.com' });
     assert.notEqual(a1.state, a2.state);
     assert.match((await tabs('GET', '/api/oauth/google/callback?' + new URLSearchParams({ code: a2.code, state: a2.state }))).location, /^\/account/);
-    assert.match((await tabs('GET', '/api/oauth/google/callback?' + new URLSearchParams({ code: a1.code, state: a1.state }))).location, /^\/account/);
+    assert.match((await tabs('GET', '/api/oauth/google/callback?' + new URLSearchParams({ code: a1.code, state: a1.state }))).location, /^\/(account|#games)/);
 
     // 5. refusals, each with its message code — and no session
     const bad = async (claims, opts, code) => { const b = browser(srv.base); const x = await googleFlow(fake, b, claims, opts); assert.match(x.cb.location, new RegExp('google_error=' + code), code); assert.equal((await b('GET', '/api/auth/me')).data.account ?? null, null, code); return x; };

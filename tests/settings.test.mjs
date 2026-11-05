@@ -63,7 +63,7 @@ function browser(base, fixed = {}) {
 const ownerOf = (base) => browser(base, {});
 const ownerCall = (b) => (m, r, body) => b(m, r, body, { Authorization: 'Bearer ' + OWNER });
 
-test('settings dashboard: redeem, platforms, billing, e-mail/password, Google re-auth, privacy, sessions, permanent ID', { skip, timeout: 180_000 }, async () => {
+test('settings dashboard: free games, platforms, billing records, e-mail/password, Google re-auth, privacy, sessions, permanent ID', { skip, timeout: 180_000 }, async () => {
   const keys = await jwks();
   const kick = await fakePlatforms();
   kick.addKick(801, { slug: 'reefking' });
@@ -81,18 +81,13 @@ test('settings dashboard: redeem, platforms, billing, e-mail/password, Google re
     assert.equal((await u('GET', '/account')).status, 200);
     for (const f of ['/dash.css', '/me.js', '/profile.js']) assert.equal((await anon('GET', f)).status, 200, f);
     let prof = (await u('GET', '/api/me/profile')).data;
-    assert.equal(prof.access.active, false); assert.deepEqual(prof.payments, []); assert.equal(prof.privacy.hideStream, false);
+    assert.equal(prof.access.active, true); assert.equal(prof.access.plan, 'free'); assert.deepEqual(prof.payments, []); assert.equal(prof.privacy.hideStream, false);
 
-    // 2 + 3. redeem: a valid code once; a wrong or used code is refused; many clicks at once activate it once
-    const codes = (await owner('POST', '/api/manage/voucher-create', { plan: 'weekly', count: 2 })).data.codes;
-    assert.equal((await u('POST', '/api/me/redeem', { code: 'SHFQ-0000-0000-0000-0000' })).status, 401);
-    const clicks = await Promise.all(Array.from({ length: 5 }, () => u('POST', '/api/me/redeem', { code: codes[0] })));
-    assert.equal(clicks.filter((r) => r.status === 200).length, 1, 'one activation for five clicks');
-    assert.ok((await u('POST', '/api/me/redeem', { code: codes[0] })).status >= 400, 'a used code is refused');
-    // 7. the right subscription is shown at once
+    // 2 + 3 + 7. no codes or subscriptions any more: the account already plays every game for free
+    assert.equal((await owner('POST', '/api/manage/voucher-create', { plan: 'weekly', count: 2 })).status, 410);
+    assert.notEqual((await u('POST', '/api/me/redeem', { code: 'SHFQ-0000-0000-0000-0000' })).status, 200);
     prof = (await u('GET', '/api/me/profile')).data;
-    assert.equal(prof.access.active, true); assert.equal(prof.access.plan, 'weekly'); assert.equal(prof.access.planName, 'شفيق العادي');
-    assert.equal(prof.history.filter((h) => h.plan === 'weekly').length, 1);
+    assert.equal(prof.access.planName, 'مجاني'); assert.equal(prof.history.length, 0);
 
     // 4. link Kick from settings: official sign-in with Kick (no typed name), stored as verified
     let r = await signIn(kick, u, 'kick', 801);
@@ -173,13 +168,13 @@ test('settings dashboard: redeem, platforms, billing, e-mail/password, Google re
     assert.equal((await anon('POST', '/api/me/privacy', { key: 'hideStream', value: true })).status, 401);
     assert.equal((await back('POST', '/api/me/privacy', { key: 'hideStream', value: true }, { Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' })).status, 403);
 
-    // 8. the subscription ends: shown as ended, platform linking closes
+    // 8. stopping old subscription rows changes nothing: games and platform linking stay free
     assert.equal((await owner('POST', '/api/manage/stop', { publicId: pid })).status, 200);
     prof = (await back('GET', '/api/me/profile')).data;
-    assert.equal(prof.access.active, false);
+    assert.equal(prof.access.active, true);
     r = await back('POST', '/api/admin/connect', { platform: 'kick' });
-    assert.equal(r.status, 402); assert.equal(r.data.needPlan, true);
-    assert.match((await back('GET', '/api/oauth/kick/start')).location, /link_error=plan/);
+    assert.notEqual(r.status, 402);
+    assert.doesNotMatch((await back('GET', '/api/oauth/kick/start')).location, /link_error=plan/);
 
     // 10 + 11. Google account: re-auth with Google (the same Google account only), then add a local password
     const g = browser(srv.base);

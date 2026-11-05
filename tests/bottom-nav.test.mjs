@@ -54,11 +54,11 @@ function browser(base) {
   };
 }
 
-test('/go/<section>: the server picks studio, renewal or sign-in from the session', { skip, timeout: 60_000 }, async () => {
+test('/go/<section>: the games list for everyone (all free), account sections or sign-in from the session', { skip, timeout: 60_000 }, async () => {
   const { base, stop } = await boot();
   try {
     const guest = browser(base);
-    assert.equal((await guest('GET', '/go/studio')).location, '/login?intent=studio&next=%2Fstudio');
+    assert.equal((await guest('GET', '/go/studio')).location, '/#games');
     assert.equal((await guest('GET', '/go/profile')).location, '/login?next=%2Faccount%23profile');
     assert.equal((await guest('GET', '/go/community')).location, '/login?next=%2Faccount%23community');
     assert.equal((await guest('GET', '/go/nope')).status, 404);
@@ -68,16 +68,18 @@ test('/go/<section>: the server picks studio, renewal or sign-in from the sessio
     const reg = await b('POST', '/api/auth/register', { username: 'bnuser', email: 'bn@example.com', password: 'reef2026go', confirm: 'reef2026go' });
     assert.equal(reg.status, 201);
     const publicId = reg.data.account.publicId;
-    // signed in, no plan yet → the renewal page; sections open directly
-    assert.equal((await b('GET', '/go/studio')).location, '/account?need=plan#billing');
+    // signed in: every game is free → the games list; sections open directly
+    assert.equal((await b('GET', '/go/studio')).location, '/#games');
     for (const s of ['profile', 'community', 'bag', 'challenge']) assert.equal((await b('GET', '/go/' + s)).location, '/account#' + s);
-    // with an active trial → the studio itself
-    assert.equal((await b('POST', '/api/me/trial-start', {})).data.started, true);
-    assert.equal((await b('GET', '/go/studio')).location, '/studio');
-    // navigating never changes the account: same permanent ID, trial still the only one
+    // no trial is created any more (nothing to start), and a game opens directly for a new account
+    assert.equal((await b('POST', '/api/me/trial-start', {})).data.started, false);
+    assert.equal((await b('GET', '/game/quiz')).status, 200);
+    assert.equal((await b('GET', '/studio?mode=quiz')).location, '/game/quiz');
+    // navigating never changes the account: same permanent ID, no subscription rows
     const me = await b('GET', '/api/me/profile');
     assert.equal(me.data.user.publicId, publicId);
-    assert.equal(me.data.history.filter((h) => h.plan === 'trial').length, 1);
+    assert.equal(me.data.history.length, 0);
+    assert.equal(me.data.access.active, true); assert.equal(me.data.access.plan, 'free');
     // the pages are served with the component
     const home = await (await fetch(base + '/')).text();
     assert.match(home, /\/bottom-nav\.js\?v=/); assert.match(home, /\/bottom-nav\.css\?v=/);

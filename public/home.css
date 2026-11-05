@@ -973,3 +973,36 @@ html.is-hidden .hm-sponge,html.is-hidden .hm-sponge *{animation-play-state:pause
 .hm-bar .sc-pill{height:40px}
 @media (max-width:520px){ .hm-bar .sc-pill{height:36px;padding:0 9px 0 4px;font-size:14px} .hm-bar .sc-pill img{width:24px;height:24px} #barStudio span{display:none} #barStudio{padding-inline:10px} }
 @media (max-width:480px){ .hm-bar.is-signed .hm-bar-brand span{display:none} }
+
+/* the games list: every game is a link to its own page (all free); nothing in it may widen the page */
+.hm-games{overflow-x:clip}
+.hm-games .hm-cards{display:grid;grid-template-columns:repeat(auto-fill,120px);justify-content:center;gap:16px 12px;overflow:visible;max-width:1180px;scroll-snap-type:none}
+.hm-games .hm-cards li{animation:none;background:none;box-shadow:none;overflow:visible;pointer-events:auto;user-select:auto}
+.hm-game{position:relative;display:grid;justify-items:center;gap:6px;width:120px;color:#EAF8FF;text-decoration:none;border-radius:16px;transition:transform .2s}
+.hm-game img{width:120px;border-radius:14px;box-shadow:0 0 0 1px rgba(56,212,255,.45),0 10px 22px -10px #000,0 0 18px -6px rgba(56,212,255,.6)}
+.hm-game b{font-size:14px;font-weight:800;line-height:1.3;text-align:center}
+.hm-game-play{position:absolute;top:8px;inset-inline-start:8px;padding:3px 10px;border-radius:999px;background:#FFD62A;color:#2B1A00;font-size:12px;font-weight:900;opacity:0;transform:translateY(-4px);transition:.2s}
+.hm-game:hover,.hm-game:focus-visible{transform:translateY(-4px)}
+.hm-game:hover .hm-game-play,.hm-game:focus-visible .hm-game-play{opacity:1;transform:none}
+.hm-game:focus-visible{outline:3px solid #FFD62A;outline-offset:4px}
+@media (max-width:700px){.hm-games .hm-cards{grid-template-columns:repeat(auto-fill,96px);gap:12px 10px}.hm-game,.hm-game img{width:96px}.hm-game b{font-size:12.5px}.hm-game-play{opacity:1;transform:none;font-size:11px;padding:2px 8px}}
+@media (max-width:360px){.hm-games .hm-cards{grid-template-columns:repeat(auto-fill,86px);padding-inline:8px}.hm-game,.hm-game img{width:86px}}
+
+/* «المتجر»: coin packs only */
+.hm-packs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:22px 0 0;padding:0;list-style:none}
+.hm-pack{position:relative;display:grid;justify-items:center;gap:2px;padding:22px 14px 18px;border-radius:22px;text-align:center;
+  background:linear-gradient(160deg,rgba(14,42,104,.62),rgba(4,16,46,.8));border:1px solid rgba(140,232,255,.32);box-shadow:0 24px 48px -32px #000}
+.hm-pack img{width:64px;height:64px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))}
+.hm-pack b{font-size:28px;font-weight:900;color:#FFE14D}
+.hm-pack span{color:rgba(234,248,255,.75);font-weight:700}
+.hm-pack-price{margin:8px 0 0;font-size:18px;font-weight:900;color:#fff}
+.hm-pack.is-featured{border-color:#FFD62A;box-shadow:0 0 0 1px rgba(255,214,42,.4),0 0 30px -8px rgba(255,214,42,.6)}
+.hm-pack em{position:absolute;top:-12px;left:50%;translate:-50% 0;padding:3px 12px;border-radius:999px;background:#FFD62A;color:#2B1A00;font-style:normal;font-size:12px;font-weight:900;white-space:nowrap}
+.hm-store-uses{display:grid;gap:10px;margin:20px auto 0;padding:0;max-width:720px;list-style:none}
+.hm-store-uses li{display:flex;align-items:center;gap:10px;color:rgba(234,248,255,.85)}
+.hm-store-uses svg{flex:none;color:#38D4FF}
+.hm-store-uses b{color:#FFE14D}
+.hm-store-cta{display:flex;justify-content:center;margin:20px 0 6px}
+@media (max-width:760px){.hm-packs{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.hm-pack b{font-size:24px}}
+.hm-store-cta .hm-enter{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:auto;min-width:220px;padding:0 30px;text-decoration:none}
+.hm-store-cta .hm-enter svg{flex:none}

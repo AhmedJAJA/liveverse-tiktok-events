@@ -11,7 +11,12 @@ export const PLANS = Object.freeze({
   weekly:  { id: 'weekly',  name: 'شفيق العادي',      priceHalalas: 2900, duration: '7 أيام',  days: 7 },
   monthly: { id: 'monthly', name: 'أمير الهامور',     priceHalalas: 4499, duration: 'شهر واحد', months: 1 },
   manual:  { id: 'manual',  name: 'اشتراك من الإدارة', priceHalalas: 0 },
+  free:    { id: 'free',    name: 'مجاني', priceHalalas: 0 },
 });
+/** Every game is free for every account: subscriptions, trials and vouchers are no longer sold or started.
+ *  Their rows stay in the database (history, accounting, refunds) and are only read for the records. */
+export const FREE_PLAY = true;
+export const SALES_CLOSED_MESSAGE = 'جميع الألعاب مجانية الآن — لم تعد هناك اشتراكات أو تجارب.';
 export const AVATARS = Object.freeze(['sponge', 'star', 'crab', 'squid', 'shell', 'fish', 'whale', 'jelly']);
 const ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROOM_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
@@ -174,6 +179,13 @@ export class Platform {
   entitlement(userId) {
     const e = this.cached(userId);
     if (!e || e.user.disabled_at) return { active: false, plan: null, endsAt: null };
+    if (FREE_PLAY) return { active: true, plan: 'free', endsAt: null };
+    return this.subscription(userId);
+  }
+  /** The paid / voucher subscription period that was running (records only once FREE_PLAY is on). */
+  subscription(userId) {
+    const e = this.cached(userId);
+    if (!e || e.user.disabled_at) return { active: false, plan: null, endsAt: null };
     const t = this.now();
     const current = e.subs.filter((s) => s.status === 'active' && s.starts <= t && s.ends > t).sort((a, b) => b.ends - a.ends)[0];
     if (!current) return { active: false, plan: null, endsAt: null };
@@ -317,6 +329,7 @@ export class Platform {
   }
   /** Step 1: an eligible, verified account gets its own single-use code (generated on the server). */
   async claimTrial(userId) {
+    if (FREE_PLAY) fail(SALES_CLOSED_MESSAGE, 410);
     if (!this.verified(userId)) fail('أكّد بريدك الإلكتروني أولًا لتحصل على التجربة المجانية', 403);
     if ((await this.pool.query('SELECT 1 FROM trial_activations WHERE user_id=$1', [userId])).rowCount) fail('استخدمت التجربة المجانية من قبل — يمكنك الاشتراك في إحدى الباقات', 409);
     const existing = await this.trialState(userId);
@@ -336,6 +349,7 @@ export class Platform {
   }
   /** Step 2: activation. The 24 hours start now. Runs in one transaction with the user row locked, so two clicks cannot start two trials. */
   async activateTrial(userId, { code = null, ip = '' } = {}) {
+    if (FREE_PLAY) fail(SALES_CLOSED_MESSAGE, 410);
     if (!this.verified(userId)) fail('أكّد بريدك الإلكتروني أولًا', 403);
     const ipHash = ip ? sha('net:' + ip) : null;
     const result = await tx(this.pool, async (c) => {
@@ -365,6 +379,7 @@ export class Platform {
    * running it is returned unchanged; an expired trial is never restarted.
    */
   async startTrial(userId, { ip = '' } = {}) {
+    if (FREE_PLAY) return { started: false, entitled: true, free: true };
     if (this.trialNeedsVerifiedEmail && !this.verified(userId)) fail('أكّد بريدك الإلكتروني أو سجّل الدخول باستخدام Google لتفعيل التجربة المجانية', 403);
     const ipHash = ip ? sha('net:' + ip) : null;
     const out = await tx(this.pool, async (c) => {
@@ -466,6 +481,7 @@ export class Platform {
   }
   /** One voucher → one plan period for the signed-in account, starting when its current access ends. */
   async redeemVoucher(userId, plain) {
+    if (FREE_PLAY) fail(SALES_CLOSED_MESSAGE, 410);
     const n = normalizeCode(plain);
     const out = await tx(this.pool, async (c) => {
       const v = (await c.query("SELECT * FROM promo_codes WHERE code_hash=$1 AND kind='plan' FOR UPDATE", [voucherHash(n)])).rows[0];
@@ -485,6 +501,7 @@ export class Platform {
     return out;
   }
   async createVouchers(plan, count, { label = '', createdBy = 'owner' } = {}) {
+    if (FREE_PLAY) fail(SALES_CLOSED_MESSAGE, 410);
     if (!VOUCHER_PREFIX[plan]) fail('الباقة غير معروفة');
     const n = Number(count);
     if (!Number.isInteger(n) || n < 1 || n > 500) fail('العدد من 1 إلى 500');
@@ -519,6 +536,7 @@ export class Platform {
     return { starts: new Date(start), ends: d };
   }
   async checkout(userId, planId) {
+    if (FREE_PLAY) fail(SALES_CLOSED_MESSAGE, 410);
     const plan = PLANS[planId];
     if (!plan || !['weekly', 'monthly'].includes(planId)) fail('الباقة غير معروفة');
     if (!this.verified(userId)) fail('أكّد بريدك الإلكتروني أولًا', 403);
@@ -1164,7 +1182,7 @@ export class Platform {
     const t = this.now();
     return {
       user: this.publicUser(e.user),
-      access: { ...ent, planName: ent.plan ? PLANS[ent.plan].name : null, endsAt: iso(ent.endsAt), remainingMs: ent.active ? ent.endsAt - t : 0 },
+      access: { ...ent, planName: ent.plan ? PLANS[ent.plan].name : null, endsAt: iso(ent.endsAt), remainingMs: ent.active && ent.endsAt ? ent.endsAt - t : 0 },
       trial,
       // only official sign-ins count as linked; an old unverified row is reported as not linked
       linked: Object.fromEntries(links.rows.filter((l) => l.verified && l.verify_method === 'oauth').map((l) => [l.platform, { handle: l.handle, displayName: l.display_name, avatar: l.avatar_url, verified: true, needsReauth: l.needs_reauth, verifiedAt: iso(l.verified_at), lastConnectedAt: iso(l.last_connected_at) }])),
@@ -1212,11 +1230,17 @@ export class Platform {
       ? (await this.pool.query(`SELECT * FROM users WHERE public_id=upper($1) OR lower(username) LIKE lower($2) OR canonical_email LIKE lower($2) ORDER BY created_at DESC LIMIT 50`, [s, '%' + s.replace(/[%_\\]/g, '\\$&') + '%'])).rows
       : (await this.pool.query('SELECT * FROM users ORDER BY created_at DESC LIMIT 50')).rows;
     for (const u of rows) if (!this.cache.has(u.id)) await this.refresh(u.id);
-    return rows.map((u) => { const ent = this.entitlement(u.id); return { id: u.id, ...this.publicUser(u), disabled: !!u.disabled_at, access: { active: ent.active, plan: ent.plan, planName: ent.plan ? PLANS[ent.plan].name : null, endsAt: iso(ent.endsAt) } }; });
+    return rows.map((u) => { const ent = this.subscription(u.id); return { id: u.id, ...this.publicUser(u), disabled: !!u.disabled_at, access: { active: ent.active, plan: ent.plan, planName: ent.plan ? PLANS[ent.plan].name : null, endsAt: iso(ent.endsAt) } }; });
   }
   async userByPublicId(publicId) { return (await this.pool.query('SELECT id FROM users WHERE public_id=upper($1)', [String(publicId).trim()])).rows[0]?.id || null; }
-  async adminUser(userId) { const p = await this.profile(userId); if (!p) fail('الحساب غير موجود', 404); delete p.trial.code; return { id: userId, ...p }; }
+  async adminUser(userId) {
+    const p = await this.profile(userId); if (!p) fail('الحساب غير موجود', 404); delete p.trial.code;
+    // the owner reviews the subscription that was running (records), not the free access every account now has
+    const sub = this.subscription(userId);
+    return { id: userId, ...p, access: { ...sub, planName: sub.plan ? PLANS[sub.plan].name : null, endsAt: iso(sub.endsAt) } };
+  }
   async grant(userId, { days, plan = 'manual', note = '' } = {}) {
+    if (FREE_PLAY) fail(SALES_CLOSED_MESSAGE, 410);
     const n = Number(days);
     if (!Number.isInteger(n) || n < 1 || n > 366) fail('عدد الأيام من 1 إلى 366');
     if (!['manual', 'weekly', 'monthly'].includes(plan)) fail('الباقة غير معروفة');
@@ -1231,6 +1255,7 @@ export class Platform {
     return this.entitlement(userId);
   }
   async extend(userId, { days } = {}) {
+    if (FREE_PLAY) fail(SALES_CLOSED_MESSAGE, 410);
     const n = Number(days);
     if (!Number.isInteger(n) || n < 1 || n > 366) fail('عدد الأيام من 1 إلى 366');
     const row = (await this.pool.query("SELECT id FROM subscriptions WHERE user_id=$1 AND status='active' AND ends_at > now() ORDER BY ends_at DESC LIMIT 1", [userId])).rows[0];

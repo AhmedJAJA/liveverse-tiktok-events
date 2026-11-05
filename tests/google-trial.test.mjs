@@ -83,7 +83,7 @@ test('Google ID tokens: signature, issuer, audience, expiry and nonce are all ch
   } finally { await keys.close(); }
 });
 
-test('studio access by account state, one-click trial, Google sign-in and linking', { skip, timeout: 120_000 }, async () => {
+test('free access for every account (no trial, no studio gate), Google sign-in and linking', { skip, timeout: 120_000 }, async () => {
   const keys = await jwksServer();
   const env = { GOOGLE_CLIENT_ID: CLIENT_ID, GOOGLE_JWKS_URL: keys.url };
   let srv = await boot(env);
@@ -95,29 +95,24 @@ test('studio access by account state, one-click trial, Google sign-in and linkin
     assert.equal((await anon('POST', '/api/me/trial-start', {})).status, 401);
     assert.equal((await anon('GET', '/api/auth/config')).data.google, true);
 
-    // 4: new e-mail account starts its trial with one click and goes straight in
+    // 4: every game is free — a new e-mail account plays straight away, no trial, no subscription
     const a = browser(srv.base);
     const reg = await a('POST', '/api/auth/register', { username: 'trial_fan', email: 'trial.fan@example.com', password: 'reef2026go', confirm: 'reef2026go' });
     assert.equal(reg.status, 201);
     const id = reg.data.account.publicId;
-    assert.equal((await a('GET', '/studio')).location, '/account?need=plan', 'no access before the trial');
-    assert.equal(reg.data.account.trial.status, 'available');
-    // 7: many clicks at the same moment create exactly one trial
+    assert.equal(reg.data.account.entitled, true);
+    assert.equal((await a('GET', '/studio')).location, '/#games', 'no separate studio');
+    assert.equal((await a('GET', '/game/quiz')).status, 200, 'a game opens directly');
+    // 7: pressing the old «trial» button many times creates nothing
     const clicks = await Promise.all(Array.from({ length: 6 }, () => a('POST', '/api/me/trial-start', {})));
-    assert.ok(clicks.every((r) => r.status === 200), clicks.map((r) => r.status).join());
-    assert.equal(clicks.filter((r) => r.data.started).length, 1, 'only one click starts the trial');
-    const started = clicks.find((r) => r.data.started).data;
-    assert.equal(new Date(started.endsAt) - new Date(started.startedAt), 24 * 3600_000, 'exactly 24 hours');
-    // 2: active trial — straight into the studio, no code
-    assert.equal((await a('GET', '/studio')).status, 200);
+    assert.ok(clicks.every((r) => r.status === 200 && r.data.started === false), clicks.map((r) => r.status).join());
     const me = (await a('GET', '/api/access/me')).data;
-    assert.equal(me.signedIn, true); assert.equal(me.account.plan, 'trial'); assert.equal(me.account.trial.status, 'active');
-    assert.equal((await a('POST', '/api/me/trial-start', {})).data.already, true, 'pressing again does not restart it');
-    // 10: another device signs in to the same account: same access, same countdown
+    assert.equal(me.signedIn, true); assert.equal(me.account.plan, 'free'); assert.equal(me.account.endsAt, null);
+    // 10: another device signs in to the same account: same free access
     const phone = browser(srv.base);
     const li = await phone('POST', '/api/auth/login', { identifier: 'trial.fan@example.com', password: 'reef2026go' });
-    assert.equal(li.data.next, '/studio'); assert.equal(li.data.account.endsAt, me.account.endsAt);
-    // 11: a request dropped mid-way, then retried: still one trial
+    assert.equal(li.data.next, '/#games'); assert.equal(li.data.account.entitled, true);
+    // 11: a request dropped mid-way, then retried: still nothing created
     const ctl = new AbortController();
     const cookie = [...phone.cookies].map(([k, v]) => k + '=' + v).join('; ');
     const dropped = fetch(srv.base + '/api/me/trial-start', { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie }, body: '{}', signal: ctl.signal }).catch(() => null);
@@ -142,12 +137,10 @@ test('studio access by account state, one-click trial, Google sign-in and linkin
     assert.equal(g1.status, 200, JSON.stringify(g1.data));
     const gid = g1.data.account.publicId;
     assert.match(gid, /^SPG-[A-HJ-NP-Z2-9]{6}$/); assert.equal(g1.data.account.googleLinked, true); assert.equal(g1.data.account.verified, true);
-    const gTrial = await g('POST', '/api/me/trial-start', {});
-    assert.equal(gTrial.data.started, true);
-    assert.equal((await g('GET', '/studio')).status, 200);
+    assert.equal((await g('GET', '/game/flag')).status, 200, 'plays straight away');
     // 6: signing in with Google again (another device) finds the same account, never a duplicate
     const g2 = await googleSignIn(browser(srv.base), { sub: 'google-sub-777', email: 'new.player@gmail.com' });
-    assert.equal(g2.data.account.publicId, gid); assert.equal(g2.data.next, '/studio');
+    assert.equal(g2.data.account.publicId, gid); assert.equal(g2.data.next, '/#games');
     // forged nonce / token for another site are refused
     const nb = browser(srv.base); await nb('GET', '/api/auth/google');
     assert.equal((await nb('POST', '/api/auth/google', { credential: idToken({ sub: 'x', email: 'x@gmail.com', nonce: 'guessed' }) })).status, 401);
@@ -163,30 +156,24 @@ test('studio access by account state, one-click trial, Google sign-in and linkin
     assert.equal((await googleSignIn(g, { sub: 'google-sub-888', email: 'x@x.io' }, { link: true })).status, 409, 'a Google account links to one SPONGE account only');
     const pool = new pg.Pool({ connectionString: dbUrl });
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM users WHERE google_sub IN ('google-sub-777','google-sub-888')")).rows[0].n, 2);
-    assert.equal((await pool.query('SELECT count(*)::int AS n FROM trial_activations WHERE user_id=(SELECT id FROM users WHERE public_id=$1)', [id])).rows[0].n, 1);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM trial_activations WHERE user_id=(SELECT id FROM users WHERE public_id=$1)', [id])).rows[0].n, 0, 'no trial is created');
     const view = (await pool.query('SELECT * FROM account_access WHERE public_id=$1', [id])).rows[0];
-    assert.equal(view.trial_used, true); assert.equal(view.google_linked, true); assert.equal(view.subscription_status, 'active');
+    assert.equal(view.trial_used, false); assert.equal(view.google_linked, true);
 
-    // 1: a subscriber goes straight in
+    // 1: no subscription can be granted or sold any more; an old subscription row stays as a record
     const owner = browser(srv.base); await owner('POST', '/api/access/redeem', { code: OWNER });
     const sub = browser(srv.base);
     const subReg = await sub('POST', '/api/auth/register', { username: 'month_sub', email: 'month@example.com', password: 'reef2026go', confirm: 'reef2026go' });
-    await owner('POST', '/api/manage/grant', { publicId: subReg.data.account.publicId, days: 30, plan: 'monthly' });
-    assert.equal((await sub('GET', '/studio')).status, 200);
-    assert.equal((await sub('POST', '/api/me/trial-start', {})).data.entitled, true, 'a subscriber is sent in without spending the trial');
-
-    // 8 + 13 + 15: after the trial ends (and a restart), the studio closes, renewal is offered, no second trial
-    await pool.query("UPDATE trial_activations SET activated_at=now()-interval '25 hours', ends_at=now()-interval '1 hour' WHERE user_id=(SELECT id FROM users WHERE public_id=$1)", [id]);
-    await pool.query("UPDATE subscriptions SET starts_at=now()-interval '25 hours', ends_at=now()-interval '1 hour' WHERE user_id=(SELECT id FROM users WHERE public_id=$1)", [id]);
+    assert.equal((await owner('POST', '/api/manage/grant', { publicId: subReg.data.account.publicId, days: 30, plan: 'monthly' })).status, 410);
+    await pool.query("INSERT INTO subscriptions (user_id, plan, starts_at, ends_at, source, price_halalas) SELECT id, 'monthly', now()-interval '40 days', now()-interval '10 days', 'payment', 4499 FROM users WHERE public_id=$1", [subReg.data.account.publicId]);
+    // 8 + 13 + 15: after a restart nothing closes: free access for everyone, records kept
     await pool.end();
     await srv.stop(); srv = await boot(env);
     const back = async (b, ...x) => { const r = await fetch(srv.base + x[1], { method: x[0], redirect: 'manual', headers: { 'Content-Type': 'application/json', Cookie: [...b.cookies].map(([k, v]) => k + '=' + v).join('; ') }, ...(x[2] ? { body: JSON.stringify(x[2]) } : {}) }); let d = null; try { d = await r.json(); } catch {} return { status: r.status, data: d, location: r.headers.get('location') }; };
-    assert.equal((await back(a, 'GET', '/studio')).location, '/account?need=plan');
-    const ended = (await back(a, 'GET', '/api/access/me')).data.account;
-    assert.equal(ended.expired, true); assert.equal(ended.trial.status, 'expired'); assert.equal(ended.publicId, id);
-    assert.equal((await back(a, 'POST', '/api/me/trial-start', {})).status, 409, 'an expired trial cannot be used again');
-    assert.equal((await back(a, 'POST', '/api/admin/start', {})).status, 402, 'studio commands are refused with a renewal hint');
-    assert.equal((await back(sub, 'GET', '/studio')).status, 200, 'the subscriber survived the restart');
-    assert.equal((await back(g, 'GET', '/studio')).status, 200, 'the Google user and trial survived the restart');
+    for (const b of [a, sub, g]) assert.equal((await back(b, 'GET', '/game/quiz')).status, 200, 'every account plays after the restart');
+    const acc = (await back(a, 'GET', '/api/access/me')).data.account;
+    assert.equal(acc.entitled, true); assert.equal(acc.publicId, id);
+    const old = (await back(sub, 'GET', '/api/me/profile')).data;
+    assert.equal(old.history.length, 1); assert.equal(old.history[0].plan, 'monthly'); assert.equal(old.history[0].price, 44.99, 'the paid record is kept');
   } finally { await srv.stop(); await keys.close(); }
 });

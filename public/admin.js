@@ -37,7 +37,7 @@
       const dl = $('userInfo'); dl.replaceChildren();
       const add = (k, v) => { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd); };
       add('المستخدم', d.user.username + ' — ' + d.user.displayName); add('البريد', d.user.email + (d.user.verified ? ' (مؤكَّد)' : ' (غير مؤكَّد)'));
-      add('أُنشئ', fmtDate(d.user.createdAt)); add('الاشتراك الحالي', d.access.active ? d.access.planName + ' حتى ' + fmtDate(d.access.endsAt) : 'لا يوجد');
+      add('أُنشئ', fmtDate(d.user.createdAt)); add('اشتراك سابق ما زال ضمن مدته', d.access.active ? d.access.planName + ' حتى ' + fmtDate(d.access.endsAt) : 'لا يوجد');
       add('التجربة', { available: 'لم تُستخدم', ready: 'رمز جاهز غير مفعّل', active: 'فعّالة', expired: 'انتهت' }[d.trial.status] || d.trial.status);
       $('verifyButton').hidden = d.user.verified;
       const tb = $('userSubs'); tb.replaceChildren();
