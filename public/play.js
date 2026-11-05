@@ -5,7 +5,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
-  const MODES = ['quiz', 'drawguess', 'chairs', 'bowling', 'bomb', 'categories', 'rps', 'roles', 'roulette', 'redlight', 'country', 'flag', 'tug', 'outsider',
+  const MODES = ['quiz', 'drawguess', 'chairs', 'bowling', 'bomb', 'categories', 'rps', 'roles', 'roulette', 'redlight', 'country', 'flag', 'tug', 'outsider', 'chain',
     'guess', 'race', 'glass', 'truefalse', 'higherlower', 'minority', 'wheel'];
   const mode = MODES.includes(params.get('mode')) ? params.get('mode') : 'quiz';
   const NO_TIMER = ['race', 'wheel'];
@@ -185,14 +185,14 @@
   let secretRound = -1, rolesAt = 0;
   async function paintTools(s, view) {
     const party = s.party, live = view === 'live';
-    const draw = live && mode === 'drawguess' && party, judge = live && mode === 'categories' && party?.judging, roles = live && (mode === 'roles' || mode === 'outsider');
+    const draw = live && mode === 'drawguess' && party, judge = live && ((mode === 'categories' && party?.judging) || (mode === 'chain' && party?.pending)), roles = live && (mode === 'roles' || mode === 'outsider');
     $('hostTools').hidden = !(draw || judge || roles);
     $('sketchTool').hidden = !draw; $('judgeTool').hidden = !judge; $('rolesTool').hidden = !roles;
     if (draw && party.round !== secretRound) {
       secretRound = party.round; clearSketch(true);
       try { const r = await admin('secret'); $('secretWord').textContent = r.secret?.word || '—'; } catch { $('secretWord').textContent = '—'; }
     }
-    if (judge) $('judgeAnswer').textContent = '«' + (party.answer || '') + '»';
+    if (judge) $('judgeAnswer').textContent = mode === 'chain' ? '«' + party.pending.word + '» — ' + party.pending.player.name : '«' + (party.answer || '') + '»';
     if (roles) {
       $('roleLink').textContent = location.origin + '/role' + (session()?.room() && session().room() !== 'main' ? '?room=' + session().room() : '');
       if (Date.now() - rolesAt > 2500) { rolesAt = Date.now(); admin('roles-admin').then(paintRoles).catch(() => {}); }
@@ -303,7 +303,7 @@
   $('endButton').addEventListener('click', (e) => run(e.currentTarget, async () => {
     if (state?.status?.active) await admin('stop');
     if (state?.registration?.phase === 'open') await admin('registration-close').catch(() => {});
-    location.href = '/#games';
+    location.href = '/games';
   }));
   $('againButton').addEventListener('click', (e) => run(e.currentTarget, () => admin('prepare', { mode })));
 

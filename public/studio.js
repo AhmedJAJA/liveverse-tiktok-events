@@ -8,14 +8,14 @@
   addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
-  const MODES = ['quiz', 'drawguess', 'chairs', 'bowling', 'bomb', 'categories', 'rps', 'roles', 'roulette', 'redlight', 'country', 'flag', 'tug', 'outsider',
+  const MODES = ['quiz', 'drawguess', 'chairs', 'bowling', 'bomb', 'categories', 'rps', 'roles', 'roulette', 'redlight', 'country', 'flag', 'tug', 'outsider', 'chain',
     'guess', 'race', 'glass', 'truefalse', 'higherlower', 'minority', 'wheel'];
   let codeAt = 0; // last «كود الغرفة» request
   const pathMode = (location.pathname.match(/^\/game\/([a-z]+)$/) || [])[1];
   let mode = MODES.includes(pathMode) ? pathMode : MODES.includes(params.get('mode')) ? params.get('mode') : 'quiz';
-  // the games list lives on the home page; leaving this page never ends anything on the server
+  // the games list is «مكتبة الألعاب» (/games); leaving this page never ends anything on the server
   let toListing = false, booted = false, autoOpening = false;
-  const toList = () => { toListing = true; location.assign('/#games'); };
+  const toList = () => { toListing = true; location.assign('/games'); };
   const NO_TIMER = ['race', 'wheel'];
   // server stage → studio screen
   const SCREEN = { GAME_LIBRARY: 'games', GAME_SETUP: 'setup', PREPARING_LOBBY: 'prepare', WAITING_FOR_PLAYERS: 'lobby', GAME_RUNNING: 'game', GAME_FINISHED: 'game' };
@@ -323,32 +323,84 @@
       : 'قواعد «' + (game.title || '') + '» تثبّت قائمة اللاعبين عند البدء: من يكتب الكلمة بعد البدء يدخل الجولة التالية.';
     paintAdvanced(f);
     paintPlatforms();
+    paintBadges(s); paintAudience(f);
+  }
+  /** «2 — المباراة» and «3 — قواعد اللعب»: drawn from the game's settings schema (control = counter / segment /
+      toggle / options, group = match / rules). Every value is validated and stored by the server. */
+  function control(field) {
+    const row = el('div', 'su-row su-field'); row.dataset.key = field.key;
+    const text = el('div', 'su-row-text'); text.append(el('b', '', field.label)); if (field.hint) text.append(el('small', '', field.hint));
+    let ctl;
+    if (field.control === 'counter') {
+      ctl = el('div', 'su-counter'); ctl.setAttribute('role', 'group'); ctl.setAttribute('aria-label', field.label);
+      const minus = el('button', 'su-step', '−'), plus = el('button', 'su-step', '+'), val = el('output', 'su-count');
+      minus.type = plus.type = 'button'; minus.dataset.step = '-1'; plus.dataset.step = '1'; minus.setAttribute('aria-label', 'إنقاص'); plus.setAttribute('aria-label', 'زيادة');
+      ctl.append(plus, val, minus);
+    } else if (field.control === 'toggle') {
+      ctl = el('button', 'su-switch su-toggle'); ctl.type = 'button'; ctl.setAttribute('role', 'switch'); ctl.setAttribute('aria-label', field.label); ctl.append(el('i'));
+    } else {
+      ctl = el('div', field.control === 'segment' ? 'su-seg' : 'su-choices'); ctl.setAttribute('role', 'radiogroup'); ctl.setAttribute('aria-label', field.label);
+      ctl.classList.toggle('is-many', field.options.length > 4);
+      for (const o of field.options) { const b = el('button', 'su-choice', o.label); b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.key = field.key; b.dataset.value = String(o.value); ctl.append(b); }
+    }
+    ctl.dataset.key = field.key; row.append(text, ctl);
+    return row;
   }
   function paintAdvanced(f) {
     const fields = site?.gameSettings?.[mode] || [];
-    $('advTitle').textContent = 'إعدادات ' + (game.title || 'اللعبة');
-    $('advNone').hidden = fields.length > 0 || mode === 'guess';
+    const match = fields.filter((x) => x.group !== 'rules'), rules = fields.filter((x) => x.group === 'rules');
+    $('advNone').hidden = match.length > 0 || mode === 'guess';
     $('resetSettings').hidden = !fields.length;
     if (advFor !== mode) {
       advFor = mode;
-      $('advFields').replaceChildren(...fields.map((field) => {
-        const box = el('section', 'su-field'); box.dataset.key = field.key;
-        const head = el('div', 'su-field-head');
-        const ic = el('span', 'su-field-ic'); ic.setAttribute('aria-hidden', 'true'); ic.textContent = /seconds|stepSeconds/.test(field.key) ? '⏱' : /rounds|questions|steps|target/.test(field.key) ? '#' : '⚙';
-        head.append(ic, el('h4', '', field.label));
-        const grid = el('div', 'su-choices'); grid.setAttribute('role', 'radiogroup'); grid.setAttribute('aria-label', field.label);
-        grid.classList.toggle('is-many', field.options.length > 4);
-        for (const o of field.options) {
-          const b = el('button', 'su-choice', o.label); b.type = 'button'; b.setAttribute('role', 'radio');
-          b.dataset.key = field.key; b.dataset.value = String(o.value); grid.append(b);
-        }
-        box.append(head, grid);
-        if (field.hint) box.append(el('p', 'su-field-hint', field.hint));
-        return box;
-      }));
+      $('advFields').replaceChildren(...match.map(control));
+      $('rulesFields').replaceChildren(...rules.map(control));
+      $('rulesList').replaceChildren(...(game.rules || []).map((r) => el('li', '', r)));
     }
     const values = f.settings || {};
-    for (const b of $('advFields').querySelectorAll('.su-choice')) b.setAttribute('aria-checked', String(String(values[b.dataset.key]) === b.dataset.value));
+    for (const field of fields) {
+      const box = document.querySelector('.su-field[data-key="' + field.key + '"]'); if (!box) continue;
+      const v = values[field.key] ?? field.default;
+      if (field.control === 'counter') {
+        const i = field.options.findIndex((o) => String(o.value) === String(v));
+        box.querySelector('.su-count').textContent = String(v);
+        box.querySelector('[data-step="-1"]').disabled = i <= 0; box.querySelector('[data-step="1"]').disabled = i >= field.options.length - 1;
+      } else if (field.control === 'toggle') box.querySelector('.su-toggle').setAttribute('aria-checked', String(v === true));
+      else for (const b of box.querySelectorAll('.su-choice')) b.setAttribute('aria-checked', String(String(v) === b.dataset.value));
+    }
+  }
+  function saveSetting(key, value) { return run(null, async () => { await step('flow-settings', { settings: { [key]: value } }); }); }
+  function settingClick(e) {
+    const field = (site?.gameSettings?.[mode] || []).find((x) => x.key === e.target.closest('[data-key]')?.dataset.key); if (!field) return;
+    const values = state?.flow?.settings || {}, cur = values[field.key] ?? field.default;
+    const stepBtn = e.target.closest('[data-step]');
+    if (stepBtn) {
+      const i = field.options.findIndex((o) => String(o.value) === String(cur)), next = field.options[i + Number(stepBtn.dataset.step)];
+      if (!next) return;
+      e.target.closest('.su-field').querySelector('.su-count').textContent = String(next.value); // shown at once; the server confirms
+      return saveSetting(field.key, next.value);
+    }
+    if (e.target.closest('.su-toggle')) { const t = e.target.closest('.su-toggle'); const on = t.getAttribute('aria-checked') !== 'true'; t.setAttribute('aria-checked', String(on)); return saveSetting(field.key, on); }
+    const b = e.target.closest('.su-choice'); if (!b || b.getAttribute('aria-checked') === 'true') return;
+    for (const x of b.parentElement.children) x.setAttribute('aria-checked', String(x === b));
+    const o = field.options.find((x) => String(x.value) === b.dataset.value); if (o) saveSetting(field.key, o.value);
+  }
+  /** Top badges: the real stream connection and «فتح التسجيل تلقائيًا». */
+  function paintBadges(s) {
+    const c = s.connection || {}, on = c.state === 'connected';
+    const badge = $('streamBadge'); badge.dataset.on = String(on);
+    badge.querySelector('b').textContent = on ? 'متصل بالبث — ' + (c.platform === 'kick' ? 'Kick' : 'TikTok') + (c.username ? ' @' + c.username : '') : c.state === 'connecting' ? 'جارٍ الاتصال بالبث…' : 'غير متصل بالبث';
+    $('autoBadge').hidden = s.flow?.join?.autoOpen === false;
+  }
+  /** «المسموح لهم»: followers-only is offered when a TikTok account is linked (TikTok reports follow status). */
+  function paintAudience(f) {
+    const tiktok = !!(links.linked?.tiktok && !links.linked.tiktok.needsReauth), aud = f.join?.audience === 'followers' ? 'followers' : 'all';
+    for (const b of $('audienceSeg').children) {
+      b.setAttribute('aria-checked', String(b.dataset.aud === aud));
+      if (b.dataset.aud === 'followers') { b.disabled = !tiktok && aud !== 'followers'; b.setAttribute('aria-disabled', String(b.disabled)); }
+    }
+    $('audienceHint').textContent = tiktok ? (aud === 'followers' ? 'يُقبل فقط من يؤكد TikTok أنه يتابعك. مع Kick أو وضع التجربة يُقبل الجميع.' : '«المتابعون فقط» يتحقق منه TikTok فعليًا — Kick لا يرسل حالة المتابعة.')
+      : '«المتابعون فقط» يحتاج حساب TikTok مربوطًا — Kick لا يرسل حالة المتابعة.';
   }
   /** «منصات البث»: only accounts linked by signing in with TikTok / Kick; nothing can be typed here. */
   function preferredPlatform() { try { return localStorage.getItem('sponge_platform') || ''; } catch { return ''; } }
@@ -588,14 +640,14 @@
   let secretRound = -1, rolesAt = 0;
   async function paintTools(s, view) {
     const party = s.party, live = view === 'live';
-    const draw = live && mode === 'drawguess' && party, judge = live && mode === 'categories' && party?.judging, roles = live && (mode === 'roles' || mode === 'outsider');
+    const draw = live && mode === 'drawguess' && party, judge = live && ((mode === 'categories' && party?.judging) || (mode === 'chain' && party?.pending)), roles = live && (mode === 'roles' || mode === 'outsider');
     $('hostTools').hidden = !(draw || judge || roles);
     $('sketchTool').hidden = !draw; $('judgeTool').hidden = !judge; $('rolesTool').hidden = !roles;
     if (draw && party.round !== secretRound) {
       secretRound = party.round; clearSketch(true);
       try { const r = await admin('secret'); $('secretWord').textContent = r.secret?.word || '—'; } catch { $('secretWord').textContent = '—'; }
     }
-    if (judge) $('judgeAnswer').textContent = '«' + (party.answer || '') + '»';
+    if (judge) $('judgeAnswer').textContent = mode === 'chain' ? '«' + party.pending.word + '» — ' + party.pending.player.name + ' (حرف «' + party.letter + '» — ' + party.category + ')' : '«' + (party.answer || '') + '»';
     if (roles) {
       $('roleLink').textContent = location.origin + '/role' + (session()?.room() && session().room() !== 'main' ? '?room=' + session().room() : '');
       if (Date.now() - rolesAt > 2500) { rolesAt = Date.now(); admin('roles-admin').then(paintRoles).catch(() => {}); }
@@ -705,10 +757,12 @@
   $('setupBack').addEventListener('click', (e) => run(e.currentTarget, async () => { toListing = true; await step('flow-library'); toList(); }));
 
   /* setup screen */
-  $('advFields').addEventListener('click', (e) => {
-    const b = e.target.closest('.su-choice'); if (!b || b.getAttribute('aria-checked') === 'true') return;
-    for (const x of b.parentElement.children) x.setAttribute('aria-checked', String(x === b)); // shown at once; the server confirms
-    run(null, async () => { const raw = b.dataset.value; await step('flow-settings', { settings: { [b.dataset.key]: /^\d+$/.test(raw) ? Number(raw) : raw } }); });
+  $('advFields').addEventListener('click', settingClick);
+  $('rulesFields').addEventListener('click', settingClick);
+  $('audienceSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-aud]'); if (!b || b.disabled || b.getAttribute('aria-checked') === 'true') return;
+    for (const x of b.parentElement.children) x.setAttribute('aria-checked', String(x === b));
+    run(null, () => step('flow-settings', { audience: b.dataset.aud }));
   });
   $('resetSettings').addEventListener('click', (e) => run(e.currentTarget, async () => { await step('flow-reset'); feedback('أُعيدت الإعدادات الافتراضية.'); }));
   document.querySelector('.su-options').addEventListener('click', (e) => {

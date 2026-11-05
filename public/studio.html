@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/play.css">
 <link rel="stylesheet" href="/sponge.css">
 <link rel="stylesheet" href="/studio.css">
+<link rel="stylesheet" href="/setup.css">
 <link rel="stylesheet" href="/frames.css">
 <link rel="stylesheet" href="/lobby.css">
 <script defer src="/session.js"></script>
@@ -26,7 +27,7 @@
   <a class="sp-brand st-brand" href="/" aria-label="سبونج لايف"><img src="/brand/sponge-128.webp" alt="" width="34" height="34"><span><b>سبونج</b> لايف</span></a>
   <nav class="st-links" aria-label="روابط الموقع">
    <a href="/">الرئيسية</a>
-   <a href="/#games" id="gamesLink">الألعاب</a>
+   <a href="/games" id="gamesLink">الألعاب</a>
    <a href="/tools">أدوات البث</a>
    <a href="/#store">المتجر</a>
    <a href="/#faq">الأسئلة الشائعة</a>
@@ -103,71 +104,88 @@
 <section class="st-setup" id="setupView" aria-labelledby="setupTitle">
  <div class="st-setup-in">
   <header class="su-head">
-   <button type="button" class="su-back" id="setupBack" aria-label="رجوع إلى الألعاب"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></button>
+   <button type="button" class="su-back" id="setupBack" aria-label="رجوع إلى مكتبة الألعاب"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg><span>رجوع</span></button>
    <div class="su-id">
     <span class="su-eyebrow">إعداد اللعبة</span>
     <h1 id="setupTitle">—</h1>
     <p id="setupSummary"></p>
+    <div class="su-badges" aria-live="polite">
+     <span class="su-badge" id="streamBadge" data-on="false"><i aria-hidden="true"></i><b>غير متصل بالبث</b></span>
+     <span class="su-badge is-auto" id="autoBadge"><i aria-hidden="true"></i><b>فتح التسجيل تلقائيًا</b></span>
+    </div>
    </div>
    <figure class="su-cover"><img id="setupCover" alt="" width="120" height="154"></figure>
   </header>
 
-  <div class="su-grid">
-   <section class="su-card su-platform" aria-labelledby="platTitle">
-    <span class="su-icon" aria-hidden="true"><svg class="i"><use href="/icons.svg#i-link"/></svg></span>
-    <div class="su-card-body">
-     <small id="platTitle">منصات البث</small>
-     <b id="platState">…</b>
-     <div class="su-accounts" id="platAccounts"></div>
-    </div>
-    <a class="su-edit" href="/account#settings">تعديل</a>
-   </section>
-
+  <div class="su-cards">
+   <!-- 1 — الدخول -->
    <section class="su-card su-join" aria-labelledby="joinTitle">
-    <div class="su-card-head"><small class="su-kicker">انضمام اللاعبين</small><h2 id="joinTitle">طريقة الانضمام للجولة</h2><p>يكتب المشاهدون كلمة الانضمام في تعليقات البث بعد فتح التسجيل.</p></div>
-    <form class="su-word" id="wordForm" novalidate>
-     <label class="su-word-label" for="wordInput">كلمة الانضمام</label>
-     <div class="su-word-row"><input id="wordInput" class="su-word-input" maxlength="32" value="انضم" autocomplete="off" spellcheck="false" enterkeyhint="done" dir="auto"><button type="submit" class="su-reset" id="wordSave">حفظ</button></div>
-     <div class="rg-chips su-word-chips" id="wordChips" role="group" aria-label="كلمات مقترحة"></div>
-     <small id="wordHint">تُقبل الكلمة وحدها في التعليق (مع اختلاف التشكيل أو الهمزة) — لا تُقبل كلمة أطول تحتويها. تقدر تغيّرها من غرفة الانتظار أيضًا.</small>
+    <h2 class="su-num-title" id="joinTitle"><span class="su-num">1</span>الدخول</h2>
+    <form class="su-row su-word" id="wordForm" novalidate>
+     <div class="su-row-text"><label class="su-word-label" for="wordInput">كلمة الدخول</label><small id="wordHint">يكتبها المشاهد وحدها في التعليقات (مع اختلاف التشكيل أو الهمزة).</small></div>
+     <div class="su-row-ctl">
+      <div class="su-word-row"><input id="wordInput" class="su-word-input" maxlength="32" value="انضم" autocomplete="off" spellcheck="false" enterkeyhint="done" dir="auto"><button type="submit" class="su-reset" id="wordSave">حفظ</button></div>
+      <div class="rg-chips su-word-chips" id="wordChips" role="group" aria-label="كلمات مقترحة"></div>
+     </div>
      <b class="su-word-now" id="setupWord" hidden>انضم</b>
     </form>
-    <div class="su-auto">
-     <span><b id="autoOpenTitle">فتح التسجيل تلقائيًا</b><small>عند جاهزية اللوبي يبدأ قبول المشاهدين مباشرة. أطفئه لتفتحه بنفسك.</small></span>
+    <div class="su-row">
+     <div class="su-row-text"><b>المسموح لهم</b><small id="audienceHint">«المتابعون فقط» يتحقق منه TikTok فعليًا — Kick لا يرسل حالة المتابعة.</small></div>
+     <div class="su-seg" role="radiogroup" aria-label="المسموح لهم" id="audienceSeg">
+      <button type="button" role="radio" data-aud="all" aria-checked="true">الجميع</button>
+      <button type="button" role="radio" data-aud="followers" aria-checked="false">المتابعون فقط</button>
+     </div>
+    </div>
+    <div class="su-row su-auto">
+     <div class="su-row-text"><b id="autoOpenTitle">فتح التسجيل تلقائيًا</b><small>عند جاهزية اللوبي يبدأ قبول المشاهدين مباشرة.</small></div>
      <button type="button" class="su-switch" id="autoOpenToggle" role="switch" aria-checked="true" aria-labelledby="autoOpenTitle"><i></i></button>
     </div>
-    <div class="su-late">
-     <p class="su-late-title">الانضمام بعد بدء اللعبة <span class="su-warn" id="lateWarn" hidden>!</span></p>
-     <div class="su-options" role="radiogroup" aria-label="الانضمام بعد بدء اللعبة">
-      <button type="button" class="su-option" role="radio" data-late="click" aria-checked="true"><span class="su-option-ic" aria-hidden="true">☝</span><span><b>انقر للإضافة</b><small>تضيف اللاعبين الجدد بنفسك من «إضافة لاعب».</small></span></button>
-      <button type="button" class="su-option" role="radio" data-late="open" aria-checked="false"><span class="su-option-ic" aria-hidden="true">⇥</span><span><b>مفتوح دائمًا</b><small>من يكتب الكلمة أثناء الجولة يدخلها فورًا.</small></span></button>
+    <div class="su-row su-late">
+     <div class="su-row-text"><b class="su-late-title">الانضمام بعد بدء الجولة <span class="su-warn" id="lateWarn" hidden>!</span></b><small class="su-note" id="lateHelp"></small></div>
+     <div class="su-seg su-options" role="radiogroup" aria-label="الانضمام بعد بدء الجولة">
+      <button type="button" class="su-option" role="radio" data-late="click" aria-checked="true">انقر للإضافة</button>
+      <button type="button" class="su-option" role="radio" data-late="open" aria-checked="false">مفتوح دائمًا</button>
      </div>
-     <p class="su-note" id="lateHelp"></p>
     </div>
    </section>
 
-   <section class="su-card su-other" aria-labelledby="otherTitle">
-    <div class="su-card-body"><h2 id="otherTitle">تشغيل اللعبة على حساب آخر</h2><p id="otherHint">اختر حساب بث آخر موثّقًا ومربوطًا بحسابك — لا يمكن كتابة اسم حساب يدويًا.</p><div class="su-accounts" id="otherAccounts" hidden></div></div>
-    <button type="button" class="su-switch" id="otherToggle" role="switch" aria-checked="false" aria-labelledby="otherTitle"><i></i></button>
-   </section>
-
-   <details class="su-card su-adv" id="advanced" open>
-    <summary><h2>الإعدادات المتقدمة</h2><svg class="i su-caret" aria-hidden="true"><use href="/icons.svg#i-chevron"/></svg></summary>
-    <div class="su-adv-head"><div><h3 id="advTitle">إعدادات اللعبة</h3><p>اختر ما يناسب بثك — تُحفظ فورًا وتُطبَّق عند بدء الجولة.</p></div><button type="button" class="su-reset" id="resetSettings">استعادة الافتراضي</button></div>
+   <!-- 2 — المباراة -->
+   <section class="su-card su-adv" id="advanced" aria-labelledby="advTitle">
+    <div class="su-card-top"><h2 class="su-num-title" id="advTitle"><span class="su-num">2</span>المباراة</h2><button type="button" class="su-reset su-reset-sm" id="resetSettings">الافتراضي</button></div>
     <div class="su-fields" id="advFields"></div>
     <div class="su-guess" id="setupGuess" hidden>
-     <label><span>التلميح للجمهور</span><input id="guessPrompt" maxlength="200" dir="auto" placeholder="مثال: عاصمة فرنسا"></label>
-     <label><span>الإجابة السرية</span><input id="guessAnswer" maxlength="80" dir="auto" placeholder="باريس" autocomplete="off"></label>
+     <label class="su-row"><span class="su-row-text"><b>التلميح للجمهور</b></span><input id="guessPrompt" class="su-word-input" maxlength="200" dir="auto" placeholder="مثال: عاصمة فرنسا"></label>
+     <label class="su-row"><span class="su-row-text"><b>الإجابة السرية</b></span><input id="guessAnswer" class="su-word-input" maxlength="80" dir="auto" placeholder="باريس" autocomplete="off"></label>
     </div>
     <p class="su-none" id="advNone" hidden>هذه اللعبة لا تحتاج إعدادات إضافية.</p>
-   </details>
+   </section>
+
+   <!-- 3 — قواعد اللعب -->
+   <section class="su-card su-rules" aria-labelledby="rulesTitle">
+    <h2 class="su-num-title" id="rulesTitle"><span class="su-num">3</span>قواعد اللعب</h2>
+    <div class="su-fields" id="rulesFields"></div>
+    <ul class="su-rules-list" id="rulesList"></ul>
+   </section>
+
+   <!-- 4 — البث -->
+   <section class="su-card su-platform" aria-labelledby="platTitle">
+    <div class="su-card-top"><h2 class="su-num-title" id="platTitle"><span class="su-num">4</span>البث</h2><a class="su-edit" href="/account#settings">إدارة الربط</a></div>
+    <div class="su-row">
+     <div class="su-row-text"><b id="platState">…</b><small>اختر حساب البث الذي تلعب عليه — يتصل عند «الدخول للوبي».</small></div>
+     <div class="su-accounts" id="platAccounts"></div>
+    </div>
+    <div class="su-row su-other">
+     <div class="su-row-text"><b id="otherTitle">تشغيل اللعبة على حساب آخر</b><small id="otherHint">اختر حساب بث آخر موثّقًا ومربوطًا بحسابك — لا يمكن كتابة اسم حساب يدويًا.</small><div class="su-accounts" id="otherAccounts" hidden></div></div>
+     <button type="button" class="su-switch" id="otherToggle" role="switch" aria-checked="false" aria-labelledby="otherTitle"><i></i></button>
+    </div>
+   </section>
   </div>
 
   <footer class="su-foot">
-   <p class="su-foot-hint" id="setupHint"><i aria-hidden="true"></i><span>«ابدأ اللعبة» يجهّز اللوبي ويتحقق من اتصال البث — لا تبدأ أي جولة قبل «بدء الجولة الآن». «تجربة اللعبة» بلاعبين تجريبيين بلا بث.</span></p>
-   <div class="su-foot-btns">
-    <button type="button" class="su-btn su-btn-ghost" id="tryButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span>تجربة اللعبة</span></button>
-    <button type="button" class="su-btn su-btn-main" id="beginButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span>ابدأ اللعبة</span></button>
+   <button type="button" class="su-btn su-btn-main" id="beginButton"><span>الدخول للوبي</span><svg class="i" aria-hidden="true"><use href="/icons.svg#i-arrow"/></svg></button>
+   <div class="su-foot-row">
+    <p class="su-foot-hint" id="setupHint"><i aria-hidden="true"></i><span>«الدخول للوبي» يجهّز غرفة الانتظار ويتحقق من اتصال البث — لا تبدأ أي جولة قبل «بدء الجولة الآن».</span></p>
+    <button type="button" class="su-btn su-btn-ghost" id="tryButton"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-play"/></svg><span>وضع التجربة بلا بث</span></button>
    </div>
   </footer>
  </div>

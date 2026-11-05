@@ -119,6 +119,8 @@ test('engine runs every party mode end to end from chat, with server timers and 
     e.start();
     assert.ok(e.snapshot().party, mode);
     assert.equal(e.snapshot().status.active, true);
+    // Word Chain awards only real answers: one viewer types a correct word
+    if (mode === 'chain') e.receiveChat({ id: 'a', username: 'a', text: e.party.botWord() });
     for (let i = 0; i < 400 && e.status.active; i++) { t += 1000; e.tick(); }
     if (e.status.active) e.stop();
     assert.equal(e.status.active, false, mode + ' finishes');

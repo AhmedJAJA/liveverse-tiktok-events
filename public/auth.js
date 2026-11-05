@@ -7,7 +7,7 @@
   const MODES = { '/login': 'login', '/signup': 'signup', '/forgot': 'forgot', '/reset': 'reset' };
   const mode = MODES[location.pathname] || 'login';
   document.body.dataset.mode = mode;
-  const safeNext = (n) => (n && /^\/(account|game\/|admin|u\/|go\/|tools|event|#games)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : null);
+  const safeNext = (n) => (n && /^\/(account|game\/|games|admin|u\/|go\/|tools|event|#games)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : null);
   const next = safeNext(params.get('next'));
   const intent = params.get('intent') || (params.get('trial') === '1' ? 'trial' : '');
   const wantsTrial = intent === 'trial';
@@ -43,8 +43,8 @@
   async function continueIntent(data) {
     const go = (u) => location.replace(u);
     if (next) return go(next);
-    if (intent === 'studio' || wantsTrial) return go('/#games');
-    return go(data.next || '/#games');
+    if (intent === 'studio' || wantsTrial) return go('/games');
+    return go(data.next || '/games');
   }
 
   // «المتابعة باستخدام Google»

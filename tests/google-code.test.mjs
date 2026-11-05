@@ -142,7 +142,7 @@ test('Google code flow: state, nonce, PKCE, one account per Google identity, saf
     const a1 = fake.approve(s1.location, { sub: 'g-200', email: 'tabs@gmail.com' }), a2 = fake.approve(s2.location, { sub: 'g-200', email: 'tabs@gmail.com' });
     assert.notEqual(a1.state, a2.state);
     assert.match((await tabs('GET', '/api/oauth/google/callback?' + new URLSearchParams({ code: a2.code, state: a2.state }))).location, /^\/account/);
-    assert.match((await tabs('GET', '/api/oauth/google/callback?' + new URLSearchParams({ code: a1.code, state: a1.state }))).location, /^\/(account|#games)/);
+    assert.match((await tabs('GET', '/api/oauth/google/callback?' + new URLSearchParams({ code: a1.code, state: a1.state }))).location, /^\/(account|games)/);
 
     // 5. refusals, each with its message code — and no session
     const bad = async (claims, opts, code) => { const b = browser(srv.base); const x = await googleFlow(fake, b, claims, opts); assert.match(x.cb.location, new RegExp('google_error=' + code), code); assert.equal((await b('GET', '/api/auth/me')).data.account ?? null, null, code); return x; };

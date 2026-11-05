@@ -148,3 +148,58 @@
   .gx-floor{width:calc(var(--u)*360)}
 }
 @media (prefers-reduced-motion:reduce){.gx-bub,.gx-ray,.gx-glint,.gx-logo.gx-shine,.gx-logo.gx-shine::after,.arena .gx-card .clock-panel,.arena .gx-card .clock-face,.arena .gx-card .choice{animation:none!important}}
+
+/* ===== «سلسلة الكلمات» (Word Chain) board ===== */
+.wc-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,300px);gap:18px;align-items:start}
+.wc-board{display:grid;gap:14px;min-width:0}
+.wc-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.wc-cat,.wc-goal{display:inline-flex;align-items:baseline;gap:8px;padding:8px 16px;border-radius:999px;background:rgba(2,10,34,.7);border:1px solid rgba(140,232,255,.35)}
+.wc-cat small,.wc-goal small{color:rgba(234,248,255,.65);font-weight:800;font-size:.85em}
+.wc-cat b{color:#8CE8FF;font-size:1.25em;font-weight:900}
+.wc-goal b{color:#FFE14D;font-weight:900;font-size:1.15em}
+.wc-links{display:inline-flex;gap:6px}
+.wc-links i{width:14px;height:14px;border-radius:50%;background:rgba(140,232,255,.18);border:1px solid rgba(140,232,255,.4)}
+.wc-links i.is-on{background:#2FD9A0;border-color:#7DFFC8;box-shadow:0 0 10px #2FD9A0}
+.wc-stage{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:16px}
+.wc-word{display:grid;gap:4px;padding:18px 22px;border-radius:22px;background:linear-gradient(160deg,rgba(30,91,255,.35),rgba(4,16,46,.9));border:1px solid rgba(140,232,255,.45);min-width:0}
+.wc-word small{color:rgba(234,248,255,.7);font-weight:800}
+.wc-word-text{font-size:clamp(34px,4.6vw,64px);font-weight:900;line-height:1.15;color:#fff;overflow-wrap:anywhere}
+.wc-word.is-new{animation:wc-in .6s cubic-bezier(.2,1.3,.4,1) both;border-color:#2FD9A0;box-shadow:0 0 34px -8px #2FD9A0}
+@keyframes wc-in{from{opacity:0;transform:translateY(16px) scale(.94)}}
+.wc-arrow{font-size:40px;font-weight:900;color:#FFD62A}
+.wc-letter{display:grid;justify-items:center;gap:2px;min-width:132px;padding:14px 18px;border-radius:26px;background:linear-gradient(180deg,#FFE14D,#FFB800);color:#2B1A00;box-shadow:0 12px 30px -10px rgba(255,214,42,.85)}
+.wc-letter small{font-weight:900;font-size:.85em}
+.wc-letter strong{font-size:clamp(56px,7vw,96px);line-height:1;font-weight:900}
+.wc-letter.is-live{animation:wc-pulse 1.6s ease-in-out infinite}
+@keyframes wc-pulse{50%{transform:scale(1.04);box-shadow:0 16px 40px -8px rgba(255,214,42,1)}}
+.wc-note{margin:0;padding:8px 14px;border-radius:14px;background:rgba(56,212,255,.10);color:#C9F2FF;font-weight:800}
+.wc-flash{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;animation:wc-in .45s cubic-bezier(.2,1.3,.4,1) both}
+.wc-flash.is-ok{background:rgba(47,217,160,.16);border:1px solid rgba(47,217,160,.6)}
+.wc-flash.is-ok b{display:block;font-size:1.25em;font-weight:900;color:#9FF5D6}
+.wc-flash.is-ok span{color:rgba(234,248,255,.8);font-weight:800}
+.wc-flash.is-review{border-color:rgba(255,214,42,.6)}
+.wc-flash-av{width:56px;height:56px;flex:none}
+.wc-miss{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(255,77,106,.14);border:1px solid rgba(255,122,146,.5);animation:wc-shake .45s ease both}
+.wc-miss b{color:#FFB3C1;font-weight:900}
+.wc-miss span{color:rgba(234,248,255,.8);font-weight:700}
+@keyframes wc-shake{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.wc-board.is-timeout .wc-word{opacity:.55}
+.wc-chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.wc-chip{padding:5px 12px;border-radius:999px;background:rgba(2,10,34,.7);border:1px solid rgba(140,232,255,.28);color:#EAF8FF;font-weight:800}
+.wc-chip:last-child{border-color:#2FD9A0;color:#9FF5D6}
+.wc-link{font-style:normal;color:#FFD62A;font-weight:900}
+.wc-scores{display:grid;gap:8px;margin:0;padding:12px;list-style:none;border-radius:22px;background:rgba(2,10,34,.66);border:1px solid rgba(140,232,255,.28)}
+.wc-scores li{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;grid-template-rows:auto auto;align-items:center;column-gap:10px;row-gap:4px}
+.wc-scores li.is-lead{padding:6px;border-radius:14px;background:rgba(255,214,42,.10);box-shadow:inset 0 0 0 1px rgba(255,214,42,.45)}
+.wc-rank{grid-row:1/3;width:24px;text-align:center;font-weight:900;color:#8CE8FF}
+.wc-av{grid-row:1/3;width:40px;height:40px}
+.wc-scores .fr-av{grid-row:1/3;width:40px;height:40px}
+.wc-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:900}
+.wc-scores li>b{grid-row:1/3;font-size:1.25em;font-weight:900;color:#FFE14D}
+.wc-bar{grid-column:3;height:6px;border-radius:99px;background:rgba(140,232,255,.16);overflow:hidden}
+.wc-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#38D4FF,#2FD9A0);transition:width .5s}
+@media (max-width:900px){.wc-wrap{grid-template-columns:minmax(0,1fr)}.wc-stage{grid-template-columns:minmax(0,1fr) auto}.wc-arrow{display:none}}
+@media (prefers-reduced-motion:reduce){.wc-word.is-new,.wc-flash,.wc-miss,.wc-letter.is-live{animation:none}}
+/* the chain board replaces the question card (the game title is already in the header) */
+#arena[data-mode=chain][data-phase=active] .question-card{display:none}
+#arena[data-mode=chain] .party-panel{padding-top:8px}

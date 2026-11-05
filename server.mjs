@@ -404,7 +404,7 @@ async function handleAction(action, body, actor) {
   switch (action) {
     // ---- the launch flow: every step is a separate command (see src/flow.mjs)
     case 'flow-setup': room.flow.setup(String(body.mode || '')); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
-    case 'flow-settings': room.flow.saveSettings(room.flow.mode, body.settings, { lateJoin: body.lateJoin, keyword: body.keyword, autoOpen: typeof body.autoOpen === 'boolean' ? body.autoOpen : undefined }); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-settings': room.flow.saveSettings(room.flow.mode, body.settings, { lateJoin: body.lateJoin, keyword: body.keyword, autoOpen: typeof body.autoOpen === 'boolean' ? body.autoOpen : undefined, audience: body.audience }); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-reset': room.flow.resetSettings(room.flow.mode); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
     // «ابدأ اللعبة»: PREPARING_LOBBY now; the real steps run in the background and report themselves
     case 'flow-begin': { const r = room.flow.begin({ demo: false }); if (!r.reused) startPreparation(room, actor, String(body.platform || '')); return { ok: true, reused: r.reused, flow: room.flow.snapshot() }; }
@@ -705,7 +705,7 @@ async function handleOAuth(p, step, req, res, url) {
    state: single use, 10 minutes, bound to this browser (og_bind cookie) — two tabs can sign in at once;
    nonce + PKCE; the account is found by Google's subject ID only. */
 /** The games list (no separate studio): every game opens from here. */
-const GAMES_LIST = '/#games';
+const GAMES_LIST = '/games';
 const GOOGLE_MODES = new Set(['login', 'link', 'reauth']);
 const googleLimiter = new RateLimiter({ limit: 30, windowMs: 10 * 60_000 });
 /** Same e-mail, exactly, and verified by Google → the existing account (Google linked to it). If that account's e-mail
@@ -719,7 +719,7 @@ async function autoLinkGoogle(g, req) {
   return hit.user;
 }
 const pendingGoogle = new Map(); // id -> { g, expires }: a Google identity waiting for the password of the account with its e-mail
-const safeNext = (n) => (typeof n === 'string' && /^\/(account|game\/|admin|u\/|go\/|tools|event|#games)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : '');
+const safeNext = (n) => (typeof n === 'string' && /^\/(account|game\/|games|admin|u\/|go\/|tools|event|#games)(?:[/?#A-Za-z0-9_=&.%-]*)$/.test(n) && !n.startsWith('//') ? n : '');
 async function handleGoogleOAuth(step, req, res, url) {
   const secure = isHttps(req) ? '; Secure' : '';
   const go = (to, cookies = []) => { res.writeHead(302, { Location: to, 'Cache-Control': 'no-store', ...(cookies.length ? { 'Set-Cookie': cookies } : {}) }); res.end(); };
@@ -1367,7 +1367,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css',
+const STATIC = new Set(['setup.css','games.html','games.js','games.css','game-icons.svg','profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['cards', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -1523,7 +1523,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/admin' && !adminActor(req)) { res.writeHead(302, { Location: '/login?next=/admin', 'Cache-Control': 'no-store' }); return res.end(); }
   if (url.pathname === '/account' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/account' + encodeURIComponent(url.search), 'Cache-Control': 'no-store' }); return res.end(); }
-  const fileMap = { '/': 'home.html', '/signup': 'auth.html', '/login': 'auth.html', '/forgot': 'auth.html', '/reset': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/og-512.webp' };
+  const fileMap = { '/': 'home.html', '/games': 'games.html', '/signup': 'auth.html', '/login': 'auth.html', '/forgot': 'auth.html', '/reset': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/og-512.webp' };
   const relative = fileMap[url.pathname] || (gamePage ? 'studio.html' : null) || (/^\/u\/SPG-[A-Z0-9]{6}$/i.test(url.pathname) ? 'profile.html' : url.pathname.slice(1));
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });

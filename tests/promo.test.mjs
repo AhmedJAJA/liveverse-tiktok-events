@@ -75,7 +75,7 @@ test('promo / owner codes over HTTP: game pages gated, codes checked on the serv
       const r = await visitor('GET', p);
       assert.equal(r.status, 302, p); assert.match(r.location, /^\/login\?next=/);
     }
-    assert.equal((await visitor('GET', '/studio')).location, '/#games');
+    assert.equal((await visitor('GET', '/studio')).location, '/games');
     assert.equal((await visitor('GET', '/play?mode=quiz')).location, '/game/quiz');
     assert.equal((await visitor('GET', '/game/nope')).status, 404);
     assert.equal((await visitor('GET', '/play?mode=quiz&room=main')).status, 200, 'viewers can still watch a room');
@@ -87,7 +87,7 @@ test('promo / owner codes over HTTP: game pages gated, codes checked on the serv
     assert.equal(wrong.status, 401); assert.match(wrong.data.error, /غير صحيح/);
     assert.equal((await visitor('POST', '/api/access/redeem', { code: 'BIKINI2026' }, { Origin: 'https://evil.example' })).status, 403);
     const ok = await visitor('POST', '/api/access/redeem', { code: 'bikini2026' });
-    assert.equal(ok.status, 200); assert.equal(ok.data.next, '/#games');
+    assert.equal(ok.status, 200); assert.equal(ok.data.next, '/games');
     assert.match(ok.cookie, /HttpOnly/); assert.match(ok.cookie, /SameSite=Lax/);
     assert.equal((await visitor('GET', '/game/quiz')).status, 200);
     const me = (await visitor('GET', '/api/access/me')).data;

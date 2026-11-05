@@ -16,6 +16,7 @@ const modeInfo = {
   bowling: { en:'BOWLING', short:'BOWLING', ar:'لعبة البولينج', instruction:'اكتب نقطة التصويب من 1 إلى 10 — الأقرب للنقطة المخفية يُسقط قوارير أكثر' },
   drawguess: { en:'GUESS THE DRAWING', short:'DRAW', ar:'خمن الرسمة', instruction:'اكتب تخمينك في الشات — أول إجابة صحيحة تربح الجولة' },
   chairs: { en:'MUSICAL CHAIRS', short:'CHAIRS', ar:'كراسي موسيقية', instruction:'لا تكتب أثناء الموسيقى • عند التوقف اكتب «اجلس» بسرعة' },
+  chain: { en:'WORD CHAIN', short:'CHAIN', ar:'سلسلة الكلمات', instruction:'اكتب كلمة من الفئة تبدأ بالحرف المطلوب — أول إجابة صحيحة تفوز بالحلقة' },
   categories: { en:'LETTER & CATEGORY', short:'CATEGORIES', ar:'اسم حيوان جماد نبات', instruction:'اللاعب المختار يكتب كلمة تبدأ بالحرف خلال 15 ثانية' },
   roles: { en:'HIDDEN ROLES', short:'ROLES', ar:'الأدوار المخفية', instruction:'افتح صفحة دورك • في النهار اكتب «صوت» ورقم اللاعب' },
   roulette: { en:'ROULETTE', short:'ROULETTE', ar:'الروليت', instruction:'العجلة تدور وتتوقف على نتيجة يحددها الخادم بعدل' },
@@ -26,7 +27,7 @@ const modeInfo = {
 };
 modeInfo.rps = { en:'ROCK PAPER SCISSORS', short:'RPS', ar:'حجرة ورقة مقص', instruction:'مواجهات ثنائية: اكتب حجرة أو ورقة أو مقص — يُكشف الاختياران معًا' };
 modeInfo.quiz.ar = 'تحدي المعرفة'; modeInfo.bomb.ar = 'القنبلة الموقوتة';
-const PARTY = new Set(['rps','minority','higherlower','truefalse','redlight','bowling','drawguess','chairs','categories','roles','roulette','country','flag','tug','outsider']);
+const PARTY = new Set(['rps','minority','higherlower','truefalse','redlight','bowling','drawguess','chairs','categories','roles','roulette','country','flag','tug','outsider','chain']);
 const RPS_ICON = ['✊','✋','✌️'];
 let sketchData = '';
 const fxPlay = (name) => window.SpongeFx?.play(name);
@@ -646,7 +647,61 @@ function wheelSvg(items, target, round, spinMs) {
   g.style.setProperty('--spin',final+'deg'); g.style.setProperty('--spin-ms',Math.max(1500,(spinMs||7000)-900)+'ms');
   return svg;
 }
+/** «سلسلة الكلمات»: category, the previous word with its last letter lit, the required letter, the chain so far,
+    the scores toward «نقاط الفوز» with name frames, and a clear effect for a correct word, a miss and a timeout. */
+let chainSeen = { events: -1, round: -1 };
+function chainBoard(panel, party, r) {
+  const board=node('div','wc-board'+(party.phase==='reveal'&&r?.ok?' is-ok':party.phase==='reveal'&&r?.timeout?' is-timeout':''));
+  const top=node('div','wc-top');
+  const cat=node('span','wc-cat'); cat.append(node('small','','الفئة'),node('b','',party.category||''));
+  const links=node('span','wc-links'); for(let i=0;i<(party.linksPerCategory||5);i++) links.append(node('i',i<(party.links||0)?'is-on':''));
+  const goal=node('span','wc-goal'); goal.append(node('small','','نقاط الفوز'),node('b','num',number(party.target)));
+  top.append(cat,links,goal);
+  const stage=node('div','wc-stage');
+  const prev=node('div','wc-word'+(party.phase==='reveal'&&r?.ok?' is-new':''));
+  const w=String(party.word||'');
+  prev.append(node('small','',party.wordBy?'كلمة '+party.wordBy.name:'كلمة البداية'),node('strong','wc-word-text',w));
+  const letter=node('div','wc-letter'+(party.phase==='input'?' is-live':''));
+  letter.append(node('small','','الحرف المطلوب'),node('strong','',party.letter||'؟'));
+  stage.append(prev,node('span','wc-arrow','←'),letter);
+  board.append(top,stage);
+  if(party.letterNote) board.append(node('p','wc-note',party.letterNote));
+  // what just happened
+  if(party.phase==='reveal'&&r?.ok){
+    const b=node('div','wc-flash is-ok'); const av=node('span','member-avatar wc-flash-av'); paintAvatar(av,r.player);
+    const t=node('div'); t.append(node('b','',r.player.name+' — «'+r.word+'»'),node('span','',`+${r.gained} نقاط${r.fast?' (إجابة سريعة)':''}${r.reviewed?' • قبلها المشرف':''}${r.categoryChange?' • فئة جديدة':''}`));
+    b.append(av,t); board.append(b);
+  } else if(party.phase==='reveal'&&r?.timeout){
+    board.append(banner('انتهى الوقت','كلمة جديدة وفئة جديدة','لم تصل إجابة صحيحة بحرف «'+(r.letter==='ا'?'أ':r.letter||'')+'»','is-bad wc-flash'));
+  } else if(party.pending){
+    board.append(banner('بانتظار مراجعة المشرف','«'+party.pending.word+'»',party.pending.player.name+' — كلمة ليست في القائمة','wc-flash is-review'));
+  } else if(party.miss){
+    const m=node('div','wc-miss'); m.append(node('b','','✕ «'+party.miss.word+'»'),node('span','',party.miss.player.name+' — '+party.miss.why)); board.append(m);
+  } else if(party.blocked && party.phase==='input'){
+    board.append(node('p','wc-note','دور غير '+party.blocked.name+' — لا تُقبل إجابتان متتاليتان من نفس اللاعب'));
+  }
+  // the chain so far
+  if((party.chain||[]).length>1){ const ch=node('div','wc-chain'); party.chain.forEach((c,i)=>{ if(i) ch.append(node('i','wc-link','←')); ch.append(node('span','wc-chip',c.text)); }); board.append(ch); }
+  // scores toward the target
+  const list=node('ol','wc-scores');
+  (party.players||[]).slice(0,6).forEach((p,i)=>{
+    const li=node('li',i===0&&p.points>0?'is-lead':''); const av=node('span','member-avatar wc-av'); paintAvatar(av,p);
+    const fr=frameOf(p); const avBox=fr&&window.SpongeFrames?window.SpongeFrames.avatar(av,fr):av;
+    const name=fr&&window.SpongeFrames?window.SpongeFrames.plate(p.name,fr,'wc-name'):node('bdi','wc-name',p.name);
+    const bar=node('span','wc-bar'); const fill=node('i',''); fill.style.width=Math.min(100,100*p.points/(party.target||30))+'%'; bar.append(fill);
+    li.append(node('span','wc-rank num',String(i+1)),avBox,name,bar,node('b','num',number(p.points)));
+    list.append(li);
+  });
+  const wrap=node('div','wc-wrap'); wrap.append(board,list); panel.append(wrap);
+  // sounds (when «الأصوات» is on): one per new event, never repeated by a redraw
+  if(party.sounds && chainSeen.events!==party.events){
+    if(chainSeen.events>=0){ if(party.phase==='reveal'&&r?.ok) fxPlay('correct'); else if(party.phase==='reveal'&&r?.timeout) fxPlay('warn'); else if(party.miss) fxPlay('wrong'); }
+  }
+  if(party.phase==='reveal'&&r?.ok&&chainSeen.events!==party.events&&!reducedMotion()) window.SpongeFx?.burst(prev,14);
+  chainSeen={events:party.events,round:party.round};
+}
 const SEA_RENDER = {
+  chain(panel, party, r) { chainBoard(panel, party, r); },
   drawguess(panel, party, r) {
     const wrap=node('div','party-split sea-draw');
     const board=node('div','sea-board'); const img=document.createElement('img'); img.id='partySketch'; img.alt='رسمة المشرف'; if(sketchData)img.src=sketchData; else img.hidden=true;
@@ -775,11 +830,11 @@ function renderParty(party, mode) {
   if(!party){panel.hidden=true;return;}
   panel.hidden=false;
   panel.dataset.mode=mode; panel.dataset.phase=party.phase;
-  const key=JSON.stringify([mode,party.round,party.phase,party.reveal,party.players,party.track,party.lanes,party.light,party.card,party.alive,party.out,party.duels,party.wheel&&party.round,party.clues,party.flag,party.mask,party.solved,party.chosen,party.judging,party.music,party.seatedCount,party.linked,party.winner,party.format]);
+  const key=JSON.stringify([mode,party.round,party.phase,party.reveal,party.players,party.track,party.lanes,party.light,party.card,party.alive,party.out,party.duels,party.wheel&&party.round,party.clues,party.flag,party.mask,party.solved,party.chosen,party.judging,party.music,party.seatedCount,party.linked,party.winner,party.format,party.word,party.letter,party.events,party.pending,party.miss&&party.miss.n,party.links]);
   if(key===partyCache.key)return; partyCache.key=key;
   panel.replaceChildren();
   const head=node('div','party-head');
-  head.append(node('span','party-round',`الجولة ${number(party.round)} / ${number(party.rounds)}`));
+  head.append(node('span','party-round',mode==='chain'?`الدور ${number(party.round)}`:`الجولة ${number(party.round)} / ${number(party.rounds)}`));
   if(['rps','minority','redlight','chairs','categories','roles','roulette'].includes(mode)) head.append(node('span','party-alive',`${number(party.alive)} من ${number(party.total)} في اللعبة`));
   panel.append(head);
   const r=party.reveal;
