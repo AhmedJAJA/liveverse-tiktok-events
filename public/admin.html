@@ -10,6 +10,8 @@
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/pages.css">
 <script defer src="/admin.js"></script>
+<link rel="stylesheet" href="/frames.css">
+<script defer src="/frames.js"></script>
 <script defer src="/admin-economy.js"></script>
 </head>
 <body class="hm pg">
@@ -174,6 +176,24 @@
     <div class="pg-row"><label class="pg-field"><span>النموذج (GLB)</span><input name="model" type="file" accept=".glb,model/gltf-binary"></label><label class="pg-field"><span>صورة المعاينة</span><input name="thumb" type="file" accept="image/webp,image/png"></label></div>
     <button class="pg-btn2" type="submit">رفع</button>
    </form>
+  </section>
+
+  <section class="pg-card pg-span" aria-labelledby="framesAdminTitle">
+   <h2 id="framesAdminTitle">إطارات الأسماء</h2>
+   <p class="pg-sub">إطار = حلقة حول الصورة + لوحة خلف الاسم. الإطارات المدمجة مرسومة بالـCSS. لإطاراتك: ارفع PNG أو WebP شفافًا (حتى 300 KB لكل صورة) — حلقة الصورة مربعة، ولوحة الاسم تُرسم بتقسيم nine-slice: اكتب سماكة الأطراف بالبكسل (أعلى، يمين، أسفل، يسار) حتى لا تتمدد الزوايا مع الأسماء الطويلة. ارسم الصور بحجم مضاعف (2×) للشاشات الحادة.</p>
+   <p class="pg-msg" id="framesMsg" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>المعاينة</th><th>المعرّف</th><th>الاسم</th><th>الندرة</th><th>الحصول</th><th>المؤثر</th><th>مفعّل</th><th>المالكون</th><th></th></tr></thead><tbody id="frameRows"></tbody></table></div>
+   <h3>إضافة إطار أو استبدال صوره</h3>
+   <form class="pg-form" id="frameUpload">
+    <div class="pg-row"><label class="pg-field"><span>المعرّف</span><input name="id" dir="ltr" pattern="[a-z0-9_]{2,32}" required></label><label class="pg-field"><span>الاسم</span><input name="name" maxlength="40" required></label>
+    <label class="pg-field"><span>الندرة</span><select name="rarity"><option value="common">عادي</option><option value="rare">نادر</option><option value="epic">ملحمي</option><option value="legendary">أسطوري</option><option value="mythic">خرافي</option></select></label>
+    <label class="pg-field"><span>المؤثر</span><select name="effect"><option value="none">بدون</option><option value="cyan">سماوي</option><option value="gold">لمعة ذهبية</option><option value="saudi">أخضر سعودي</option><option value="ice">جليد</option><option value="flame">لهب</option><option value="crown">تاج</option><option value="royal">ملكي</option></select></label></div>
+    <div class="pg-row"><label class="pg-field"><span>حلقة الصورة (اختياري)</span><input name="avatar" type="file" accept="image/webp,image/png"></label><label class="pg-field"><span>لوحة الاسم (اختياري)</span><input name="plate" type="file" accept="image/webp,image/png"></label></div>
+    <div class="pg-row"><label class="pg-field"><span>أعلى</span><input name="s0" type="number" min="0" max="400" value="12"></label><label class="pg-field"><span>يمين</span><input name="s1" type="number" min="0" max="400" value="24"></label><label class="pg-field"><span>أسفل</span><input name="s2" type="number" min="0" max="400" value="12"></label><label class="pg-field"><span>يسار</span><input name="s3" type="number" min="0" max="400" value="24"></label></div>
+    <button class="pg-btn2" type="submit">حفظ الإطار</button>
+   </form>
+   <h3>منح إطار لحساب</h3>
+   <form class="pg-form pg-row" id="frameGrant"><label class="pg-field"><span>معرّف SPG</span><input name="publicId" dir="ltr" required></label><label class="pg-field"><span>معرّف الإطار</span><input name="frame" dir="ltr" required></label><button class="pg-btn2" type="submit">منح</button></form>
   </section>
 
   <section class="pg-card pg-span" aria-labelledby="refAdminTitle">

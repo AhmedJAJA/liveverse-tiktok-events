@@ -14,12 +14,15 @@
 <link rel="stylesheet" href="/wheel.css">
 <link rel="stylesheet" href="/store.css">
 <link rel="stylesheet" href="/bottom-nav.css">
+<link rel="stylesheet" href="/frames.css">
 <script defer src="/google.js"></script>
 <script defer src="/coins.js"></script>
 <script defer src="/bottom-nav.js"></script>
 <script defer src="/me.js"></script>
 <script defer src="/wheel.js"></script>
 <script defer src="/store.js"></script>
+<script defer src="/frames.js"></script>
+<script defer src="/me-frames.js"></script>
 </head>
 <body class="hm pg ds" data-sec="settings">
 <div class="hm-sea" aria-hidden="true"><span class="hm-glow"></span><span class="hm-rays"></span>
@@ -456,6 +459,14 @@
       <p class="ds-small sk-shards" id="skShards" hidden></p>
       <p class="ds-small sk-credit" id="skCredit"></p>
      </div>
+    </div>
+    <!-- «إطارات الأسماء»: shown around your name and picture when you play in a stream (cosmetic only) -->
+    <div class="ds-card mf-card" aria-labelledby="mfTitle">
+     <div class="mf-head"><div><small class="ds-small">حقيبتي</small><h2 id="mfTitle">إطارات الأسماء</h2><p class="ds-small">يظهر إطارك حول اسمك وصورتك في غرفة الانتظار وشاشات الألعاب عندما تلعب من حساب TikTok أو Kick مربوط بحسابك. للزينة فقط — لا يغيّر أي نتيجة.</p></div>
+      <div class="mf-preview" id="mfPreview" aria-label="معاينة الإطار"></div></div>
+     <ul class="mf-grid" id="mfGrid" aria-label="الإطارات"></ul>
+     <div class="mf-foot"><label class="sk-gfx"><input type="checkbox" id="mfLite"> إيقاف تأثيرات الإطارات المتحركة على هذا الجهاز</label><button type="button" class="ds-btn is-ghost" id="mfRemove" hidden>إزالة الإطار</button></div>
+     <p class="pg-msg" id="mfMsg" role="status" hidden></p>
     </div>
    </section>
 

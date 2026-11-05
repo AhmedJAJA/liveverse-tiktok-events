@@ -10,6 +10,8 @@ import { LiveBridge } from './src/bridge.mjs';
 import { KickBridge, validKickSlug } from './src/kick.mjs';
 import { StreamTools } from './src/stream-tools.mjs';
 import { GameFlow } from './src/flow.mjs';
+import { prepareLobby } from './src/lobby.mjs';
+import { FrameStore } from './src/frames.mjs';
 import { settingsSchema, JOIN_WORD_SUGGESTIONS, LATE_JOIN_MODES } from './src/game-settings.mjs';
 import { QuestionBank, loadDefaultQuestions } from './src/question-bank.mjs';
 import { siteConfig, ALL_GAMES, UPDATES } from './src/catalog.mjs';
@@ -48,6 +50,10 @@ const rooms = new Map();
 const HOST_TIMEOUT_MS = Math.max(5_000, Number(process.env.SKY_HOST_TIMEOUT_MS) || 45_000); // a studio window that stops beating is gone after this
 const sameHandle = (a, b) => String(a || '').replace(/^@/, '').toLowerCase() === String(b || '').replace(/^@/, '').toLowerCase();
 const skinCache = new Map(); // 'platform:handle' → { skin, at }
+const frameCache = new Map(); // 'platform:handle' → { frame, at }
+// lobby transitions → the event name sent to every screen of the room (the full state follows in the next 'state')
+const LOBBY_EVENT = { PREPARING_LOBBY: 'lobby:preparing', LOBBY_READY: 'lobby:ready', LOBBY_ERROR: 'lobby:error', RECOVERING: 'lobby:recovering', REGISTRATION_OPEN: 'registration:opened',
+  REGISTRATION_CLOSED: 'registration:closed', ROUND_STARTING: 'round:starting', ROUND_RUNNING: 'round:started', ROUND_FINISHED: 'round:finished', GAME_LIBRARY: 'session:ended', GAME_SETUP: 'lobby:state' };
 class Room {
   constructor(id, kind, ownerId = null) {
     this.id = id; this.kind = kind; this.ownerId = ownerId; this.clients = new Set(); this.touched = Date.now();
@@ -70,7 +76,8 @@ class Room {
     this.gameSessionId = null; this.saved = { state: '', at: 0 };
     this.tools = new StreamTools();  // OBS tools: countdown, chat draw, active chatters
     // the game session's launch flow (library → setup → join word → lobby → round → results), kept on the server
-    this.flow = new GameFlow({ engine: this.engine, games: ALL_GAMES });
+    this.flow = new GameFlow({ engine: this.engine, games: ALL_GAMES, onChange: () => this.lobbyChanged() });
+    this.lastLobbyState = this.flow.state; this.lastCount = 0; this.persistTimer = null; this.persistSig = ''; this.restoring = null; this.preparing = null;
     this.engine.questionSource = (filter) => drawQuestion(this.questionBank, filter);
   }
   receiveChat(chat) {
@@ -85,7 +92,31 @@ class Room {
     this.engine.setConnection('disconnected', '', reason);
   }
   hostTab() { const t = this.primaryTab && this.tabs.get(this.primaryTab); return t && Date.now() - t.at <= HOST_TIMEOUT_MS ? t : null; }
-  view() { return { ...this.engine.snapshot(), flow: this.flow.snapshot(), tools: this.tools.snapshot(), roomCode: this.joinCode && roomCodes.get(this.joinCode) === this.id ? this.joinCode : null, viewers: this.clients.size, skins: this.skinView() }; }
+  /** One lobby event per change, sent at once (not throttled): the preparation screen follows each real step. */
+  lobbyChanged() {
+    if (this.inLobbyEvent) return; // snapshot() may itself settle the state; one event is enough
+    this.inLobbyEvent = true;
+    try {
+      const f = this.flow.snapshot(), st = f.state;
+      const event = st === this.lastLobbyState ? 'lobby:progress' : LOBBY_EVENT[st] || 'lobby:state';
+      this.lastLobbyState = st;
+      if (this.clients.size) { const raw = JSON.stringify({ type: 'lobby', event, data: { state: st, stage: f.stage, version: f.version, lobby: f.lobby } }); for (const ws of this.clients) if (ws.readyState === WebSocket.OPEN) ws.send(raw); }
+    } finally { this.inLobbyEvent = false; }
+    this.scheduleBroadcast(); this.persistSoon();
+  }
+  /** Account rooms keep their open lobby in PostgreSQL so a restart can bring it back (src/flow.mjs recover()). */
+  persistSoon() {
+    if (this.kind !== 'acct' || !frames || this.restoring) return;
+    clearTimeout(this.persistTimer);
+    this.persistTimer = setTimeout(() => {
+      const data = this.flow.persisted(), sig = data ? JSON.stringify({ ...data, savedAt: 0 }) : 'none';
+      if (sig === this.persistSig) return;
+      this.persistSig = sig;
+      frames.saveLobby(this.id, this.ownerId, data).catch((err) => { this.persistSig = ''; console.warn('[lobby] save', err.message); });
+    }, 1200);
+    this.persistTimer.unref?.();
+  }
+  view() { return { ...this.engine.snapshot(), flow: this.flow.snapshot(), frames: this.frameView(), connRetry: this.engine.connection.platform === 'tiktok' && this.engine.connection.state !== 'connected' ? this.tiktok.retryState() : null, tools: this.tools.snapshot(), roomCode: this.joinCode && roomCodes.get(this.joinCode) === this.id ? this.joinCode : null, viewers: this.clients.size, skins: this.skinView() }; }
   /** Equipped skins of players whose TikTok / Kick account is officially linked to a SPONGE LIVE account.
       Read from a shared 60-second cache, so building the state never waits on the database. */
   skinView() {
@@ -108,6 +139,29 @@ class Room {
     }
     return out;
   }
+  /** Name frames of players whose TikTok / Kick account is linked to a SPONGE LIVE account that equipped one
+      (guests get none — nothing is invented). Same 60-second shared cache as the skins. */
+  frameView() {
+    const where = this.engine.connection.platform;
+    if (!frames || !['tiktok', 'kick'].includes(where)) return {};
+    const out = {}, missing = [], now = Date.now();
+    for (const p of this.engine.players.values()) {
+      const handle = p.handle || (p.host ? String(this.engine.connection.username || '').toLowerCase() : '');
+      if (!handle) continue;
+      const hit = frameCache.get(where + ':' + handle);
+      if (!hit || now - hit.at > 60_000) missing.push(handle);
+      if (hit?.frame) out['n:' + p.number] = hit.frame;
+    }
+    if (missing.length && !this.frameLookup) {
+      this.frameLookup = frames.forHandles(where, missing).then((found) => {
+        let any = false;
+        for (const [h, frame] of found) { const prev = frameCache.get(where + ':' + h); frameCache.set(where + ':' + h, { frame, at: Date.now() }); if (frame?.id !== prev?.frame?.id) any = true; }
+        if (frameCache.size > 20_000) frameCache.clear();
+        if (any) this.scheduleBroadcast();
+      }).catch(() => {}).finally(() => { this.frameLookup = null; });
+    }
+    return out;
+  }
   scheduleBroadcast() {
     this.noteGameEnd();
     if (this.flushTimer) return;
@@ -115,11 +169,19 @@ class Room {
     this.flushTimer = setTimeout(() => this.flush(), wait);
   }
   flush() {
-    this.flushTimer = null; this.lastFlush = Date.now();
-    if (!this.clients.size) return;
+    clearTimeout(this.flushTimer); this.flushTimer = null; this.lastFlush = Date.now();
+    if (!this.clients.size) return 0;
     this.broadcasts++;
+    const n = this.engine.players.size;
+    if (n !== this.lastCount) { // participant events (the full list follows in the state)
+      const raw = JSON.stringify({ type: 'lobby', event: n > this.lastCount ? 'participant:added' : 'participant:removed', data: { count: n, generation: this.engine.registration.generation } });
+      this.lastCount = n; this.persistSoon();
+      for (const ws of this.clients) if (ws.readyState === WebSocket.OPEN) ws.send(raw);
+    }
     const raw = JSON.stringify({ type: 'state', data: this.view() });
-    for (const ws of this.clients) if (ws.readyState === WebSocket.OPEN && (ws.bufferedAmount || 0) < 4_000_000) ws.send(raw);
+    let sent = 0;
+    for (const ws of this.clients) if (ws.readyState === WebSocket.OPEN && (ws.bufferedAmount || 0) < 4_000_000) { ws.send(raw); sent++; }
+    return sent;
   }
   /** Weekly leaderboard: a finished game in a real, listed session gives each real player an entry and the winner a win. */
   noteGameEnd() {
@@ -127,6 +189,7 @@ class Room {
     if (!ev || st.active || ev.at === this.lastGameAt || !(ev.winner || st.results)) return;
     this.lastGameAt = ev.at;
     if (this.kind !== 'acct' || !platform || !this.sessionCounted) return;
+    if (this.flow.trial || this.flow.lobby?.demo) return; // «وضع التجربة» never reaches the rankings
     const where = this.engine.connection.platform;
     const participants = [...this.engine.players.values()].filter((p) => !p.manual && !/^(demo|host|manual):/.test(p.id)).map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, handle: p.handle }));
     if (!participants.length) return;
@@ -151,6 +214,7 @@ function ensureRoom(id, kind, ownerId) {
     if (rooms.size >= MAX_ROOMS) throw Object.assign(new Error('الخادم مشغول الآن، حاول بعد قليل'), { status: 503 });
     room = new Room(id, kind, ownerId);
     rooms.set(id, room);
+    if (kind === 'acct' && frames) room.restoring = restoreLobby(room).finally(() => { room.restoring = null; });
   }
   room.touched = Date.now();
   return room;
@@ -178,7 +242,7 @@ for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((
 /* PostgreSQL (DATABASE_URL): accounts with permanent IDs, trials, subscriptions, payments, admin audit — and
    the promo codes and sessions above are written through to it, so nothing depends on the host's disk. */
 const pool = createPool();
-let platform = null, economy = null;
+let platform = null, economy = null, frames = null;
 if (pool) {
   await migrate(pool);
   await PromoMirror.attach(pool, promos);
@@ -187,6 +251,7 @@ if (pool) {
     ...(process.env.NODE_ENV === 'test' && process.env.SKY_MIN_ROUND_MS ? { minRoundMs: Number(process.env.SKY_MIN_ROUND_MS) } : {}) });
   await platform.init();
   economy = new Economy({ pool, platform });
+  frames = new FrameStore({ pool });
   for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
 } else console.warn('[db] DATABASE_URL is not set: games and promo codes work; accounts, trials and subscriptions are off.');
 const appUrl = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000)).replace(/\/$/, '');
@@ -312,7 +377,7 @@ function secureHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin'); // Google Identity Services needs the origin
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src https://accounts.google.com/gsi/; connect-src 'self' blob: ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: blob: https://*.googleusercontent.com https://files.kick.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' https://accounts.google.com/gsi/style; frame-src 'self' https://accounts.google.com/gsi/; connect-src 'self' blob: ws: wss: https://accounts.google.com/gsi/; img-src 'self' data: blob: https://*.googleusercontent.com https://files.kick.com https://*.tiktokcdn.com https://*.tiktokcdn-us.com https://*.tiktokcdn-eu.com https://*.tiktokcdn-in.com https://*.byteoversea.com https://*.ibytedtos.com https://*.ibyteimg.com https://*.muscdn.com; font-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'");
 }
 
 /** One question of «تحدي المعرفة» from the bank; when the chosen category/level runs out, any question will do. */
@@ -323,24 +388,38 @@ function drawQuestion(bank, { category = 'all', difficulty = 'all' } = {}) {
 async function handleAction(action, body, actor) {
   const { engine, questionBank } = actor.room;
   const room = actor.room;
+  if (room.restoring && action !== 'heartbeat') await room.restoring; // a lobby coming back after a restart is settled first
   switch (action) {
     // ---- the launch flow: every step is a separate command (see src/flow.mjs)
     case 'flow-setup': room.flow.setup(String(body.mode || '')); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
-    case 'flow-settings': room.flow.saveSettings(room.flow.mode, body.settings, { lateJoin: body.lateJoin, keyword: body.keyword }); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-settings': room.flow.saveSettings(room.flow.mode, body.settings, { lateJoin: body.lateJoin, keyword: body.keyword, autoOpen: typeof body.autoOpen === 'boolean' ? body.autoOpen : undefined }); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-reset': room.flow.resetSettings(room.flow.mode); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
-    case 'flow-begin': room.flow.begin(); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
+    // «ابدأ اللعبة»: PREPARING_LOBBY now; the real steps run in the background and report themselves
+    case 'flow-begin': { const r = room.flow.begin({ demo: false }); if (!r.reused) startPreparation(room, actor, String(body.platform || '')); return { ok: true, reused: r.reused, flow: room.flow.snapshot() }; }
+    case 'flow-cancel': room.flow.cancel(); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-open': room.flow.open(body.keyword); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-close': room.flow.close(); return { ok: true, flow: room.flow.snapshot() };
-    case 'flow-start': room.flow.start((s) => { const q = drawQuestion(questionBank, s); engine.configure({ mode: 'quiz', title: q.title, prompt: q.prompt, options: q.options, answer: q.answer }); }); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-keyword': room.flow.setKeyword(body.keyword, body.version); return { ok: true, flow: room.flow.snapshot() };
+    case 'flow-registration-reset': {
+      const r = room.flow.resetRegistration({ confirm: body.confirm === true });
+      if (actor.kind === 'acct') platform?.audit('user:' + actor.userId, 'lobby-reset', { target: actor.userId, details: { generation: r.generation } }).catch(() => {});
+      return { ok: true, ...r, flow: room.flow.snapshot() };
+    }
+    case 'flow-start': {
+      // the live chat must really be connected for a live lobby («وضع التجربة» is exempt)
+      const c = engine.connection;
+      const streamIssue = room.flow.lobby?.demo ? null : c.state !== 'connected' ? 'البث غير متصل — أعد الاتصال من الأعلى أو استخدم «تجربة اللعبة»'
+        : actor.kind === 'acct' && !engine.connMeta.verified ? 'لم يُتحقق من حساب البث — أعد الاتصال من الأعلى' : null;
+      const requestId = /^[A-Za-z0-9_-]{6,64}$/.test(String(body.requestId || '')) ? String(body.requestId) : null;
+      const r = room.flow.start((s) => { const q = drawQuestion(questionBank, s); engine.configure({ mode: 'quiz', title: q.title, prompt: q.prompt, options: q.options, answer: q.answer }); }, { requestId, requireStream: streamIssue });
+      room.flush();
+      return { ok: true, duplicate: !!r.duplicate, round: r.round, flow: room.flow.snapshot() };
+    }
     case 'flow-again': room.flow.again(); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-end': room.flow.end(); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-library': room.flow.library(); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
-    case 'flow-trial': {
-      room.flow.tryOut();
-      const added = engine.addDemoPlayers({ count: Math.max(4, engine.snapshot().registration.minPlayers || 1) });
-      engine.setSimulation({ autoplay: true });
-      return { ok: true, flow: room.flow.snapshot(), added };
-    }
+    // «تجربة اللعبة»: the same preparation in «وضع التجربة» (test players, no stream, nothing counted)
+    case 'flow-trial': { const r = room.flow.tryOut(); if (!r.reused) startPreparation(room, actor, ''); return { ok: true, flow: room.flow.snapshot() }; }
     case 'configure': engine.configure(body); return { ok: true };
     case 'registration-open': engine.openRegistration(body); return { ok: true };
     case 'registration-settings': return { ok: true, registration: engine.updateRegistration({ ...body, ...(body.hostJoin ? { hostName: actor.user?.displayName || 'المشرف' } : {}) }) };
@@ -381,7 +460,11 @@ async function handleAction(action, body, actor) {
       room.flow.legacy('prepare', game.mode);
       return { ok: true, ...result };
     }
-    case 'remove-player': return { ok: true, ...engine.removePlayer(body) };
+    case 'remove-player': {
+      const r = engine.removePlayer(body);
+      if (actor.kind === 'acct') platform?.audit('user:' + actor.userId, 'lobby-remove-player', { target: actor.userId, details: { name: r.removed, session: room.flow.sessionId } }).catch(() => {});
+      return { ok: true, ...r };
+    }
     case 'branding': return { ok: true, branding: engine.setBranding(body) };
     case 'bank-next': {
       if (engine.status.active) throw new Error('أوقف الجولة الحالية قبل اختيار سؤال جديد');
@@ -512,6 +595,41 @@ async function connectLinked(actor, room, p) {
   platform.touchStream(actor.userId, p).catch(() => {});
   return { ok: true, state: engine.connection.state, verified: true, platform: p, handle: engine.connection.username };
 }
+/* ------------------------------------------------ the game lobby: preparation, recovery (src/lobby.mjs) */
+const PREPARE_LIMIT = 6; let preparingNow = 0; // limits simultaneous connection attempts across all rooms
+function lobbyContext(actor, room, platformPref = '') {
+  return {
+    actor, platform: ['tiktok', 'kick'].includes(platformPref) ? platformPref : '',
+    entitled: (a) => a.kind !== 'acct' || !!platform?.entitlement(a.userId).active,
+    linked: async (userId) => ({ tiktok: await platform.verifiedStream(userId, 'tiktok'), kick: await platform.verifiedStream(userId, 'kick') }),
+    linkable: (p) => linkableNow(p),
+    connect: (a, r, p) => connectLinked(a, r, p),
+    flush: () => room.flush(),
+    addDemo: () => { const added = room.engine.addDemoPlayers({ count: Math.max(4, minPlayersOf(room)) }); room.engine.setSimulation({ autoplay: true }); return added; },
+  };
+}
+const minPlayersOf = (room) => room.engine.snapshot().registration.minPlayers || 1;
+/** Run the preparation in the background; the studio follows it through lobby events (and /api/state). */
+function startPreparation(room, actor, platformPref) {
+  if (room.preparing) return room.preparing;
+  if (preparingNow >= PREPARE_LIMIT) { room.flow.failLobby({ code: 'prepare_failed', message: 'الخادم يجهّز لوبيات كثيرة الآن — أعد المحاولة بعد لحظات', action: 'retry' }); return Promise.resolve(); }
+  preparingNow++;
+  room.preparing = prepareLobby(room, lobbyContext(actor, room, platformPref))
+    .catch((err) => { console.warn('[lobby]', err?.message); room.flow.failLobby({ code: 'prepare_failed', message: '', action: 'retry' }); })
+    .finally(() => { preparingNow--; room.preparing = null; });
+  return room.preparing;
+}
+/** After a restart: a saved lobby of an account room comes back in RECOVERING and reconnects its chat. */
+async function restoreLobby(room) {
+  try {
+    const saved = await frames.loadLobby(room.id);
+    if (!saved || !room.flow.recover(saved)) return;
+    await platform.refresh(room.ownerId).catch(() => {});
+    const actor = { kind: 'acct', userId: room.ownerId, live: true };
+    room.restoring = null; // later changes are saved again
+    await startPreparation(room, actor, saved.platform || '');
+  } catch (err) { console.warn('[lobby] restore', err?.message); }
+}
 /** Kick live state, re-read from the official API every few minutes while connected. */
 async function checkKickLive(room) {
   const k = room.kickOfficial; if (!k || k.checking) return;
@@ -580,6 +698,7 @@ async function handleKickWebhook(req, res) {
   const sender = ev?.sender || {};
   if (room && sender.user_id !== undefined && ev.content) {
     room.receiveChat({ id: 'kick:' + sender.user_id, username: String(sender.username || 'مشاهد'), handle: String(sender.channel_slug || sender.username || ''),
+      at: Date.parse(String(req.headers['kick-event-message-timestamp'] || ev.created_at || '')) || 0,
       text: String(ev.content).replace(/\[emote:\d+:[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim(), msgId: 'kick:' + String(req.headers['kick-event-message-id'] || ev.message_id || ''),
       avatar: '', isFollower: false, isSubscriber: (sender.identity?.badges || []).some((b) => /subscriber|founder|og/i.test(String(b?.type || ''))) });
   }
@@ -796,6 +915,7 @@ async function handleMe(action, req, res) {
     if (action === 'wheel-result' && req.method === 'GET') { const r = await economy.spinByKey(userId, new URL(req.url, 'http://x').searchParams.get('key')); return r ? json(res, 200, r) : json(res, 404, { error: 'لم تُسجَّل هذه العملية' }); }
     if (action === 'invites' && req.method === 'GET') { const u = platform.cached(userId).user; return json(res, 200, await economy.invitations(userId, u.public_id, appUrl)); }
     if (action === 'skins' && req.method === 'GET') return json(res, 200, await platform.skins(userId));
+    if (action === 'frames' && req.method === 'GET') return json(res, 200, await frames.list(userId));
     if (action === 'friends' && req.method === 'GET') return json(res, 200, await platform.community(userId));
     if (action === 'find' && req.method === 'GET') {
       if (!findLimiter.hit('find:' + userId)) return json(res, 429, { error: 'بحث كثير — انتظر دقيقة' });
@@ -820,6 +940,8 @@ async function handleMe(action, req, res) {
     /* ---- «السكنات» (the skin id is the only input; ownership is checked on the server) ---- */
     if (action === 'skin-claim') return json(res, 200, { ok: true, ...(await platform.claimSkin(userId, body.id)) });
     if (action === 'skin-equip') return json(res, 200, { ok: true, ...(await platform.equipSkin(userId, body.id)) });
+    if (action === 'frame-claim') { const r = await frames.claim(userId, body.id); frameCache.clear(); return json(res, 200, { ok: true, ...r }); }
+    if (action === 'frame-equip') { const r = await frames.equip(userId, body.id === null ? null : String(body.id || '')); frameCache.clear(); for (const room of rooms.values()) room.scheduleBroadcast(); return json(res, 200, { ok: true, ...r }); }
     if (action === 'skin-buy') { await economy.buySkin(userId, body.id); return json(res, 200, { ok: true, ...(await platform.skins(userId)), wallet: await economy.wallet(userId) }); }
     /* ---- «المجتمع» (the other account is named only by its SPG ID; who I am comes from the session) ---- */
     if (action === 'friend-request') return json(res, 200, { ok: true, ...(await platform.friendRequest(userId, body.id)) });
@@ -933,12 +1055,13 @@ async function handleManage(action, req, res) {
       if (action === 'economy') return json(res, 200, await economy.adminOverview());
       if (action === 'wheel') return json(res, 200, await economy.wheelReport());
       if (action === 'skins') return json(res, 200, { skins: await platform.adminSkins() });
+      if (action === 'frames') return json(res, 200, { frames: await frames.admin() });
       if (action === 'purchases') return json(res, 200, { purchases: await economy.adminPurchases(url.searchParams.get('status') || ''), packages: await economy.packages() });
       if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
       return json(res, 404, { error: 'Not found' });
     }
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
-    const body = await readBody(req, action === 'partner-save' ? 600_000 : action === 'skin-upload' ? 6_200_000 : 4096);
+    const body = await readBody(req, action === 'partner-save' ? 600_000 : action === 'skin-upload' ? 6_200_000 : action === 'frame-save' ? 900_000 : 4096);
     if (action === 'partner-save') { const partners = await platform.savePartner(body); await platform.audit(admin.name, 'partner-save', { details: { name: String(body.name || '').slice(0, 40) }, ip }); return json(res, 200, { ok: true, partners }); }
     if (action === 'partner-delete') { const partners = await platform.deletePartner(body.id); await platform.audit(admin.name, 'partner-delete', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, partners }); }
     if (action === 'prize-save') { const r = await platform.savePrize(body); await platform.audit(admin.name, 'prize-save', { details: { title: String(body.title || '').slice(0, 80) }, ip }); return json(res, 200, { ok: true, ...r }); }
@@ -950,6 +1073,7 @@ async function handleManage(action, req, res) {
     if (action === 'code-revoke') { const code = promos.update(String(body.id), { active: false }); sessions.destroyWhere((x) => x.codeId === body.id); await platform.audit(admin.name, 'promo-revoke', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, code }); }
     if (action === 'skin-save') { const skins = await platform.saveSkin(body); await platform.catalog(true); return json(res, 200, { ok: true, skins }); }
     if (action === 'skin-upload') { const skins = await platform.uploadSkin(body); await platform.catalog(true); return json(res, 200, { ok: true, skins }); }
+    if (action === 'frame-save') { const frame = await frames.save(body); frameCache.clear(); await platform.audit(admin.name, 'frame-save', { details: { id: frame.id, name: frame.name, active: frame.active }, ip }); return json(res, 200, { ok: true, frame }); }
     if (action === 'order-decide') return json(res, 200, { ok: true, ...(await economy.decideOrder(body.ref, String(body.decision || ''), { actor: admin.name, reason: body.reason })) });
     if (action === 'wheel-odds') return json(res, 200, { ok: true, config: await economy.setWheelOdds(body.odds, { cost1: body.cost1, cost10: body.cost10, actor: admin.name, reason: body.reason }) });
     if (action === 'wheel-simulate') return json(res, 200, await economy.simulate(body.n));
@@ -958,6 +1082,7 @@ async function handleManage(action, req, res) {
     const log = (what, details = {}) => platform.audit(admin.name, what, { target: userId, details, ip });
     if (action === 'wallet-adjust') { const w = await economy.adjust(userId, { amount: Number(body.amount), bucket: body.bucket === 'purchased' ? 'purchased' : 'earned', reason: body.reason, actor: admin.name }); await log('wallet-adjust', { amount: Number(body.amount), reason: String(body.reason || '').slice(0, 200) }); return json(res, 200, { ok: true, wallet: w }); }
     if (action === 'referral-decide') { const r = await economy.decideReferral(userId, body.approve === true, admin.name, body.reason); return json(res, 200, { ok: true, result: r }); }
+    if (action === 'frame-grant') { const r = await frames.grant(userId, body.frame, admin.name); frameCache.clear(); await log('frame-grant', { frame: String(body.frame || '').slice(0, 32) }); return json(res, 200, r); }
     if (action === 'skin-grant') { const r = await platform.grantSkin(userId, body.skin, admin.name); await log('skin-grant', { skin: String(body.skin || '').slice(0, 32) }); return json(res, 200, r); }
     if (action === 'grant') { const r = await platform.grant(userId, body); await log('subscription-grant', { days: Number(body.days), plan: body.plan || 'manual', note: String(body.note || '').slice(0, 200) }); return json(res, 200, { ok: true, access: r }); }
     if (action === 'extend') { const r = await platform.extend(userId, body); await log('subscription-extend', { days: Number(body.days) }); return json(res, 200, { ok: true, access: r }); }
@@ -1099,7 +1224,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js',
+const STATIC = new Set(['profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['games', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -1122,6 +1247,13 @@ const server = http.createServer(async (req, res) => {
       if (!platform) return json(res, 404, { error: 'غير موجود' });
       const p = await platform.publicProfile(decodeURIComponent(url.pathname.slice(7)), accountSession(req)?.userId || null);
       return p ? json(res, 200, p) : json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
+    }
+    const fu = /^\/frames\/u\/([a-z0-9_]{2,32})-(avatar|plate)\.(png|webp)$/.exec(url.pathname);
+    if (fu && req.method === 'GET' && frames) {
+      const f = await frames.file(fu[1], fu[2]);
+      if (!f) return json(res, 404, { error: 'Not found' });
+      res.writeHead(200, { 'Content-Type': f.type, 'Cache-Control': url.searchParams.get('v') ? 'public, max-age=31536000, immutable' : 'public, max-age=300', 'X-Content-Type-Options': 'nosniff', 'Content-Length': f.data.length });
+      return res.end(f.data);
     }
     const up = /^\/skins\/u\/([a-z0-9_]{2,32})\.(glb|webp)$/.exec(url.pathname);
     if (up && req.method === 'GET' && platform) {

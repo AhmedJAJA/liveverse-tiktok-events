@@ -111,3 +111,6 @@ form.pg-row{align-items:flex-end}
 .pg-table td .pg-row{flex-wrap:nowrap;gap:6px;align-items:center}
 .pg-table td .pg-row input{min-width:150px}
 #oddsSum.is-ok{color:#7DF0C6;font-weight:900}#oddsSum.is-err{color:#FF8FA6;font-weight:900}
+/* owner panel: frame previews */
+.pg-frame-demo{display:inline-flex;align-items:center;gap:8px;padding:8px 6px 4px}
+.pg-frame-av{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:linear-gradient(180deg,#4FDBFF,#1E5BFF);color:#03122F;font-weight:900}
