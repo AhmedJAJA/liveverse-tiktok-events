@@ -152,8 +152,8 @@ test('studio access by account state, one-click trial, Google sign-in and linkin
     const nb = browser(srv.base); await nb('GET', '/api/auth/google');
     assert.equal((await nb('POST', '/api/auth/google', { credential: idToken({ sub: 'x', email: 'x@gmail.com', nonce: 'guessed' }) })).status, 401);
     assert.equal((await googleSignIn(browser(srv.base), { sub: 'y', email: 'y@gmail.com', aud: 'other-app' })).status, 401);
-    // same e-mail as an existing password account: no automatic merge
-    const clash = await googleSignIn(browser(srv.base), { sub: 'google-sub-888', email: 'Trial.Fan@example.com' });
+    // same e-mail as an existing password account but not verified by Google: no automatic merge
+    const clash = await googleSignIn(browser(srv.base), { sub: 'google-sub-888', email: 'Trial.Fan@example.com', email_verified: false });
     assert.equal(clash.status, 409); assert.equal(clash.data.needsLink, true);
     // 14: linking Google from the signed-in account keeps the permanent ID; then Google opens that same account
     const link = await googleSignIn(a, { sub: 'google-sub-888', email: 'trial.fan@example.com' }, { link: true });
