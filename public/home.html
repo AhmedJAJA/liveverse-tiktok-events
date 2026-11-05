@@ -31,11 +31,20 @@
    <a href="#top" aria-current="true">الرئيسية</a>
    <a href="#live">البثوث النشطة</a>
    <a href="#leaders">المتصدرون</a>
+   <a href="#partners" data-partners-link hidden>الشركاء</a>
    <a href="#room">دخول الغرفة</a>
-   <a href="#games">الألعاب</a>
-   <a href="#enter">الدخول بالرمز</a>
    <a href="#faq">الأسئلة الشائعة</a>
    <a href="#plans">الأسعار</a>
+   <div class="hm-more">
+    <button type="button" class="hm-more-btn" id="moreButton" aria-expanded="false" aria-controls="moreMenu">المزيد <span aria-hidden="true">▾</span></button>
+    <div class="hm-more-menu" id="moreMenu" hidden>
+     <a href="#games">الألعاب</a>
+     <a href="#enter">الدخول بالرمز</a>
+     <a href="/guide/games">دليل الألعاب</a>
+     <a href="/guide/tiktok-live">دليل تيك توك لايف</a>
+     <a href="/guide/tools">أدوات البث</a>
+    </div>
+   </div>
   </nav>
   <div class="hm-bar-actions">
    <a class="hm-pill hm-pill-blue" id="barStudio" href="/studio" hidden><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-play"></use></svg><span>الاستوديو</span></a>
@@ -52,6 +61,7 @@
    <a href="#top"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-home"></use></svg>الرئيسية</a>
    <a href="#live"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg>البثوث النشطة</a>
    <a href="#leaders"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-trophy"></use></svg>المتصدرون</a>
+   <a href="#partners" data-partners-link hidden><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-star"></use></svg>الشركاء</a>
    <a href="#room"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg>دخول الغرفة</a>
    <a href="#games"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg>الألعاب</a>
    <a href="#enter"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg>دخول الاستوديو بالرمز</a>
@@ -150,45 +160,60 @@
  </div>
 </section>
 
-<section class="hm-sec" id="leaders" aria-labelledby="leadersTitle">
- <div class="hm-panelbox hm-lb">
-  <div class="hm-box-head">
-   <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-trophy"></use></svg></span>
-   <div class="hm-box-text"><h2 id="leadersTitle">متصدرو الأسبوع</h2><p>أفضل خمسة هذا الأسبوع في ألعاب SPONGE LIVE — تُحسب من الجولات الحقيقية في البثوث الموثقة فقط.</p></div>
-   <div class="hm-lb-clock" aria-live="off"><small>أسبوع جديد خلال</small><b id="lbClock" dir="ltr">—</b></div>
+<section class="hm-sec hm-lbsec" id="leaders" aria-labelledby="leadersTitle">
+ <p class="hm-kicker"><i aria-hidden="true"></i>ألعاب SPONGE LIVE</p>
+ <h2 class="hm-h hm-h2" id="leadersTitle">الصدارة لها<span class="hm-accent">مكانها هنا.</span></h2>
+ <p class="hm-lead">لوحة أسبوعية لألعاب SPONGE LIVE فقط، تُحسب من الجولات الحقيقية في البثوث الموثقة. اختر الفئة ونوع الترتيب لتعرف أفضل خمسة هذا الأسبوع.</p>
+ <div class="lb-tabs" role="tablist" aria-label="نوع اللوحة">
+  <button type="button" role="tab" class="lb-tab" data-board="players" aria-selected="true">اللاعبون</button>
+  <button type="button" role="tab" class="lb-tab" data-board="streamers" aria-selected="false">الستريمرز</button>
+ </div>
+ <div class="lb-metrics" id="lbMetrics" role="group" aria-label="الترتيب حسب"></div>
+ <div class="lb-card">
+  <div class="lb-info">
+   <button type="button" class="lb-how" id="lbHow" aria-expanded="false" aria-controls="lbHowText"><span class="lb-i" aria-hidden="true">i</span><span>كيف تُحسب <b id="lbHowMetric">الانتصارات</b>؟</span></button>
+   <span class="lb-prize" id="lbPrize" hidden><span aria-hidden="true">★</span> عليها جوائز</span>
   </div>
-  <div class="hm-lb-bar">
-   <div class="hm-seg" role="tablist" aria-label="نوع اللوحة">
-    <button type="button" role="tab" class="hm-seg-btn" data-board="players" aria-selected="true">اللاعبون</button>
-    <button type="button" role="tab" class="hm-seg-btn" data-board="streamers" aria-selected="false">الستريمرز</button>
-   </div>
-   <div class="hm-seg hm-seg-sm" id="lbMetrics" role="group" aria-label="الترتيب حسب"></div>
-  </div>
-  <ol class="hm-lb-list" id="lbList" aria-live="polite"></ol>
-  <div class="hm-empty" id="lbEmpty" hidden><span aria-hidden="true">🏆</span><b>لا أحد في اللوحة بعد هذا الأسبوع</b><p>العب في بث موثّق لتظهر هنا.</p></div>
-  <form class="hm-lb-find" id="lbFind" novalidate hidden>
+  <p class="lb-how-text" id="lbHowText" hidden></p>
+  <ul class="lb-prizes" id="lbPrizes" hidden></ul>
+  <div class="lb-status"><span class="lb-live"><i aria-hidden="true"></i>يُحدّث تلقائيًا</span><span id="lbScope">أفضل 5 هذا الأسبوع</span></div>
+  <div class="lb-clock-box"><span class="lb-clock-ic" aria-hidden="true">⏱</span><span class="lb-clock-label">الأسبوع الجديد<br>يبدأ خلال</span>
+   <span class="lb-clock" id="lbClock" dir="ltr" aria-live="off"><b data-u="d">0</b><small>d</small><b data-u="h">00</b><small>h</small><b data-u="m">00</b><small>m</small><b data-u="s">00</b><small>s</small></span></div>
+  <form class="lb-find" id="lbFind" novalidate>
    <label for="lbFindInput" class="sr-only">ابحث بمعرف SPG</label>
-   <input id="lbFindInput" type="text" placeholder="ابحث بمعرف SPG-XXXXXX" dir="ltr" maxlength="12" autocapitalize="characters" spellcheck="false" autocomplete="off">
-   <button type="submit" class="hm-pill hm-pill-blue"><svg width="16" height="16" aria-hidden="true"><use href="/icons.svg#i-search"></use></svg><span>بحث</span></button>
+   <span class="lb-find-ic" aria-hidden="true">⌕</span>
+   <input id="lbFindInput" type="text" placeholder="معرف SPG مثل SPG-8F42K9" dir="ltr" maxlength="12" autocapitalize="characters" spellcheck="false" autocomplete="off">
+   <button type="submit">بحث</button>
   </form>
-  <p class="hm-lb-found" id="lbFound" role="status" hidden></p>
-  <p class="hm-lb-note">الانتصارات: الفائز الأول في كل جولة منتهية. المشاركات: كل جولة شارك فيها اللاعب. الساعات: وقت البث الموثّق أثناء تشغيل لعبة.</p>
+  <a class="lb-found" id="lbFound" hidden></a>
+  <p class="lb-found-msg" id="lbFoundMsg" role="status" hidden></p>
+  <ol class="lb-list" id="lbList" aria-live="polite"></ol>
+  <div class="hm-empty lb-empty" id="lbEmpty" hidden><span aria-hidden="true">🏆</span><b>لا أحد في اللوحة بعد</b><p>العب في بث موثّق لتظهر هنا.</p></div>
+  <button type="button" class="lb-week" id="lbWeek">عرض نتائج الأسبوع الماضي</button>
  </div>
 </section>
 
+<section class="hm-sec hm-partners" id="partners" aria-labelledby="partnersTitle" hidden>
+ <p class="hm-kicker"><i aria-hidden="true"></i>شركاء النجاح</p>
+ <h2 class="hm-h hm-h2" id="partnersTitle">صناع محتوى<span class="hm-accent">نعتز بالتعاون معهم.</span></h2>
+ <p class="hm-lead">مساحة لشركاء SPONGE LIVE من صناع المحتوى على TikTok وKick.</p>
+ <div class="pt-viewport"><ul class="pt-track" id="ptTrack"></ul></div>
+ <div class="pt-nav" id="ptNav"><button type="button" class="pt-arrow" data-pt="prev" aria-label="السابق"><span aria-hidden="true">→</span></button><span class="pt-count" id="ptCount" aria-live="polite">1 من 1</span><button type="button" class="pt-arrow" data-pt="next" aria-label="التالي"><span aria-hidden="true">←</span></button></div>
+</section>
+
 <section class="hm-sec" id="room" aria-labelledby="roomTitle">
- <div class="hm-panelbox hm-room">
-  <div class="hm-box-head">
-   <span class="hm-box-icon" aria-hidden="true"><svg width="24" height="24" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg></span>
-   <div class="hm-box-text"><h2 id="roomTitle">معاك كود غرفة؟</h2><p>الستريمر يعرض كود الغرفة على شاشة بثه — اكتبه هنا وتفتح لك صفحة لعبته مباشرة على جوالك.</p></div>
+ <div class="rm-card">
+  <div class="rm-head">
+   <span class="rm-ic" aria-hidden="true"><svg width="30" height="30"><use href="/icons.svg#i-user-plus"></use></svg></span>
+   <div><p class="hm-kicker rm-kicker"><i aria-hidden="true"></i>ألعاب البث</p><h2 id="roomTitle">معاك كود غرفة؟</h2><p class="rm-desc">اكتبه هنا ونفتح لك صفحة اللعبة الصحيحة مباشرة — الكود يظهر على شاشة البث وعند الستريمر. لا تحتاج إنشاء حساب.</p></div>
   </div>
-  <form class="hm-room-form" id="roomForm" novalidate>
-   <label for="roomInput" class="sr-only">كود الغرفة</label>
-   <input id="roomInput" type="text" inputmode="text" maxlength="4" placeholder="مثال: K7QM" dir="ltr" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="roomHint roomError">
-   <button type="submit" class="hm-enter hm-enter-sm"><span>دخول الغرفة</span><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-arrow"></use></svg></button>
+  <form class="rm-form" id="roomForm" novalidate>
+   <label for="roomInput" class="rm-label">كود الغرفة</label>
+   <input id="roomInput" type="text" inputmode="text" maxlength="4" placeholder="K7QM" dir="ltr" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="go" aria-describedby="roomHint roomError">
+   <p class="rm-hint" id="roomHint">اكتب الكود المكوّن من 4 خانات (حروف إنجليزية وأرقام) كما يظهر لك.</p>
+   <p class="rm-error" id="roomError" role="alert" hidden></p>
+   <button type="submit" class="rm-btn"><span>دخول الغرفة</span><span aria-hidden="true">‹</span></button>
   </form>
-  <p class="hm-room-hint" id="roomHint">الكود 4 خانات (حروف إنجليزية وأرقام) كما يظهر في البث.</p>
-  <p class="hm-room-error" id="roomError" role="alert" hidden></p>
  </div>
 </section>
 
@@ -329,20 +354,24 @@
 
 <section class="hm-sec" id="faq" aria-labelledby="faqTitle">
  <p class="hm-kicker"><i aria-hidden="true"></i>أسئلة شائعة</p>
- <h2 class="hm-h" id="faqTitle">الأسئلة الشائعة</h2>
- <p class="hm-lead">كل ما تحتاج معرفته قبل أن تبدأ.</p>
- <div class="hm-faq">
-  <details open><summary>كيف أبدأ؟</summary><p>أنشئ حسابًا مجانيًا، ثم فعّل التجربة المجانية أو أدخل رمز اشتراكك، وبعدها افتح الاستوديو واختر لعبة. اربط بثك على TikTok أو Kick واكتب لجمهورك «انضم» — والباقي يتم تلقائيًا.</p></details>
-  <details><summary>كيف تعمل الألعاب مع الجمهور؟</summary><p>كل لعبة تقرأ تعليقات البث المباشر: يكتب المتابع «انضم» ليدخل، ثم يجيب أو يختار بكتابة رقم أو كلمة في الشات. النتائج والفائزون يظهرون على شاشة البث فورًا.</p></details>
-  <details><summary>هل يحتاج المتابع إلى تحميل تطبيق؟</summary><p>لا. المتابع يشارك من شات البث نفسه في TikTok أو Kick، بلا تطبيق ولا تسجيل.</p></details>
-  <details><summary>هل أحتاج OBS؟</summary><p>ليس شرطًا للعب، لكن لعرض اللعبة على شاشة بثك تضيف رابط «شاشة البث» من الاستوديو كمصدر Browser في OBS أو TikTok LIVE Studio بمقاس 1920×1080.</p></details>
-  <details><summary>كيف أحصل على التجربة المجانية؟</summary><p>أنشئ حسابًا وأكّد بريدك الإلكتروني، ثم من صفحة «حسابي» اضغط «احصل على تجربتك المجانية». يظهر لك رمز خاص بحسابك: فعّله مباشرة من الصفحة أو أدخله في نافذة الرمز الترويجي. تبدأ الـ24 ساعة من لحظة التفعيل، والتجربة مرة واحدة لكل حساب.</p></details>
-  <details><summary>هل أحتاج إلى حساب؟</summary><p>نعم للتجربة المجانية والاشتراكات، فالاشتراك يُربط بمعرّف حسابك الدائم. إذا أعطاك فريق SPONGE LIVE رمزًا ترويجيًا فيكفي إدخاله في نافذة الرمز.</p></details>
-  <details><summary>كيف تعمل الاشتراكات؟</summary><p>اختر «شفيق العادي» (29 ريال / 7 أيام) أو «أمير الهامور» (44.99 ريال / شهر) وتواصل معنا عبر واتساب. بعد الدفع نرسل لك رمز الاشتراك؛ أدخله في «حسابي» أو في نافذة الرمز فيُضاف إلى حسابك فورًا. الاشتراك لا يتجدد تلقائيًا، وإذا اشتركت قبل انتهاء الحالي تُضاف المدة بعده.</p></details>
-  <details><summary>كيف أربط بث TikTok؟</summary><p>ابدأ بثك المباشر على TikTok، ثم اكتب اسم حسابك في قسم الربط أو في شريط الاستوديو واضغط «ربط البث المباشر». تتحول الحالة إلى «متصل» عندما تصل تعليقات البث فعلًا.</p></details>
-  <details><summary>هل يدعم الموقع Kick؟</summary><p>نعم. اختر Kick واكتب اسم قناتك. دعم Kick ما زال تجريبيًا، وقد تحتاج أحيانًا رقم غرفة الشات من إعدادات الاستوديو.</p></details>
-  <details><summary>كيف أعرف متى ينتهي اشتراكي؟</summary><p>صفحة «حسابي» تعرض نوع اشتراكك، تاريخ انتهائه والوقت المتبقي، وسجل اشتراكاتك السابقة.</p></details>
-  <details><summary>هل لدي معرّف ثابت؟</summary><p>نعم. كل حساب يحصل على معرّف مثل <bdi dir="ltr">SPG-8F42K9</bdi> يُنشأ مرة واحدة ولا يتغير أبدًا، حتى لو غيّرت اسمك. اذكره عند الشراء أو التواصل مع الدعم.</p></details>
+ <h2 class="hm-h hm-h2" id="faqTitle">كل ما تحتاجه<span class="hm-accent">قبل أن تبدأ.</span></h2>
+ <div class="fq-list">
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq0" id="fqq0"><span>ما هو SPONGE LIVE؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq0" role="region" aria-labelledby="fqq0" hidden><p>منصة ألعاب تفاعلية للبث المباشر على TikTok وKick: تختار لعبة من الاستوديو، يكتب متابعوك كلمة الانضمام في التعليقات فيدخلون اللعبة بأسمائهم وصورهم، والخادم يدير المؤقتات والنتائج على شاشة البث.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq1" id="fqq1"><span>كيف أبدأ بثًا باللعبة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq1" role="region" aria-labelledby="fqq1" hidden><p>افتح بثك على TikTok أو Kick، ثم الاستوديو: اختر لعبة واضغط «تشغيل اللعبة» لتظهر إعداداتها، ثم «ابدأ اللعبة» لتحدد كلمة الانضمام، ثم «فتح التسجيل». عندما يكتمل العدد اضغط «بدء الجولة الآن».</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq2" id="fqq2"><span>ما الألعاب المتاحة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq2" role="region" aria-labelledby="fqq2" hidden><p>أكثر من 20 لعبة، منها تحدي المعرفة وخمن الرسمة والكراسي الموسيقية والقنبلة الموقوتة والأدوار المخفية والروليت وشد الحبل وبرا السالفة. تجد شرح كل لعبة في <a href="/guide/games">دليل الألعاب</a>.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq3" id="fqq3"><span>كيف يدخل المتسابقون؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq3" role="region" aria-labelledby="fqq3" hidden><p>بعد أن تفتح التسجيل يكتب المشاهد كلمة الانضمام التي حددتها (مثل «انضم» أو «جاهز») في تعليقات البث، فيُضاف مرة واحدة باسمه وصورته. الكلمات الأخرى لا تُدخله.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq4" id="fqq4"><span>هل يحتاج المتابع إلى إنشاء حساب؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq4" role="region" aria-labelledby="fqq4" hidden><p>لا. المتابع يشارك من شات البث نفسه بلا تطبيق ولا تسجيل، ويمكنه فتح صفحة اللعبة على جواله بكود الغرفة.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq5" id="fqq5"><span>كيف أربط TikTok؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq5" role="region" aria-labelledby="fqq5" hidden><p>من «حسابي ← الإعدادات ← ربط منصاتك» اضغط «المتابعة باستخدام TikTok» وسجّل الدخول ووافق في صفحة TikTok الرسمية. لا نطلب كلمة مرورك ولا يمكن الربط بكتابة اسم الحساب.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq6" id="fqq6"><span>كيف أربط Kick؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq6" role="region" aria-labelledby="fqq6" hidden><p>بنفس الطريقة: «المتابعة باستخدام Kick» من الإعدادات، ثم تسجيل الدخول والموافقة في صفحة Kick الرسمية. تصل التعليقات عبر خدمة Kick الرسمية بعد الربط.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq7" id="fqq7"><span>هل أحتاج OBS؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq7" role="region" aria-labelledby="fqq7" hidden><p>ليس شرطًا للعب، لكن لعرض اللعبة على شاشة بثك انسخ رابط «شاشة OBS» من الاستوديو وأضفه كمصدر متصفح في OBS أو TikTok LIVE Studio. أدوات مثل العد التنازلي والسحب لها روابط مستقلة في <a href="/guide/tools">أدوات البث</a>.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq8" id="fqq8"><span>ما الفرق بين التجربة المجانية والاشتراك؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq8" role="region" aria-labelledby="fqq8" hidden><p>التجربة المجانية 24 ساعة كاملة بكل الألعاب، مرة واحدة لكل حساب. الاشتراكات: «شفيق العادي» 29 ريال لمدة 7 أيام، و«أمير الهامور» 44.99 ريال لمدة شهر.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq9" id="fqq9"><span>كيف تبدأ مدة التجربة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq9" role="region" aria-labelledby="fqq9" hidden><p>أنشئ حسابًا وأكّد بريدك (أو سجّل الدخول بـ Google)، ثم اضغط «ابدأ التجربة المجانية». تبدأ الـ24 ساعة من لحظة الضغط.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq10" id="fqq10"><span>كيف أشترك أو أجدد؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq10" role="region" aria-labelledby="fqq10" hidden><p>حاليًا الدفع عبر واتساب مع فريق SPONGE LIVE. بعد التحقق من الدفع تصلك رمز الاشتراك، أدخله في «حسابي ← استخدام كود الاسترداد» فيُضاف لحسابك فورًا. إذا جددت قبل انتهاء الاشتراك تُضاف المدة بعده.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq11" id="fqq11"><span>هل يوجد تجديد تلقائي؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq11" role="region" aria-labelledby="fqq11" hidden><p>لا. لا نحفظ بيانات بطاقات ولا نجدد تلقائيًا؛ كل تجديد بطلبك.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq12" id="fqq12"><span>كيف أحصل على المعرّف الدائم؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq12" role="region" aria-labelledby="fqq12" hidden><p>يُنشأ تلقائيًا مع حسابك مثل <bdi dir="ltr">SPG-8F42K9</bdi> ولا يتغير أبدًا. تجده في «ملفي» مع زر نسخ، واذكره عند التواصل مع الدعم.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq13" id="fqq13"><span>كيف يُحسب ترتيب المتصدرين؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq13" role="region" aria-labelledby="fqq13" hidden><p>من الجولات الحقيقية فقط في بثوث مربوطة رسميًا وتعمل فيها لعبة: الانتصارات (المركز الأول في كل جولة)، المشاركات، والساعات. الجولة الأقصر من 15 ثانية لا تُحسب، والوقت المتداخل بين بثّين لا يُحسب مرتين. يبدأ أسبوع جديد كل أحد الساعة 12 ليلًا بتوقيت السعودية.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq14" id="fqq14"><span>كيف أستخدم كود الغرفة؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq14" role="region" aria-labelledby="fqq14" hidden><p>الستريمر يرى كود الغرفة (4 خانات) في الاستوديو ويظهر على شاشة البث. اكتبه في «معاك كود غرفة؟» بالصفحة الرئيسية فتفتح لك صفحة اللعبة.</p></div></div>
+  <div class="fq-item"><h3><button type="button" class="fq-q" aria-expanded="false" aria-controls="fq15" id="fqq15"><span>كيف أتواصل مع الدعم؟</span><i aria-hidden="true">+</i></button></h3><div class="fq-a" id="fq15" role="region" aria-labelledby="fqq15" hidden><p>عبر واتساب من زر «تواصل معنا» أسفل الصفحة. اذكر معرّفك الدائم ليساعدك الفريق أسرع.</p></div></div>
  </div>
 </section>
 
@@ -362,6 +391,7 @@
   <p class="hm-foot-desc">منصة ألعاب تفاعلية للبث المباشر: جمهورك يلعب من التعليقات، وأنت تدير كل شيء من استوديو واحد.</p>
   <div class="hm-foot-cols">
    <nav aria-label="روابط الموقع"><h3>الموقع</h3><a href="#live">البثوث النشطة</a><a href="#leaders">المتصدرون</a><a href="#games">الألعاب</a><a href="#connect">ربط البث</a><a href="#faq">الأسئلة الشائعة</a></nav>
+   <nav aria-label="الأدلة"><h3>الأدلة</h3><a href="/guide/games">دليل الألعاب</a><a href="/guide/tiktok-live">دليل تيك توك لايف</a><a href="/guide/tools">أدوات البث</a></nav>
    <nav aria-label="الأدلة"><h3>الأدلة</h3><a href="/guide/games">دليل الألعاب</a><a href="/guide/tiktok-live">دليل تيك توك لايف</a><a href="/guide/tools">أدوات البث</a></nav>
    <nav aria-label="الحساب"><h3>الحساب</h3><a href="/login">تسجيل الدخول</a><a href="/signup">إنشاء حساب جديد</a><a href="/account">حسابي</a><a href="#plans">الاشتراكات</a></nav>
    <nav aria-label="تواصل"><h3>تواصل معنا</h3><a href="https://wa.me/qr/7GOY3ACMFYQCK1" target="_blank" rel="noopener">واتساب</a><a href="#" id="supportLink" hidden rel="noopener" target="_blank">الدعم</a></nav>

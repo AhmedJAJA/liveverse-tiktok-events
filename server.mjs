@@ -18,7 +18,7 @@ import { DrawHub } from './src/draw.mjs';
 import { PromoStore, PROMO_LEVELS } from './src/promo.mjs';
 import { createPool, migrate } from './src/db.mjs';
 import { PromoMirror, SessionMirror } from './src/persist.mjs';
-import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS, privacyOf } from './src/platform.mjs';
+import { Platform, PlatformError, PLANS as PLATFORM_PLANS, AVATARS, privacyOf, weekOf } from './src/platform.mjs';
 import { createMailer, createGateway } from './src/services.mjs';
 import { GoogleVerifier } from './src/google.mjs';
 import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
@@ -104,10 +104,10 @@ class Room {
     this.lastGameAt = ev.at;
     if (this.kind !== 'acct' || !platform || !this.sessionCounted) return;
     const where = this.engine.connection.platform;
-    const participants = [...this.engine.players.values()].filter((p) => !p.manual && !/^(demo|host|manual):/.test(p.id)).map((p) => ({ id: p.id, name: p.name, avatar: p.avatar }));
+    const participants = [...this.engine.players.values()].filter((p) => !p.manual && !/^(demo|host|manual):/.test(p.id)).map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, handle: p.handle }));
     if (!participants.length) return;
     const winnerId = ev.winner?.id && participants.some((p) => p.id === ev.winner.id) ? ev.winner.id : null;
-    platform.recordGameResult({ platform: where, winnerId, participants }).catch(() => {});
+    platform.recordGameResult({ platform: where, winnerId, participants, startedAt: st.startedAt, endedAt: ev.at, streamerId: this.ownerId }).catch(() => {});
   }
   async disconnectAll() { this.kickOfficial = null; await this.tiktok.disconnect(false); await this.kick.disconnect(false); this.engine.setConnection('disconnected', '', 'تم الفصل'); }
 }
@@ -159,7 +159,8 @@ if (pool) {
   await migrate(pool);
   await PromoMirror.attach(pool, promos);
   await SessionMirror.attach(pool, sessions);
-  platform = new Platform({ pool, hashCode: (c) => promos.hash(c), mail: createMailer(), gateway: createGateway(), appUrl: process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000) });
+  platform = new Platform({ pool, hashCode: (c) => promos.hash(c), mail: createMailer(), gateway: createGateway(), appUrl: process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000),
+    ...(process.env.NODE_ENV === 'test' && process.env.SKY_MIN_ROUND_MS ? { minRoundMs: Number(process.env.SKY_MIN_ROUND_MS) } : {}) });
   await platform.init();
   for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
 } else console.warn('[db] DATABASE_URL is not set: games and promo codes work; accounts, trials and subscriptions are off.');
@@ -840,11 +841,17 @@ async function handleManage(action, req, res) {
       if (action === 'users') return json(res, 200, { users: await platform.searchUsers(url.searchParams.get('q') || ''), stats: await platform.stats() });
       if (action === 'user') { const id = await platform.userByPublicId(url.searchParams.get('id') || ''); if (!id) return json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' }); return json(res, 200, await platform.adminUser(id)); }
       if (action === 'audit') return json(res, 200, { log: await platform.auditLog(Number(url.searchParams.get('limit')) || 100) });
+      if (action === 'partners') return json(res, 200, { partners: await platform.partners({ all: true }) });
+      if (action === 'prizes') return json(res, 200, await platform.listPrizes());
       if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
       return json(res, 404, { error: 'Not found' });
     }
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
-    const body = await readBody(req, 4096);
+    const body = await readBody(req, action === 'partner-save' ? 600_000 : 4096);
+    if (action === 'partner-save') { const partners = await platform.savePartner(body); await platform.audit(admin.name, 'partner-save', { details: { name: String(body.name || '').slice(0, 40) }, ip }); return json(res, 200, { ok: true, partners }); }
+    if (action === 'partner-delete') { const partners = await platform.deletePartner(body.id); await platform.audit(admin.name, 'partner-delete', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, partners }); }
+    if (action === 'prize-save') { const r = await platform.savePrize(body); await platform.audit(admin.name, 'prize-save', { details: { title: String(body.title || '').slice(0, 80) }, ip }); return json(res, 200, { ok: true, ...r }); }
+    if (action === 'award-status') { const r = await platform.setAwardStatus(body.id, String(body.status || '')); await platform.audit(admin.name, 'award-status', { details: { id: body.id, status: body.status }, ip }); return json(res, 200, { ok: true, ...r }); }
     if (action === 'code-create') { const code = promos.create(body); await platform.audit(admin.name, 'promo-create', { details: { id: code.id, label: code.label, level: code.level, maxUses: code.maxUses }, ip }); return json(res, 200, { ok: true, code }); }
     if (action === 'voucher-create') { const codes = await platform.createVouchers(String(body.plan), body.count, { label: body.label, createdBy: admin.name }); await platform.audit(admin.name, 'voucher-create', { details: { plan: body.plan, count: codes.length, label: String(body.label || '').slice(0, 60) }, ip }); return json(res, 200, { ok: true, codes }); }
     if (action === 'voucher-revoke') { const r = await platform.revokeVoucher(String(body.code || '')); await platform.audit(admin.name, 'voucher-revoke', { details: { hint: String(body.code).slice(0, 4) + '…' + String(body.code).slice(-4) }, ip }); return json(res, 200, { ok: true, ...r }); }
@@ -1017,6 +1024,8 @@ const server = http.createServer(async (req, res) => {
       const code = String(url.searchParams.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
       const id = code.length === 4 ? roomCodes.get(code) : null;
       if (!id || !rooms.has(id)) return json(res, 404, { error: 'الكود غير صحيح أو انتهت الغرفة — تأكد منه من شاشة البث' });
+      const reg = rooms.get(id).engine.registration, count = rooms.get(id).engine.players.size;
+      if (reg.phase === 'open' && count >= reg.maxPlayers) return json(res, 409, { error: 'الغرفة ممتلئة — اكتمل عدد المتسابقين في هذه الجولة', full: true });
       return json(res, 200, { room: id, url: '/play?room=' + encodeURIComponent(id) });
     }
     if (url.pathname === '/api/leaderboard' && req.method === 'GET') {
@@ -1026,11 +1035,26 @@ const server = http.createServer(async (req, res) => {
       const find = url.searchParams.get('find');
       if (find) {
         if (!/^SPG-[A-Z0-9]{4,8}$/i.test(find)) return json(res, 400, { error: 'اكتب معرف SPG بالشكل SPG-XXXXXX' });
-        const hit = await platform.leaderboardFind(find, metric);
-        return hit ? json(res, 200, { found: hit }) : json(res, 404, { error: 'لا يوجد ستريمر بهذا المعرف أو إحصاءاته مخفية' });
+        const hit = await platform.leaderboardFind(find, metric, board);
+        return hit ? json(res, 200, { found: hit }) : json(res, 404, { error: 'لا يوجد حساب بهذا المعرف أو إحصاءاته مخفية' });
       }
-      res.setHeader('Cache-Control', 'public, max-age=30');
+      res.setHeader('Cache-Control', 'public, max-age=20');
+      if (url.searchParams.get('week') === 'prev') {
+        const prev = new Date(Date.parse(weekOf(Date.now()).start + 'T00:00:00Z') - 7 * 86400_000).toISOString().slice(0, 10);
+        return json(res, 200, await platform.archivedBoard(prev, board, metric || (board === 'players' ? 'wins' : 'hours')));
+      }
       return json(res, 200, await platform.leaderboard(board, metric));
+    }
+    if (url.pathname === '/api/partners' && req.method === 'GET') {
+      res.setHeader('Cache-Control', 'public, max-age=60');
+      return json(res, 200, { partners: platform ? await platform.partners() : [] });
+    }
+    const photo = /^\/api\/partners\/(\d{1,8})\/photo$/.exec(url.pathname);
+    if (photo && req.method === 'GET') {
+      const img = platform && await platform.partnerPhoto(photo[1]);
+      if (!img) return json(res, 404, { error: 'Not found' });
+      res.writeHead(200, { 'Content-Type': img.type, 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+      return res.end(img.data);
     }
     if (url.pathname === '/api/sketch' && req.method === 'GET') { const room = publicRoom(url.searchParams.get('room')); return room ? json(res, 200, room.sketch || { data: '', v: 0 }) : json(res, 404, { error: 'الغرفة غير موجودة' }); }
     if (url.pathname.startsWith('/api/role/')) return await handleRole(url.pathname.slice('/api/role/'.length), url, req, res);
@@ -1160,6 +1184,8 @@ wss.on('connection', (ws, room) => {
 const roundClock = setInterval(() => { for (const room of rooms.values()) room.engine.tick(); draw.tick(); }, 100);
 roundClock.unref?.();
 const liveSweep = setInterval(sweepLive, 5000);
+// a week that ended: freeze its leaderboard and record prize winners (idempotent)
+const weekCloser = setInterval(() => { platform?.closeWeeks().catch(() => {}); }, 60_000);
 liveSweep.unref?.();
 const heartbeat = setInterval(() => {
   for (const room of rooms.values()) for (const ws of room.clients) { if (!ws.isAlive) { ws.terminate(); continue; } ws.isAlive = false; ws.ping(); }
@@ -1168,7 +1194,7 @@ const heartbeat = setInterval(() => {
 heartbeat.unref?.();
 server.listen(PORT, '0.0.0.0', () => console.log(`TikTok LIVE Events ready on http://localhost:${PORT}`));
 const shutdown = async () => {
-  clearInterval(roundClock); clearInterval(heartbeat); clearInterval(liveSweep);
+  clearInterval(roundClock); clearInterval(heartbeat); clearInterval(liveSweep); clearInterval(weekCloser);
   for (const room of rooms.values()) await room.disconnectAll().catch(() => {});
   wss.close(); server.close(); server.closeIdleConnections?.();
   if (pool) { await promos.mirror?.drain(); await sessions.mirror?.drain(); await pool.end().catch(() => {}); }

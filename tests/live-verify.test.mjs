@@ -66,7 +66,7 @@ test('official TikTok/Kick sign-in, linked-only connections and the active-strea
   const fake = await fakePlatforms();
   fake.addKick(501, { slug: 'hostchan', name: 'Host Chan' }); fake.addKick(777, { slug: 'otherchan' });
   fake.addTikTok('tt-open-1', { username: 'reef.host', name: 'Reef Host', linkOnly: true }); // username read from the profile link
-  const srv = await boot({ ...fake.env, KICK_LIVE_CHECK_MS: '5000', SKY_HOST_TIMEOUT_MS: '5000' });
+  const srv = await boot({ ...fake.env, KICK_LIVE_CHECK_MS: '5000', SKY_HOST_TIMEOUT_MS: '5000', SKY_MIN_ROUND_MS: '100' });
   const pool = new pg.Pool({ connectionString: dbUrl });
   const owner = browser(srv.base, { Authorization: 'Bearer ' + OWNER });
   const anon = browser(srv.base);

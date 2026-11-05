@@ -73,6 +73,42 @@
    <form class="pg-row" id="voucherRevokeForm"><label class="pg-field"><span>إلغاء رمز غير مستخدم</span><input name="code" dir="ltr" maxlength="40"></label><button class="pg-btn2 is-danger" type="submit">إلغاء</button></form>
   </section>
 
+  <section class="pg-card pg-span" aria-labelledby="partnersTitle">
+   <h2 id="partnersTitle">شركاء النجاح</h2>
+   <p class="pg-sub">يظهر القسم في الصفحة الرئيسية فقط عند وجود شريك ظاهر. استخدم صور شركاء وافقوا على عرضها. شارة «شريك رسمي» تتطلب أن يكون حساب الشريك على المنصة مربوطًا رسميًا بحساب SPONGE LIVE.</p>
+   <form class="pg-form" id="partnerForm">
+    <input type="hidden" name="id">
+    <div class="pg-row"><label class="pg-field"><span>الاسم</span><input name="name" maxlength="40" required></label>
+    <label class="pg-field"><span>اسم الحساب (بدون @)</span><input name="handle" maxlength="40" dir="ltr" required pattern="[A-Za-z0-9_.]{1,40}"></label>
+    <label class="pg-field"><span>المنصة</span><select name="platform"><option value="tiktok">TikTok</option><option value="kick">Kick</option></select></label></div>
+    <label class="pg-field"><span>وصف مختصر</span><input name="description" maxlength="120" placeholder="صانعة محتوى على TikTok"></label>
+    <div class="pg-row"><label class="pg-field"><span>الترتيب</span><input name="sort" type="number" value="0" min="-999" max="999"></label>
+    <label class="pg-field"><span>الصورة (PNG / JPEG / WebP — حتى 400 KB)</span><input name="photo" type="file" accept="image/png,image/jpeg,image/webp"></label></div>
+    <div class="pg-row"><label class="pg-check"><input type="checkbox" name="active" checked> ظاهر في الصفحة الرئيسية</label><label class="pg-check"><input type="checkbox" name="official"> شريك رسمي</label></div>
+    <div class="pg-row"><button class="pg-btn2" type="submit">حفظ الشريك</button><button class="pg-btn2" type="reset">جديد</button></div>
+   </form>
+   <p class="pg-msg" id="partnerMsg" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الترتيب</th><th>الاسم</th><th>الحساب</th><th>الحالة</th><th></th></tr></thead><tbody id="partnerRows"></tbody></table></div>
+  </section>
+
+  <section class="pg-card pg-span" aria-labelledby="prizesTitle">
+   <h2 id="prizesTitle">جوائز المتصدرين</h2>
+   <p class="pg-sub">لا تُعرض عبارة «عليها جوائز» إلا إذا أضفت هنا جائزة حقيقية معلنة. عند انتهاء كل أسبوع يُسجَّل الفائزون تلقائيًا وتحدّث حالة التسليم من الجدول.</p>
+   <form class="pg-form" id="prizeForm">
+    <div class="pg-row"><label class="pg-field"><span>اللوحة</span><select name="board"><option value="players">اللاعبون</option><option value="streamers">الستريمرز</option></select></label>
+    <label class="pg-field"><span>الترتيب حسب</span><select name="metric"><option value="wins">الانتصارات (لاعبون)</option><option value="entries">المشاركات (لاعبون)</option><option value="hours">الساعات</option><option value="players">اللاعبون (ستريمرز)</option><option value="sessions">الجلسات (ستريمرز)</option><option value="rounds">الجولات (ستريمرز)</option></select></label>
+    <label class="pg-field"><span>من المركز</span><input name="rankFrom" type="number" min="1" max="5" value="1"></label><label class="pg-field"><span>إلى المركز</span><input name="rankTo" type="number" min="1" max="5" value="1"></label></div>
+    <label class="pg-field"><span>الجائزة</span><input name="title" maxlength="80" required placeholder="مثال: اشتراك أمير الهامور مجانًا"></label>
+    <label class="pg-field"><span>شروط التأهل</span><input name="conditions" maxlength="300"></label>
+    <div class="pg-row"><label class="pg-field"><span>تبدأ من أسبوع</span><input name="startsOn" type="date"></label><label class="pg-field"><span>تنتهي (اختياري)</span><input name="endsOn" type="date"></label></div>
+    <button class="pg-btn2" type="submit">إضافة الجائزة</button>
+   </form>
+   <p class="pg-msg" id="prizeMsg" hidden></p>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الجائزة</th><th>اللوحة</th><th>المراكز</th><th>الفترة</th><th></th></tr></thead><tbody id="prizeRows"></tbody></table></div>
+   <h3>سجل الفائزين</h3>
+   <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الأسبوع</th><th>الجائزة</th><th>المركز</th><th>الفائز</th><th>الاستلام</th></tr></thead><tbody id="awardRows"></tbody></table></div>
+  </section>
+
   <section class="pg-card" aria-labelledby="auditTitle">
    <h2 id="auditTitle">سجل عمليات الإدارة</h2>
    <div class="pg-scroll"><table class="pg-table"><thead><tr><th>الوقت</th><th>المنفّذ</th><th>العملية</th><th>الحساب</th></tr></thead><tbody id="auditRows"></tbody></table></div>
