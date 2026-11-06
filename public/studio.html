@@ -8,6 +8,7 @@
 <title>اللعبة | سبونج لايف</title>
 <link rel="icon" href="/brand/favicon-64.png" type="image/png">
 <link rel="preload" href="/fonts/tajawal-arabic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/shared-theme.css">
 <link rel="stylesheet" href="/royal-core.css">
 <link rel="stylesheet" href="/play.css">
 <link rel="stylesheet" href="/sponge.css">
@@ -20,25 +21,41 @@
 <script defer src="/sponge-ui.js"></script>
 <script defer src="/frames.js"></script>
 <script defer src="/studio.js"></script>
+<script defer src="/site-header.js"></script>
 </head>
-<body class="pl-page st-page" data-category="smart" data-view="join" data-drawer="open" data-screen="games">
-<header class="st-top">
- <div class="st-top-row">
-  <a class="sp-brand st-brand" href="/" aria-label="سبونج لايف"><img src="/brand/sponge-128.webp" alt="" width="34" height="34"><span><b>سبونج</b> لايف</span></a>
-  <nav class="st-links" aria-label="روابط الموقع">
-   <a href="/">الرئيسية</a>
-   <a href="/games" id="gamesLink">الألعاب</a>
-   <a href="/tools">أدوات البث</a>
-   <a href="/#store">المتجر</a>
-   <a href="/#faq">الأسئلة الشائعة</a>
-   <a href="/#contact">تواصل معنا</a>
+<body class="sl-page pl-page st-page" data-category="smart" data-view="join" data-drawer="open" data-screen="games">
+<header class="sl-header" id="bar">
+ <div class="sl-header-in">
+  <button type="button" class="sl-icon-btn sl-burger-btn" id="menuButton" aria-controls="menu" aria-expanded="false" aria-label="القائمة"><span class="sl-burger" aria-hidden="true"><i></i><i></i><i></i></span></button>
+  <a class="sl-brand" href="/" aria-label="سبونج لايف — الرئيسية"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
+  <nav class="sl-nav" aria-label="أقسام الموقع">
+   <a href="/" data-nav="home">الرئيسية</a>
+   <a href="/games" data-nav="games" id="gamesLink">الألعاب</a>
+   <a href="/#live" data-nav="live">البثوث النشطة</a>
+   <a href="/#leaders" data-nav="leaders">المتصدرون</a>
+   <a href="/#store" data-nav="store">المتجر</a>
+   <div class="sl-more">
+    <button type="button" class="sl-more-btn" id="moreButton" aria-expanded="false" aria-controls="moreMenu">المزيد <span aria-hidden="true">▾</span></button>
+    <div class="sl-more-menu" id="moreMenu" hidden>
+     <a href="/#room">دخول الغرفة</a>
+     <a href="/#partners" data-partners-link hidden>الشركاء</a>
+     <a href="/#faq">الأسئلة الشائعة</a>
+     <a href="/guide/games">دليل الألعاب</a>
+     <a href="/guide/tiktok-live">دليل تيك توك لايف</a>
+     <a href="/guide/tools">أدوات البث</a>
+    </div>
+   </div>
   </nav>
-  <div class="st-top-user">
-   <span class="pl-room" id="roomBadge" hidden></span>
-   <a class="st-account" href="/account"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-user"/></svg><span>حسابي</span></a>
-   <button type="button" class="pl-chip" id="logoutButton">خروج</button>
+  <div class="sl-actions">
+   <span class="pl-room sl-hide-phone" id="roomBadge" hidden></span>
+   <a class="sc-pill" id="barCoins" href="/account#wallet" hidden aria-label="رصيد عملات الإسفنجة"><img src="/brand/coin-64.webp" alt="" width="28" height="28"><b data-coin-balance>0</b></a>
+   <a class="sl-btn sl-btn-sun" id="barTrial" href="/signup">ابدأ مجاناً</a>
+   <a class="sl-btn sl-btn-primary sl-user" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg?v=20261106#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
+   <button type="button" class="sl-btn sl-btn-ghost sl-btn-sm sl-hide-phone" id="logoutButton">خروج</button>
   </div>
  </div>
+</header>
+<div class="st-top">
  <div class="st-toolbar" role="toolbar" aria-label="أدوات البث">
   <form class="st-connect" id="connectForm" autocomplete="off">
    <!-- accounts: the platform accounts they signed in with (no typed names) -->
@@ -67,7 +84,7 @@
    <button type="button" class="pl-chip" id="drawerToggle" aria-expanded="true" aria-controls="hostPanel"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-gear"/></svg><span>التحكم</span></button>
   </div>
  </div>
-</header>
+</div>
 <!-- server-decided notices: plan needed, proof of account ownership, another studio window -->
 <div class="st-notices">
  <div class="st-notice is-plan" id="planNotice" hidden role="alert"><span>تعذر ربط البث — سجّل الدخول من جديد ثم حاول.</span><a class="st-notice-btn" href="/login">تسجيل الدخول</a></div>

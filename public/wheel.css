@@ -16,10 +16,10 @@
 .wh-bulb{fill:#FFF6C4}
 .wh-bulb.is-alt{fill:#FFE38A}
 .wh-pointer{position:absolute;z-index:3;top:-6px;left:50%;width:46px;height:56px;translate:-50% 0;
-  background:linear-gradient(180deg,#FFF4A8,#FFC21A 60%,#B97A00);clip-path:polygon(50% 100%,0 0,100% 0);filter:drop-shadow(0 4px 6px rgba(0,0,0,.6)) drop-shadow(0 0 10px rgba(255,214,42,.8))}
+  background:linear-gradient(180deg,#FFF4A8,var(--sl-yellow) 60%,#B97A00);clip-path:polygon(50% 100%,0 0,100% 0);filter:drop-shadow(0 4px 6px rgba(0,0,0,.6)) drop-shadow(0 0 10px rgba(255,214,42,.8))}
 .wh-stage.is-tick .wh-pointer{animation:wh-tick .12s ease-out}
 @keyframes wh-tick{40%{transform:rotate(-14deg)}}
-.wh-hub{position:absolute;z-index:2;inset:39%;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,#123A8A,#061A44);
+.wh-hub{position:absolute;z-index:2;inset:39%;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle,#123A8A,var(--sl-navy));
   box-shadow:0 0 0 5px #FFD23A,0 0 0 8px #9E5A00,0 0 30px rgba(56,212,255,.6)}
 .wh-hub img{width:86%;height:auto;animation:wh-hub 6s ease-in-out infinite}
 @keyframes wh-hub{50%{transform:rotate(8deg) scale(1.05)}}
@@ -56,12 +56,12 @@ body.wh-open .wh-bubbles i,body.wh-open .wh-hub img,body.wh-open .hm-sea *{anima
 .wh-over[data-rarity=legendary]{background:radial-gradient(60% 50% at 50% 45%,rgba(255,200,58,.28),rgba(1,6,20,.92) 70%)}
 .wh-over[data-rarity=mythic]{background:radial-gradient(60% 50% at 50% 45%,rgba(255,61,110,.3),rgba(40,10,60,.9) 55%,rgba(1,4,16,.96))}
 .wh-over.is-cinema::before{content:"";position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 50% 45%,#fff 0,rgba(255,230,140,.9) 12%,transparent 45%);animation:wh-flash 1.3s ease-out both;pointer-events:none}
-.wh-over[data-rarity=mythic].is-cinema::before{background:conic-gradient(from 0deg at 50% 45%,#FF3D6E,#B06BFF,#38D4FF,#FFD62A,#FF3D6E);animation:wh-flash-m 1.4s ease-out both}
+.wh-over[data-rarity=mythic].is-cinema::before{background:conic-gradient(from 0deg at 50% 45%,#FF3D6E,#B06BFF,var(--sl-cyan),var(--sl-yellow),#FF3D6E);animation:wh-flash-m 1.4s ease-out both}
 @keyframes wh-flash{0%{opacity:0;transform:scale(.2)}25%{opacity:1}100%{opacity:0;transform:scale(2.4)}}
 @keyframes wh-flash-m{0%{opacity:0;transform:scale(.2) rotate(0)}30%{opacity:.85}100%{opacity:0;transform:scale(2.6) rotate(180deg)}}
 @keyframes wh-fade{from{opacity:0}to{opacity:1}}
 .wh-card,.wh-sum{position:relative;width:min(440px,100%);padding:22px;border-radius:28px;text-align:center;color:var(--foam);
-  background:linear-gradient(180deg,#0E2A66,#061A44);border:2px solid var(--rc,rgba(140,232,255,.4));box-shadow:0 0 50px -10px var(--rc,#38D4FF),0 30px 80px -20px #000;animation:wh-pop .5s cubic-bezier(.3,1.5,.5,1) both}
+  background:linear-gradient(180deg,#0E2A66,var(--sl-navy));border:2px solid var(--rc,rgba(140,232,255,.4));box-shadow:0 0 50px -10px var(--rc,var(--sl-cyan)),0 30px 80px -20px #000;animation:wh-pop .5s cubic-bezier(.3,1.5,.5,1) both}
 .wh-sum{width:min(860px,100%)}
 @keyframes wh-pop{from{opacity:0;transform:scale(.85) translateY(20px)}to{opacity:1;transform:none}}
 .wh-card.is-r-rare{animation:wh-pop .5s cubic-bezier(.3,1.5,.5,1) both,wh-spin-y 1s ease-out .1s both}

@@ -1,13 +1,14 @@
 /* سبونج لايف — game join page. Royal black & gold base; each game category brings its own accent. */
 :root{
-  --pl-bg:#07060A; --pl-text:#EAF9FF; --pl-text-2:#B0D5E3; --pl-text-3:#83AEBF;
-  --pl-gold:#4AD3FF; --pl-gold-btn:linear-gradient(180deg,#6BDDFF 0%,#3AB1E0 100%);
-  --pl-line:rgba(140,223,255,.22); --pl-card:rgba(10,15,25,.72);
-  --pl-accent:#4FD1FF; --pl-accent-soft:rgba(79,209,255,.16);
-  --pl-ease:cubic-bezier(.2,.8,.2,1);
+  /* aliases of the shared palette (shared-theme.css) */
+  --pl-bg:var(--sl-deep); --pl-text:var(--sl-text); --pl-text-2:#B9CBE6; --pl-text-3:var(--sl-muted);
+  --pl-gold:var(--sl-cyan); --pl-gold-btn:var(--sl-grad-primary);
+  --pl-line:var(--sl-border-2); --pl-card:rgba(var(--sl-surface-rgb),.78);
+  --pl-accent:var(--sl-cyan); --pl-accent-soft:rgba(var(--sl-cyan-rgb),.16);
+  --pl-ease:var(--sl-ease);
 }
 body.pl-page[data-category="elimination"]{--pl-accent:#FF5C7A;--pl-accent-soft:rgba(255,92,122,.16)}
-body.pl-page[data-category="smart"]{--pl-accent:#4FD1FF;--pl-accent-soft:rgba(79,209,255,.16)}
+body.pl-page[data-category="smart"]{--pl-accent:var(--sl-cyan);--pl-accent-soft:rgba(79,209,255,.16)}
 body.pl-page[data-category="luck"]{--pl-accent:#C39BFF;--pl-accent-soft:rgba(195,155,255,.17)}
 body.pl-page[data-category="group"]{--pl-accent:#3DDC84;--pl-accent-soft:rgba(61,220,132,.16)}
 
@@ -20,15 +21,11 @@ body.pl-page::before{display:none}
 /* backdrop: the game cover, blurred, tinted by the category accent */
 .pl-backdrop{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
 .pl-backdrop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.12;transform:scale(1.2)}
-.pl-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--pl-accent-soft),transparent 60%),linear-gradient(180deg,rgba(7,6,10,.55),rgba(7,6,10,.92) 55%,#07060A)}
+.pl-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,var(--pl-accent-soft),transparent 60%),linear-gradient(180deg,rgba(7,6,10,.55),rgba(7,6,10,.92) 55%,var(--sl-deep))}
 
 /* top bar */
-.pl-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;height:62px;padding:0 max(16px,env(safe-area-inset-right));background:rgba(3,12,34,.94);border-bottom:1px solid var(--pl-line)}
-.pl-back,.pl-chip{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 13px;border-radius:12px;border:1px solid var(--pl-line);color:var(--pl-text-2);font-weight:700;font-size:14px;text-decoration:none;background:rgba(255,255,255,.03)}
-.pl-back .i{transform:scaleX(-1)}
-.pl-back:hover,.pl-chip:hover{border-color:var(--pl-gold);color:var(--pl-text)}
-.pl-brand{display:inline-flex;align-items:center;gap:8px;margin-inline:auto;color:var(--pl-gold);font:800 16px/1 "Tajawal",system-ui,sans-serif;letter-spacing:0;text-decoration:none}
-.pl-bar-tools{display:flex;align-items:center;gap:8px}
+.pl-chip{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 13px;border-radius:12px;border:1px solid var(--pl-line);color:var(--pl-text-2);font-weight:700;font-size:14px;text-decoration:none;background:rgba(255,255,255,.03)}
+.pl-chip:hover{border-color:var(--pl-gold);color:var(--pl-text)}
 .pl-room{height:30px;display:inline-flex;align-items:center;padding:0 11px;border-radius:999px;background:var(--pl-accent-soft);color:var(--pl-accent);font-size:13px;font-weight:800;border:1px solid var(--pl-accent)}
 
 .pl-main{width:100%;max-width:1180px;margin-inline:auto;padding:26px 16px 24px;display:flex;flex-direction:column;gap:22px}
@@ -128,8 +125,7 @@ body[data-view="live"] .pl-players{max-height:260px}
   .pl-admin-join .pl-btn-gold{order:-1;flex:1 1 100%}
   .pl-admin-join .pl-btn-line,.pl-admin-join .pl-btn-ghost{flex:1 1 40%}
   .pl-admin-live .pl-btn,.pl-admin-done .pl-btn{flex:1 1 40%}
-  .pl-chip span,.pl-back span{display:none}
-  .pl-brand span{display:none}
+  .pl-chip span{display:none}
 }
 @media (max-width:400px){
   .pl-players{grid-template-columns:1fr 1fr}
@@ -157,38 +153,36 @@ body[data-view="live"] .pl-players{max-height:260px}
 .pl-panel h2{font-size:22px;font-weight:900;margin-bottom:14px}
 .pl-panel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
 .pl-box{display:grid;gap:10px;align-content:start;margin:0;padding:14px;border-radius:18px;border:1px solid rgba(56,212,255,.25);background:rgba(2,10,34,.55);min-width:0}
-.pl-box legend{padding:0 8px;font-weight:900;color:#8CE8FF}
+.pl-box legend{padding:0 8px;font-weight:900;color:var(--sl-cyan-soft)}
 .pl-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
 .pl-row label,.pl-select{display:flex;flex-direction:column;gap:4px;flex:1 1 120px;font-size:12px;color:var(--pl-text-3);font-weight:700}
 .pl-row input,.pl-select select{height:42px;padding:0 12px;border-radius:12px;border:1px solid rgba(56,212,255,.3);background:rgba(255,255,255,.04);color:var(--pl-text);font:700 15px "Tajawal",system-ui,sans-serif;min-width:0}
-.pl-select option{background:#061A44}
-.pl-row input:focus,.pl-select select:focus{outline:none;border-color:#FFD21F}
+.pl-select option{background:var(--sl-navy)}
+.pl-row input:focus,.pl-select select:focus{outline:none;border-color:var(--sl-yellow)}
 .pl-row .pl-btn,.pl-box .pl-btn{height:42px;font-size:15px;padding:0 14px}
 .pl-check{display:flex;align-items:center;gap:10px;font-weight:800;cursor:pointer}
-.pl-check input{width:22px;height:22px;accent-color:#FFD21F}
+.pl-check input{width:22px;height:22px;accent-color:var(--sl-yellow)}
 .pl-hint{margin:0;color:var(--pl-text-3);font-size:13px}
-.pl-link{color:#8CE8FF;font-size:14px}
+.pl-link{color:var(--sl-cyan-soft);font-size:14px}
 .pl-tools{display:grid;gap:12px;padding:16px;border-radius:24px;background:rgba(6,26,68,.8);border:1px solid rgba(255,210,31,.45)}
 .pl-sketch-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:10px}
-.pl-sketch-head b{font-size:28px;color:#FFE14D}
+.pl-sketch-head b{font-size:28px;color:var(--sl-yellow-hi)}
 .pl-sketch-head small{color:var(--pl-text-3)}
-.pl-canvas{border-radius:18px;overflow:hidden;border:4px solid #E9FBFF;background:#fff;touch-action:none}
+.pl-canvas{border-radius:18px;overflow:hidden;border:4px solid var(--sl-text);background:#fff;touch-action:none}
 .pl-canvas canvas{display:block;width:100%;height:auto;cursor:crosshair;touch-action:none}
 .pl-sketch-tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px}
 .pl-palette{display:flex;flex-wrap:wrap;gap:6px}
 .pl-swatch{width:32px;height:32px;border-radius:50%;border:3px solid rgba(255,255,255,.4);background:var(--sw);cursor:pointer}
-.pl-swatch[aria-pressed="true"]{border-color:#FFD21F;scale:1.12}
+.pl-swatch[aria-pressed="true"]{border-color:var(--sl-yellow);scale:1.12}
 .pl-judge{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .pl-judge p{flex:1 1 260px;margin:0;font-weight:800}
-.pl-judge b{color:#FFE14D;font-size:22px}
+.pl-judge b{color:var(--sl-yellow-hi);font-size:22px}
 .pl-roles p{margin:0 0 10px;color:var(--pl-text-2)}
 .pl-roles ul{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin:0;padding:0;list-style:none}
 .pl-roles li{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.05)}
 .pl-roles li small{margin-inline-start:auto;font-weight:900}
-.pl-roles li.is-impostor small{color:#FF6A8A}.pl-roles li.is-detective small{color:#FFE14D}
+.pl-roles li.is-impostor small{color:#FF6A8A}.pl-roles li.is-detective small{color:var(--sl-yellow-hi)}
 .pl-roles li.is-out{opacity:.45;text-decoration:line-through}
-body.is-offline .pl-bar::after{content:"إعادة الاتصال…";position:absolute;inset-inline-start:50%;top:100%;translate:-50% 6px;padding:4px 12px;border-radius:999px;background:#FF6A8A;color:#fff;font-size:13px;font-weight:800}
-.pl-bar{position:sticky}
 .pl-admin .pl-btn[href]{text-decoration:none}
 @media (max-width:760px){
   .pl-cover.is-art{width:110px}
@@ -198,10 +192,10 @@ body.is-offline .pl-bar::after{content:"إعادة الاتصال…";position:a
 .role-main{max-width:640px}
 .role-card .pl-call-main{font-size:clamp(40px,10vw,72px)}
 body[data-role="impostor"] .role-card{box-shadow:0 0 0 2px #FF6A8A,0 0 50px rgba(255,106,138,.4)}
-body[data-role="detective"] .role-card{box-shadow:0 0 0 2px #FFD21F,0 0 50px rgba(255,210,31,.35)}
+body[data-role="detective"] .role-card{box-shadow:0 0 0 2px var(--sl-yellow),0 0 50px rgba(255,210,31,.35)}
 body[data-role="outsider"] .role-card{box-shadow:0 0 0 2px #FF6A8A,0 0 50px rgba(255,106,138,.4)}
-body[data-role="insider"] .role-card{box-shadow:0 0 0 2px #38D4FF,0 0 50px rgba(56,212,255,.35)}
-.role-card .role-word{font-size:clamp(28px,7vw,48px);color:#FFD62A}
+body[data-role="insider"] .role-card{box-shadow:0 0 0 2px var(--sl-cyan),0 0 50px rgba(56,212,255,.35)}
+.role-card .role-word{font-size:clamp(28px,7vw,48px);color:var(--sl-yellow)}
 .role-actions{display:grid;gap:10px;width:100%}
 .role-actions h2{font-size:20px}
 .role-targets{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}

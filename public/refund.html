@@ -7,17 +7,44 @@
 <meta name="robots" content="noindex">
 <title>سياسة الاسترداد — سبونج لايف</title>
 <link rel="icon" href="/brand/favicon-64.png" type="image/png">
+<link rel="stylesheet" href="/shared-theme.css">
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/pages.css">
 
+<script defer src="/site-header.js"></script>
 </head>
-<body class="hm pg">
+<body class="sl-page hm pg">
 <div class="hm-sea" aria-hidden="true"><span class="hm-glow"></span><span class="hm-rays"></span>
  <i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i>
 </div>
-<header class="pg-top">
- <a class="pg-brand" href="/"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
- <nav class="pg-nav" aria-label="روابط"><a href="/">الرئيسية</a><a href="/#store">المتجر</a></nav>
+<header class="sl-header" id="bar">
+ <div class="sl-header-in">
+  <button type="button" class="sl-icon-btn sl-burger-btn" id="menuButton" aria-controls="menu" aria-expanded="false" aria-label="القائمة"><span class="sl-burger" aria-hidden="true"><i></i><i></i><i></i></span></button>
+  <a class="sl-brand" href="/" aria-label="سبونج لايف — الرئيسية"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
+  <nav class="sl-nav" aria-label="أقسام الموقع">
+   <a href="/" data-nav="home">الرئيسية</a>
+   <a href="/games" data-nav="games">الألعاب</a>
+   <a href="/#live" data-nav="live">البثوث النشطة</a>
+   <a href="/#leaders" data-nav="leaders">المتصدرون</a>
+   <a href="/#store" data-nav="store">المتجر</a>
+   <div class="sl-more">
+    <button type="button" class="sl-more-btn" id="moreButton" aria-expanded="false" aria-controls="moreMenu">المزيد <span aria-hidden="true">▾</span></button>
+    <div class="sl-more-menu" id="moreMenu" hidden>
+     <a href="/#room">دخول الغرفة</a>
+     <a href="/#partners" data-partners-link hidden>الشركاء</a>
+     <a href="/#faq">الأسئلة الشائعة</a>
+     <a href="/guide/games">دليل الألعاب</a>
+     <a href="/guide/tiktok-live">دليل تيك توك لايف</a>
+     <a href="/guide/tools">أدوات البث</a>
+    </div>
+   </div>
+  </nav>
+  <div class="sl-actions">
+   <a class="sc-pill" id="barCoins" href="/account#wallet" hidden aria-label="رصيد عملات الإسفنجة"><img src="/brand/coin-64.webp" alt="" width="28" height="28"><b data-coin-balance>0</b></a>
+   <a class="sl-btn sl-btn-sun" id="barTrial" href="/signup">ابدأ مجاناً</a>
+   <a class="sl-btn sl-btn-primary sl-user" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg?v=20261106#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
+  </div>
+ </div>
 </header>
 <main class="pg-main"><article class="pg-card pg-legal">
 <h1>سياسة الاسترداد</h1>

@@ -1,0 +1,188 @@
+/* سبونج لايف — the one design system. Every page links this file first; page stylesheets only lay out their
+   own content and take every colour, font, radius, shadow and timing from the tokens below.
+   Official identity: deep navy + sea blue + cyan + sponge yellow. Violet is a secondary accent (epic items) only. */
+
+/* ---------- Tajawal, once, with one weight mapping for the whole site ----------
+   Each weight band is one face split by script: the Latin file sits in the SAME band as the Arabic file (same
+   descriptors), so the browser picks the band by weight and then the file by character. A Latin face spanning
+   400–900 would tie with the Arabic bands and win, and Arabic text would fall back to a system font.
+   Regular Latin text (400–500) keeps the system face, since the Latin file here is bold. */
+@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-latin-700-normal.woff2) format("woff2");font-weight:600 700;font-display:swap;unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-latin-700-normal.woff2) format("woff2");font-weight:800 900;font-display:swap;unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-500-normal.woff2) format("woff2");font-weight:400 500;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-700-normal.woff2) format("woff2");font-weight:600 700;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-800-normal.woff2) format("woff2");font-weight:800 900;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+
+:root{
+  color-scheme:dark;
+  /* colour */
+  --sl-deep:#020A22; --sl-navy:#061A44; --sl-surface:#0B1737; --sl-elevated:#10234D;
+  --sl-primary:#176DF0; --sl-primary-hi:#2C8BFF; --sl-primary-lo:#0F4FC2;
+  --sl-cyan:#38D4FF; --sl-cyan-soft:#8CE8FF;
+  --sl-yellow:#FFD62A; --sl-yellow-hi:#FFE14D; --sl-yellow-lo:#FFB800; --sl-yellow-edge:#C98A00;
+  --sl-text:#EAF8FF; --sl-muted:#9EADD0; --sl-faint:rgba(234,248,255,.52); --sl-ink:#0A1A3D;
+  --sl-success:#2FD9A0; --sl-danger:#FF4D6A; --sl-live:#FF3B5C; --sl-warn:#FFB020;
+  --sl-epic:#B06BFF; --sl-legend:#FFC83A; /* rarity accents only — never a page colour */
+  /* the same colours as r,g,b for translucent use: rgba(var(--sl-cyan-rgb),.2) */
+  --sl-deep-rgb:2,10,34; --sl-navy-rgb:6,26,68; --sl-surface-rgb:11,23,55; --sl-primary-rgb:23,109,240;
+  --sl-cyan-rgb:56,212,255; --sl-yellow-rgb:255,214,42; --sl-text-rgb:234,248,255;
+  --sl-border:rgba(56,212,255,.18); --sl-border-2:rgba(56,212,255,.32); --sl-border-3:rgba(56,212,255,.55);
+  --sl-glow:rgba(56,212,255,.45); --sl-glow-blue:rgba(23,109,240,.6); --sl-glow-sun:rgba(255,214,42,.55);
+  /* gradients */
+  --sl-grad-primary:linear-gradient(180deg,#2C8BFF 0%,#176DF0 100%);
+  --sl-grad-ocean:linear-gradient(135deg,#176DF0 0%,#2C8BFF 50%,#38D4FF 100%);
+  --sl-grad-sun:linear-gradient(180deg,#FFF27D 0%,#FFD62A 55%,#FFB800 100%);
+  --sl-grad-card:linear-gradient(180deg,#10234D 0%,#0B1737 100%);
+  --sl-grad-panel:linear-gradient(160deg,rgba(16,35,77,.92) 0%,rgba(11,23,55,.96) 60%,rgba(6,26,68,.96) 100%);
+  --sl-sea:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(56,212,255,.26),transparent 62%),radial-gradient(ellipse 55% 40% at 88% 36%,rgba(23,109,240,.18),transparent 70%),linear-gradient(180deg,#0A2563 0%,#051640 42%,#020A22 100%);
+  /* shape */
+  --sl-r-xs:8px; --sl-r-sm:12px; --sl-r-md:16px; --sl-r-lg:20px; --sl-r-xl:26px; --sl-r-pill:999px;
+  --sl-shadow-sm:0 6px 16px -10px rgba(0,0,0,.7);
+  --sl-shadow-md:0 18px 40px -24px rgba(0,0,0,.85);
+  --sl-shadow-lg:0 30px 60px -30px rgba(0,0,0,.9);
+  --sl-shadow-card:0 6px 0 0 #04112F,0 7px 0 0 rgba(56,212,255,.22),0 24px 44px -24px rgba(0,0,0,.9),inset 0 1px 0 rgba(140,232,255,.14);
+  --sl-shadow-btn:0 4px 0 0 #0B3E9E,0 12px 26px -12px rgba(23,109,240,.85),inset 0 1px 0 rgba(255,255,255,.32);
+  --sl-shadow-sun:0 4px 0 0 #C98A00,0 12px 26px -12px rgba(255,184,0,.7),inset 0 1px 0 rgba(255,255,255,.55);
+  --sl-focus:0 0 0 3px rgba(255,225,77,.85);
+  /* spacing */
+  --sl-sp-1:4px; --sl-sp-2:8px; --sl-sp-3:12px; --sl-sp-4:16px; --sl-sp-5:24px; --sl-sp-6:32px; --sl-sp-7:40px; --sl-sp-8:56px;
+  /* type: one family, one scale */
+  --sl-font:"Tajawal",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --sl-font-num:"Royal Latin","Tajawal",system-ui,sans-serif; /* large scoreboard numerals on the game screens */
+  --sl-fs-xs:12px; --sl-fs-sm:13.5px; --sl-fs-base:15px; --sl-fs-md:17px; --sl-fs-lg:20px; --sl-fs-xl:26px;
+  --sl-fs-2xl:clamp(28px,4vw,36px); --sl-fs-display:clamp(36px,6vw,60px);
+  --sl-fw-regular:500; --sl-fw-bold:700; --sl-fw-heavy:800; --sl-fw-black:900;
+  /* motion */
+  --sl-dur-1:.15s; --sl-dur-2:.25s; --sl-dur-3:.45s;
+  --sl-ease:cubic-bezier(.2,.8,.2,1); --sl-ease-spring:cubic-bezier(.34,1.56,.64,1);
+  /* frame */
+  --sl-frame:min(1720px,calc(100% - 32px)); --sl-header-h:64px; --sl-header-top:10px;
+}
+@media (max-width:980px){:root{--sl-header-h:58px;--sl-header-top:8px;--sl-frame:calc(100% - 24px)}}
+
+/* ---------- base: every page sizes boxes the same way ---------- */
+*,*::before,*::after{box-sizing:border-box}
+
+/* ---------- the hidden attribute always hides (every page, every component) ---------- */
+[hidden]{display:none!important}
+
+/* ---------- site pages: one background, one font ---------- */
+body.sl-page{margin:0;color:var(--sl-text);background:var(--sl-deep);font-family:var(--sl-font);-webkit-font-smoothing:antialiased}
+.sl-sea{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none;contain:strict;background:var(--sl-sea)}
+.sl-sea::before{content:"";position:absolute;left:50%;top:40%;width:min(900px,120vw);height:min(560px,80vh);translate:-50% -50%;border-radius:50%;background:radial-gradient(closest-side,rgba(56,212,255,.16),transparent)}
+.sl-sea::after{content:"";position:absolute;inset:-20% 0 auto;height:80%;background:repeating-linear-gradient(100deg,rgba(140,232,255,.05) 0 40px,transparent 40px 120px);-webkit-mask:linear-gradient(180deg,#000,transparent 85%);mask:linear-gradient(180deg,#000,transparent 85%)}
+
+/* ---------- header (every site page) ---------- */
+.sl-header{position:sticky;top:var(--sl-header-top);z-index:45;width:var(--sl-frame);margin:var(--sl-header-top) auto 0;border-radius:var(--sl-r-pill);
+  background:rgba(var(--sl-navy-rgb),.84);border:1px solid var(--sl-border);box-shadow:0 18px 40px -26px rgba(0,0,0,.9),inset 0 1px 0 rgba(140,232,255,.08);
+  -webkit-backdrop-filter:blur(12px) saturate(1.2);backdrop-filter:blur(12px) saturate(1.2)}
+.sl-header-in{display:flex;align-items:center;gap:10px;min-width:0;min-height:var(--sl-header-h);padding:8px 10px 8px 16px}
+.sl-actions{min-width:0}
+.sl-brand{display:inline-flex;align-items:center;gap:9px;flex:none;min-width:0;color:var(--sl-text);text-decoration:none;font:var(--sl-fw-black) 19px/1 var(--sl-font)}
+.sl-brand img{width:40px;height:40px;border-radius:12px;box-shadow:0 0 0 2px rgba(var(--sl-cyan-rgb),.55),0 6px 16px -6px rgba(var(--sl-cyan-rgb),.6)}
+.sl-brand b{color:var(--sl-yellow);font-weight:inherit}
+.sl-brand span{white-space:nowrap}
+.sl-nav{display:flex;align-items:center;gap:2px;margin-inline:auto}
+.sl-nav>a,.sl-more-btn{position:relative;display:inline-flex;align-items:center;gap:5px;height:40px;padding:0 13px;border:0;border-radius:var(--sl-r-sm);background:none;
+  color:var(--sl-muted);font:var(--sl-fw-heavy) var(--sl-fs-base)/1 var(--sl-font);text-decoration:none;cursor:pointer;white-space:nowrap;transition:color var(--sl-dur-2),background var(--sl-dur-2)}
+.sl-nav>a:hover,.sl-more-btn:hover,.sl-more-btn[aria-expanded=true]{color:var(--sl-text);background:rgba(var(--sl-cyan-rgb),.08)}
+.sl-nav>a[aria-current]{color:var(--sl-text)}
+.sl-nav>a[aria-current]::after{content:"";position:absolute;inset-inline:14px;bottom:3px;height:2px;border-radius:2px;background:var(--sl-cyan);box-shadow:0 0 10px var(--sl-cyan)}
+.sl-more{position:relative}
+.sl-more-btn span{font-size:11px;opacity:.75}
+.sl-more-menu{position:absolute;top:calc(100% + 10px);inset-inline-start:0;z-index:5;display:grid;min-width:220px;padding:8px;border-radius:var(--sl-r-md);
+  background:var(--sl-grad-panel);border:1px solid var(--sl-border-2);box-shadow:var(--sl-shadow-lg);animation:sl-pop var(--sl-dur-2) var(--sl-ease)}
+.sl-more-menu a{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--sl-r-sm);color:var(--sl-text);font-weight:var(--sl-fw-bold);font-size:var(--sl-fs-sm);text-decoration:none}
+.sl-more-menu a:hover,.sl-more-menu a:focus-visible{background:rgba(var(--sl-cyan-rgb),.1);outline:none}
+.sl-actions{display:flex;align-items:center;gap:8px;flex:none;margin-inline-start:auto}
+.sl-nav+.sl-actions{margin-inline-start:0}
+.sl-icon-btn{display:inline-grid;place-items:center;width:44px;height:44px;flex:none;border-radius:var(--sl-r-sm);border:1px solid var(--sl-border-2);background:rgba(var(--sl-deep-rgb),.45);
+  color:var(--sl-text);cursor:pointer;transition:border-color var(--sl-dur-2),background var(--sl-dur-2),transform var(--sl-dur-1)}
+.sl-icon-btn:hover{border-color:var(--sl-cyan);background:rgba(var(--sl-cyan-rgb),.12)}
+.sl-icon-btn:active{transform:scale(.96)}
+.sl-icon-btn svg{fill:none;stroke:currentColor}
+.sl-burger-btn{display:none}
+.sl-burger{display:grid;gap:5px;width:20px}
+.sl-burger i{display:block;height:2px;border-radius:2px;background:currentColor}
+.sl-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px rgba(var(--sl-cyan-rgb),.6)}
+.sl-header .sl-btn{height:42px;padding:0 16px;font-size:14px}
+.sl-header .sl-btn svg{width:18px;height:18px}
+.sl-header .sl-user span{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:1240px){.sl-nav>a,.sl-more-btn{padding:0 9px;font-size:14px}}
+@media (max-width:980px){
+  .sl-header-in{gap:8px;padding:6px 8px 6px 10px}
+  .sl-nav{display:none}
+  .sl-burger-btn{display:inline-grid;width:42px;height:42px}
+  .sl-brand{font-size:17px;gap:7px}
+  .sl-brand img{width:34px;height:34px;border-radius:10px}
+  .sl-header .sl-btn{height:40px;padding:0 13px;font-size:13.5px}
+}
+.sl-header .sl-show-phone{display:none}
+@media (max-width:600px){.sl-header .sl-hide-phone{display:none}.sl-header .sl-show-phone{display:inline}.sl-header .sl-user span{max-width:84px}.sl-actions{gap:6px}.sc-pill{height:36px;padding:0 10px 0 4px}.sc-pill img{width:24px;height:24px}}
+/* phones: the account button is a round icon whether signed in or not (its label stays readable to screen readers) */
+@media (max-width:480px){.sl-header .sl-user{position:relative;width:42px;padding:0}.sl-header .sl-user span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
+@media (max-width:380px){.sl-brand span{display:none}.sl-header .sl-btn-sun{display:none}}
+/* a page whose header carries extra controls (the play page's sound and OBS chips) on a narrow phone: site-header.js drops
+   the brand name first, then «ابدأ مجاناً», rather than let the header scroll sideways */
+.sl-header.sl-tight-1 .sl-brand span{display:none}.sl-header.sl-tight-2 .sl-btn-sun{display:none}
+
+/* the coin balance in the header */
+.sc-pill{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px 0 6px;border-radius:var(--sl-r-pill);border:1px solid rgba(var(--sl-yellow-rgb),.55);
+  background:linear-gradient(180deg,rgba(var(--sl-yellow-rgb),.16),rgba(var(--sl-yellow-rgb),.05));color:#FFE98A;font:var(--sl-fw-black) var(--sl-fs-base)/1 var(--sl-font);text-decoration:none;white-space:nowrap;
+  box-shadow:0 0 18px -8px var(--sl-glow-sun);transition:border-color var(--sl-dur-2),color var(--sl-dur-2)}
+.sc-pill img{width:28px;height:28px;filter:drop-shadow(0 0 4px rgba(var(--sl-cyan-rgb),.6))}
+.sc-pill:hover{border-color:var(--sl-yellow-hi);color:#fff}
+.sc-pill[hidden]{display:none}
+
+/* the site menu (phones), the same on every page */
+.sl-menu{position:fixed;inset:0;z-index:60;background:rgba(1,6,20,.62);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:sl-fade var(--sl-dur-2) ease}
+.sl-menu[hidden]{display:none}
+.sl-menu-panel{position:absolute;inset-block:0;inset-inline-start:0;display:flex;flex-direction:column;gap:14px;width:min(340px,88vw);padding:16px;overflow-y:auto;
+  background:linear-gradient(180deg,var(--sl-navy) 0%,var(--sl-deep) 100%);border-inline-end:1px solid var(--sl-border-2);box-shadow:var(--sl-shadow-lg);animation:sl-slide var(--sl-dur-3) var(--sl-ease)}
+.sl-menu-head{display:flex;align-items:center;justify-content:space-between}
+.sl-menu-nav{display:grid;gap:4px}
+.sl-menu-nav a{display:flex;align-items:center;gap:12px;padding:13px 12px;border-radius:14px;color:var(--sl-text);font-weight:var(--sl-fw-heavy);font-size:16px;text-decoration:none}
+.sl-menu-nav a svg{width:20px;height:20px;flex:none;color:var(--sl-cyan-soft);fill:none;stroke:currentColor}
+.sl-menu-nav a:hover,.sl-menu-nav a:focus-visible,.sl-menu-nav a[aria-current]{background:rgba(var(--sl-cyan-rgb),.12);outline:none}
+.sl-menu-acts{display:grid;gap:10px;margin-top:auto;padding-top:14px;border-top:1px solid var(--sl-border)}
+.sl-menu-acts .sl-btn{width:100%;height:48px}
+html.sl-menu-open{overflow:hidden}
+
+/* ---------- buttons ---------- */
+.sl-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 20px;border:1px solid transparent;border-radius:var(--sl-r-pill);
+  font:var(--sl-fw-heavy) var(--sl-fs-base)/1 var(--sl-font);text-decoration:none;white-space:nowrap;cursor:pointer;
+  transition:transform var(--sl-dur-1) var(--sl-ease),box-shadow var(--sl-dur-2),filter var(--sl-dur-2),background var(--sl-dur-2),border-color var(--sl-dur-2)}
+.sl-btn svg{fill:none;stroke:currentColor}
+.sl-btn:hover{filter:brightness(1.08)}
+.sl-btn:active{transform:translateY(2px)}
+.sl-btn:focus-visible,.sl-icon-btn:focus-visible,.sl-nav a:focus-visible{outline:none;box-shadow:var(--sl-focus)}
+.sl-btn-primary{color:#fff;background:var(--sl-grad-primary);box-shadow:var(--sl-shadow-btn)}
+.sl-btn-primary:active{box-shadow:0 1px 0 0 #0B3E9E,0 8px 18px -10px rgba(23,109,240,.8),inset 0 1px 0 rgba(255,255,255,.3)}
+.sl-btn-sun{color:var(--sl-ink);background:var(--sl-grad-sun);box-shadow:var(--sl-shadow-sun)}
+.sl-btn-sun:active{box-shadow:0 1px 0 0 #C98A00,inset 0 1px 0 rgba(255,255,255,.5)}
+.sl-btn-ghost{color:var(--sl-text);background:rgba(var(--sl-deep-rgb),.45);border-color:var(--sl-border-2)}
+.sl-btn-ghost:hover{border-color:var(--sl-cyan);background:rgba(var(--sl-cyan-rgb),.1);filter:none}
+.sl-btn-danger{color:#FFD0DA;background:rgba(255,77,106,.1);border-color:rgba(255,77,106,.55)}
+.sl-btn-sm{height:36px;padding:0 14px;font-size:var(--sl-fs-sm)}
+.sl-btn-lg{height:54px;padding:0 26px;font-size:var(--sl-fs-md)}
+.sl-btn[disabled],.sl-btn[aria-disabled=true]{opacity:.5;cursor:not-allowed;filter:none;transform:none}
+
+/* ---------- cards ---------- */
+.sl-card{position:relative;border-radius:var(--sl-r-lg);background:var(--sl-grad-card);border:1px solid var(--sl-border-2);box-shadow:var(--sl-shadow-md)}
+.sl-card-lift{transition:transform var(--sl-dur-3) var(--sl-ease),border-color var(--sl-dur-2),box-shadow var(--sl-dur-2)}
+.sl-card-lift:hover{transform:translateY(-4px);border-color:var(--sl-border-3)}
+
+/* ---------- badges ---------- */
+.sl-badge{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 10px;border-radius:var(--sl-r-pill);font:var(--sl-fw-heavy) var(--sl-fs-xs)/1 var(--sl-font);white-space:nowrap;
+  color:var(--sl-cyan-soft);background:rgba(var(--sl-cyan-rgb),.12);border:1px solid rgba(var(--sl-cyan-rgb),.38)}
+.sl-badge-new{color:var(--sl-ink);background:var(--sl-grad-sun);border-color:transparent;box-shadow:0 4px 12px -6px rgba(255,184,0,.9)}
+.sl-badge-blue{color:#CFE4FF;background:rgba(var(--sl-primary-rgb),.2);border-color:rgba(44,139,255,.5)}
+.sl-badge-ok{color:#B4F5DF;background:rgba(47,217,160,.12);border-color:rgba(47,217,160,.42)}
+.sl-badge-live{color:#fff;background:var(--sl-live);border-color:transparent}
+.sl-badge-epic{color:#E4CCFF;background:rgba(176,107,255,.14);border-color:rgba(176,107,255,.45)}
+.sl-badge-muted{color:var(--sl-muted);background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}
+
+@keyframes sl-pop{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes sl-fade{from{opacity:0}to{opacity:1}}
+@keyframes sl-slide{from{transform:translateX(100%)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.sl-menu,.sl-menu-panel,.sl-more-menu{animation:none}.sl-btn,.sl-icon-btn,.sl-card-lift{transition:none}}

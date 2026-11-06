@@ -5,19 +5,20 @@
    sponge-yellow primary action.
    ===================================================================== */
 :root{
-  --sp-deep:#020A22; --sp-navy:#061A44; --sp-blue:#1E5BFF; --sp-cyan:#38D4FF; --sp-aqua:#8CE8FF; --sp-foam:#E9FBFF;
-  --sp-yellow:#FFE14D; --sp-yellow-2:#FFC21A; --sp-ink:#0A1A3D; --sp-coral:#FF6A8A; --sp-purple:#7B5CFF;
-  --sp-yellow-btn:linear-gradient(180deg,#FFF07A 0%,#FFD21F 55%,#FFB800 100%);
-  --sp-neon:0 0 0 1px rgba(56,212,255,.55),0 0 18px rgba(56,212,255,.45),0 0 42px -8px rgba(30,91,255,.7);
-  --sp-sea:radial-gradient(ellipse 80% 55% at 50% -10%,rgba(56,212,255,.22),transparent 60%),radial-gradient(ellipse 60% 40% at 85% 30%,rgba(123,92,255,.16),transparent 70%),linear-gradient(180deg,#071C4D 0%,#04112F 45%,#020A22 100%);
+  /* every colour comes from shared-theme.css (the one palette); these names stay for the game screens */
+  --sp-deep:var(--sl-deep); --sp-navy:var(--sl-navy); --sp-blue:var(--sl-primary); --sp-cyan:var(--sl-cyan); --sp-aqua:var(--sl-cyan-soft); --sp-foam:var(--sl-text);
+  --sp-yellow:var(--sl-yellow-hi); --sp-yellow-2:var(--sl-yellow); --sp-ink:var(--sl-ink); --sp-coral:#FF6A8A; --sp-purple:var(--sl-epic);
+  --sp-yellow-btn:var(--sl-grad-sun);
+  --sp-neon:0 0 0 1px rgba(var(--sl-cyan-rgb),.55),0 0 18px rgba(var(--sl-cyan-rgb),.45),0 0 42px -8px rgba(var(--sl-primary-rgb),.7);
+  --sp-sea:var(--sl-sea);
   /* core tokens re-pointed at the ocean palette */
-  --obsidian:#020A22; --carbon:#061433; --graphite:#0C2050;
-  --gold:#38D4FF; --champagne:#8CE8FF; --ivory:#EAF8FF; --gold-ink:#06183D;
-  --metal:linear-gradient(135deg,#E9FBFF 0%,#8CE8FF 22%,#2F8CFF 48%,#9FEFFF 70%,#1D5FD8 100%);
-  --metal-v:linear-gradient(180deg,#F2FDFF 0%,#8CE8FF 42%,#2F8CFF 58%,#A8F0FF 100%);
+  --obsidian:var(--sl-deep); --carbon:var(--sl-surface); --graphite:var(--sl-elevated);
+  --gold:var(--sl-cyan); --champagne:var(--sl-cyan-soft); --ivory:var(--sl-text); --gold-ink:var(--sl-ink);
+  --metal:linear-gradient(135deg,var(--sl-text) 0%,var(--sl-cyan-soft) 22%,#2F8CFF 48%,#9FEFFF 70%,#1D5FD8 100%);
+  --metal-v:linear-gradient(180deg,#F2FDFF 0%,var(--sl-cyan-soft) 42%,#2F8CFF 58%,#A8F0FF 100%);
   --glow-gold:var(--sp-neon);
   --sh-gold-btn:var(--sp-yellow-btn); --pl-gold-btn:var(--sp-yellow-btn); --pl-gold:var(--sp-yellow);
-  --font-ar:"Tajawal","Royal Latin",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-ar:var(--sl-font);
 }
 html{background:var(--sp-deep)}
 /* The sea is painted once on fixed layers (no background-attachment:fixed repaints while scrolling). */
@@ -34,9 +35,6 @@ html.fx-off .sp-bubbles{display:none}
 html.is-hidden *,html.is-hidden *::before,html.is-hidden *::after{animation-play-state:paused!important}
 
 /* brand mark */
-.sp-brand{display:inline-flex;align-items:center;gap:10px;color:var(--sp-foam);text-decoration:none;font:900 18px/1 "Tajawal",system-ui,sans-serif;letter-spacing:0;text-shadow:0 0 14px rgba(56,212,255,.65)}
-.sp-brand img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 7px rgba(255,214,42,.55)) drop-shadow(0 0 12px rgba(56,212,255,.45))}
-.sp-brand b{color:var(--sp-yellow);text-shadow:0 0 14px rgba(255,210,31,.6)}
 
 /* primary action = sponge yellow, secondary = neon outline */
 .sh-btn-gold,.pl-btn-gold,.start-game,.primary-action,.btn-gold{background:var(--sp-yellow-btn)!important;color:var(--sp-ink)!important;border-color:rgba(255,246,168,.8)!important;box-shadow:0 0 0 1px rgba(255,210,31,.5),0 10px 30px -10px rgba(255,190,0,.75)!important}
@@ -52,7 +50,7 @@ html.is-hidden *,html.is-hidden *::before,html.is-hidden *::after{animation-play
 .sp-tilt:hover{transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-6px)}
 
 /* page transition into a game */
-.sp-curtain{position:fixed;inset:0;z-index:999;pointer-events:none;background:radial-gradient(circle at var(--cx,50%) var(--cy,50%),rgba(56,212,255,.35),#020A22 60%);opacity:0;transition:opacity .35s ease}
+.sp-curtain{position:fixed;inset:0;z-index:999;pointer-events:none;background:radial-gradient(circle at var(--cx,50%) var(--cy,50%),rgba(56,212,255,.35),var(--sl-deep) 60%);opacity:0;transition:opacity .35s ease}
 .sp-curtain.is-on{opacity:1}
 html.fx-off .sp-curtain{display:none}
 @media (prefers-reduced-motion:reduce){.sp-burst,.sp-tilt{animation:none;transition:none}.sp-tilt:hover{transform:none}}
@@ -69,16 +67,16 @@ html.fx-off .sp-curtain{display:none}
 .sp-head h2{font-size:clamp(26px,3.6vw,38px);font-weight:900;color:var(--sp-foam);text-shadow:0 0 22px rgba(56,212,255,.55)}
 .sp-head p{color:var(--sh-text-2);max-width:60ch}
 .sp-gallery{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
-.sp-game{position:relative;display:block;aspect-ratio:290/371;border-radius:20px;overflow:hidden;background:#020A22;isolation:isolate;
+.sp-game{position:relative;display:block;aspect-ratio:290/371;border-radius:20px;overflow:hidden;background:var(--sl-deep);isolation:isolate;
   box-shadow:0 0 0 1px rgba(56,212,255,.35),0 14px 30px -18px #000;transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s;outline:none}
 .sp-game img{display:block;width:100%;height:100%;object-fit:contain;transition:filter .25s}
 .sp-game::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(56,212,255,0);transition:box-shadow .25s}
-.sp-game:hover,.sp-game:focus-visible{box-shadow:0 0 0 2px #38D4FF,0 0 30px rgba(56,212,255,.65),0 24px 40px -20px #000}
+.sp-game:hover,.sp-game:focus-visible{box-shadow:0 0 0 2px var(--sl-cyan),0 0 30px rgba(56,212,255,.65),0 24px 40px -20px #000}
 .sp-game:hover img{filter:brightness(1.08) saturate(1.1)}
-.sp-game:focus-visible::after,.sp-game.is-chosen::after{box-shadow:inset 0 0 0 3px #8CE8FF}
+.sp-game:focus-visible::after,.sp-game.is-chosen::after{box-shadow:inset 0 0 0 3px var(--sl-cyan-soft)}
 .sp-game:active{transform:scale(.96)!important}
-.sp-game.is-chosen{transform:scale(1.04);box-shadow:0 0 0 3px #FFD21F,0 0 50px rgba(255,210,31,.6)}
-.sp-game-num{position:absolute;top:8px;inset-inline-start:10px;padding:2px 8px;border-radius:999px;background:rgba(2,10,34,.75);color:#8CE8FF;font-size:12px;font-weight:800}
+.sp-game.is-chosen{transform:scale(1.04);box-shadow:0 0 0 3px var(--sl-yellow),0 0 50px rgba(255,210,31,.6)}
+.sp-game-num{position:absolute;top:8px;inset-inline-start:10px;padding:2px 8px;border-radius:999px;background:rgba(2,10,34,.75);color:var(--sl-cyan-soft);font-size:12px;font-weight:800}
 .sp-gallery .sp-game{animation:sp-card-in .55s cubic-bezier(.2,.8,.2,1) both}
 .sp-gallery .sp-game:nth-child(n){animation-delay:calc(var(--i,0) * 40ms)}
 @keyframes sp-card-in{from{opacity:0;transform:translateY(16px) scale(.96)}}

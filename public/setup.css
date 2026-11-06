@@ -5,7 +5,7 @@
 
 /* header: back button, centred title, badges */
 .st-setup .su-head{grid-template-columns:auto minmax(0,1fr) auto;padding:18px 18px 22px;border-radius:26px;text-align:center;
-  background:radial-gradient(70% 120% at 50% 0%,rgba(30,91,255,.28),transparent 70%),linear-gradient(160deg,rgba(10,32,86,.8),rgba(3,12,38,.92))}
+  background:radial-gradient(70% 120% at 50% 0%,rgba(var(--sl-primary-rgb),.28),transparent 70%),linear-gradient(160deg,rgba(10,32,86,.8),rgba(3,12,38,.92))}
 .st-setup .su-head::after{display:none}
 .st-setup .su-back{align-self:start;min-width:auto;height:42px;padding:0 14px;border-radius:13px;font-size:14px}
 .st-setup .su-back span{font-weight:800}
@@ -18,7 +18,7 @@
 .su-badge i{width:8px;height:8px;border-radius:50%;background:#FF4D6A;box-shadow:0 0 8px #FF4D6A}
 .su-badge[data-on=true]{border-color:rgba(47,217,160,.5);background:rgba(47,217,160,.12);color:#9FF5D6}
 .su-badge[data-on=true] i{background:#2FD9A0;box-shadow:0 0 8px #2FD9A0}
-.su-badge.is-auto{border-color:transparent;background:linear-gradient(135deg,#1E5BFF,#38D4FF);color:#fff;box-shadow:0 6px 16px -8px rgba(56,212,255,.9)}
+.su-badge.is-auto{border-color:transparent;background:linear-gradient(135deg,var(--sl-primary),var(--sl-cyan));color:#fff;box-shadow:0 6px 16px -8px rgba(56,212,255,.9)}
 .su-badge.is-auto i{background:#fff;box-shadow:none}
 .su-badge[hidden]{display:none}
 
@@ -29,21 +29,21 @@
 .su-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .su-num-title{display:flex;align-items:center;gap:10px;margin:0!important;padding:14px 0;font-size:19px!important;font-weight:900}
 .su-card-top .su-num-title{flex:1}
-.su-num{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(56,212,255,.12);border:1px solid rgba(140,232,255,.35);color:#8CE8FF;font-size:14px;font-weight:900}
+.su-num{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(56,212,255,.12);border:1px solid rgba(140,232,255,.35);color:var(--sl-cyan-soft);font-size:14px;font-weight:900}
 .st-setup .su-reset-sm{padding:7px 12px;border-radius:11px;font-size:13px}
 
 /* one setting per row */
 .st-setup .su-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-top:1px solid rgba(140,232,255,.12);margin:0;background:none;border-radius:0}
 .su-row-text{display:grid;gap:3px;min-width:0;flex:1}
-.su-row-text>b,.su-row-text>label,.st-setup .su-word-label{color:#EAF8FF;font-size:16px;font-weight:900}
+.su-row-text>b,.su-row-text>label,.st-setup .su-word-label{color:var(--sl-text);font-size:16px;font-weight:900}
 .su-row-text>small,.st-setup .su-row-text .su-note{margin:0!important;color:rgba(234,248,255,.6);font-size:13px;line-height:1.65}
 .su-row-ctl{display:grid;gap:8px;justify-items:end;flex:none;max-width:60%}
 
 /* the join word */
 .st-setup .su-word{border:0;border-top:1px solid rgba(140,232,255,.12);padding:14px 0}
 .st-setup .su-word-row{display:flex;gap:8px}
-.st-setup .su-word-input{width:170px;height:44px;padding:0 14px;border-radius:13px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.7);color:#FFE14D;font:900 18px "Tajawal",system-ui,sans-serif;text-align:center}
-.st-setup .su-word-input:focus{outline:none;border-color:#38D4FF;box-shadow:0 0 0 3px rgba(56,212,255,.25)}
+.st-setup .su-word-input{width:170px;height:44px;padding:0 14px;border-radius:13px;border:1px solid rgba(140,232,255,.35);background:rgba(2,10,34,.7);color:var(--sl-yellow-hi);font:900 18px "Tajawal",system-ui,sans-serif;text-align:center}
+.st-setup .su-word-input:focus{outline:none;border-color:var(--sl-cyan);box-shadow:0 0 0 3px rgba(56,212,255,.25)}
 .st-setup .su-word .su-reset{padding:0 14px;height:44px}
 .st-setup .su-word-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .st-setup .su-word-chips .rg-chip{padding:5px 10px;font-size:12.5px}
@@ -52,10 +52,10 @@
 .su-seg{display:inline-flex;flex:none;gap:4px;padding:4px;border-radius:999px;background:rgba(2,10,34,.75);border:1px solid rgba(140,232,255,.2)}
 .st-setup .su-seg>button,.st-setup .su-seg .su-choice,.st-setup .su-seg .su-option{display:inline-flex;align-items:center;justify-content:center;width:auto;min-height:36px;min-width:46px;padding:0 14px;border:0;border-radius:999px;background:none;box-shadow:none;color:rgba(234,248,255,.7);font:800 14px/1 "Tajawal",system-ui,sans-serif;cursor:pointer;transition:background .2s,color .2s}
 .st-setup .su-seg>button:hover{color:#fff}
-.st-setup .su-seg>button[aria-checked=true]{color:#fff;background:linear-gradient(135deg,#1E5BFF,#38D4FF);box-shadow:0 6px 14px -8px rgba(56,212,255,.95)}
+.st-setup .su-seg>button[aria-checked=true]{color:#fff;background:linear-gradient(135deg,var(--sl-primary),var(--sl-cyan));box-shadow:0 6px 14px -8px rgba(56,212,255,.95)}
 .st-setup .su-seg>button:disabled{opacity:.4;cursor:not-allowed}
 .su-counter{display:inline-flex;align-items:center;flex:none;gap:4px;padding:4px;border-radius:999px;background:rgba(2,10,34,.75);border:1px solid rgba(140,232,255,.2)}
-.su-step{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;border:0;background:rgba(56,212,255,.1);color:#EAF8FF;font:900 20px/1 system-ui,sans-serif;cursor:pointer}
+.su-step{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;border:0;background:rgba(56,212,255,.1);color:var(--sl-text);font:900 20px/1 system-ui,sans-serif;cursor:pointer}
 .su-step:hover{background:rgba(56,212,255,.22)}
 .su-step:disabled{opacity:.35;cursor:not-allowed}
 .su-count{min-width:54px;text-align:center;font-size:20px;font-weight:900;color:#fff}
@@ -64,10 +64,10 @@
 .st-setup .su-choices{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:62%}
 .st-setup .su-choices .su-choice{min-height:38px;padding:0 12px;border-radius:12px;font-size:13.5px}
 .st-setup .su-switch{flex:none}
-.st-setup .su-switch[aria-checked=true]{background:linear-gradient(135deg,#1E5BFF,#38D4FF)}
+.st-setup .su-switch[aria-checked=true]{background:linear-gradient(135deg,var(--sl-primary),var(--sl-cyan))}
 .su-rules-list{display:grid;gap:8px;margin:0;padding:14px 0 10px;list-style:none;border-top:1px solid rgba(140,232,255,.12)}
 .su-rules-list li{position:relative;padding-inline-start:22px;color:rgba(234,248,255,.78);font-size:14px;line-height:1.7}
-.su-rules-list li::before{content:"";position:absolute;inset-inline-start:2px;top:.55em;width:9px;height:9px;border-radius:50%;background:#38D4FF;box-shadow:0 0 8px rgba(56,212,255,.8)}
+.su-rules-list li::before{content:"";position:absolute;inset-inline-start:2px;top:.55em;width:9px;height:9px;border-radius:50%;background:var(--sl-cyan);box-shadow:0 0 8px rgba(56,212,255,.8)}
 .su-rules-list:empty,.su-fields:empty{display:none}
 #rulesFields:not(:empty)+.su-rules-list{margin-top:4px}
 .st-setup .su-none{padding:4px 0 14px}
@@ -82,7 +82,7 @@
 
 /* the big «الدخول للوبي» */
 .st-setup .su-foot{display:grid;gap:10px;justify-items:center;padding:16px;border-radius:24px;background:rgba(3,12,38,.94)}
-.st-setup .su-btn-main{width:min(520px,100%);min-height:62px;border-radius:20px;font-size:20px;background:linear-gradient(135deg,#1E5BFF 0%,#2B8BFF 50%,#38D4FF 100%);color:#fff;box-shadow:0 14px 34px -14px rgba(56,212,255,1),inset 0 1px 0 rgba(255,255,255,.3)}
+.st-setup .su-btn-main{width:min(520px,100%);min-height:62px;border-radius:20px;font-size:20px;background:linear-gradient(135deg,var(--sl-primary) 0%,var(--sl-primary-hi) 50%,var(--sl-cyan) 100%);color:#fff;box-shadow:0 14px 34px -14px rgba(56,212,255,1),inset 0 1px 0 rgba(255,255,255,.3)}
 .st-setup .su-btn-main .i{transform:none}
 .su-foot-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 18px;width:100%}
 .st-setup .su-btn-ghost{min-height:44px;min-width:0;font-size:14px;border-radius:14px}

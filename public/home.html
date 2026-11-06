@@ -12,14 +12,16 @@
 <link rel="apple-touch-icon" href="/brand/sponge-192.png">
 <link rel="preload" href="/fonts/tajawal-arabic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/brand/sponge-256.webp" as="image" type="image/webp">
+<link rel="stylesheet" href="/shared-theme.css">
 <link rel="stylesheet" href="/home.css">
 <link rel="stylesheet" href="/coins.css">
 <link rel="stylesheet" href="/bottom-nav.css">
 <script defer src="/coins.js"></script>
 <script defer src="/bottom-nav.js"></script>
 <script defer src="/home.js"></script>
+<script defer src="/site-header.js"></script>
 </head>
-<body class="hm">
+<body class="sl-page hm">
 <a class="hm-skip" href="#enter">تخطَّ إلى إدخال الرمز</a>
 <div class="hm-sea" aria-hidden="true"><span class="hm-glow"></span><span class="hm-rays"></span><span class="hm-floor"></span>
  <i class="hm-b"></i><i class="hm-b"></i><i class="hm-b"></i>
@@ -27,61 +29,35 @@
  <i class="hm-b"></i>
 </div>
 
-<header class="hm-bar" id="bar">
- <div class="hm-bar-in">
-  <button type="button" class="hm-icon-btn" id="menuButton" aria-controls="menu" aria-expanded="false" aria-label="القائمة"><span class="hm-burger" aria-hidden="true"><i></i><i></i><i></i></span></button>
-  <a class="hm-bar-brand" href="#top"><img src="/brand/sponge-128.webp" alt="" width="36" height="36"><span><b>سبونج</b> لايف</span></a>
-  <nav class="hm-nav" aria-label="أقسام الموقع">
-   <a href="#top" aria-current="true">الرئيسية</a>
-   <a href="/games">الألعاب</a>
-   <a href="#live">البثوث النشطة</a>
-   <a href="#leaders">المتصدرون</a>
-   <a href="#partners" data-partners-link hidden>الشركاء</a>
-   <a href="#room">دخول الغرفة</a>
-   <a href="#faq">الأسئلة الشائعة</a>
-   <a href="#store">المتجر</a>
-   <div class="hm-more">
-    <button type="button" class="hm-more-btn" id="moreButton" aria-expanded="false" aria-controls="moreMenu">المزيد <span aria-hidden="true">▾</span></button>
-    <div class="hm-more-menu" id="moreMenu" hidden>
+<header class="sl-header" id="bar">
+ <div class="sl-header-in">
+  <button type="button" class="sl-icon-btn sl-burger-btn" id="menuButton" aria-controls="menu" aria-expanded="false" aria-label="القائمة"><span class="sl-burger" aria-hidden="true"><i></i><i></i><i></i></span></button>
+  <a class="sl-brand" href="/" aria-label="سبونج لايف — الرئيسية"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
+  <nav class="sl-nav" aria-label="أقسام الموقع">
+   <a href="/" data-nav="home">الرئيسية</a>
+   <a href="/games" data-nav="games">الألعاب</a>
+   <a href="/#live" data-nav="live">البثوث النشطة</a>
+   <a href="/#leaders" data-nav="leaders">المتصدرون</a>
+   <a href="/#store" data-nav="store">المتجر</a>
+   <div class="sl-more">
+    <button type="button" class="sl-more-btn" id="moreButton" aria-expanded="false" aria-controls="moreMenu">المزيد <span aria-hidden="true">▾</span></button>
+    <div class="sl-more-menu" id="moreMenu" hidden>
+     <a href="/#room">دخول الغرفة</a>
+     <a href="/#partners" data-partners-link hidden>الشركاء</a>
+     <a href="/#faq">الأسئلة الشائعة</a>
      <a href="/guide/games">دليل الألعاب</a>
      <a href="/guide/tiktok-live">دليل تيك توك لايف</a>
      <a href="/guide/tools">أدوات البث</a>
     </div>
    </div>
   </nav>
-  <div class="hm-bar-actions">
+  <div class="sl-actions">
    <a class="sc-pill" id="barCoins" href="/account#wallet" hidden aria-label="رصيد عملات الإسفنجة"><img src="/brand/coin-64.webp" alt="" width="28" height="28"><b data-coin-balance>0</b></a>
-   <a class="hm-pill hm-pill-blue" id="barStudio" href="/games" hidden><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-play"></use></svg><span>العب الآن</span></a>
-   <a class="hm-pill hm-pill-ghost" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
-   <a class="hm-pill hm-pill-gold" id="barTrial" href="/signup">ابدأ مجاناً</a>
+   <a class="sl-btn sl-btn-sun" id="barTrial" href="/signup">ابدأ مجاناً</a>
+   <a class="sl-btn sl-btn-primary sl-user" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg?v=20261106#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
   </div>
  </div>
 </header>
-
-<div class="hm-menu" id="menu" role="dialog" aria-modal="true" aria-label="القائمة" hidden>
- <div class="hm-menu-panel">
-  <div class="hm-menu-head"><span class="hm-menu-title"><b>سبونج</b> لايف</span><button type="button" class="hm-icon-btn" id="menuClose" aria-label="إغلاق القائمة"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg#i-close"></use></svg></button></div>
-  <nav class="hm-menu-nav" aria-label="أقسام الصفحة">
-   <a href="#top"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-home"></use></svg>الرئيسية</a>
-   <a href="#live"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-live"></use></svg>البثوث النشطة</a>
-   <a href="#leaders"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-trophy"></use></svg>المتصدرون</a>
-   <a href="#partners" data-partners-link hidden><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-star"></use></svg>الشركاء</a>
-   <a href="#room"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-key"></use></svg>دخول الغرفة</a>
-   <a href="/games"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-games"></use></svg>مكتبة الألعاب</a>
-   <a href="#connect"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-plug"></use></svg>ربط البث</a>
-   <a href="#store"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-ticket"></use></svg>المتجر</a>
-   <a href="#faq"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-question"></use></svg>الأسئلة الشائعة</a>
-   <a href="#contact"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-chat"></use></svg>تواصل معنا</a>
-  </nav>
-  <div class="hm-menu-actions">
-   <a class="hm-enter hm-enter-sm" id="menuAccount" href="/login"><svg width="20" height="20" aria-hidden="true"><use href="/icons.svg#i-user"></use></svg><span id="menuAccountLabel">تسجيل الدخول</span></a>
-   <a class="hm-pill hm-pill-ghost hm-pill-wide" id="menuSecond" href="/signup">إنشاء حساب جديد</a>
-   <a class="hm-pill hm-pill-green hm-pill-wide" id="menuTrial" href="/games">العب الآن — كل الألعاب مجانية</a>
-   <button type="button" class="hm-pill hm-pill-danger hm-pill-wide" id="menuLogout" hidden>تسجيل الخروج</button>
-  </div>
- </div>
-</div>
-
 <main id="top">
 <section class="hm-hero" aria-labelledby="heroTitle">
  <svg width="0" height="0" class="hm-defs" aria-hidden="true" focusable="false"><defs>

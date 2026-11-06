@@ -1,4 +1,4 @@
-// «مكتبة الألعاب» (/games): the page order, the violet design measurements, filters + search together,
+// «مكتبة الألعاب» (/games): the page order, the site's shared identity (navy + cyan + sponge yellow), filters + search together,
 // card states, the live rail (verified streams only, a real empty state), «آخر التحديثات», the connection card
 // and phones — static checks always, and the same page in a real browser when Playwright + PostgreSQL exist.
 import test from 'node:test';
@@ -17,7 +17,7 @@ const html = pub('games.html'), css = pub('games.css'), js = pub('games.js'), se
 
 test('page order: header, title, lead, call to action, «اتصل بالبث», live streams, updates, filters, games, support, footer', () => {
   const at = (s) => { const i = html.indexOf(s); assert.ok(i > 0, 'missing ' + s); return i; };
-  const order = ['class="gl-top"', 'id="libTitle"', 'class="gl-lead"', 'class="gl-cta"', 'id="connect"', 'id="live"', 'id="updates"', 'id="filters"', 'id="gameGrid"', 'class="gl-support', 'class="gl-foot"'].map(at);
+  const order = ['class="sl-header"', 'id="libTitle"', 'class="gl-lead"', 'gl-cta"', 'id="connect"', 'id="live"', 'id="updates"', 'id="filters"', 'id="gameGrid"', 'class="gl-support', 'class="gl-foot"'].map(at);
   assert.deepEqual(order, [...order].sort((a, b) => a - b));
   assert.match(html, /<h1 id="libTitle">مكتبة الألعاب<\/h1>/);
   assert.match(html, /<span>تصفح الألعاب<\/span>/);
@@ -31,8 +31,8 @@ test('page order: header, title, lead, call to action, «اتصل بالبث», 
   assert.doesNotMatch(html, /https?:\/\//, 'no external resources');
 });
 
-test('every link on the page goes somewhere real, and the self-hosted fonts are served', () => {
-  const routes = new Set(['/', '/games', '/terms', '/privacy', '/refund', '/guide/games', '/guide/tiktok-live', '/guide/tools', '/account']);
+test('every link on the page goes somewhere real, and the page uses the site font only', () => {
+  const routes = new Set(['/', '/games', '/terms', '/privacy', '/refund', '/guide/games', '/guide/tiktok-live', '/guide/tools', '/account', '/signup']);
   for (const [, href] of html.matchAll(/href="([^"]+)"/g)) {
     if (href.startsWith('#')) { assert.ok(html.includes('id="' + href.slice(1) + '"'), 'anchor ' + href); continue; }
     if (/\.(css|js|png|webp|woff2?|svg)(#.*)?$/.test(href.split('?')[0])) continue;
@@ -41,10 +41,10 @@ test('every link on the page goes somewhere real, and the self-hosted fonts are 
     if (href.startsWith('/account#')) assert.match(pub('me.js'), new RegExp("'" + href.split('#')[1] + "'|id=\"" + href.split('#')[1]) , href);
   }
   assert.match(pub('me.html'), /id="platforms"/);
-  for (const f of ['noto-kufi-arabic-700.woff', 'ibm-plex-arabic-400.woff', 'ibm-plex-arabic-600.woff', 'ibm-plex-arabic-700.woff', 'readex-pro-700.woff', 'OFL-library-fonts.txt']) {
-    assert.ok(fs.existsSync(new URL('../public/fonts/' + f, import.meta.url)), f);
-    assert.ok(server.includes("'fonts/" + f + "'"), 'served: ' + f);
-  }
+  // one family for the whole site (Tajawal, declared once in shared-theme.css): no other font on this page
+  assert.doesNotMatch(css, /@font-face|Plex|Kufi|Readex/);
+  assert.doesNotMatch(html, /plex|kufi|readex/i);
+  for (const f of ['noto-kufi-arabic-700.woff', 'ibm-plex-arabic-400.woff', 'readex-pro-700.woff']) assert.ok(!fs.existsSync(new URL('../public/fonts/' + f, import.meta.url)), 'removed: ' + f);
   // every icon the page uses exists, and comes from a versioned sprite address (the plain one is cached for days)
   const sprite = pub('icons.svg'), games = pub('game-icons.svg');
   const used = new Set([...html.matchAll(/icons\.svg\?v=\d+#(i-[a-z-]+)/g)].map((m) => m[1]));
@@ -57,15 +57,20 @@ test('every link on the page goes somewhere real, and the self-hosted fonts are 
   assert.match(server, /\['icons\.svg', 'game-icons\.svg'\]\.includes\(relative\) \? 'public, max-age=300, must-revalidate'/);
 });
 
-test('design tokens: violet-black page, 4 columns of 3D cards, violet buttons, phone layouts, calm motion', () => {
-  for (const c of ['#080610', '#100B1D', '#19112B', '#25173D']) assert.ok(css.includes(c), c);
+test('design: the shared tokens (no page palette), 4 columns of 3D cards, blue buttons, phone layouts, calm motion', () => {
+  // colours come from shared-theme.css: the library defines no palette and has no violet
+  assert.doesNotMatch(css, /#(080610|100B1D|19112B|25173D|7A3FD4|9A6CF0|4F2596|B28CF5|C6B4F2)\b/i);
+  assert.doesNotMatch(css, /rgba\(122,63,212/);
+  assert.match(css, /background:var\(--sl-grad-primary\)/);
+  assert.ok((css.match(/var\(--sl-/g) || []).length > 80, 'built on the tokens');
+  assert.match(html, /<link rel="stylesheet" href="\/shared-theme\.css">\n<link rel="stylesheet" href="\/games\.css">/);
   assert.match(css, /\.gl-grid\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\);gap:22px/);
-  assert.match(css, /\.gl-card\{[^}]*border-radius:26px/);
+  assert.match(css, /\.gl-card\{[^}]*border-radius:var\(--sl-r-xl\)/);
   assert.match(css, /\.gl-play\{[^}]*height:48px[^}]*border-radius:14px/);
   assert.match(css, /\.gl-tile\{[^}]*width:56px;height:56px/);
   assert.match(css, /@media \(max-width:620px\)\{[\s\S]*\.gl-grid,\.gl-grid\[data-cols\]\{grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css, /prefers-reduced-motion:reduce/);
-  assert.doesNotMatch(css, /#1E5BFF|#38D4FF/i, 'the library is violet, not the sea-blue of the rest of the site');
+  assert.doesNotMatch(css, /body\.gl \.bn|\.bn-item/, 'the bottom bar is the same on every page (no page override)');
 });
 
 test('data: every update has a type and summary; «مميزة» games exist; streams carry the real join state', () => {
@@ -116,14 +121,14 @@ test('in a real browser: desktop layout, filters with search, card states, live 
     const m = await p.evaluate(() => {
       const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { x: b.left, y: b.top + scrollY, w: b.width, h: b.height }; };
       const cs = getComputedStyle(document.getElementById('gameGrid'));
-      return { header: r('.gl-top'), h1: getComputedStyle(document.querySelector('.gl-hero h1')).fontSize, card: r('.gl-card'), play: r('.gl-card .gl-play'), cols: cs.gridTemplateColumns.split(' ').length, gap: cs.columnGap,
-        cards: document.querySelectorAll('.gl-card').length, links: [...document.querySelectorAll('.gl-card .gl-play')].map((a) => a.getAttribute('href')), bg: getComputedStyle(document.documentElement).backgroundColor, sw: document.documentElement.scrollWidth, iw: innerWidth };
+      return { header: r('.sl-header'), font: getComputedStyle(document.body).fontFamily.split(',')[0].replace(/"/g, ''), h1: getComputedStyle(document.querySelector('.gl-hero h1')).fontSize, card: r('.gl-card'), play: r('.gl-card .gl-play'), cols: cs.gridTemplateColumns.split(' ').length, gap: cs.columnGap,
+        cards: document.querySelectorAll('.gl-card').length, links: [...document.querySelectorAll('.gl-card .gl-play')].map((a) => a.getAttribute('href')), bg: getComputedStyle(document.body).backgroundColor, sw: document.documentElement.scrollWidth, iw: innerWidth };
     });
     assert.equal(m.cols, 4); assert.equal(m.gap, '22px');
     assert.ok(m.card.w > 380 && m.card.w < 430, 'card width near the reference 408px: ' + m.card.w);
     assert.ok(m.card.h >= 340, 'card height near the reference: ' + m.card.h);
-    assert.equal(m.play.h, 48); assert.equal(Math.round(m.header.h), 76); assert.equal(m.h1, '60px');
-    assert.equal(m.bg, 'rgb(8, 6, 16)'); assert.equal(m.sw, m.iw);
+    assert.equal(m.play.h, 48); assert.equal(Math.round(m.header.h), 66); assert.equal(m.h1, '60px');
+    assert.equal(m.bg, 'rgb(2, 10, 34)', 'the site navy'); assert.equal(m.font, 'Tajawal'); assert.equal(m.sw, m.iw);
     assert.equal(m.cards, playable.length, 'every finished game, free');
     assert.ok(m.links.every((h) => /^\/game\/[a-z]+$/.test(h)), '«العب الآن» opens the game page directly');
     // the icons really draw (a missing sprite symbol leaves an empty box)
