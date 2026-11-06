@@ -302,11 +302,10 @@
     $('rrRandom').hidden = ph !== 'choose';
     $('rrPick').hidden = !hostHolds;
     $('rrCancel').hidden = $('rrOut').hidden = !['picked', 'choose'].includes(ph);
-    const left = p.endsAt ? Math.max(0, Math.ceil((p.endsAt - (s.serverTime || Date.now())) / 1000)) : null;
     let line = 'الدور ' + num(ph === 'ready' ? p.turn + 1 : p.turn) + ' — ' + (RR_STATE[ph] || '');
     if (ph === 'ready' && p.waitingHost) line = 'الأدوار التلقائية متوقفة حتى تعود هذه النافذة';
     else if (ph === 'ready' && p.rules?.autoRun === 'auto') line += ' — السحب التالي تلقائيًا';
-    else if (['picked', 'choose'].includes(ph)) line += ' — ' + who(p.holder?.number) + (ph === 'choose' && left != null ? ' • ' + left + ' ث' : '');
+    else if (['picked', 'choose'].includes(ph)) line += ' — ' + who(p.holder?.number);
     else if (ph === 'aim') line += ' — الهدف ' + who(p.target?.number);
     else if (ph === 'reveal') line = p.result?.outcome === 'out' ? 'خرج ' + who(p.target?.number) : p.result?.outcome === 'empty' ? 'نجا ' + who(p.target?.number) + ' — حجرة فارغة' : 'أُلغي الدور';
     line += ' • داخل اللعبة ' + num(p.alive) + ' من ' + num(p.total);
