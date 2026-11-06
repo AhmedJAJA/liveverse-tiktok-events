@@ -1090,6 +1090,12 @@
     try { site = await (await fetch('/api/site', { cache: 'no-store' })).json(); } catch {}
     try { me = await (await fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' })).json(); if (!me.signedIn && !ownerToken()) { location.href = '/login?next=' + encodeURIComponent(location.pathname); return; } } catch {}
     game = [...(site?.games || []), ...(site?.extraGames || [])].find((x) => x.mode === mode) || game;
+    // «قيد التطوير»: only a developer (checked by the server on every command) gets this far; say so on screen
+    if (game?.status === 'dev') {
+      if (!me?.developer && !ownerToken()) { location.replace('/game/' + encodeURIComponent(mode)); return; }
+      $('devBannerText').textContent = '«' + (game.title || 'هذه اللعبة') + '» قيد التطوير — لا يراها المستخدمون ولا يستطيعون تشغيلها. الاختبار هنا للمطورين فقط.';
+      $('devBanner').hidden = false;
+    }
     paintNav(); paintGame(); paintRoom(); loadLinks();
     const s = session(); if (s) await s.ready;
     beat(true); // the window opened last takes control (a reload never waits for the old window to time out)

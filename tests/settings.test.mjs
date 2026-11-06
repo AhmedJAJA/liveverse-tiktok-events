@@ -13,6 +13,9 @@ import os from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
 import { fakePlatforms } from './fake-platforms.mjs';
+// These tests exercise the game machinery itself, so the games are released here; «قيد التطوير» (every game
+// stopped until it is rebuilt) is covered by tests/game-status.test.mjs.
+process.env.SKY_GAMES_DEFAULT = 'available';
 /** Official sign-in round trip: our start → the platform's page (approved as uid) → our callback. */
 async function signIn(fake, b, p, uid) { const s = await b('GET', '/api/oauth/' + p + '/start'); const { code, state } = fake.approve(s.location, uid); return b('GET', '/api/oauth/' + p + '/callback?' + new URLSearchParams({ code, state })); }
 

@@ -16,7 +16,7 @@ const pub = (f) => fs.readFileSync(new URL(f, dir), 'utf8');
 const htmlFiles = fs.readdirSync(dir).filter((f) => f.endsWith('.html'));
 const cssFiles = fs.readdirSync(dir).filter((f) => f.endsWith('.css'));
 const theme = pub('shared-theme.css');
-const HEADER_PAGES = ['home', 'games', 'auth', 'me', 'profile', 'terms', 'privacy', 'refund', 'guide-games', 'guide-tiktok', 'guide-tools', 'admin', 'studio', 'tools', 'play', 'role'];
+const HEADER_PAGES = ['home', 'games', 'auth', 'me', 'profile', 'terms', 'privacy', 'refund', 'guide-games', 'guide-tiktok', 'guide-tools', 'admin', 'studio', 'tools', 'play', 'role', 'game-soon'];
 
 test('the official palette, type scale, radii, shadows, spacing and timing live in shared-theme.css', () => {
   for (const [token, hex] of [['--sl-deep', '#020A22'], ['--sl-navy', '#061A44'], ['--sl-surface', '#0B1737'], ['--sl-elevated', '#10234D'], ['--sl-primary', '#176DF0'], ['--sl-cyan', '#38D4FF'], ['--sl-yellow', '#FFD62A'], ['--sl-text', '#EAF8FF'], ['--sl-muted', '#9EADD0']])

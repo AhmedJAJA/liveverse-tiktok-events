@@ -6,7 +6,7 @@
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.DateTimeFormat('ar-SA-u-ca-gregory-nu-latn', { dateStyle: 'medium', timeStyle: 'short' });
   const fmtDate = (iso) => (iso ? fmt.format(new Date(iso)) : '—');
-  const ACTIONS = { 'subscription-grant': 'منح اشتراك', 'subscription-extend': 'تمديد اشتراك', 'subscription-stop': 'إيقاف اشتراك', 'email-verify-manual': 'تأكيد بريد يدويًا', 'account-disable': 'إيقاف حساب', 'account-enable': 'إعادة تفعيل حساب', 'trial-code-revoke': 'إلغاء رمز تجربة', 'password-reset-link': 'رابط إعادة تعيين كلمة المرور', 'password-reset': 'إعادة تعيين كلمة المرور', 'google-link': 'ربط Google', 'promo-create': 'إنشاء رمز', 'promo-revoke': 'إلغاء رمز', 'promo-update': 'تعديل رمز', 'promo-delete': 'حذف رمز', 'voucher-create': 'إنشاء رموز اشتراك', 'voucher-revoke': 'إلغاء رمز اشتراك', 'partner-save': 'حفظ شريك', 'partner-delete': 'حذف شريك', 'prize-save': 'حفظ جائزة', 'award-status': 'تحديث استلام جائزة' };
+  const ACTIONS = { 'subscription-grant': 'منح اشتراك', 'subscription-extend': 'تمديد اشتراك', 'subscription-stop': 'إيقاف اشتراك', 'email-verify-manual': 'تأكيد بريد يدويًا', 'account-disable': 'إيقاف حساب', 'account-enable': 'إعادة تفعيل حساب', 'trial-code-revoke': 'إلغاء رمز تجربة', 'password-reset-link': 'رابط إعادة تعيين كلمة المرور', 'password-reset': 'إعادة تعيين كلمة المرور', 'google-link': 'ربط Google', 'promo-create': 'إنشاء رمز', 'promo-revoke': 'إلغاء رمز', 'promo-update': 'تعديل رمز', 'promo-delete': 'حذف رمز', 'voucher-create': 'إنشاء رموز اشتراك', 'voucher-revoke': 'إلغاء رمز اشتراك', 'partner-save': 'حفظ شريك', 'partner-delete': 'حذف شريك', 'prize-save': 'حفظ جائزة', 'award-status': 'تحديث استلام جائزة', 'game-status': 'تغيير حالة لعبة' };
   const STATUS = { active: 'فعّال', expired: 'منتهي', scheduled: 'لاحقًا', cancelled: 'موقوف', disabled: 'ملغى', used: 'مستخدم' };
   let current = null;
   const api = async (method, url, body) => {
@@ -188,4 +188,24 @@
   }
   $('reportStatus').addEventListener('change', loadReports);
   loadReports();
+
+  /* حالة الألعاب: release a reviewed game, or put one back under development (audited on the server) */
+  const GSTATUS = { available: 'متاحة', dev: 'قيد التطوير' };
+  async function loadGames() {
+    const tb = $('gameRows');
+    try {
+      const d = await api('GET', '/api/manage/games'); tb.replaceChildren();
+      for (const g of d.games) {
+        const chip = document.createElement('b'); chip.textContent = GSTATUS[g.status] || g.status; chip.className = g.status === 'available' ? 'pg-ok' : 'pg-warn';
+        const next = g.status === 'available' ? 'dev' : 'available';
+        const btn = button(next === 'available' ? 'إطلاق اللعبة' : 'إرجاعها قيد التطوير', async () => {
+          if (next === 'available' && !confirm('إطلاق «' + g.title + '» لكل المستخدمين؟ تأكد أنها اكتملت واختُبرت.')) return;
+          try { await api('POST', '/api/manage/game-status', { mode: g.mode, status: next }); pmsg('gamesMsg', (next === 'available' ? 'أُطلقت ' : 'أُعيدت قيد التطوير: ') + g.title); loadGames(); audit(); }
+          catch (e) { pmsg('gamesMsg', e.message, false); }
+        }, next === 'dev');
+        row(tb, [g.title + (g.spotlight ? ' — أول لعبة قادمة' : ''), g.category, chip, g.updatedAt ? fmtDate(g.updatedAt) + (g.updatedBy ? ' · ' + g.updatedBy : '') : 'الافتراضي', btn]);
+      }
+    } catch (e) { pmsg('gamesMsg', e.message, false); }
+  }
+  loadGames();
 })();

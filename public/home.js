@@ -60,12 +60,14 @@
   const coverAt = (g, w) => (/\.webp$/.test(g.cover || '') && g.cover.startsWith('/cards/') ? g.cover.replace(/\.webp$/, '-' + w + '.webp') : g.cover);
   function paintGames(games) {
     const ul = $('gameStrip'); if (!ul || !games?.length) return;
-    ul.replaceChildren(...games.map((g, i) => {
-      const li = document.createElement('li'), a = document.createElement('a');
-      a.href = '/game/' + g.mode; a.className = 'hm-game'; a.setAttribute('aria-label', 'العب ' + g.title);
+    // the first game back comes first; a game under development says so (its page explains, it does not open the game)
+    const list = games.slice().sort((x, y) => (y.spotlight ? 1 : 0) - (x.spotlight ? 1 : 0));
+    ul.replaceChildren(...list.map((g, i) => {
+      const li = document.createElement('li'), a = document.createElement('a'), dev = g.status === 'dev';
+      a.href = '/game/' + g.mode; a.className = 'hm-game' + (dev ? ' is-dev' : ''); a.setAttribute('aria-label', dev ? g.title + ' — قيد التطوير' : 'العب ' + g.title);
       const img = document.createElement('img'); img.src = coverAt(g, 200); img.alt = ''; img.width = 120; img.height = 154; img.decoding = 'async'; if (i > 5) img.loading = 'lazy';
       const t = document.createElement('b'); t.textContent = g.title;
-      const play = document.createElement('span'); play.className = 'hm-game-play'; play.textContent = 'العب';
+      const play = document.createElement('span'); play.className = 'hm-game-play' + (dev ? ' is-dev' : ''); play.textContent = dev ? 'قيد التطوير' : 'العب';
       a.append(img, t, play); li.append(a); return li;
     }));
   }

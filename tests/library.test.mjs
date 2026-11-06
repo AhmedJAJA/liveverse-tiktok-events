@@ -104,7 +104,7 @@ const STREAMS = { streams: [
 
 test('in a real browser: desktop layout, filters with search, card states, live rail, updates, phones', { skip: !chromium ? 'no Playwright' : !pgOk ? 'no PostgreSQL' : false, timeout: 120_000 }, async () => {
   const port = await freePort();
-  const child = spawn(process.execPath, ['server.mjs'], { cwd: new URL('..', import.meta.url), env: { ...process.env, PORT: String(port), NODE_ENV: 'test', ADMIN_TOKEN: 'owner-token-library-test-1', SKY_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'sponge-lib-')), DATABASE_URL: dbUrl }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, ['server.mjs'], { cwd: new URL('..', import.meta.url), env: { ...process.env, PORT: String(port), NODE_ENV: 'test', ADMIN_TOKEN: 'owner-token-library-test-1', SKY_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'sponge-lib-')), DATABASE_URL: dbUrl, SKY_GAMES_DEFAULT: 'available' }, stdio: ['ignore', 'pipe', 'pipe'] });
   let out = ''; child.stdout.on('data', (c) => (out += c)); child.stderr.on('data', (c) => (out += c));
   const t0 = Date.now(); while (!/ready on/.test(out)) { if (Date.now() - t0 > 15000 || child.exitCode !== null) throw new Error('server did not start: ' + out); await new Promise((r) => setTimeout(r, 50)); }
   const base = 'http://127.0.0.1:' + port;
@@ -184,13 +184,23 @@ test('in a real browser: desktop layout, filters with search, card states, live 
     await p.waitForURL(/\/login\?next=%2Fgame%2Fquiz/);
     await ctx.close();
 
-    // a game still in development: shown as such, never playable
+    // a game under development among released ones: «قيد التطوير» instead of «العب الآن», it explains and never opens
     const dctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     await dctx.route('**/api/site', async (r) => { const res = await r.fetch(); const j = await res.json(); j.extraGames = [...j.extraGames, { ...j.extraGames[0], mode: 'devgame', title: 'لعبة قيد التطوير', status: 'dev', isNew: false }]; r.fulfill({ response: res, json: j }); });
     const d = await dctx.newPage(); await d.goto(base + '/games', { waitUntil: 'networkidle' }); await d.waitForSelector('.gl-card');
     const dev = d.locator('.gl-card[data-mode=devgame] .gl-play');
-    assert.equal(await dev.getAttribute('aria-disabled'), 'true'); assert.equal(await dev.getAttribute('href'), null);
+    assert.equal(await dev.evaluate((n) => n.tagName), 'BUTTON'); assert.equal(await dev.getAttribute('href'), null);
+    assert.equal((await dev.textContent()).trim(), 'قيد التطوير');
     assert.equal(await d.textContent('.gl-card[data-mode=devgame] .gl-badge'), 'قيد التطوير');
+    assert.equal(await d.textContent('.gl-card[data-mode=devgame] .gl-off'), 'غير متاحة حالياً');
+    assert.equal(await d.locator('.gl-card[data-mode=devgame] .gl-devtest').count(), 0, 'no test link for a visitor');
+    await dev.click();
+    assert.equal(await d.evaluate(() => document.getElementById('devDialog').open), true);
+    assert.equal(await d.textContent('#devMsg'), 'نعمل حالياً على تطوير هذه اللعبة لتقديم تجربة أفضل. ستعود قريباً!');
+    assert.equal(await d.textContent('#devTitle'), 'لعبة قيد التطوير');
+    await d.keyboard.press('Escape');
+    assert.equal(await d.evaluate(() => document.getElementById('devDialog').open), false);
+    assert.match(d.url(), /\/games$/, 'the page stays on the library');
     assert.equal(await d.evaluate(() => getComputedStyle(document.getElementById('gameGrid')).gridTemplateColumns.split(' ').length), 4);
     await dctx.close();
 
@@ -215,5 +225,56 @@ test('in a real browser: desktop layout, filters with search, card states, live 
     const tp = await tctx.newPage(); await tp.goto(base + '/games', { waitUntil: 'networkidle' }); await tp.waitForSelector('.gl-card');
     assert.equal(await tp.evaluate(() => getComputedStyle(document.getElementById('gameGrid')).gridTemplateColumns.split(' ').length), 2);
     await tctx.close();
+  } finally { await browser.close(); child.kill(); await once(child, 'exit').catch(() => {}); }
+});
+
+test('in a real browser, as deployed: every game «قيد التطوير», the roulette first with its own badge, the notice page', { skip: !chromium ? 'no Playwright' : !pgOk ? 'no PostgreSQL' : false, timeout: 90_000 }, async () => {
+  const port = await freePort();
+  const child = spawn(process.execPath, ['server.mjs'], { cwd: new URL('..', import.meta.url), env: { ...process.env, PORT: String(port), NODE_ENV: 'test', ADMIN_TOKEN: 'owner-token-library-test-2', SKY_DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'sponge-lib-')), DATABASE_URL: dbUrl, SKY_GAMES_DEFAULT: '' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  let out = ''; child.stdout.on('data', (c) => (out += c)); child.stderr.on('data', (c) => (out += c));
+  const t0 = Date.now(); while (!/ready on/.test(out)) { if (Date.now() - t0 > 15000 || child.exitCode !== null) throw new Error('server did not start: ' + out); await new Promise((r) => setTimeout(r, 50)); }
+  const base = 'http://127.0.0.1:' + port;
+  const browser = await chromium.launch();
+  try {
+    for (const [width, height, mobile] of [[1440, 900, false], [390, 844, true]]) {
+      const ctx = await browser.newContext({ viewport: { width, height }, ...(mobile ? { isMobile: true, hasTouch: true } : {}) });
+      await ctx.route('**/api/streams', (r) => r.fulfill({ json: { streams: [], totalStreams: 0, totalPlayers: 0 } }));
+      const p = await ctx.newPage(); const errors = []; p.on('pageerror', (e) => errors.push(String(e)));
+      await p.goto(base + '/games', { waitUntil: 'networkidle' }); await p.waitForSelector('.gl-card');
+      const cards = await p.$$eval('.gl-card', (n) => n.map((c) => ({ mode: c.dataset.mode, badges: [...c.querySelectorAll('.gl-badge')].map((b) => b.textContent), play: c.querySelector('.gl-play').tagName + ':' + c.querySelector('.gl-play').textContent.trim(), off: c.querySelector('.gl-off')?.textContent || '', title: c.querySelector('.gl-title').textContent, desc: c.querySelector('.gl-desc').textContent })));
+      assert.equal(cards.length, GAMES.length + EXTRA_GAMES.length, 'every game stays in the library');
+      assert.equal(cards[0].mode, 'roulette', 'the first game back comes first');
+      assert.deepEqual(cards[0].badges, ['أول لعبة قادمة — قيد التطوير']);
+      for (const c of cards) {
+        assert.equal(c.play, 'BUTTON:قيد التطوير', c.mode); assert.equal(c.off, 'غير متاحة حالياً', c.mode);
+        assert.ok(c.title && c.desc, c.mode + ': name and description kept');
+        if (c.mode !== 'roulette') assert.deepEqual(c.badges, ['قيد التطوير'], c.mode);
+      }
+      assert.equal(await p.locator('.gl-card a[href^="/game/"]').count(), 0, 'nothing opens a game');
+      assert.equal(await p.isVisible('#devStrip'), true);
+      assert.match(await p.textContent('#gameCount'), /قيد التطوير/);
+      await p.click('.gl-card[data-mode=roulette] .gl-play');
+      assert.equal(await p.textContent('#devBadge'), 'أول لعبة قادمة — قيد التطوير');
+      assert.equal(await p.isVisible('#devNote'), true);
+      await p.click('#devOk');
+      assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no sideways scroll');
+      // a direct link: the notice page with the same message, the game's name and its art
+      await p.goto(base + '/game/roulette', { waitUntil: 'networkidle' });
+      await p.waitForFunction(() => document.getElementById('gsTitle').textContent === 'الروليت');
+      assert.equal(await p.textContent('#gsMsg'), 'نعمل حالياً على تطوير هذه اللعبة لتقديم تجربة أفضل. ستعود قريباً!');
+      assert.equal(await p.textContent('#gsBadge'), 'أول لعبة قادمة — قيد التطوير');
+      assert.match(await p.getAttribute('#gsCover', 'src'), /^\/cards\/09-roulette/);
+      assert.equal(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await p.goto(base + '/game/quiz', { waitUntil: 'networkidle' });
+      await p.waitForFunction(() => document.getElementById('gsTitle').textContent === 'تحدي المعرفة');
+      assert.equal(await p.textContent('#gsBadge'), 'قيد التطوير — Under Development');
+      // the home page strip says it too
+      await p.goto(base + '/', { waitUntil: 'networkidle' });
+      await p.waitForSelector('#gameStrip .hm-game');
+      const strip = await p.$$eval('#gameStrip .hm-game', (n) => n.map((a) => [a.getAttribute('href'), a.querySelector('.hm-game-play').textContent]));
+      assert.equal(strip[0][0], '/game/roulette'); assert.ok(strip.every(([, t]) => t === 'قيد التطوير'));
+      assert.deepEqual(errors, []);
+      await ctx.close();
+    }
   } finally { await browser.close(); child.kill(); await once(child, 'exit').catch(() => {}); }
 });

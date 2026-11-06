@@ -9,6 +9,9 @@ import { Engine } from '../src/engine.mjs';
 import { GameFlow } from '../src/flow.mjs';
 import { ALL_GAMES, GAMES, GAME_UPDATES, siteConfig } from '../src/catalog.mjs';
 import { GAME_SETTINGS, defaultSettings, validateSettings, applySettings, settingsSchema } from '../src/game-settings.mjs';
+// These tests exercise the game machinery itself, so the games are released here; «قيد التطوير» (every game
+// stopped until it is rebuilt) is covered by tests/game-status.test.mjs.
+process.env.SKY_GAMES_DEFAULT = 'available';
 
 const P = (id) => ({ id, name: 'لاعب ' + id });
 function game(opts = {}) {

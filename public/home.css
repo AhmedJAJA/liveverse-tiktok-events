@@ -920,6 +920,8 @@ html.is-hidden .hm-sponge,html.is-hidden .hm-sponge *{animation-play-state:pause
 .hm-game-play{position:absolute;top:8px;inset-inline-start:8px;padding:3px 10px;border-radius:999px;background:var(--sl-yellow);color:#2B1A00;font-size:12px;font-weight:900;opacity:0;transform:translateY(-4px);transition:.2s}
 .hm-game:hover,.hm-game:focus-visible{transform:translateY(-4px)}
 .hm-game:hover .hm-game-play,.hm-game:focus-visible .hm-game-play{opacity:1;transform:none}
+.hm-game-play.is-dev{opacity:1;transform:none;background:rgba(var(--sl-deep-rgb),.86);color:var(--sl-yellow);border:1px solid rgba(var(--sl-yellow-rgb),.5)}
+.hm-game.is-dev img{filter:saturate(.7) brightness(.85)}
 .hm-game:focus-visible{outline:3px solid var(--sl-yellow);outline-offset:4px}
 @media (max-width:700px){.hm-games .hm-cards{grid-template-columns:repeat(auto-fill,96px);gap:12px 10px}.hm-game,.hm-game img{width:96px}.hm-game b{font-size:12.5px}.hm-game-play{opacity:1;transform:none;font-size:11px;padding:2px 8px}}
 @media (max-width:360px){.hm-games .hm-cards{grid-template-columns:repeat(auto-fill,86px);padding-inline:8px}.hm-game,.hm-game img{width:86px}}

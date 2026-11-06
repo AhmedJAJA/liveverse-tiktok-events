@@ -125,6 +125,7 @@
    </div>
   </div>
   <p class="gl-count" id="gameCount" aria-live="polite"></p>
+  <p class="gl-devstrip" id="devStrip" hidden><svg aria-hidden="true" width="18" height="18"><use href="/icons.svg?v=20261106#i-gear"/></svg><span>نطوّر الآن كل لعبة على حدة حتى تصل إلى مستوى ممتاز — الألعاب قيد التطوير مؤقتاً، وأولها عودةً الروليت.</span></p>
   <ul class="gl-grid" id="gameGrid"></ul>
   <div class="gl-empty" id="gridEmpty" hidden><b>لا توجد ألعاب مطابقة</b><span id="gridEmptyText">جرّب تصنيفًا آخر أو كلمة بحث مختلفة.</span><button type="button" class="sl-btn sl-btn-ghost sl-btn-sm" id="clearFilters">عرض كل الألعاب</button></div>
  </section>
@@ -139,6 +140,21 @@
   </div>
  </section>
 </main>
+
+<!-- «قيد التطوير»: what a game under development says instead of opening -->
+<dialog class="gl-dev" id="devDialog" aria-labelledby="devTitle" aria-describedby="devMsg">
+ <div class="gl-dev-card">
+  <span class="gl-dev-ic" id="devIcon" aria-hidden="true"></span>
+  <p class="gl-dev-badge" id="devBadge">قيد التطوير — Under Development</p>
+  <h2 id="devTitle">قيد التطوير</h2>
+  <p class="gl-dev-msg" id="devMsg">نعمل حالياً على تطوير هذه اللعبة لتقديم تجربة أفضل. ستعود قريباً!</p>
+  <p class="gl-dev-note" id="devNote" hidden>هي أول لعبة ستعود: نعيد بناءها من الصفر ونختبرها قبل فتحها للجميع.</p>
+  <div class="gl-dev-acts">
+   <button type="button" class="sl-btn sl-btn-primary" id="devOk">حسنًا</button>
+   <a class="sl-btn sl-btn-ghost" id="devTest" href="/games" hidden><svg aria-hidden="true" width="16" height="16"><use href="/icons.svg?v=20261106#i-key"/></svg><span>اختبار المطور</span></a>
+  </div>
+ </div>
+</dialog>
 
 <footer class="gl-foot"><p>© <span id="year">2026</span> سبونج لايف — <a href="/terms">شروط الاستخدام</a> · <a href="/privacy">الخصوصية</a> · <a href="/refund">الاسترداد</a></p></footer>
 </body>

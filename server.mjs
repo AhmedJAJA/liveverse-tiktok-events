@@ -25,6 +25,7 @@ import { createMailer, createGateway } from './src/services.mjs';
 import { Economy, EconomyError, hashDevice, hashIp, WHATSAPP_URL, DAILY_REWARD, REFERRAL_REWARD, REFERRAL_CAP } from './src/economy.mjs';
 import { GoogleVerifier, GoogleOAuth } from './src/google.mjs';
 import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
+import { GameStatus, devError, DEV_MESSAGE } from './src/game-status.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, 'public');
@@ -243,8 +244,11 @@ for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((
    the promo codes and sessions above are written through to it, so nothing depends on the host's disk. */
 const pool = createPool();
 let platform = null, economy = null, frames = null;
+/* «قيد التطوير»: one switch per game (src/game-status.mjs). Every game is under development until the owner releases it. */
+const gameStatus = new GameStatus({ modes: ALL_GAMES.map((g) => g.mode), defaultStatus: process.env.SKY_GAMES_DEFAULT || 'dev', testers: process.env.SKY_GAME_TESTERS || '' });
 if (pool) {
   await migrate(pool);
+  await gameStatus.attach(pool);
   await PromoMirror.attach(pool, promos);
   await SessionMirror.attach(pool, sessions);
   platform = new Platform({ pool, hashCode: (c) => promos.hash(c), mail: createMailer(), gateway: createGateway(), appUrl: process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000),
@@ -397,10 +401,37 @@ function drawQuestion(bank, { category = 'all', difficulty = 'all' } = {}) {
   let q; try { q = bank.draw({ category, difficulty }); } catch { try { q = bank.draw({}); } catch { bank.reset(); q = bank.draw({}); } }
   return { title: 'تحدي ' + (bank.stats().categories[q.category]?.title || 'المعلومات'), prompt: q.question, options: q.options, answer: q.answer };
 }
+/* «قيد التطوير»: who may run a game under development, and which game a command would run. */
+/** Developers may open and test games under development: the site owner, site admins and SKY_GAME_TESTERS accounts. */
+function isDeveloper(actor) {
+  if (!actor) return false;
+  if (actor.kind === 'owner') return true;
+  if (actor.kind === 'acct' && platform) return platform.isAdmin(actor.userId) || gameStatus.isTester(platform.cached(actor.userId)?.user?.public_id);
+  return false;
+}
+/** Refuse (HTTP 423) a game under development for everyone but a developer. */
+function requirePlayable(mode, actor) {
+  if (!mode || !gameStatus.has(mode) || gameStatus.isAvailable(mode) || isDeveloper(actor)) return;
+  throw devError(mode, ALL_GAMES.find((g) => g.mode === mode)?.title);
+}
+// Commands that only stop, leave, end or manage something work for every game (and for a game that was already
+// running when it went back under development). Everything else plays a game and is checked first.
+const FREE_ACTIONS = new Set(['heartbeat', 'stop', 'reset', 'flow-end', 'flow-library', 'flow-cancel', 'flow-close', 'flow-registration-reset', 'registration-close',
+  'remove-player', 'host-unseat', 'bomb-end', 'connect', 'disconnect', 'tools', 'branding', 'room-code', 'bank-reset',
+  'accounts', 'promo-list', 'promo-create', 'promo-update', 'promo-delete', 'account-plan', 'account-password']);
+/** The game a command would set up or run: the chosen game for the launch flow, the engine's game for direct commands. */
+function commandMode(action, body, room) {
+  if (FREE_ACTIONS.has(action)) return null;
+  if (action === 'flow-setup' || action === 'prepare') return String(body.mode || '');
+  if (action.startsWith('flow-')) return room.flow.mode || room.engine.status.mode;
+  if (action === 'configure') return body.mode !== undefined ? String(body.mode) : room.engine.status.mode;
+  return room.engine.status.mode;
+}
 async function handleAction(action, body, actor) {
   const { engine, questionBank } = actor.room;
   const room = actor.room;
   if (room.restoring && action !== 'heartbeat') await room.restoring; // a lobby coming back after a restart is settled first
+  requirePlayable(commandMode(action, body, room), actor);
   switch (action) {
     // ---- the launch flow: every step is a separate command (see src/flow.mjs)
     case 'flow-setup': room.flow.setup(String(body.mode || '')); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
@@ -636,7 +667,9 @@ function startPreparation(room, actor, platformPref) {
 async function restoreLobby(room) {
   try {
     const saved = await frames.loadLobby(room.id);
-    if (!saved || !room.flow.recover(saved)) return;
+    if (!saved) return;
+    if (saved.mode && gameStatus.has(saved.mode) && !gameStatus.isAvailable(saved.mode) && !isDeveloper({ kind: 'acct', userId: room.ownerId })) return;
+    if (!room.flow.recover(saved)) return;
     await platform.refresh(room.ownerId).catch(() => {});
     const actor = { kind: 'acct', userId: room.ownerId, live: true };
     room.restoring = null; // later changes are saved again
@@ -828,7 +861,7 @@ function requireOwner(actor) { if (actor.kind !== 'owner') throw Object.assign(n
 /* «الدخول بالرمز الترويجي»: the server checks the code and opens a session cookie; the page never
    decides on its own. The owner can type the ADMIN_TOKEN in the same field to open the main room. */
 async function handleAccess(action, req, res) {
-  if (action === 'me' && req.method === 'GET') { const me = meFor(req); return json(res, 200, { signedIn: !!actorFor(req), ...me }); }
+  if (action === 'me' && req.method === 'GET') { const me = meFor(req), actor = actorFor(req); return json(res, 200, { signedIn: !!actor, ...me, developer: isDeveloper(actor) }); }
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
   const origin = req.headers.origin;
   if (origin) { try { if (new URL(origin).host !== req.headers.host) return json(res, 403, { error: 'طلب من مصدر غير مسموح' }); } catch { return json(res, 403, { error: 'طلب غير صالح' }); } }
@@ -1200,10 +1233,13 @@ async function handleManage(action, req, res) {
       if (action === 'frames') return json(res, 200, { frames: await frames.admin() });
       if (action === 'purchases') return json(res, 200, { purchases: await economy.adminPurchases(url.searchParams.get('status') || ''), packages: await economy.packages() });
       if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
+      if (action === 'games') return json(res, 200, { games: ALL_GAMES.map((g) => ({ ...gameStatus.view(g.mode), title: g.title, category: g.categoryLabel })), defaultStatus: gameStatus.default });
       return json(res, 404, { error: 'Not found' });
     }
     if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' });
     const body = await readBody(req, action === 'partner-save' ? 600_000 : action === 'skin-upload' ? 6_200_000 : action === 'frame-save' ? 900_000 : 4096);
+    // «حالة الألعاب»: release a finished game, or put one back under development (audited)
+    if (action === 'game-status') { const game = await gameStatus.set(String(body.mode || ''), String(body.status || ''), admin.name); await platform.audit(admin.name, 'game-status', { details: { mode: game.mode, status: game.status }, ip }); return json(res, 200, { ok: true, game }); }
     if (action === 'partner-save') { const partners = await platform.savePartner(body); await platform.audit(admin.name, 'partner-save', { details: { name: String(body.name || '').slice(0, 40) }, ip }); return json(res, 200, { ok: true, partners }); }
     if (action === 'partner-delete') { const partners = await platform.deletePartner(body.id); await platform.audit(admin.name, 'partner-delete', { details: { id: body.id }, ip }); return json(res, 200, { ok: true, partners }); }
     if (action === 'prize-save') { const r = await platform.savePrize(body); await platform.audit(admin.name, 'prize-save', { details: { title: String(body.title || '').slice(0, 80) }, ip }); return json(res, 200, { ok: true, ...r }); }
@@ -1369,7 +1405,7 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['shared-theme.css','site-header.js','setup.css','games.html','games.js','games.css','game-icons.svg','profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css',
+const STATIC = new Set(['shared-theme.css','site-header.js','game-soon.html','game-soon.js','game-soon.css','setup.css','games.html','games.js','games.css','game-icons.svg','profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['cards', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
@@ -1389,7 +1425,11 @@ const server = http.createServer(async (req, res) => {
     }
     // «المتجر» on the home page: the public coin price list (the only thing sold), read from coin_packages
     if (url.pathname === '/api/store/packages' && req.method === 'GET') return json(res, 200, { packages: economy ? await economy.packages() : [], dailyReward: DAILY_REWARD, referralReward: REFERRAL_REWARD, referralCap: REFERRAL_CAP });
-    if (url.pathname === '/api/site' && req.method === 'GET') return json(res, 200, { ...siteConfig(), updates: UPDATES, plans: PLANS, gameSettings: settingsSchema(), joinWords: JOIN_WORD_SUGGESTIONS, lateJoinModes: LATE_JOIN_MODES });
+    if (url.pathname === '/api/site' && req.method === 'GET') {
+      const site = siteConfig(), games = site.games.map((g) => gameStatus.decorate(g)), extraGames = site.extraGames.map((g) => gameStatus.decorate(g));
+      return json(res, 200, { ...site, games, extraGames, availableCount: [...games, ...extraGames].filter((g) => g.status === 'available').length, devMessage: DEV_MESSAGE,
+        updates: UPDATES, plans: PLANS, gameSettings: settingsSchema(), joinWords: JOIN_WORD_SUGGESTIONS, lateJoinModes: LATE_JOIN_MODES });
+    }
     if (url.pathname.startsWith('/api/u/') && req.method === 'GET') {
       if (!platform) return json(res, 404, { error: 'غير موجود' });
       const p = await platform.publicProfile(decodeURIComponent(url.pathname.slice(7)), accountSession(req)?.userId || null);
@@ -1479,7 +1519,7 @@ const server = http.createServer(async (req, res) => {
       const tab = String(req.headers['x-studio-tab'] || '');
       if (tab && action !== 'heartbeat' && actor.room.hostTab() && actor.room.primaryTab !== tab) return json(res, 409, { error: 'اللعبة مفتوحة في نافذة أخرى — اضغط «التحكم من هنا» لنقل التحكم إلى هذه النافذة', otherWindow: true });
       try { const result = await handleAction(action, await readBody(req, action === 'sketch' ? 200_000 : 16384), actor); return json(res, 200, result); }
-      catch (err) { return json(res, err.status || 400, { error: String(err.message || err).slice(0, 240), ...(err.fields ? { fields: err.fields } : {}), ...(err.needPlan ? { needPlan: true } : {}) }); }
+      catch (err) { return json(res, err.status || 400, { error: String(err.message || err).slice(0, 240), ...(err.fields ? { fields: err.fields } : {}), ...(err.needPlan ? { needPlan: true } : {}), ...(err.gameStatus ? { gameStatus: err.gameStatus, mode: err.mode } : {}) }); }
     }
     if (url.pathname === '/api/dev-token' && req.method === 'GET') {
       // Never expose administrator credentials on a deployed or remotely reachable server.
@@ -1509,6 +1549,11 @@ const server = http.createServer(async (req, res) => {
   }
   const gamePage = url.pathname.match(/^\/game\/([a-z]{2,20})$/);
   if (gamePage && !gameOf(gamePage[1])) return json(res, 404, { error: 'Not found' });
+  // «قيد التطوير»: a game under development opens its notice page instead of the game — for everyone but a developer,
+  // and before any sign-in step (there is nothing to sign in for).
+  const pageMode = gamePage ? gamePage[1] : url.pathname === '/bomb' ? 'bomb' : url.pathname === '/event' ? gameOf(url.searchParams.get('mode')) : null;
+  if (pageMode && !gameStatus.isAvailable(pageMode) && !isDeveloper(actorFor(req))) { res.setHeader('X-Game-Status', 'dev'); return serveStatic(req, res, 'game-soon.html'); }
+  if (url.pathname === '/dashboard' && !ALL_GAMES.some((g) => gameStatus.isAvailable(g.mode)) && !isDeveloper(actorFor(req))) { res.writeHead(302, { Location: GAMES_LIST, 'Cache-Control': 'no-store' }); return res.end(); }
   // Host pages need a signed-in session (any account — every game is free —, the owner or a promo code). Viewers keep /overlay, /play?room and /role.
   const HOST_PAGES = new Set(['/dashboard', '/event', '/bomb', '/tools']);
   if (gamePage || HOST_PAGES.has(url.pathname)) {

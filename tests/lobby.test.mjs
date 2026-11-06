@@ -64,6 +64,9 @@ const streams = async (b) => (await b('GET', '/api/streams')).data;
 
 
 import { FrameStore } from '../src/frames.mjs';
+// These tests exercise the game machinery itself, so the games are released here; «قيد التطوير» (every game
+// stopped until it is rebuilt) is covered by tests/game-status.test.mjs.
+process.env.SKY_GAMES_DEFAULT = 'available';
 test('lobby preparation, errors with actions, demo mode, keyword version, reset, restart recovery, frames', { skip, timeout: 240_000 }, async () => {
   const fake = await fakePlatforms();
   fake.addKick(601, { slug: 'lobbychan', name: 'Lobby Chan' });

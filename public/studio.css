@@ -156,6 +156,8 @@ body[data-drawer=closed] .st-drawer{display:none!important}
 .st-notices:has(.st-notice:not([hidden])){padding-top:12px}
 .st-notice{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 16px;border-radius:18px;border:1px solid rgba(56,212,255,.4);background:rgba(6,26,68,.88);font-weight:800}
 .st-notice[hidden]{display:none}
+.st-notice.is-dev{border-color:rgba(var(--sl-yellow-rgb),.55);background:rgba(var(--sl-navy-rgb),.92);color:var(--sl-text)}
+.st-notice.is-dev b{padding:3px 10px;border-radius:var(--sl-r-pill);background:var(--sl-grad-sun);color:var(--sl-ink);font-size:var(--sl-fs-xs)}
 .st-notice.is-plan{border-color:rgba(255,106,138,.6);background:rgba(58,11,44,.9);color:#FFE3EA}
 .st-notice.is-window{border-color:rgba(255,210,31,.6);background:rgba(58,44,6,.85);color:#FFF1B8}
 .st-notice-btn{display:inline-flex;align-items:center;height:38px;padding:0 14px;border:0;border-radius:12px;background:var(--sl-yellow);color:var(--sl-ink);font:900 14px "Tajawal",system-ui,sans-serif;text-decoration:none;cursor:pointer}
