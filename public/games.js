@@ -68,7 +68,10 @@
   function paint() {
     const list = shown();
     for (const b of document.querySelectorAll('[data-filter]')) b.setAttribute('aria-selected', String(b.dataset.filter === state.filter));
-    $('gameGrid').replaceChildren(...list.map(card));
+    // the server already sent these cards (and they played their entrance): the first swap must not replay it
+    const grid = $('gameGrid'), cards = list.map(card);
+    if (grid.dataset.ssr === '1') { delete grid.dataset.ssr; for (const c of cards) c.classList.add('no-in'); }
+    grid.replaceChildren(...cards);
     $('gridEmpty').hidden = list.length > 0;
     if (!list.length) $('gridEmptyText').textContent = state.q ? 'لا توجد لعبة باسم «' + state.q + '» في هذا التصنيف.' : 'لا توجد ألعاب في هذا التصنيف حاليًا.';
     const playable = list.filter((g) => g.status !== 'dev').length, inDev = list.length - playable;

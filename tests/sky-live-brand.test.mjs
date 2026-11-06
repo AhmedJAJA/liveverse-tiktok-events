@@ -16,7 +16,9 @@ test('the official SPONGE LIVE image is shipped in light WebP/PNG sizes and the 
 test('public pages are branded «سبونج لايف» without the former identity',()=>{
   for(const name of files){
     const html=publicFile(name);
-    assert.match(html,/سبونج لايف/,name); assert.doesNotMatch(html,/SPONGE LIVE/,name);
+    // the Latin name may appear only in search/social metadata in <head> (a search term people use), never on the page
+    const body=html.slice(html.indexOf('</head>'));
+    assert.match(html,/سبونج لايف/,name); assert.doesNotMatch(body,/SPONGE LIVE/,name);
     assert.doesNotMatch(html,/SKY LIVE|Royal Edition|ROYAL EDITION|LIVEVERSE|sky-live/i,name);
   }
 });

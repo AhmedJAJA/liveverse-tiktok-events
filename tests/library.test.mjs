@@ -28,12 +28,14 @@ test('page order: header, title, lead, call to action, «اتصل بالبث», 
   for (const a of ['#live', '#updates', '#library']) assert.ok(html.includes('href="' + a + '"'), a);
   assert.doesNotMatch(html, /studio|استوديو/i, 'no separate studio step');
   assert.doesNotMatch(html, /\bstyle="/, 'no inline styles (CSP)');
-  assert.doesNotMatch(html, /https?:\/\//, 'no external resources');
+  // nothing is loaded from another site; absolute addresses appear only in search metadata (canonical, Open Graph, JSON-LD)
+  const loaded = html.replace(/<link rel="canonical"[^>]*>|<meta [^>]*>|<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '');
+  assert.doesNotMatch(loaded, /https?:\/\//, 'no external resources');
 });
 
 test('every link on the page goes somewhere real, and the page uses the site font only', () => {
   const routes = new Set(['/', '/games', '/terms', '/privacy', '/refund', '/guide/games', '/guide/tiktok-live', '/guide/tools', '/account', '/signup']);
-  for (const [, href] of html.matchAll(/href="([^"]+)"/g)) {
+  for (const [, href] of html.replace(/<link rel="canonical"[^>]*>/, '').matchAll(/href="([^"]+)"/g)) {
     if (href.startsWith('#')) { assert.ok(html.includes('id="' + href.slice(1) + '"'), 'anchor ' + href); continue; }
     if (/\.(css|js|png|webp|woff2?|svg)(#.*)?$/.test(href.split('?')[0])) continue;
     const p = href.split(/[?#]/)[0];

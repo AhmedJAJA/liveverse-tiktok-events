@@ -27,6 +27,7 @@ import { GoogleVerifier, GoogleOAuth } from './src/google.mjs';
 import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
 import { GameStatus, devError, DEV_MESSAGE } from './src/game-status.mjs';
 import { RouletteStore } from './src/roulette-store.mjs';
+import { SITE_URL, DEFAULT_SITE_URL, INDEXABLE_PAGES, seoRedirect, robotsHeader, robotsTxt, sitemapXml, verificationMeta, indexNowKey, renderLibrary } from './src/seo.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, 'public');
@@ -387,7 +388,7 @@ function accountSession(req) { const s = sessionOf(req); return s?.kind === 'acc
 function sameOrigin(req) {
   if (req.headers['sec-fetch-site'] === 'cross-site') return false; // CSRF: browsers label requests sent from other sites
   const origin = req.headers.origin; if (!origin) return true; try { return new URL(origin).host === req.headers.host; } catch { return false; } }
-function json(res, status, value) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(value)); }
+function json(res, status, value) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex' }); res.end(JSON.stringify(value)); }
 async function readBody(req, limit = 16384) {
   let size = 0, bytes = [];
   for await (const chunk of req) { size += chunk.length; if (size > limit) throw new Error('الطلب كبير جدًا'); bytes.push(chunk); }
@@ -1432,6 +1433,13 @@ const server = http.createServer(async (req, res) => {
   secureHeaders(res);
   renewSession(req, res);
   let url; try { url = new URL(req.url, 'http://localhost'); } catch { return json(res, 400, { error: 'Bad URL' }); }
+  // HTTPS only from now on (Render already redirects http → https; this tells browsers to skip the http step)
+  if (IS_PRODUCTION && isHttps(req)) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  // search engines: one address per public page (see src/seo.mjs)
+  const moved = seoRedirect({ method: req.method, host: req.headers.host, pathname: url.pathname, search: url.search, production: IS_PRODUCTION,
+    signedIn: !!parseCookies(req.headers.cookie)[COOKIE] });
+  if (moved) { res.writeHead(301, { Location: moved, 'Cache-Control': 'public, max-age=3600' }); return res.end(); }
+  if ((req.method === 'GET' || req.method === 'HEAD') && SEO_FILES[url.pathname]) return serveText(req, res, SEO_FILES[url.pathname]);
   try {
     if (url.pathname === '/health') return json(res, 200, { ok: true, mode: mainRoom.engine.status.mode, rooms: rooms.size, accounts: !!platform });
     if (url.pathname === '/api/state' && req.method === 'GET') {
@@ -1597,6 +1605,7 @@ const server = http.createServer(async (req, res) => {
    every local CSS/JS link (?v=…), so those files can be cached for a year and a deploy is picked up
    immediately — an old design can never stick in a browser cache. */
 const fileCache = new Map();
+function etagOf(body) { return '"' + createHash('sha1').update(body).digest('base64url').slice(0, 16) + '"'; }
 const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.svg', '.txt', '.json', '.glb']);
 async function loadAsset(relative) {
   const filename = path.join(root, relative);
@@ -1611,13 +1620,59 @@ async function loadAsset(relative) {
     for (const ref of refs) { if (!STATIC.has(ref)) continue; const asset = await loadAsset(ref); html = html.split('"/' + ref + '"').join('"/' + ref + '?v=' + asset.etag.slice(1, 9) + '"'); }
     body = Buffer.from(html);
   }
-  const etag = '"' + createHash('sha1').update(body).digest('base64url').slice(0, 16) + '"';
+  const etag = etagOf(body);
   const entry = { body, gzip: COMPRESSIBLE.has(ext) && body.length > 600 ? gzipSync(body, { level: 9 }) : null, etag, type: mime[ext] || 'application/octet-stream', ext, mtime: stat.mtimeMs };
   fileCache.set(relative, entry);
   return entry;
 }
-async function serveStatic(req, res, relative) {
+/* ---------------------------------------------------------- search engines (src/seo.mjs) */
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const VERIFY_META = verificationMeta();
+const INDEXNOW_KEY = indexNowKey();
+const SEO_FILES = {
+  '/robots.txt': { type: 'text/plain; charset=utf-8', body: robotsTxt() },
+  '/sitemap.xml': { type: 'application/xml; charset=utf-8', body: sitemapXml() },
+  ...(INDEXNOW_KEY ? { ['/' + INDEXNOW_KEY + '.txt']: { type: 'text/plain; charset=utf-8', body: INDEXNOW_KEY } } : {})
+};
+for (const f of Object.values(SEO_FILES)) { f.buf = Buffer.from(f.body); f.etag = etagOf(f.buf); }
+function serveText(req, res, f) {
+  const headers = { 'Content-Type': f.type, 'Cache-Control': 'public, max-age=3600', ETag: f.etag, 'X-Robots-Tag': 'noindex' };
+  if (req.headers['if-none-match'] === f.etag) { res.writeHead(304, headers); return res.end(); }
+  headers['Content-Length'] = f.buf.length;
+  res.writeHead(200, headers); res.end(req.method === 'HEAD' ? undefined : f.buf);
+}
+/** Pages whose first HTML response is completed on the server: the library's game cards (each game's current
+    status), the owner's Search Console / Bing ownership tags on the home page, and — when SITE_URL is not the
+    default address — the canonical/Open Graph/JSON-LD addresses of the public pages. Rendered once per variant. */
+const PUBLIC_PAGE_FILES = new Set(INDEXABLE_PAGES.map((p) => p.file));
+const pageVariants = new Map();
+async function pageAsset(relative) {
   const asset = await loadAsset(relative);
+  let library = null;
+  if (relative === 'games.html') { const site = siteConfig(); library = { games: [...site.games, ...site.extraGames].map((g) => gameStatus.decorate(g)), updates: site.gameUpdates }; }
+  const rehost = SITE_URL !== DEFAULT_SITE_URL && PUBLIC_PAGE_FILES.has(relative);
+  const verify = relative === 'home.html' && VERIFY_META;
+  if (!library && !rehost && !verify) return asset;
+  // the library changes only when a game's status changes (or a dated «تم التحديث» badge expires at midnight)
+  const key = relative + '|' + asset.etag + (library ? '|' + library.games.map((g) => g.mode + ':' + g.status).join(',') + '|' + new Date().toISOString().slice(0, 10) : '');
+  let hit = pageVariants.get(key);
+  if (hit) return hit;
+  let html = asset.body.toString('utf8');
+  if (rehost) html = html.split(DEFAULT_SITE_URL).join(SITE_URL);
+  if (library) html = renderLibrary(html, library.games, library.updates);
+  if (verify) html = html.replace('</head>', VERIFY_META + '</head>');
+  const body = Buffer.from(html);
+  hit = { ...asset, body, gzip: gzipSync(body, { level: 9 }), etag: etagOf(body) };
+  if (pageVariants.size > 32) pageVariants.clear();
+  pageVariants.set(key, hit);
+  return hit;
+}
+async function serveStatic(req, res, relative) {
+  const asset = await pageAsset(relative);
+  if (asset.ext === '.html') {
+    const tag = robotsHeader({ host: req.headers.host, pathname: new URL(req.url, 'http://localhost').pathname, production: IS_PRODUCTION });
+    if (tag) res.setHeader('X-Robots-Tag', tag);
+  }
   const versioned = /[?&]v=/.test(req.url);
   // signed-in pages are never kept by the browser: after «تسجيل الخروج» the back button cannot show them again
   const cache = ['me.html', 'studio.html', 'admin.html', 'auth.html', 'index.html'].includes(relative) ? 'no-store'

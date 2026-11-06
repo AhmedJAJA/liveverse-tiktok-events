@@ -57,3 +57,15 @@ services:
       # 32 random bytes, base64 — seals platform tokens in the database. Never change it once set.
       - key: TOKEN_ENC_KEY
         sync: false
+      # Search engines (src/seo.mjs). SITE_URL: the one public address (default https://spongelive.com); pages on
+      # Render's onrender.com address and www redirect there. Optional ownership tags for Google Search Console
+      # (HTML-tag method) and Bing Webmaster Tools — only the token, e.g. GOOGLE_SITE_VERIFICATION=abc123…
+      # INDEXNOW_KEY: optional, 8–128 of a-z A-Z 0-9 -; served at /<key>.txt for tools/indexnow.mjs.
+      - key: SITE_URL
+        value: https://spongelive.com
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false
+      - key: BING_SITE_VERIFICATION
+        sync: false
+      - key: INDEXNOW_KEY
+        sync: false
