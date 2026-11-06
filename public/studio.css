@@ -407,9 +407,12 @@ body[data-drawer=closed] .st-drawer{display:none!important}
 body[data-screen=game][data-rr="1"] .pl-frame{width:min(100%,calc((100dvh - 190px) * 16 / 9))}
 body[data-screen=game][data-rr="1"]:has(#devBanner:not([hidden])) .pl-frame{width:min(100%,calc((100dvh - 262px) * 16 / 9))}
 @media (max-width:760px){
-  .st-rr{gap:6px;padding:8px}
-  .st-rr .pl-btn{flex:1 1 40%;padding:0 10px;font-size:14px}
-  .st-rr-draw{flex-basis:100%!important;min-width:0!important}
-  .st-rr kbd{display:none}
-  body[data-screen=game][data-rr="1"] .pl-frame{height:calc(100dvh - 250px)}
+  .st-rr{gap:6px;padding:6px;border-radius:var(--sl-r-md)}
+  .st-rr .pl-btn{flex:1 1 auto;min-width:0;min-height:40px;height:40px;padding:0 8px;font-size:13px;gap:5px}
+  .st-rr .pl-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .st-rr .pl-btn .i{width:15px;height:15px}
+  .st-rr-draw{flex:1 1 58%!important;min-width:0!important;font-size:15px!important}
+  .st-rr-pick{flex:1 1 100%;justify-content:center}
+  .st-rr kbd,.st-rr-state{display:none}
+  body[data-screen=game][data-rr="1"] .pl-frame{height:calc(100dvh - 232px)}
 }
