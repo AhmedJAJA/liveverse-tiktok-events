@@ -151,20 +151,14 @@ test('rps keeps the original vs-Sky format as an option', () => {
 });
 
 /* ---------- الروليت ---------- */
-test('roulette: server picks the result, wheel always contains it, last one standing wins', () => {
-  const { g, c } = make('roulette', 4, {}, [2, 1, 0, 0]);
+// Rebuilt from scratch (src/roulette.mjs): its rules, fairness and simulations are in tests/roulette.test.mjs.
+test('roulette: the party factory builds the new elimination roulette (the old wheel is gone)', () => {
+  const { g, c } = make('roulette', 4);
   const v = g.snapshot();
-  assert.equal(v.rule, 'eliminate');
-  assert.equal(v.wheel[v.target].id, g.picked);
-  runOut(g, c);
+  assert.equal(v.phase, 'ready'); assert.equal(v.wheel, undefined); assert.equal(v.rules.chambers, 2);
+  for (let i = 0; i < 400 && !g.finished; i++) { if (g.phase === 'ready') g.draw(); c.add(8000); g.tick(); }
   assert.equal(g.alive.length, 1);
   assert.equal(g.rankings[0].id, g.alive[0].id);
-  const big = make('roulette', 40);
-  assert.equal(big.g.rule, 'winner', 'big crowds pick one winner by default');
-  assert.ok(big.g.snapshot().wheel.length <= 24);
-  assert.equal(big.g.snapshot().wheel[big.g.snapshot().target].id, big.g.picked);
-  runOut(big.g, big.c);
-  assert.equal(big.g.rankings[0].id, big.g.picked);
 });
 
 /* ---------- خمن الدولة / العلم ---------- */

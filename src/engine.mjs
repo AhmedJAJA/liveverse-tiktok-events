@@ -4,6 +4,7 @@ import { PARTY_MODES, PARTY_MIN_PLAYERS, PARTY_DEFAULTS, createPartyGame } from 
 import { OUTSIDER_WORDS } from './team-games.mjs';
 import { ALL_GAMES as GAMES } from './catalog.mjs';
 import { CATEGORY_WORDS } from './word-banks.mjs';
+import { ROULETTE_RULES, ROULETTE_DISPLAY } from './roulette.mjs';
 const botWord = (category, letter) => (CATEGORY_WORDS[category] || []).find(w => normalizeAnswer(w).replace(/^ال/, '').startsWith(normalizeAnswer(letter)));
 
 /** «سلسلة الكلمات»: the «نقاط الفوز» counter steps (10 → 100 by 5). */
@@ -365,7 +366,7 @@ export class Engine {
     const partyMode = PARTY_MODES.includes(mode ?? this.status.mode) ? (mode ?? this.status.mode) : null;
     if (partyMode && variant !== undefined) {
       // Per-game rule switches, validated against a fixed list.
-      const allowed = { rps: { format: ['duel', 'sky'] }, roulette: { rule: ['eliminate', 'winner'] }, categories: { scoring: ['elimination', 'points'] }, chain: { target: CHAIN_TARGETS, order: ['ordered', 'random'], alternate: [true, false], review: [true, false], sounds: [true, false] }, drawguess: { winners: [1, 2, 3] }, outsider: { category: ['random', ...Object.keys(OUTSIDER_WORDS)] } }[partyMode] || {};
+      const allowed = { rps: { format: ['duel', 'sky'] }, roulette: { ...ROULETTE_RULES, ...ROULETTE_DISPLAY }, categories: { scoring: ['elimination', 'points'] }, chain: { target: CHAIN_TARGETS, order: ['ordered', 'random'], alternate: [true, false], review: [true, false], sounds: [true, false] }, drawguess: { winners: [1, 2, 3] }, outsider: { category: ['random', ...Object.keys(OUTSIDER_WORDS)] } }[partyMode] || {};
       const clean = {};
       for (const [k, v] of Object.entries(variant || {})) { if (!allowed[k]?.includes(v)) throw new Error('خيار غير صالح لهذه اللعبة'); clean[k] = v; }
       this.partyConfig[partyMode] = { ...this.partyConfig[partyMode], ...clean };
@@ -444,7 +445,8 @@ export class Engine {
     this.party = null;
     if (partyMode) {
       const cfg = { ...PARTY_DEFAULTS[this.status.mode], ...this.partyConfig[this.status.mode] };
-      this.party = createPartyGame(this.status.mode, { ...cfg, now: () => this.now(), random: n => this.random(n) });
+      // the room may add what a game needs from outside (the roulette: its recorder and «is the host here?»)
+      this.party = createPartyGame(this.status.mode, { ...cfg, now: () => this.now(), random: n => this.random(n), ...(this.partyExtras?.(this.status.mode) || {}) });
       this.party.start([...this.players.values()].slice(0, this.registration.maxPlayers));
       this.syncParty(false);
     }
@@ -767,7 +769,8 @@ export class Engine {
       if (player) this.addScore(player, r.points);
       return { rank: r.rank, id: r.id, name: r.name, ...(r.avatar ? { avatar: r.avatar } : {}), points: r.points, detail: r.detail, totalScore: player?.score ?? r.points };
     });
-    const winner = rankings[0] || null;
+    // «الروليت»: only the last player standing wins — a match the host ends early has no winner
+    const winner = this.party.mode === 'roulette' ? (this.party.winner ? rankings.find((r) => r.id === this.party.winner.id) || null : null) : rankings[0] || null;
     this.status.active = false;
     this.status.endsAt = null;
     this.status.winner = winner ? { id: winner.id, name: winner.name, score: winner.points, ...(winner.avatar ? { avatar: winner.avatar } : {}) } : null;
@@ -874,6 +877,14 @@ export class Engine {
   }
   /* ---- private game helpers (host-only or player-private; never part of the public snapshot) ---- */
   requireParty(mode) { if (!this.party || this.status.mode !== mode || !this.status.active) throw new Error('هذه اللعبة ليست جارية'); return this.party; }
+  /** «الروليت»: the host's buttons (draw, skip, pick, random target, cancel the turn, eliminate the holder). */
+  rouletteCommand(cmd, body = {}) {
+    if (!this.party || this.status.mode !== 'roulette' || !this.status.active) throw Object.assign(new Error('المباراة ليست جارية — اضغط «جولة جديدة»'), { status: 409 });
+    const g = this.party;
+    const r = g.command(String(cmd || ''), body || {}, { hostId: this.hostSeat()?.id || null });
+    if (g.finished) this.finishParty(); else this.syncParty();
+    return r;
+  }
   partySecret() { return this.status.active && this.party?.secret ? this.party.secret() : null; }
   judgeAnswer(accept) { const g = this.requireParty(this.status.mode === 'chain' ? 'chain' : 'categories'); if (!g.judge(accept)) throw new Error('لا توجد إجابة بانتظار الحكم'); this.syncParty(); return true; }
   // the private page serves both secret-role games: «الأدوار المخفية» and «برا السالفة»

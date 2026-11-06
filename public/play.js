@@ -12,7 +12,7 @@
   const ROUND_GAMES = { drawguess: [3, 5, 8], bowling: [2, 3, 5], country: [5, 8, 12], flag: [5, 10, 15], truefalse: [5, 8, 12], higherlower: [5, 8, 12], categories: [8, 12, 20] };
   const VARIANTS = {
     rps: { key: 'format', label: 'شكل اللعب', options: [['duel', 'مواجهات ثنائية'], ['sky', 'الكل ضد بوبل (3 حيوات)']] },
-    roulette: { key: 'rule', label: 'قاعدة العجلة', options: [['eliminate', 'كل دورة تُقصي لاعبًا'], ['winner', 'دورة واحدة تختار الفائز']] },
+    roulette: { key: 'targetMode', label: 'من يواجه المسدس؟', options: [['self', 'اللاعب المسحوب'], ['choose', 'يختاره صاحب الدور']] },
     categories: { key: 'scoring', label: 'عند الخطأ', options: [['elimination', 'إقصاء اللاعب'], ['points', 'خصم 3 نقاط']] },
     drawguess: { key: 'winners', label: 'الفائزون في كل جولة', options: [[1, 'أول إجابة صحيحة فقط'], [3, 'أول ثلاث إجابات']] }
   };

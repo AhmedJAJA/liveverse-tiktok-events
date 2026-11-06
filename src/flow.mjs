@@ -16,7 +16,7 @@
 // Every transition is checked against TRANSITIONS: a step out of order is refused with a clear message (409).
 // `stage` is kept for older screens: GAME_LIBRARY, GAME_SETUP, PREPARING_LOBBY, WAITING_FOR_PLAYERS, GAME_RUNNING, GAME_FINISHED.
 import { randomUUID } from 'node:crypto';
-import { validateSettings, defaultSettings, applySettings, LATE_JOIN_MODES } from './game-settings.mjs';
+import { validateSettings, defaultSettings, applySettings, applyLobbySettings, LATE_JOIN_MODES } from './game-settings.mjs';
 import { cleanJoinWord } from './engine.mjs';
 import { describeError } from './lobby.mjs';
 
@@ -106,7 +106,7 @@ export class GameFlow {
   saveSettings(mode, values, join = {}) {
     if (['ROUND_RUNNING', 'ROUND_STARTING'].includes(this.lobby?.state)) fail('لا يمكن تغيير الإعدادات أثناء الجولة');
     if (mode !== this.mode) fail('افتح إعدادات هذه اللعبة أولًا');
-    if (values) this.settings[mode] = validateSettings(mode, values, this.settingsFor(mode));
+    if (values) { this.settings[mode] = validateSettings(mode, values, this.settingsFor(mode)); if (this.lobby && this.engine.status.mode === mode) applyLobbySettings(this.engine, mode, this.settings[mode]); }
     if (join.lateJoin !== undefined) {
       if (!['click', 'open'].includes(join.lateJoin)) fail('خيار الانضمام غير صالح');
       if (join.lateJoin === 'open' && !LATE_JOIN_MODES.includes(mode)) fail('هذه اللعبة لا تدعم دخول لاعبين أثناء الجولة');
@@ -121,7 +121,7 @@ export class GameFlow {
     if (join.keyword !== undefined) this.setKeyword(join.keyword);
     this.version++; this.touch();
   }
-  resetSettings(mode) { if (mode !== this.mode) fail('افتح إعدادات هذه اللعبة أولًا'); delete this.settings[mode]; this.version++; this.touch(); }
+  resetSettings(mode) { if (mode !== this.mode) fail('افتح إعدادات هذه اللعبة أولًا'); delete this.settings[mode]; if (this.lobby && this.engine.status.mode === mode) applyLobbySettings(this.engine, mode, this.settingsFor(mode)); this.version++; this.touch(); }
 
   /* ------------------------------------------------------------- the lobby */
   /** «ابدأ اللعبة» (or «تجربة اللعبة» with demo:true): a new lobby in PREPARING_LOBBY. The server then runs the
@@ -156,6 +156,7 @@ export class GameFlow {
     const restoring = this.lobby.state === 'RECOVERING';
     if (e.status.mode !== g.mode) e.configure({ mode: g.mode, title: g.title });
     e.setLateJoin(this.join.lateJoin === 'open' && LATE_JOIN_MODES.includes(g.mode) ? 'open' : 'click');
+    applyLobbySettings(e, g.mode, this.settingsFor(g.mode));
     const target = this.lobby.restoreTo || (this.join.autoOpen ? 'REGISTRATION_OPEN' : null);
     this.lobby.readyAt = this.now(); this.lobby.error = null;
     if (restoring) {

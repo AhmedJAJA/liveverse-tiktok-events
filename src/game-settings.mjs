@@ -50,9 +50,26 @@ export const GAME_SETTINGS = Object.freeze({
     f('scoring', 'عند الخطأ', [['elimination', 'إقصاء اللاعب'], ['points', 'خصم 3 نقاط']], 'elimination'),
   ],
   roles: [roundsField([6, 12, 20], 12, 'أيام'), secondsField([30, 45, 60, 90], 45, 'وقت النقاش والتصويت')],
+  // «الروليت» (src/roulette.mjs): «قواعد اللعب» are fixed for the whole match and shown on screen; «المباراة» covers
+  // the players and how the screens look. Every option here changes the game — nothing is decorative.
   roulette: [
-    f('rule', 'طريقة الاختيار', [['eliminate', 'كل دورة تُقصي لاعبًا'], ['winner', 'دورة واحدة تختار الفائز']], 'eliminate'),
-    secondsField([5, 7, 10], 7, 'وقت كل دورة'),
+    { ...f('maxPlayers', 'الحد الأقصى للمشاركين', [10, 20, 30, 50, 100].map((n) => [n, String(n)]), 50, 'من يكتب كلمة الانضمام بعد اكتمال العدد لا يدخل'), control: 'counter', group: 'match' },
+    { ...f('hostPlays', 'السماح للمضيف بالمشاركة', onOff, false, 'تدخل كلاعب تلقائيًا عند فتح التسجيل، وتخضع للقواعد نفسها'), control: 'toggle', group: 'match' },
+    { ...f('drawSpeed', 'سرعة السحب', [['slow', 'بطيئة'], ['normal', 'عادية'], ['fast', 'سريعة']], 'normal', 'مدة دوران الأسماء ومشهد المسدس'), control: 'segment', group: 'match' },
+    { ...f('resultSeconds', 'مدة عرض النتيجة (ثانية)', [[3, '3'], [4, '4'], [5, '5'], [7, '7']], 4), control: 'segment', group: 'match' },
+    { ...f('showNames', 'إظهار أسماء اللاعبين', onOff, true, 'عند الإيقاف تظهر الأرقام فقط'), control: 'toggle', group: 'match' },
+    { ...f('showFrames', 'عرض إطارات اللاعبين', onOff, true, 'الإطار الذي جهّزه اللاعب في حسابه'), control: 'toggle', group: 'match' },
+    { ...f('sounds', 'الأصوات', onOff, true, 'مؤثرات السحب والمسدس والنتيجة على شاشة البث'), control: 'toggle', group: 'match' },
+    { ...f('effects', 'قوة المؤثرات', [['low', 'خفيفة'], ['normal', 'متوسطة'], ['high', 'قوية']], 'normal', 'الومضة واهتزاز الكاميرا والجزيئات'), control: 'segment', group: 'match' },
+    { ...f('graphics', 'مستوى الرسوميات', [['auto', 'تلقائي'], ['high', 'عالٍ'], ['low', 'منخفض']], 'auto', 'المنخفض يرسم المسدس بدون ثلاثي الأبعاد للأجهزة الضعيفة'), control: 'segment', group: 'match' },
+    { ...f('trial', 'وضع التجربة', onOff, false, '«جهّز اللوبي» يبدأ بلاعبين تجريبيين بدون بث — لا يدخل التصنيف'), control: 'toggle', group: 'match' },
+    { ...f('targetMode', 'من يواجه المسدس؟', [['self', 'اللاعب المسحوب'], ['choose', 'يختاره صاحب الدور']], 'self', '«يختاره صاحب الدور»: يكتب في الشات رقم لاعب آخر يضغط عليه الزناد'), control: 'segment', group: 'rules' },
+    { ...f('chooseSeconds', 'مهلة اختيار الهدف (ثانية)', [15, 20, 25, 30, 45].map((n) => [n, String(n)]), 25, 'عندما يختار صاحب الدور'), control: 'counter', group: 'rules' },
+    { ...f('timeoutRule', 'إذا لم يختر صاحب الدور', [['self', 'يواجه المسدس بنفسه'], ['random', 'هدف عشوائي'], ['skip', 'يُلغى الدور']], 'self'), control: 'segment', group: 'rules' },
+    { ...f('chambers', 'حجرات خزنة كل لاعب', [2, 3, 4, 5, 6].map((n) => [n, String(n)]), 2, 'لكل لاعب خزنته؛ الطلقة في مكان عشوائي يحدده الخادم'), control: 'counter', group: 'rules' },
+    { ...f('bullets', 'الطلقات في الخزنة', [1, 2, 3].map((n) => [n, String(n)]), 1, 'أقل من عدد الحجرات دائمًا'), control: 'counter', group: 'rules' },
+    { ...f('cylinder', 'الخزنة بعد كل سحبة', [['advance', 'تتقدم حجرة'], ['spin', 'تُدار من جديد']], 'advance', '«تتقدم»: من نجا مرة يقترب من الطلقة. «تُدار»: الاحتمال نفسه كل مرة'), control: 'segment', group: 'rules' },
+    { ...f('autoRun', 'تشغيل الأدوار', [['manual', 'يدوي'], ['auto', 'تلقائي']], 'manual', '«يدوي»: تضغط «ابدأ السحب» كل دور. «تلقائي»: يبدأ الدور التالي بعد النتيجة ما دامت شاشة المضيف مفتوحة'), control: 'segment', group: 'rules' },
   ],
   country: [roundsField([5, 8, 12], 8, 'دول'), secondsField([20, 30, 45, 60], 30, 'وقت كل دولة')],
   flag: [roundsField([5, 10, 15], 10, 'أعلام'), secondsField([10, 15, 20, 30], 15, 'وقت كل علم')],
@@ -90,11 +107,26 @@ export function validateSettings(mode, input = {}, base = defaultSettings(mode))
     if (!hit) throw new Error('قيمة غير صالحة لـ«' + field.label + '»');
     out[k] = hit[0];
   }
+  // the roulette: a cylinder always keeps at least one empty chamber
+  if (mode === 'roulette' && out.bullets >= out.chambers) {
+    if (input && 'bullets' in input) throw new Error('الطلقات يجب أن تكون أقل من عدد الحجرات');
+    out.bullets = out.chambers - 1;
+  }
   return out;
 }
 /** Public description for the studio (labels, options, defaults). */
 export function settingsSchema() {
   return Object.fromEntries(Object.entries(GAME_SETTINGS).map(([m, fields]) => [m, fields.map((x) => ({ key: x.key, label: x.label, options: x.options.map(([value, label]) => ({ value, label })), default: x.default, hint: x.hint || '', control: x.control || 'options', group: x.group || 'match', ...(x.step ? { step: x.step } : {}) }))]));
+}
+/** Settings that shape the lobby itself (who may join, how many): applied when the lobby is ready and whenever
+    they change before the round. Today only the roulette has them. */
+export function applyLobbySettings(engine, mode, s) {
+  if (mode !== 'roulette' || engine.status.active) return;
+  const v = validateSettings(mode, s, {});
+  const already = [...engine.players.values()].filter((p) => !p.host).length;
+  engine.registration.maxPlayers = Math.max(v.maxPlayers, already); // never drops players who already joined
+  const hostJoin = v.hostPlays ? 'auto' : 'manual';
+  if (engine.registration.hostJoin !== hostJoin) { engine.registration.hostJoin = hostJoin; if (hostJoin === 'auto' && engine.registration.phase === 'open') engine.joinHost(false); }
 }
 /** Apply saved settings to the engine before the round starts. */
 export function applySettings(engine, mode, s) {
@@ -106,6 +138,13 @@ export function applySettings(engine, mode, s) {
     case 'glass': engine.configure({ glassSteps: v.steps, glassStepDuration: v.stepSeconds }); break;
     case 'bomb': engine.configure({ bombSeconds: v.seconds }); break;
     case 'wheel': break;
+    case 'roulette': {
+      const variant = {};
+      for (const k of ['targetMode', 'chambers', 'bullets', 'cylinder', 'chooseSeconds', 'timeoutRule', 'autoRun', 'drawSpeed', 'resultSeconds', 'showNames', 'showFrames', 'sounds', 'effects', 'graphics', 'hostPlays']) variant[k] = v[k];
+      engine.configure({ variant });
+      applyLobbySettings(engine, mode, v);
+      break;
+    }
     default: {
       const variant = {};
       for (const k of ['format', 'rule', 'scoring', 'winners', 'category', 'target', 'order', 'alternate', 'review', 'sounds']) if (v[k] !== undefined) variant[k] = v[k];

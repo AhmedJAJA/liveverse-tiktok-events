@@ -26,6 +26,7 @@ import { Economy, EconomyError, hashDevice, hashIp, WHATSAPP_URL, DAILY_REWARD, 
 import { GoogleVerifier, GoogleOAuth } from './src/google.mjs';
 import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
 import { GameStatus, devError, DEV_MESSAGE } from './src/game-status.mjs';
+import { RouletteStore } from './src/roulette-store.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, 'public');
@@ -78,6 +79,8 @@ class Room {
     this.tools = new StreamTools();  // OBS tools: countdown, chat draw, active chatters
     // the game session's launch flow (library → setup → join word → lobby → round → results), kept on the server
     this.flow = new GameFlow({ engine: this.engine, games: ALL_GAMES, onChange: () => this.lobbyChanged() });
+    // «الروليت»: every turn and the winner are recorded; the auto mode only goes on while a host window is open
+    this.engine.partyExtras = (mode) => (mode === 'roulette' ? { onEvent: (e) => rouletteStore.record(this, e), hostPresent: () => !!this.hostTab(), demo: !!this.flow.lobby?.demo } : null);
     this.lastLobbyState = this.flow.state; this.lastCount = 0; this.persistTimer = null; this.persistSig = ''; this.restoring = null; this.preparing = null;
     this.engine.questionSource = (filter) => drawQuestion(this.questionBank, filter);
   }
@@ -245,10 +248,12 @@ for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((
 const pool = createPool();
 let platform = null, economy = null, frames = null;
 /* «قيد التطوير»: one switch per game (src/game-status.mjs). Every game is under development until the owner releases it. */
+const rouletteStore = new RouletteStore(null); // attached to PostgreSQL below
 const gameStatus = new GameStatus({ modes: ALL_GAMES.map((g) => g.mode), defaultStatus: process.env.SKY_GAMES_DEFAULT || 'dev', testers: process.env.SKY_GAME_TESTERS || '' });
 if (pool) {
   await migrate(pool);
   await gameStatus.attach(pool);
+  rouletteStore.pool = pool;
   await PromoMirror.attach(pool, promos);
   await SessionMirror.attach(pool, sessions);
   platform = new Platform({ pool, hashCode: (c) => promos.hash(c), mail: createMailer(), gateway: createGateway(), appUrl: process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000),
@@ -438,7 +443,13 @@ async function handleAction(action, body, actor) {
     case 'flow-settings': room.flow.saveSettings(room.flow.mode, body.settings, { lateJoin: body.lateJoin, keyword: body.keyword, autoOpen: typeof body.autoOpen === 'boolean' ? body.autoOpen : undefined, audience: body.audience }); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-reset': room.flow.resetSettings(room.flow.mode); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
     // «ابدأ اللعبة»: PREPARING_LOBBY now; the real steps run in the background and report themselves
-    case 'flow-begin': { const r = room.flow.begin({ demo: false }); if (!r.reused) startPreparation(room, actor, String(body.platform || '')); return { ok: true, reused: r.reused, flow: room.flow.snapshot() }; }
+    case 'flow-begin': {
+      // «وضع التجربة» saved in the game's settings: «جهّز اللوبي» prepares a trial lobby (test players, no stream)
+      const trial = room.flow.mode && room.flow.settingsFor(room.flow.mode)?.trial === true;
+      const r = trial ? room.flow.tryOut() : room.flow.begin({ demo: false });
+      if (!r.reused) startPreparation(room, actor, trial ? '' : String(body.platform || ''));
+      return { ok: true, reused: r.reused, trial, flow: room.flow.snapshot() };
+    }
     case 'flow-cancel': room.flow.cancel(); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-open': room.flow.open(body.keyword); return { ok: true, flow: room.flow.snapshot() };
     case 'flow-close': room.flow.close(); return { ok: true, flow: room.flow.snapshot() };
@@ -463,6 +474,9 @@ async function handleAction(action, body, actor) {
     case 'flow-library': room.flow.library(); room.scheduleBroadcast(); return { ok: true, flow: room.flow.snapshot() };
     // «تجربة اللعبة»: the same preparation in «وضع التجربة» (test players, no stream, nothing counted)
     case 'flow-trial': { const r = room.flow.tryOut(); if (!r.reused) startPreparation(room, actor, ''); return { ok: true, flow: room.flow.snapshot() }; }
+    // «الروليت»: the host's buttons — draw, skip, pick (the host holds the turn), random target, cancel the turn, eliminate the holder
+    case 'roulette': return { ok: true, ...(engine.rouletteCommand(String(body.cmd || ''), body) || {}) };
+    case 'roulette-history': return { ok: true, matches: await rouletteStore.recent(room.id, Number(body.limit) || 5) };
     case 'configure': engine.configure(body); return { ok: true };
     case 'registration-open': engine.openRegistration(body); return { ok: true };
     case 'registration-settings': return { ok: true, registration: engine.updateRegistration({ ...body, ...(body.hostJoin ? { hostName: actor.user?.displayName || 'المشرف' } : {}) }) };
@@ -649,7 +663,8 @@ function lobbyContext(actor, room, platformPref = '') {
     connect: (a, r, p) => connectLinked(a, r, p),
     flush: () => room.flush(),
     release: (why) => { if (room.engine.connection.state !== 'connected') { room.tiktok.disconnect(false).catch(() => {}); room.engine.setConnection('disconnected', room.engine.connection.username, why, room.engine.connection.platform); } },
-    addDemo: () => { const added = room.engine.addDemoPlayers({ count: Math.max(4, minPlayersOf(room)) }); room.engine.setSimulation({ autoplay: true }); return added; },
+    // «الروليت» is a game of many players: its trial seats twelve (named as trial players on every screen)
+    addDemo: () => { const added = room.engine.addDemoPlayers({ count: room.engine.status.mode === 'roulette' ? 12 : Math.max(4, minPlayersOf(room)) }); room.engine.setSimulation({ autoplay: true }); return added; },
   };
 }
 const minPlayersOf = (room) => room.engine.snapshot().registration.minPlayers || 1;
@@ -1405,12 +1420,12 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['shared-theme.css','site-header.js','game-soon.html','game-soon.js','game-soon.css','setup.css','games.html','games.js','games.css','game-icons.svg','profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css',
+const STATIC = new Set(['shared-theme.css','roulette.css','site-header.js','game-soon.html','game-soon.js','game-soon.css','setup.css','games.html','games.js','games.css','game-icons.svg','profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['cards', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   // 3D skins (optimized GLB + poster) and the pinned, self-hosted three.js (no CDN — the CSP allows only 'self')
-  ...['skins', 'vendor/three'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(glb|webp|js|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
+  ...['skins', 'vendor/three', 'roulette'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(glb|webp|js|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt']);
 
 const server = http.createServer(async (req, res) => {
