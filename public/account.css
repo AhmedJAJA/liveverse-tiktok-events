@@ -41,7 +41,7 @@
 .acc-meter[data-score="3"] i:nth-child(-n+3){background:#34D399}
 .acc-meter[data-score="4"] i{background:#22D3EE}
 .acc-meter-text{min-width:70px;color:#9FC4E8;font-size:12px;text-align:left}
-.acc-submit{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:46px;margin-top:2px;border:1px solid rgba(180,239,255,.6);border-radius:12px;background:linear-gradient(180deg,#4AD3FF,#3AB1E0);color:#021134;font:800 16px "Tajawal",system-ui;text-decoration:none;cursor:pointer;
+.acc-submit{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:46px;margin-top:2px;border:1px solid rgba(180,239,255,.6);border-radius:12px;background:linear-gradient(180deg,var(--sl-cyan),#3AB1E0);color:#021134;font:800 16px "Tajawal",system-ui;text-decoration:none;cursor:pointer;
   box-shadow:inset 0 1px 0 rgba(230,250,255,.7),0 10px 24px -10px rgba(60,197,255,.7);transition:transform .15s,filter .15s}
 .acc-submit:hover{filter:brightness(1.06)}
 .acc-submit:active{transform:translateY(1px) scale(.99)}
@@ -50,7 +50,7 @@
 .acc-or{display:flex;align-items:center;gap:10px;margin:14px 0 10px;color:#6F93B8;font-size:12px}
 .acc-or::before,.acc-or::after{content:"";flex:1;height:1px;background:rgba(125,211,252,.18)}
 .acc-guest,.acc-ghost{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:44px;border-radius:12px;border:1px solid rgba(125,211,252,.3);background:rgba(10,22,52,.7);color:#E2F2FF;font:800 14px "Tajawal",system-ui;cursor:pointer;transition:border-color .18s,background-color .18s}
-.acc-guest:hover,.acc-ghost:hover{border-color:#38BDF8;background:#10234D}
+.acc-guest:hover,.acc-ghost:hover{border-color:#38BDF8;background:var(--sl-elevated)}
 .acc-guest .i{width:18px;height:18px;color:#7DD3FC}
 .acc-profile{display:grid;justify-items:center;gap:8px;text-align:center}
 .acc-avatar{display:grid;place-items:center;width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#2563EB,#7C3AED);color:#FFFFFF;font:900 28px "Tajawal",system-ui;box-shadow:0 0 0 4px rgba(10,19,48,.9),0 0 0 5px rgba(56,189,248,.5)}

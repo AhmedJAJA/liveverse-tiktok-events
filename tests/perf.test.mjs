@@ -62,7 +62,9 @@ test('client pages: light home, single WebSocket, cleanup on leave, pause when h
   assert.match(homeCss, /content-visibility:auto/, 'lower sections render lazily');
   assert.doesNotMatch(pub('home.js'), /WebSocket/, 'no WebSocket on the home page');
   // v1.3 layout: sticky bar + side menu, real live streams (no invented partners), payments shown honestly, refund policy linked
-  for (const id of ['menuButton', 'menu', 'live', 'liveTrack', 'liveEmpty', 'enter', 'games', 'gameStrip', 'store', 'packList', 'pay', 'faq', 'contact']) assert.match(home, new RegExp('id="' + id + '"'), id);
+  // the phone menu itself (#menu) is built by the shared site header on every page (site-header.js)
+  assert.match(fs.readFileSync(new URL('../public/site-header.js', import.meta.url), 'utf8'), /menu\.id = 'menu'/);
+  for (const id of ['menuButton', 'live', 'liveTrack', 'liveEmpty', 'enter', 'games', 'gameStrip', 'store', 'packList', 'pay', 'faq', 'contact']) assert.match(home, new RegExp('id="' + id + '"'), id);
   assert.match(pub('home.js'), /fetch\('\/api\/streams'/, 'live cards come from real connected rooms');
   assert.match(home, /قريبًا/, 'card payments are marked as coming, not live');
   assert.match(home, /href="\/refund"/);

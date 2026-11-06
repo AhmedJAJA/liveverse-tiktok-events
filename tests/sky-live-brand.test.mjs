@@ -33,8 +33,10 @@ test('server offers images, icons and fonts with correct MIME, compression and c
   assert.match(server,/ETag/);
 });
 test('enforces the SPONGE LIVE ocean palette across public pages and the core theme',()=>{
-  const css=publicFile('royal-core.css');
-  for(const hex of ['#050B17','#0A132A','#102045','#37B3D4','#8CD9F1','#E7F2F6']) assert.ok(css.includes(hex),'Missing ocean palette color '+hex);
+  // one palette: shared-theme.css defines the official colours, the core theme points at them
+  const theme=publicFile('shared-theme.css'), css=publicFile('royal-core.css');
+  for(const hex of ['#020A22','#061A44','#0B1737','#10234D','#176DF0','#38D4FF','#FFD62A','#EAF8FF','#9EADD0']) assert.ok(theme.includes(hex),'Missing official colour '+hex);
+  for(const token of ['--obsidian:var(--sl-deep)','--gold:var(--sl-cyan)','--text:var(--sl-text)']) assert.ok(css.includes(token),token);
   for(const name of files) assert.match(publicFile(name),/name="theme-color" content="#020A22"/,name);
   for(const name of ['studio.html','index.html','overlay.html','play.html']) assert.match(publicFile(name),/href="\/sponge\.css"/,name);
 });

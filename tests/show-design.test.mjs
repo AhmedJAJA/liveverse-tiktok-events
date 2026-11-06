@@ -23,7 +23,10 @@ test('every page loads the shared royal core before its own surface stylesheet',
 });
 test('design tokens define the royal black and gold palette in one place',()=>{
   // SPONGE LIVE: the ocean palette lives in royal-core tokens and the sponge.css theme layer.
-  for(const color of ['#050B17','#0A132A','#102045','#37B3D4','#8CD9F1','#E7F2F6']) assert.ok(core.includes(color),color);
+  // the official palette is defined once, in shared-theme.css; royal-core keeps its token names as aliases of it
+  const theme=fs.readFileSync(new URL('../public/shared-theme.css',import.meta.url),'utf8');
+  for(const color of ['#020A22','#061A44','#0B1737','#10234D','#176DF0','#38D4FF','#FFD62A','#EAF8FF','#9EADD0']) assert.ok(theme.includes(color),color);
+  for(const [name,token] of [['--obsidian','--sl-deep'],['--carbon','--sl-surface'],['--graphite','--sl-elevated'],['--gold','--sl-cyan'],['--champagne','--sl-cyan-soft'],['--ivory','--sl-text']]) assert.ok(core.includes(name+':var('+token+')'),name);
   const sponge=fs.readFileSync(new URL('../public/sponge.css',import.meta.url),'utf8');
   for(const token of ['--sp-deep','--sp-cyan','--sp-yellow','--sp-yellow-btn','--sp-neon']) assert.ok(sponge.includes(token+':'),token);
   for(const token of ['--obsidian','--carbon','--graphite','--gold','--champagne','--ivory','--metal']) assert.ok(core.includes(token+':'),token);

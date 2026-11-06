@@ -3,32 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#080610">
+<meta name="theme-color" content="#020A22">
 <title>مكتبة الألعاب — سبونج لايف</title>
 <meta name="description" content="مكتبة ألعاب سبونج لايف: ألعاب تفاعلية مجانية للبث المباشر على TikTok وKick — جمهورك يشارك بكتابة التعليقات.">
 <link rel="icon" href="/brand/favicon-64.png" type="image/png">
-<link rel="preload" href="/fonts/noto-kufi-arabic-700.woff" as="font" type="font/woff" crossorigin>
-<link rel="preload" href="/fonts/ibm-plex-arabic-400.woff" as="font" type="font/woff" crossorigin>
-<link rel="preload" href="/fonts/readex-pro-700.woff" as="font" type="font/woff" crossorigin>
+<link rel="preload" href="/fonts/tajawal-arabic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/shared-theme.css">
 <link rel="stylesheet" href="/games.css">
 <link rel="stylesheet" href="/bottom-nav.css">
 <script defer src="/games.js"></script>
 <script defer src="/bottom-nav.js"></script>
+<script defer src="/site-header.js"></script>
 </head>
-<body class="gl">
-<div class="gl-sky" aria-hidden="true"><i class="gl-glow g1"></i><i class="gl-glow g2"></i><i class="gl-glow g3"></i><i class="gl-stars"></i></div>
+<body class="sl-page gl">
+<div class="sl-sea" aria-hidden="true"></div>
 <a class="gl-skip" href="#library">تخطَّ إلى الألعاب</a>
 
-<header class="gl-top">
- <a class="gl-brand" href="/" aria-label="سبونج لايف — الرئيسية"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
- <nav class="gl-nav" aria-label="روابط الموقع">
-  <a href="/">الرئيسية</a><a href="/games" aria-current="page">الألعاب</a><a href="#live">البثوث النشطة</a><a href="/#leaders">المتصدرون</a><a href="/#store">المتجر</a>
- </nav>
- <div class="gl-top-pills">
-  <a class="gl-pillbtn" href="/guide/games">دليل الألعاب</a>
-  <a class="gl-pillbtn" href="/account#bag">الحقيبة</a>
+<header class="sl-header" id="bar">
+ <div class="sl-header-in">
+  <button type="button" class="sl-icon-btn sl-burger-btn" id="menuButton" aria-controls="menu" aria-expanded="false" aria-label="القائمة"><span class="sl-burger" aria-hidden="true"><i></i><i></i><i></i></span></button>
+  <a class="sl-brand" href="/" aria-label="سبونج لايف — الرئيسية"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
+  <nav class="sl-nav" aria-label="أقسام الموقع">
+   <a href="/" data-nav="home">الرئيسية</a>
+   <a href="/games" data-nav="games">الألعاب</a>
+   <a href="/#live" data-nav="live">البثوث النشطة</a>
+   <a href="/#leaders" data-nav="leaders">المتصدرون</a>
+   <a href="/#store" data-nav="store">المتجر</a>
+   <div class="sl-more">
+    <button type="button" class="sl-more-btn" id="moreButton" aria-expanded="false" aria-controls="moreMenu">المزيد <span aria-hidden="true">▾</span></button>
+    <div class="sl-more-menu" id="moreMenu" hidden>
+     <a href="/#room">دخول الغرفة</a>
+     <a href="/#partners" data-partners-link hidden>الشركاء</a>
+     <a href="/#faq">الأسئلة الشائعة</a>
+     <a href="/guide/games">دليل الألعاب</a>
+     <a href="/guide/tiktok-live">دليل تيك توك لايف</a>
+     <a href="/guide/tools">أدوات البث</a>
+    </div>
+   </div>
+  </nav>
+  <div class="sl-actions">
+   <a class="sc-pill" id="barCoins" href="/account#wallet" hidden aria-label="رصيد عملات الإسفنجة"><img src="/brand/coin-64.webp" alt="" width="28" height="28"><b data-coin-balance>0</b></a>
+   <a class="sl-btn sl-btn-sun" id="barTrial" href="/signup">ابدأ مجاناً</a>
+   <a class="sl-btn sl-btn-primary sl-user" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg?v=20261106#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
+  </div>
  </div>
- <a class="gl-account" id="accountLink" href="/login?next=%2Fgames">تسجيل الدخول</a>
 </header>
 
 <main class="gl-main">
@@ -36,7 +54,7 @@
   <p class="gl-pill"><i aria-hidden="true"></i><span>ألعاب البث التفاعلية · كلها مجانية</span></p>
   <h1 id="libTitle">مكتبة الألعاب</h1>
   <p class="gl-lead">اختر لعبة واربط بثك — جمهورك يشارك بكتابة التعليقات مباشرة، بلا تحميل وبلا اشتراك.</p>
-  <a class="gl-cta" href="#library"><svg aria-hidden="true" width="20" height="20"><use href="/icons.svg?v=20261106#i-games"/></svg><span>تصفح الألعاب</span></a>
+  <a class="sl-btn sl-btn-primary sl-btn-lg gl-cta" href="#library"><svg aria-hidden="true" width="20" height="20"><use href="/icons.svg?v=20261106#i-games"/></svg><span>تصفح الألعاب</span></a>
   <nav class="gl-jump" aria-label="انتقال سريع">
    <a href="#live">البثوث المباشرة</a><i aria-hidden="true"></i><a href="#updates">آخر التحديثات</a><i aria-hidden="true"></i><a href="#library">كل الألعاب</a>
   </nav>
@@ -49,7 +67,7 @@
   </div>
   <div class="gl-connect-act">
    <span class="gl-status" id="connStatus"><i aria-hidden="true"></i><span>غير مرتبط</span></span>
-   <a class="gl-btn gl-btn-main" id="connLink" href="/login?next=%2Faccount%23platforms">ربط حساب البث</a>
+   <a class="sl-btn sl-btn-primary sl-btn-sm" id="connLink" href="/login?next=%2Faccount%23platforms">ربط حساب البث</a>
   </div>
  </section>
 
@@ -65,7 +83,7 @@
   <div class="gl-live-empty" id="liveEmpty">
    <span class="gl-live-empty-ic" aria-hidden="true"><svg width="26" height="26"><use href="/icons.svg?v=20261106#i-live"/></svg></span>
    <div><b>لا توجد بثوث مباشرة الآن</b><p>تظهر هنا البثوث الموثّقة التي تشغّل لعبة من سبونج لايف — ابدأ لعبة وكن أول من يظهر.</p></div>
-   <a class="gl-btn gl-btn-ghost" href="#library">اختر لعبة</a>
+   <a class="sl-btn sl-btn-ghost sl-btn-sm" href="#library">اختر لعبة</a>
   </div>
  </section>
 
@@ -82,7 +100,7 @@
      <button type="button" data-type="update" aria-pressed="false">تحسينات</button>
      <button type="button" data-type="platform" aria-pressed="false">المنصة</button>
     </div>
-    <button type="button" class="gl-chipbtn" id="updMore" aria-expanded="false" hidden><svg aria-hidden="true" width="16" height="16"><use href="/icons.svg?v=20261106#i-note"/></svg><span>عرض كل التحديثات</span></button>
+    <button type="button" class="sl-btn sl-btn-ghost gl-more" id="updMore" aria-expanded="false" hidden><svg aria-hidden="true" width="16" height="16"><use href="/icons.svg?v=20261106#i-note"/></svg><span>عرض كل التحديثات</span></button>
    </div>
   </div>
   <div class="gl-upd-list" id="updateList"></div>
@@ -108,16 +126,16 @@
   </div>
   <p class="gl-count" id="gameCount" aria-live="polite"></p>
   <ul class="gl-grid" id="gameGrid"></ul>
-  <div class="gl-empty" id="gridEmpty" hidden><b>لا توجد ألعاب مطابقة</b><span id="gridEmptyText">جرّب تصنيفًا آخر أو كلمة بحث مختلفة.</span><button type="button" class="gl-btn gl-btn-ghost" id="clearFilters">عرض كل الألعاب</button></div>
+  <div class="gl-empty" id="gridEmpty" hidden><b>لا توجد ألعاب مطابقة</b><span id="gridEmptyText">جرّب تصنيفًا آخر أو كلمة بحث مختلفة.</span><button type="button" class="sl-btn sl-btn-ghost sl-btn-sm" id="clearFilters">عرض كل الألعاب</button></div>
  </section>
 
  <section class="gl-support gl-reveal" aria-labelledby="supTitle">
   <span class="gl-support-ic" aria-hidden="true"><img src="/brand/sponge-128.webp" alt="" width="56" height="56"></span>
   <div class="gl-support-text"><p class="gl-support-kicker"><i aria-hidden="true"></i>الدعم والمساعدة</p><h2 id="supTitle">تحتاج مساعدة في تشغيل لعبة؟</h2><p>خطوات الربط مع TikTok، وشرح كل لعبة، وإعداد شاشة OBS — كلها في الأدلة.</p></div>
   <div class="gl-support-links">
-   <a class="gl-btn gl-btn-ghost" href="/guide/games">دليل الألعاب</a>
-   <a class="gl-btn gl-btn-ghost" href="/guide/tiktok-live">ربط TikTok</a>
-   <a class="gl-btn gl-btn-ghost" href="/guide/tools">أدوات البث وOBS</a>
+   <a class="sl-btn sl-btn-ghost sl-btn-sm" href="/guide/games">دليل الألعاب</a>
+   <a class="sl-btn sl-btn-ghost sl-btn-sm" href="/guide/tiktok-live">ربط TikTok</a>
+   <a class="sl-btn sl-btn-ghost sl-btn-sm" href="/guide/tools">أدوات البث وOBS</a>
   </div>
  </section>
 </main>

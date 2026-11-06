@@ -38,10 +38,10 @@
     const tile = el('span', 'gl-tile'); tile.append(gameIcon(g.mode)); top.append(tile, el('span', 'gl-num', String(i + 1).padStart(2, '0')));
     const meta = el('div', 'gl-meta');
     const cat = el('span', 'gl-cat', g.categoryLabel); cat.dataset.cat = g.category; meta.append(cat);
-    if (dev) meta.append(el('span', 'gl-badge is-dev', 'قيد التطوير'));
-    if (g.isNew && !dev) meta.append(el('span', 'gl-badge is-new', 'جديد'));
-    if (state.updated.has(g.mode) && !g.isNew && !dev) meta.append(el('span', 'gl-badge is-updated', 'تم التحديث'));
-    if (g.featured && !dev) meta.append(el('span', 'gl-badge is-featured', 'مميزة'));
+    if (dev) meta.append(el('span', 'gl-badge sl-badge sl-badge-muted', 'قيد التطوير'));
+    if (g.isNew && !dev) meta.append(el('span', 'gl-badge sl-badge sl-badge-new', 'جديد'));
+    if (state.updated.has(g.mode) && !g.isNew && !dev) meta.append(el('span', 'gl-badge sl-badge', 'تم التحديث'));
+    if (g.featured && !dev) meta.append(el('span', 'gl-badge sl-badge sl-badge-epic', 'مميزة'));
     const h = el('h3', 'gl-title', g.title);
     const p = el('p', 'gl-desc', g.summary);
     const how = el('p', 'gl-how'); how.append(ui('chat'), el('span', null, (g.rules || [])[0] || 'العب من تعليقات البث'));
@@ -226,7 +226,7 @@
   }
   fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.json()).then(async (me) => {
     if (!me.account) { connect('guest', 'غير مسجّل', 'سجّل الدخول بحساب مجاني، ثم اربط TikTok أو Kick مرة واحدة — وكل لعبة تتصل ببثك من صفحتها.', 'ربط حساب البث', '/login?next=%2Faccount%23platforms'); return; }
-    $('accountLink').textContent = 'حسابي'; $('accountLink').href = '/account';
+    // the header's account button is the shared site header (site-header.js)
     const p = await fetch('/api/me/profile', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const linked = Object.entries(p?.linked || {}).filter(([, v]) => v && v.handle);
     if (!linked.length) { connect('none', 'غير مرتبط', 'لم تربط حساب بث بعد — اربط TikTok أو Kick مرة واحدة، وكل لعبة تتصل ببثك من صفحتها.', 'ربط حساب البث', '/account#platforms'); return; }

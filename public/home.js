@@ -47,24 +47,13 @@
       // signed in with an account: the sign-up/login links become the account page
       $('linkSignup').textContent = 'حسابي (' + me.account.publicId + ')'; $('linkSignup').href = '/account';
       $('linkLogin').hidden = true;
-      $('barAccount').href = $('menuAccount').href = '/account';
-      // restored from the session cookie: show who is signed in (name, picture, permanent ID)
-      const shortName = me.account.displayName.length > 14 ? me.account.displayName.slice(0, 13) + '…' : me.account.displayName;
-      $('bar').classList.add('is-signed');
-      $('barAccountLabel').textContent = shortName; $('menuAccountLabel').textContent = 'حسابي — ' + me.account.publicId;
-      if (me.account.picture) { const img = document.createElement('img'); img.className = 'hm-bar-pic'; img.src = me.account.picture; img.alt = ''; img.width = 26; img.height = 26; img.referrerPolicy = 'no-referrer'; $('barAccount').querySelector('svg')?.replaceWith(img); }
-      $('barAccount').title = me.account.publicId;
-      $('menuSecond').hidden = true; $('menuLogout').hidden = false;
-      // Sponge Coins: the balance in the header, and today's reward if it is due (the server decides)
+      // the header (name, picture, coins, menu) is the shared site header (site-header.js)
+      // Sponge Coins: today's reward if it is due (the server decides)
       if (window.SpongeCoins) fetch('/api/me/wallet', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((w) => {
-        if (!w) return; $('barCoins').hidden = false; window.SpongeCoins.setBalance(w.balance);
+        if (!w) return; window.SpongeCoins.setBalance(w.balance);
         return window.SpongeCoins.claimDaily().then((d) => { if (d.granted) window.SpongeCoins.celebrate({ amount: d.amount, balance: d.balance, nextAt: d.daily.nextAt, serverNow: d.serverNow }); });
       }).catch(() => {});
-      $('barTrial').hidden = true; $('barStudio').hidden = false;
       $('heroAccount').querySelector('span').textContent = 'حسابي'; $('heroAccount').href = '/account';
-    } else if (me.signedIn) {
-      // promo-code or owner session: the games and a way out
-      $('barTrial').hidden = true; $('barStudio').hidden = false; $('menuLogout').hidden = false;
     }
   }).catch(() => {}).finally(() => document.documentElement.classList.remove('me-pending'));
   /* ---------------------------------------------- the games list: every game opens its own page (all free) */
@@ -166,36 +155,6 @@
     new IntersectionObserver(([e]) => { heroVisible = e.isIntersecting; $('heroPlay').classList.toggle('is-off', !heroVisible); if (heroVisible) chatTimer = setTimeout(chatLoop, 1200); else clearTimeout(chatTimer); }).observe($('heroPlay'));
     document.addEventListener('visibilitychange', () => { if (!document.hidden && heroVisible) chatTimer = setTimeout(chatLoop, 1200); });
   }
-
-  /* ------------------------------------------------------------------- menu */
-  const menu = $('menu'), menuBtn = $('menuButton');
-  let lastFocus = null;
-  function openMenu() {
-    lastFocus = document.activeElement; menu.hidden = false; menuBtn.setAttribute('aria-expanded', 'true');
-    document.documentElement.classList.add('menu-open'); $('menuClose').focus();
-  }
-  function closeMenu(restore = true) {
-    if (menu.hidden) return;
-    menu.hidden = true; menuBtn.setAttribute('aria-expanded', 'false'); document.documentElement.classList.remove('menu-open');
-    if (restore) lastFocus?.focus?.();
-  }
-  menuBtn.addEventListener('click', openMenu);
-  $('menuClose').addEventListener('click', () => closeMenu());
-  menu.addEventListener('click', (e) => { if (e.target === menu) closeMenu(); else if (e.target.closest('a')) closeMenu(false); });
-  document.addEventListener('keydown', (e) => {
-    if (menu.hidden) return;
-    if (e.key === 'Escape') { closeMenu(); return; }
-    if (e.key === 'Tab') { // keep focus inside the open menu
-      const f = [...menu.querySelectorAll('a[href],button:not([hidden])')].filter((el) => el.offsetParent !== null);
-      if (!f.length) return;
-      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f.at(-1).focus(); }
-      else if (!e.shiftKey && document.activeElement === f.at(-1)) { e.preventDefault(); f[0].focus(); }
-    }
-  });
-  $('menuLogout').addEventListener('click', async () => {
-    await fetch('/api/access/logout', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => {});
-    location.reload();
-  });
 
   /* --------------------------------------------------------- carousels */
   for (const b of document.querySelectorAll('[data-scroll]')) b.addEventListener('click', () => {
@@ -462,21 +421,14 @@
     q.closest('.fq-item').classList.toggle('is-open', open);
   });
 
-  /* ------------------------------------------- header: its real height keeps anchored titles below it */
-  const setBarH = () => document.documentElement.style.setProperty('--hm-bar-h', ($('bar')?.offsetHeight || 64) + 'px');
-  setBarH(); addEventListener('resize', setBarH, { passive: true });
-  /* ------------------------------------------- header: «المزيد» and the current section */
-  const more = $('moreButton'), moreMenu = $('moreMenu');
-  const closeMore = () => { moreMenu.hidden = true; more.setAttribute('aria-expanded', 'false'); };
-  more.addEventListener('click', (e) => { e.stopPropagation(); const open = moreMenu.hidden; moreMenu.hidden = !open; more.setAttribute('aria-expanded', String(open)); });
-  document.addEventListener('click', (e) => { if (!moreMenu.hidden && !e.target.closest('.hm-more')) closeMore(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !moreMenu.hidden) { closeMore(); more.focus(); } });
-  moreMenu.addEventListener('click', (e) => { if (e.target.closest('a')) closeMore(); });
-  const spyLinks = [...document.querySelectorAll('.hm-nav > a[href^="#"], .hm-menu-nav a[href^="#"]')];
+  /* ------------------------------------------- header: the section on screen is the current link
+     (the header itself — height, «المزيد», menu, account — is the shared site header) */
+  const spyLinks = [...document.querySelectorAll('.sl-nav > a[data-nav]')];
+  const sectionOf = (a) => { const h = a.getAttribute('href'); return h === '/' ? '#top' : h.replace(/^\//, ''); };
   const spy = new IntersectionObserver((entries) => {
     for (const en of entries) if (en.isIntersecting) {
       const id = en.target.id === 'top' ? '#top' : '#' + en.target.id;
-      for (const a of spyLinks) { if (a.getAttribute('href') === id) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); }
+      for (const a of spyLinks) { if (sectionOf(a) === id) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); }
     }
   }, { rootMargin: '-45% 0px -50% 0px' });
   for (const id of ['top', 'live', 'leaders', 'partners', 'room', 'faq', 'store']) { const el = document.getElementById(id); if (el) spy.observe(el); }

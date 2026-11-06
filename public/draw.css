@@ -1,14 +1,10 @@
 /* سبونج لايف — "ارسم وخمّن" party page. Playful purple world, separate from the gold studio. */
-@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-500-normal.woff2) format("woff2");font-weight:400 500;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
-@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-700-normal.woff2) format("woff2");font-weight:600 700;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
-@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-arabic-800-normal.woff2) format("woff2");font-weight:800 900;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
-@font-face{font-family:"Tajawal";src:url(/fonts/tajawal-latin-700-normal.woff2) format("woff2");font-weight:400 900;font-display:swap;unicode-range:U+0000-00FF,U+2000-206F}
 
 :root{
-  --dr-a:#5C09BE; --dr-b:#8A1AA6; --dr-c:#CF305D;
-  --dr-ink:#2a0b4a; --dr-text:#fff; --dr-soft:rgba(255,255,255,.78);
+  --dr-a:var(--sl-navy); --dr-b:var(--sl-primary); --dr-c:var(--sl-cyan); /* the shared palette (shared-theme.css) */
+  --dr-ink:var(--sl-ink); --dr-text:#fff; --dr-soft:rgba(255,255,255,.78);
   --dr-card:rgba(255,255,255,.12); --dr-card-line:rgba(255,255,255,.28);
-  --dr-mint:#7dffc8; --dr-mint-2:#2fc79a; --dr-gold:#FFC94A; --dr-err:#ffd0da;
+  --dr-mint:#7dffc8; --dr-mint-2:#2fc79a; --dr-gold:var(--sl-yellow); --dr-err:#ffd0da;
   --dr-ease:cubic-bezier(.2,.8,.2,1);
 }
 *,*::before,*::after{box-sizing:border-box}
