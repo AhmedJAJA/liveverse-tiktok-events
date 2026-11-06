@@ -264,17 +264,6 @@
 .sea-role.is-detective{background:rgba(255,210,31,.22);color:#FFF0A8}
 .sea-votes{color:var(--sl-yellow);font-size:calc(var(--u)*16)}
 
-/* roulette */
-.sea-wheel-stage{position:relative;width:min(100%,calc(var(--u)*440));aspect-ratio:1;margin-inline:auto}
-.sea-wheel{width:100%;height:100%;filter:drop-shadow(0 0 24px rgba(56,212,255,.45))}
-.sea-wheel-spin{transform-origin:0 0}
-.sea-wheel-spin.is-spinning{transition:transform var(--spin-ms) cubic-bezier(.12,.75,.12,1);transform:rotate(var(--spin))}
-.sea-wheel-spin.is-stopped{transform:rotate(var(--spin))}
-.sea-wheel-label{fill:#fff;font:800 8px "Tajawal",sans-serif;paint-order:stroke;stroke:var(--sl-deep);stroke-width:2px}
-.sea-wheel-hub{fill:var(--sl-navy);stroke:var(--sl-yellow);stroke-width:4}
-.sea-pointer{position:absolute;top:calc(var(--u)*-8);left:50%;z-index:2;width:0;height:0;margin-left:calc(var(--u)*-18);border-inline:calc(var(--u)*18) solid transparent;border-top:calc(var(--u)*34) solid var(--sl-yellow);filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
-.sea-verdict{text-align:center;font-size:calc(var(--u)*30);color:var(--sp-yellow,var(--sl-yellow-hi))}
-
 /* countries & flags */
 .sea-clues{display:grid;gap:calc(var(--u)*12);margin:0;padding:0;list-style:none}
 .sea-clue{display:flex;align-items:center;gap:calc(var(--u)*14);padding:calc(var(--u)*16) calc(var(--u)*18);border-radius:calc(var(--u)*18);background:rgba(6,26,68,.85);border:1px solid rgba(56,212,255,.45);font-size:calc(var(--u)*26);font-weight:800;animation:arena-card-in .5s var(--ease-out) both;animation-delay:var(--d,0s)}

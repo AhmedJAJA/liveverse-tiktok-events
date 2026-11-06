@@ -19,7 +19,7 @@ const modeInfo = {
   chain: { en:'WORD CHAIN', short:'CHAIN', ar:'سلسلة الكلمات', instruction:'اكتب كلمة من الفئة تبدأ بالحرف المطلوب — أول إجابة صحيحة تفوز بالحلقة' },
   categories: { en:'LETTER & CATEGORY', short:'CATEGORIES', ar:'اسم حيوان جماد نبات', instruction:'اللاعب المختار يكتب كلمة تبدأ بالحرف خلال 15 ثانية' },
   roles: { en:'HIDDEN ROLES', short:'ROLES', ar:'الأدوار المخفية', instruction:'افتح صفحة دورك • في النهار اكتب «صوت» ورقم اللاعب' },
-  roulette: { en:'ROULETTE', short:'ROULETTE', ar:'الروليت', instruction:'العجلة تدور وتتوقف على نتيجة يحددها الخادم بعدل' },
+  roulette: { en:'ROULETTE', short:'ROULETTE', ar:'الروليت', instruction:'الخادم يسحب صاحب الدور — حجرة فارغة تنجو، والطلقة تُقصي' },
   country: { en:'GUESS THE COUNTRY', short:'COUNTRY', ar:'خمن الدولة', instruction:'اكتب اسم الدولة — الإجابة المبكرة تربح نقاطًا أكثر' },
   flag: { en:'GUESS THE FLAG', short:'FLAG', ar:'خمن العلم', instruction:'اكتب اسم الدولة صاحبة العلم في الشات' },
   tug: { en:'TUG OF WAR', short:'TUG', ar:'شد الحبل', instruction:'اكتب «شد» في الشات لتسحب الحبل لفريقك' },
@@ -303,7 +303,7 @@ function showSpotlight(p, detail) {
 const REVEAL_MS=3000;
 function renderResults(status, round, data) {
   const results=status.results;
-  const show=!!results && (['quiz','guess','glass'].includes(status.mode)||PARTY.has(status.mode));
+  const show=!!results && status.mode!=='roulette' && (['quiz','guess','glass'].includes(status.mode)||PARTY.has(status.mode));
   const screen=$('roundResultsOverlay');
   screen.hidden=!show;
   if (!show) {stateCache.resultsKey=null;return;}
@@ -627,26 +627,6 @@ function renderOut(panel, r) {
   panel.append(strip);
 }
 function standingsList(players) { const list=node('ol','party-standings'); (players||[]).slice(0,6).forEach((p,i)=>{const li=node('li','');li.append(node('span','num',String(i+1)),chip(p),node('b','num',number(p.points||0)));list.append(li);}); return list; }
-function wheelSvg(items, target, round, spinMs) {
-  const ns='http://www.w3.org/2000/svg', svg=document.createElementNS(ns,'svg'); svg.setAttribute('viewBox','-110 -110 220 220'); svg.setAttribute('class','sea-wheel');
-  const g=document.createElementNS(ns,'g'); g.setAttribute('class','sea-wheel-spin');
-  const n=Math.max(1,items.length), seg=360/n, colors=['#1E5BFF','#38D4FF','#7B5CFF','#FFC21A','#FF6A8A','#2FD9A0'];
-  items.forEach((p,i)=>{
-    const a0=(i*seg-90)*Math.PI/180, a1=((i+1)*seg-90)*Math.PI/180;
-    const path=document.createElementNS(ns,'path');
-    path.setAttribute('d',`M0 0 L${100*Math.cos(a0)} ${100*Math.sin(a0)} A100 100 0 ${seg>180?1:0} 1 ${100*Math.cos(a1)} ${100*Math.sin(a1)} Z`);
-    path.setAttribute('fill',colors[i%colors.length]); path.setAttribute('stroke','#020A22'); path.setAttribute('stroke-width','1.5'); g.append(path);
-    const mid=(i+.5)*seg-90, t=document.createElementNS(ns,'text');
-    t.setAttribute('transform',`rotate(${mid}) translate(60 0)`); t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','middle');
-    t.setAttribute('class','sea-wheel-label'); t.textContent=Array.from(p.name).slice(0,n>16?6:10).join(''); g.append(t);
-  });
-  const hub=document.createElementNS(ns,'circle'); hub.setAttribute('r','16'); hub.setAttribute('class','sea-wheel-hub');
-  svg.append(g,hub);
-  // The server already chose `target`; the wheel only animates to it.
-  const final=360*6+(360-(target+.5)*seg);
-  g.style.setProperty('--spin',final+'deg'); g.style.setProperty('--spin-ms',Math.max(1500,(spinMs||7000)-900)+'ms');
-  return svg;
-}
 /** «سلسلة الكلمات»: category, the previous word with its last letter lit, the required letter, the chain so far,
     the scores toward «نقاط الفوز» with name frames, and a clear effect for a correct word, a miss and a timeout. */
 let chainSeen = { events: -1, round: -1 };
@@ -795,18 +775,6 @@ const SEA_RENDER = {
     (party.players||[]).forEach(p=>{const isOut=party.outsider&&party.outsider.id===p.id;const c=chip(p,isOut?node('small','sea-role is-impostor','برا السالفة'):p.votes?node('b','sea-votes num',p.votes+' صوت'):node('small','num','#'+p.number));grid.append(c);});
     panel.append(grid);
   },
-  roulette(panel, party, r) {
-    const wrap=node('div','party-split sea-roulette');
-    const stage=node('div','sea-wheel-stage'); stage.append(node('i','sea-pointer'));
-    const svg=wheelSvg(party.wheel||[],party.target||0,party.round,party.spinMs);
-    stage.append(svg);
-    if(party.phase==='input'&&!reducedMotion()) requestAnimationFrame(()=>requestAnimationFrame(()=>svg.firstChild.classList.add('is-spinning')));
-    else svg.firstChild.classList.add('is-stopped');
-    const side=node('div','sea-side');
-    if(party.phase==='reveal'&&r){ side.append(bigAvatar(r.picked,r.rule==='winner'?'is-win':'is-out')); side.append(node('strong','sea-verdict',r.rule==='winner'?'اختارته العجلة!':'خرج من اللعبة')); }
-    else side.append(banner('القاعدة',party.rule==='winner'?'اختيار فائز':'إقصاء لاعب',`${number((party.wheel||[]).length)} على العجلة`));
-    wrap.append(stage,side); panel.append(wrap);
-  },
   country(panel, party, r) {
     const wrap=node('div','party-split');
     const clues=node('ol','sea-clues');
@@ -827,7 +795,7 @@ const SEA_RENDER = {
 };
 function renderParty(party, mode) {
   const panel=$('partyPanel');
-  if(!party){panel.hidden=true;return;}
+  if(!party||mode==='roulette'){panel.hidden=true;return;} // «الروليت»: its own stage (/roulette/stage.js)
   panel.hidden=false;
   panel.dataset.mode=mode; panel.dataset.phase=party.phase;
   const key=JSON.stringify([mode,party.round,party.phase,party.reveal,party.players,party.track,party.lanes,party.light,party.card,party.alive,party.out,party.duels,party.wheel&&party.round,party.clues,party.flag,party.mask,party.solved,party.chosen,party.judging,party.music,party.seatedCount,party.linked,party.winner,party.format,party.word,party.letter,party.events,party.pending,party.miss&&party.miss.n,party.links]);
@@ -878,6 +846,22 @@ function markPartyChoices(party, mode) {
   if(r){ if(mode==='rps')win=(r.houseIndex+1)%3; else if(mode==='minority')win=r.tie?-1:r.minority; else if(mode==='higherlower'||mode==='truefalse')win=r.right; }
   cards.forEach((c,i)=>{c.classList.toggle('is-correct',!!r&&i===win);c.classList.toggle('is-dim',!!r&&win>=0&&i!==win);});
 }
+/* ---------- «الروليت»: its own stage, loaded the first time the roulette is the room's game ---------- */
+const rouletteView={stage:null,loading:null};
+function paintRoulette(data, phase){
+  const on=data.status.mode==='roulette'&&phase!=='registration';
+  if(data.status.mode!=='roulette'){rouletteView.stage?.hide();return false;}
+  if(!rouletteView.stage){
+    rouletteView.loading||=import('/roulette/stage.js').then((m)=>{
+      rouletteView.stage=m.mount($('arena'),{paintAvatar,frameOf});
+      rouletteView.stage.preload(window.lastLiveverseState);
+      const d=window.lastLiveverseState; if(d?.status?.mode==='roulette'&&!['open','idle'].includes(d.registration?.phase))rouletteView.stage.update(d); else rouletteView.stage.hide();
+    }).catch((err)=>{console.warn('[roulette] stage unavailable',err);rouletteView.loading=null;});
+    return on;
+  }
+  if(on)rouletteView.stage.update(data); else {rouletteView.stage.hide();rouletteView.stage.preload(data);}
+  return on;
+}
 function renderMascot(branding) {
   const box=$('arenaMascot'); if(!box||!window.SkyMascot)return;
   const key=JSON.stringify(branding?.mascot||{});
@@ -899,8 +883,10 @@ function update(data) {
   clearTimeout(update.revealTimer);
   if(revealing) update.revealTimer=setTimeout(()=>update(window.lastLiveverseState),REVEAL_MS-doneAgo+40);
   arena.dataset.mode=s.mode;arena.dataset.phase=revealing?'reveal':phase;
-  const bombMode=s.mode==='bomb';
-  arena.querySelector('.arena-body').hidden=phase==='registration'||(phase==='results'&&!revealing)||bombMode;
+  const bombMode=s.mode==='bomb', rouletteMode=s.mode==='roulette';
+  arena.querySelector('.arena-body').hidden=phase==='registration'||(phase==='results'&&!revealing)||bombMode||rouletteMode;
+  document.body.classList.toggle('rr-on', rouletteMode && phase!=='registration'); // the room code moves out of the stage's way
+  paintRoulette(data, phase);
   if(bombMode&&phase!=='registration'&&data.bomb){$('bombStage').hidden=false;renderBomb(data.bomb,data.serverTime);}else hideBomb();
   const ser=s.mode==='quiz'&&data.series&&data.series.total>1?data.series:null;
   $('overlayRound').replaceChildren(document.createTextNode(s.mode==='quiz'?'السؤال ':'الجولة '),node('b','num',String(ser?ser.index||1:data.round||1)),...(ser?[document.createTextNode(' من '),node('b','num',String(ser.total))]:[]));
@@ -927,7 +913,8 @@ function update(data) {
     $('overlayOptions').hidden=!partyOptions.length;
     $('overlayHint').textContent=mode.instruction;
     $('overlayPrompt').textContent=party?.prompt||s.title||mode.ar;
-    $('overlayRound').replaceChildren(document.createTextNode('الجولة '),node('b','num',String(party?.round||1).padStart(2,'0')));
+    if(s.mode==='roulette')$('overlayRound').replaceChildren(document.createTextNode('الدور '),node('b','num',String(party?.turn||0)));
+    else $('overlayRound').replaceChildren(document.createTextNode('الجولة '),node('b','num',String(party?.round||1).padStart(2,'0')));
   }
   renderParty(party, s.mode);
   renderMascot(data.branding);
@@ -960,7 +947,7 @@ function update(data) {
   stateCache.lastSubmissionCount = subCount;
   $('overlayStatus').textContent=s.active?'الجولة جارية • أرسل إجابتك الآن':s.results?'اكتملت الجولة • النتائج ظهرت':s.notice||'جاهز لبدء الجولة';
   $('footerDetail').textContent=phase==='active'?'إجابتك الأولى فقط هي المعتمدة':phase==='results'?'الصدارة للأسرع في الإجابة الصحيحة':'انتظر انطلاق المنافسة';
-  clock={endsAt:(party?party.endsAt:s.endsAt)??null,duration:party?Math.max(1,(party.phaseMs||party.seconds*1000)/1000):s.mode==='glass'?(Number(data.glass?.duration)||10):(Number(s.duration)||30),offset:(Number(data.serverTime)||Date.now())-Date.now(),active:!!s.active&&(['quiz','guess','glass'].includes(s.mode)||!!party)};
+  clock={endsAt:(party?party.endsAt:s.endsAt)??null,duration:party?Math.max(1,(party.phaseMs||party.seconds*1000)/1000):s.mode==='glass'?(Number(data.glass?.duration)||10):(Number(s.duration)||30),offset:(Number(data.serverTime)||Date.now())-Date.now(),active:!!s.active&&s.mode!=='roulette'&&(['quiz','guess','glass'].includes(s.mode)||!!party)};
   renderClock();
   $('overlayTimer').hidden=['race','wheel'].includes(s.mode);
   updateStandings(data.leaderboard||[]);
@@ -968,7 +955,7 @@ function update(data) {
   // Signup takes priority over a stale results screen from the previous round.
   if(phase==='registration') $('roundResultsOverlay').hidden=true;
   renderRegistration(data.registration);
-  if(phase==='active'&&update.previousPhase&&update.previousPhase!==phase&&!bombMode){
+  if(phase==='active'&&update.previousPhase&&update.previousPhase!==phase&&!bombMode&&!rouletteMode){
     triggerRoundStartCountdown(s.mode);
     restartAnimation($('gxLogo'),'gx-shine');
     requestAnimationFrame(fitBroadcastText);
@@ -987,7 +974,7 @@ function update(data) {
   stateCache.bombPhase=data.bomb?.phase;
   if(!party||s.mode!=='chairs'||!party.music)window.SpongeFx?.stopMusic();
   const banner=$('winnerBanner');
-  if(s.lastEvent?.winner && !s.results && !bombMode){
+  if(s.lastEvent?.winner && !s.results && !bombMode && !rouletteMode){
     if(stateCache.lastWinnerAt!==s.lastEvent.at){
       stateCache.lastWinnerAt=s.lastEvent.at;
       $('winnerName').textContent=s.lastEvent.winner.name;

@@ -391,3 +391,25 @@ body[data-drawer=closed] .st-drawer{display:none!important}
 .st-lib-opening i{width:18px;height:18px;border-radius:50%;border:2.5px solid var(--sl-cyan);border-top-color:transparent;animation:st-open-spin .7s linear infinite}
 @keyframes st-open-spin{to{rotate:360deg}}
 @media (prefers-reduced-motion:reduce){.st-lib-opening i{animation:none}}
+
+/* ---------- «الروليت»: the host's turn controls under the game screen ---------- */
+.st-rr{position:sticky;bottom:max(8px,env(safe-area-inset-bottom));z-index:20;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 10px;width:100%;padding:10px 12px;border-radius:var(--sl-r-lg);
+  background:rgba(var(--sl-navy-rgb),.94);border:1px solid var(--sl-border);box-shadow:var(--sl-shadow-md);backdrop-filter:blur(8px)}
+.st-rr[hidden]{display:none}
+.st-rr .pl-btn{min-height:44px;padding:0 16px;font-size:15px;min-width:0}
+.st-rr .pl-btn .i{width:18px;height:18px}
+.st-rr-draw{min-width:200px!important;font-size:17px!important}
+.st-rr kbd{margin-inline-start:4px;padding:1px 7px;border-radius:6px;background:rgba(var(--sl-deep-rgb),.35);border:1px solid rgba(var(--sl-text-rgb),.25);font:700 12px var(--sl-font);color:inherit;opacity:.8}
+.st-rr-pick{display:flex;align-items:center;gap:8px}
+.st-rr-pick label{color:var(--sl-yellow);font-weight:800;font-size:14px}
+.st-rr-pick input{width:76px;height:44px;border-radius:12px;border:1.5px solid rgba(var(--sl-yellow-rgb),.6);background:rgba(var(--sl-deep-rgb),.6);color:var(--sl-text);font:800 18px var(--sl-font);text-align:center}
+.st-rr-state{flex-basis:100%;margin:0;text-align:center;color:var(--sl-muted);font-size:14px;font-weight:700}
+body[data-screen=game][data-rr="1"] .pl-frame{width:min(100%,calc((100dvh - 190px) * 16 / 9))}
+body[data-screen=game][data-rr="1"]:has(#devBanner:not([hidden])) .pl-frame{width:min(100%,calc((100dvh - 262px) * 16 / 9))}
+@media (max-width:760px){
+  .st-rr{gap:6px;padding:8px}
+  .st-rr .pl-btn{flex:1 1 40%;padding:0 10px;font-size:14px}
+  .st-rr-draw{flex-basis:100%!important;min-width:0!important}
+  .st-rr kbd{display:none}
+  body[data-screen=game][data-rr="1"] .pl-frame{height:calc(100dvh - 250px)}
+}

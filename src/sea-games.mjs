@@ -5,9 +5,10 @@
 //   categories  اسم حيوان جماد نبات   — the chosen player answers a letter + category within 15 s
 //   rps         حجرة ورقة مقص (duel)  — players are paired; both reveal together; loser leaves
 //   roles       الأدوار المخفية        — secret roles, private role page, night actions and chat votes
-//   roulette    الروليت               — a server-picked fair spin eliminates (or crowns) a player
+//   roulette    الروليت               — src/roulette.mjs: server-drawn turns, a revolver with a cylinder per player
 //   country     خمن الدولة            — three clues revealed over time, Arabic spellings accepted
 //   flag        خمن العلم             — a flag on screen, fastest correct answers score more
+import { RussianRoulette } from './roulette.mjs';
 import { randomInt } from 'node:crypto';
 import { RoundGame, POINTS, norm, firstNumber, pub } from './round-game.mjs';
 import { COUNTRIES, matchCountry } from './countries.mjs';
@@ -264,34 +265,7 @@ class RpsDuel extends RoundGame {
 }
 
 /* ---------------- الروليت ---------------- */
-class Roulette extends RoundGame {
-  constructor(o) { super('roulette', o); this.revealMs = 3500; }
-  setup() { this.rule = ['eliminate', 'winner'].includes(this.opts.rule) ? this.opts.rule : (this.roster.size > 16 ? 'winner' : 'eliminate'); }
-  nextRound() {
-    this.round++; this.reveal = null; this.inputs = new Map();
-    const alive = this.alive;
-    // Fair pick on the server; the wheel shows up to 24 names and always includes the result.
-    const pickIndex = this.random(alive.length), picked = alive[pickIndex];
-    let wheel = alive;
-    if (wheel.length > 24) { const others = shuffle(alive.filter((p) => p.id !== picked.id), this.random).slice(0, 23); wheel = shuffle([...others, picked], this.random); }
-    this.wheel = wheel.map(pub); this.target = this.wheel.findIndex((p) => p.id === picked.id); this.picked = picked.id;
-    this.phase = 'input'; this.phaseStartedAt = this.now(); this.endsAt = this.phaseStartedAt + this.seconds * 1000;
-  }
-  input() { return false; }
-  resolve() {
-    const p = this.roster.get(this.picked);
-    if (this.rule === 'eliminate') this.eliminate(p); else p.wins++;
-    this.reveal = { picked: pub(p), rule: this.rule };
-  }
-  isOver() { return this.rule === 'winner' || this.alive.length <= 1 || this.round >= this.rounds; }
-  rank() {
-    if (this.rule === 'winner') return [...this.roster.values()].sort((a, b) => b.wins - a.wins || a.number - b.number);
-    return [...this.roster.values()].sort(byElimination);
-  }
-  detail(p) { return this.rule === 'winner' ? (p.wins ? 'اختارته العجلة' : 'شارك في السحب') : p.alive ? 'نجا من العجلة' : `خرج في الدورة ${p.eliminatedRound}`; }
-  view() { return { prompt: this.rule === 'winner' ? 'العجلة تختار الفائز' : 'العجلة تُقصي لاعبًا في كل دورة — آخر من يبقى يفوز', wheel: this.wheel, target: this.target, rule: this.rule, spinMs: this.seconds * 1000 }; }
-  summary() { return this.rule === 'winner' ? 'اختارته العجلة' : 'آخر من بقي'; }
-}
+// Rebuilt from scratch as a virtual elimination roulette (revolver, per-player cylinder): src/roulette.mjs.
 
 /* ---------------- الأدوار المخفية ---------------- */
 export const ROLE_LABELS = { impostor: 'المخادع', detective: 'المحقق', citizen: 'مواطن' };
@@ -406,5 +380,5 @@ class HiddenRoles extends RoundGame {
   adminView(hostPlaying) { return hostPlaying ? { hidden: true } : { roles: [...this.roster.values()].map((p) => ({ ...pub(p), role: this.roles.get(p.id), roleLabel: ROLE_LABELS[this.roles.get(p.id)], alive: p.alive })) }; }
 }
 
-export const SEA_GAMES = { drawguess: DrawGuess, chairs: MusicalChairs, categories: Categories, roles: HiddenRoles, roulette: Roulette, country: GuessCountry, flag: GuessFlag };
+export const SEA_GAMES = { drawguess: DrawGuess, chairs: MusicalChairs, categories: Categories, roles: HiddenRoles, roulette: RussianRoulette, country: GuessCountry, flag: GuessFlag };
 export { RpsDuel };

@@ -269,7 +269,8 @@
     $('adminLive').hidden = !(view === 'live' || view === 'busy');
     $('adminDone').hidden = view !== 'done' || stage !== 'GAME_FINISHED';
     $('drawButton').hidden = !(mode === 'wheel' && view === 'live' && active);
-    $('advanceButton').hidden = view !== 'live' || !active || NO_TIMER.includes(mode);
+    $('advanceButton').hidden = view !== 'live' || !active || NO_TIMER.includes(mode) || mode === 'roulette';
+    paintRoulette(s, view, active);
     const seated = !!reg.hostSeated;
     $('hostSeatButton').setAttribute('aria-pressed', String(seated));
     $('hostSeatLabel').textContent = seated ? 'إلغاء مشاركتي' : 'دخّلني كلاعب';
@@ -285,6 +286,60 @@
     $('addForm').querySelectorAll('input,button').forEach((n) => { n.disabled = active && !lateManual; });
     paintTools(s, view);
   }
+  /* ---------- «الروليت»: one turn at a time, the host's buttons follow the server's scene ---------- */
+  const RR_STATE = { ready: 'الجولة جاهزة', drawing: 'السحب جارٍ…', picked: 'تم اختيار صاحب الدور', choose: 'صاحب الدور يختار من الشات', aim: 'الخزنة تدور…', reveal: 'النتيجة', finished: 'انتهت المباراة' };
+  let rrPending = false;
+  function paintRoulette(s, view, active) {
+    const p = s.party && s.status?.mode === 'roulette' ? s.party : null, on = mode === 'roulette' && view === 'live' && active && !!p;
+    $('rrControls').hidden = !on; document.body.dataset.rr = on ? '1' : '';
+    if (!on) return;
+    const ph = p.phase, roster = new Map((s.roster || []).map((x) => [x.number, x]));
+    const who = (n) => (n == null ? '' : (roster.get(n)?.name || 'لاعب') + ' (#' + n + ')');
+    const hostSeat = (s.roster || []).find((x) => x.host);
+    const hostHolds = ph === 'choose' && hostSeat && p.holder?.number === hostSeat.number;
+    $('rrDraw').disabled = rrPending || ph !== 'ready';
+    $('rrSkip').disabled = !['drawing', 'picked', 'aim', 'reveal'].includes(ph);
+    $('rrRandom').hidden = ph !== 'choose';
+    $('rrPick').hidden = !hostHolds;
+    $('rrCancel').hidden = $('rrOut').hidden = !['picked', 'choose'].includes(ph);
+    const left = p.endsAt ? Math.max(0, Math.ceil((p.endsAt - (s.serverTime || Date.now())) / 1000)) : null;
+    let line = 'الدور ' + num(ph === 'ready' ? p.turn + 1 : p.turn) + ' — ' + (RR_STATE[ph] || '');
+    if (ph === 'ready' && p.waitingHost) line = 'الأدوار التلقائية متوقفة حتى تعود هذه النافذة';
+    else if (ph === 'ready' && p.rules?.autoRun === 'auto') line += ' — السحب التالي تلقائيًا';
+    else if (['picked', 'choose'].includes(ph)) line += ' — ' + who(p.holder?.number) + (ph === 'choose' && left != null ? ' • ' + left + ' ث' : '');
+    else if (ph === 'aim') line += ' — الهدف ' + who(p.target?.number);
+    else if (ph === 'reveal') line = p.result?.outcome === 'out' ? 'خرج ' + who(p.target?.number) : p.result?.outcome === 'empty' ? 'نجا ' + who(p.target?.number) + ' — حجرة فارغة' : 'أُلغي الدور';
+    line += ' • داخل اللعبة ' + num(p.alive) + ' من ' + num(p.total);
+    $('rrState').textContent = line;
+  }
+  const rrCmd = (cmd, extra = {}) => admin('roulette', { cmd, ...extra });
+  // «ابدأ السحب»: disabled at once; one request id per click, so a double click or a retried request draws once
+  function rrDraw() {
+    if (rrPending || $('rrDraw').disabled) return;
+    rrPending = true; $('rrDraw').disabled = true;
+    const requestId = 'rr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    run(null, () => rrCmd('draw', { requestId })).finally(() => { rrPending = false; if (state) render(state); });
+  }
+  $('rrDraw').addEventListener('click', rrDraw);
+  $('rrSkip').addEventListener('click', (e) => run(e.currentTarget, () => rrCmd('skip')));
+  $('rrRandom').addEventListener('click', (e) => run(e.currentTarget, () => rrCmd('random')));
+  $('rrCancel').addEventListener('click', (e) => run(e.currentTarget, () => rrCmd('cancel')));
+  $('rrOut').addEventListener('click', (e) => { const b = e.currentTarget; (async () => {
+    const n = state?.party?.holder?.number;
+    if (!(await confirmBox('إقصاء صاحب الدور؟', 'يخرج اللاعب #' + n + ' من المباراة بقرار منك، بلا سحبة — استخدمه إذا غادر البث مثلًا.', 'إقصاء'))) return;
+    run(b, () => rrCmd('out-holder'));
+  })(); });
+  $('rrPick').addEventListener('submit', (e) => { e.preventDefault(); run(null, async () => {
+    const n = Number(String($('rrPickNum').value).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+    if (!n) { $('rrPickNum').focus(); throw new Error('اكتب رقم اللاعب'); }
+    await rrCmd('pick', { number: n }); $('rrPickNum').value = '';
+  }); });
+  // keyboard: Space = «ابدأ السحب», S = «تخطي المشهد» (never while typing)
+  addEventListener('keydown', (e) => {
+    if ($('rrControls').hidden || e.altKey || e.ctrlKey || e.metaKey || e.target.closest?.('input,textarea,select,[contenteditable],dialog')) return;
+    if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); rrDraw(); }
+    else if (e.code === 'KeyS' && !$('rrSkip').disabled) { e.preventDefault(); $('rrSkip').click(); }
+  });
   /** «تجهيز المتسابقين» after the registration opened: state, stream, count, tools. */
   function paintLobby(s, count) {
     const reg = s.registration || {}, c = s.connection || {}, open = reg.phase === 'open', active = !!s.status.active;

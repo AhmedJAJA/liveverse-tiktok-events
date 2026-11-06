@@ -368,7 +368,17 @@
 
   <section class="pl-live" id="liveView" hidden aria-label="اللعبة الجارية">
    <div class="pl-live-head"><span class="pl-live-tag"><i aria-hidden="true"></i>اللعبة جارية</span><p id="liveNotice"></p></div>
-   <div class="pl-frame"><iframe id="liveFrame" title="شاشة اللعبة" src="about:blank" loading="lazy"></iframe></div>
+   <div class="pl-frame"><iframe id="liveFrame" title="شاشة اللعبة" src="about:blank" loading="lazy" allow="autoplay; fullscreen"></iframe></div>
+   <!-- «الروليت»: the host's buttons for each turn (the server decides; a click never draws twice) -->
+   <div class="st-rr" id="rrControls" hidden role="group" aria-label="تحكم الروليت">
+    <button type="button" class="pl-btn pl-btn-gold st-rr-draw" id="rrDraw" aria-keyshortcuts="Space"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-wheel"/></svg><span>ابدأ السحب</span><kbd>مسافة</kbd></button>
+    <button type="button" class="pl-btn pl-btn-ghost" id="rrSkip" aria-keyshortcuts="S"><svg class="i" aria-hidden="true"><use href="/icons.svg#i-forward"/></svg><span>تخطي المشهد</span><kbd>S</kbd></button>
+    <button type="button" class="pl-btn pl-btn-ghost" id="rrRandom" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-target"/></svg><span>هدف عشوائي</span></button>
+    <form class="st-rr-pick" id="rrPick" hidden><label for="rrPickNum">أنت صاحب الدور — رقم الهدف</label><input id="rrPickNum" inputmode="numeric" maxlength="4" autocomplete="off" dir="ltr"><button type="submit" class="pl-btn pl-btn-gold">اضغط الزناد</button></form>
+    <button type="button" class="pl-btn pl-btn-line" id="rrCancel" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-close"/></svg><span>إلغاء الدور</span></button>
+    <button type="button" class="pl-btn pl-btn-danger" id="rrOut" hidden><svg class="i" aria-hidden="true"><use href="/icons.svg#i-stop"/></svg><span>إقصاء صاحب الدور</span></button>
+    <p class="st-rr-state" id="rrState" aria-live="polite"></p>
+   </div>
    <p class="pl-late" id="lateNote">وصلت متأخرًا؟ اكتب <b class="pl-word-sm">انضم</b><span id="lateCount"> وستدخل الجولة التالية</span></p>
   </section>
 
