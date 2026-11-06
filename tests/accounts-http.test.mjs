@@ -8,6 +8,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { parseKickChat, validKickSlug } from '../src/kick.mjs';
+// These tests exercise the game machinery itself, so the games are released here; «قيد التطوير» (every game
+// stopped until it is rebuilt) is covered by tests/game-status.test.mjs.
+process.env.SKY_GAMES_DEFAULT = 'available';
 
 async function boot() {
   const reservation = createServer(); reservation.listen(0, '127.0.0.1'); await once(reservation, 'listening');

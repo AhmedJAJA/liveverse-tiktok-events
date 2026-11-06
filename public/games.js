@@ -24,31 +24,40 @@
   const CATS = ['smart', 'elimination', 'luck', 'group', 'new'];
   const TYPE_LABEL = { new: 'لعبة جديدة', update: 'تحسين', platform: 'المنصة' };
   const UPDATED_DAYS = 30; // «تم التحديث» stays on a card for a month after a dated improvement
-  const state = { games: [], updates: [], filter: 'all', q: '', updType: 'all', updAll: false, updated: new Set() };
+  const state = { games: [], updates: [], filter: 'all', q: '', updType: 'all', updAll: false, updated: new Set(), developer: false, devMessage: 'نعمل حالياً على تطوير هذه اللعبة لتقديم تجربة أفضل. ستعود قريباً!' };
   try { const p = new URLSearchParams(location.search); const c = p.get('cat'); if (CATS.includes(c)) state.filter = c; state.q = (p.get('q') || '').slice(0, 40); } catch { /* ignore */ }
   $('gameSearch').value = state.q;
 
   /* ---------------- game cards ---------------- */
   function card(g, i) {
     const dev = g.status === 'dev';
-    const li = el('li', 'gl-card' + (g.isNew ? ' is-new' : '') + (dev ? ' is-dev' : '') + (g.featured ? ' is-featured' : ''));
+    const li = el('li', 'gl-card' + (g.isNew ? ' is-new' : '') + (dev ? ' is-dev' : '') + (g.featured ? ' is-featured' : '') + (g.spotlight ? ' is-spotlight' : ''));
     li.dataset.mode = g.mode; li.style.setProperty('--i', String(i % 12));
     li.append(gameIcon(g.mode, 'gl-bgicon'));
     const top = el('div', 'gl-card-top');
     const tile = el('span', 'gl-tile'); tile.append(gameIcon(g.mode)); top.append(tile, el('span', 'gl-num', String(i + 1).padStart(2, '0')));
     const meta = el('div', 'gl-meta');
     const cat = el('span', 'gl-cat', g.categoryLabel); cat.dataset.cat = g.category; meta.append(cat);
-    if (dev) meta.append(el('span', 'gl-badge sl-badge sl-badge-muted', 'قيد التطوير'));
+    // «قيد التطوير» on every game that is not released; the first game back carries its own badge
+    if (dev) meta.append(g.spotlight && g.spotlightBadge ? el('span', 'gl-badge sl-badge gl-badge-spot', g.spotlightBadge) : el('span', 'gl-badge sl-badge gl-badge-dev', 'قيد التطوير'));
     if (g.isNew && !dev) meta.append(el('span', 'gl-badge sl-badge sl-badge-new', 'جديد'));
     if (state.updated.has(g.mode) && !g.isNew && !dev) meta.append(el('span', 'gl-badge sl-badge', 'تم التحديث'));
     if (g.featured && !dev) meta.append(el('span', 'gl-badge sl-badge sl-badge-epic', 'مميزة'));
     const h = el('h3', 'gl-title', g.title);
     const p = el('p', 'gl-desc', g.summary);
     const how = el('p', 'gl-how'); how.append(ui('chat'), el('span', null, (g.rules || [])[0] || 'العب من تعليقات البث'));
-    const a = el('a', 'gl-play');
-    if (dev) { a.setAttribute('aria-disabled', 'true'); a.setAttribute('role', 'link'); a.append(el('span', null, 'قيد التطوير'), ui('lock')); }
-    else { a.href = '/game/' + g.mode; a.setAttribute('aria-label', 'العب الآن: ' + g.title); a.append(el('span', null, 'العب الآن'), ui('arrow-b')); }
-    li.append(top, meta, h, p, how, a);
+    if (!dev) {
+      const a = el('a', 'gl-play'); a.href = '/game/' + g.mode; a.setAttribute('aria-label', 'العب الآن: ' + g.title); a.append(el('span', null, 'العب الآن'), ui('arrow-b'));
+      li.append(top, meta, h, p, how, a);
+      return li;
+    }
+    // under development: «العب الآن» is replaced — the button explains, it never opens the game
+    const off = el('p', 'gl-off'); off.append(el('i'), el('span', null, 'غير متاحة حالياً'));
+    const b = el('button', 'gl-play is-dev'); b.type = 'button'; b.dataset.mode = g.mode; b.setAttribute('aria-haspopup', 'dialog');
+    b.setAttribute('aria-label', 'قيد التطوير: ' + g.title + ' — غير متاحة حالياً'); b.append(el('span', null, 'قيد التطوير'), ui('lock'));
+    li.append(top, meta, h, p, how, off, b);
+    // developers (checked by the server on every request) can still open it to test
+    if (state.developer) { const t = el('a', 'gl-devtest'); t.href = '/game/' + g.mode; t.append(ui('key'), el('span', null, 'اختبار المطور')); li.append(t); }
     return li;
   }
   function shown() {
@@ -62,8 +71,9 @@
     $('gameGrid').replaceChildren(...list.map(card));
     $('gridEmpty').hidden = list.length > 0;
     if (!list.length) $('gridEmptyText').textContent = state.q ? 'لا توجد لعبة باسم «' + state.q + '» في هذا التصنيف.' : 'لا توجد ألعاب في هذا التصنيف حاليًا.';
-    const playable = list.filter((g) => g.status !== 'dev').length;
-    $('gameCount').textContent = list.length ? (playable === 1 ? 'لعبة واحدة' : playable + ' لعبة') + ' — كلها مجانية' + (list.length > playable ? ' · ' + (list.length - playable) + ' قيد التطوير' : '') : '';
+    const playable = list.filter((g) => g.status !== 'dev').length, inDev = list.length - playable;
+    $('gameCount').textContent = !list.length ? '' : playable ? (playable === 1 ? 'لعبة واحدة' : playable + ' لعبة') + ' — كلها مجانية' + (inDev ? ' · ' + inDev + ' قيد التطوير' : '')
+      : (inDev === 1 ? 'لعبة واحدة' : inDev + ' لعبة') + ' قيد التطوير';
     try {
       const p = new URLSearchParams(); if (state.filter !== 'all') p.set('cat', state.filter); if (state.q) p.set('q', state.q);
       history.replaceState(null, '', '/games' + (p.toString() ? '?' + p : '') + location.hash);
@@ -80,11 +90,30 @@
   $('clearFilters').addEventListener('click', () => { state.filter = 'all'; state.q = ''; $('gameSearch').value = ''; paint(); });
   // «العب الآن»: a loading state while the settings page opens
   $('gameGrid').addEventListener('click', (e) => {
+    const dev = e.target.closest('button.gl-play.is-dev'); if (dev) { openDev(dev.dataset.mode, dev); return; }
     const a = e.target.closest('a.gl-play'); if (!a || a.getAttribute('aria-disabled') === 'true') return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
     a.classList.add('is-loading'); a.setAttribute('aria-busy', 'true'); a.querySelector('span').textContent = 'جارٍ فتح اللعبة…';
   });
   addEventListener('pageshow', () => { for (const a of document.querySelectorAll('.gl-play.is-loading')) { a.classList.remove('is-loading'); a.removeAttribute('aria-busy'); a.querySelector('span').textContent = 'العب الآن'; } });
+
+  /* «قيد التطوير»: the notice a game under development shows instead of opening */
+  let devReturn = null;
+  function openDev(mode, from) {
+    const g = state.games.find((x) => x.mode === mode); const d = $('devDialog'); if (!g || !d) return;
+    $('devTitle').textContent = g.title; $('devMsg').textContent = state.devMessage;
+    $('devIcon').replaceChildren(gameIcon(g.mode));
+    $('devBadge').textContent = g.spotlight && g.spotlightBadge ? g.spotlightBadge : 'قيد التطوير — Under Development';
+    $('devBadge').classList.toggle('is-spotlight', !!(g.spotlight && g.spotlightBadge));
+    $('devNote').hidden = !g.spotlight; $('devTest').hidden = !state.developer; $('devTest').href = '/game/' + g.mode;
+    devReturn = from || null;
+    if (typeof d.showModal === 'function') d.showModal(); else d.setAttribute('open', '');
+    $('devOk').focus();
+  }
+  function closeDev() { const d = $('devDialog'); if (d.open) { if (typeof d.close === 'function') d.close(); else d.removeAttribute('open'); } devReturn?.focus?.(); devReturn = null; }
+  $('devOk').addEventListener('click', closeDev);
+  $('devDialog').addEventListener('click', (e) => { if (e.target === $('devDialog')) closeDev(); }); // a click outside the card
+  $('devDialog').addEventListener('cancel', (e) => { e.preventDefault(); closeDev(); });
 
   // cards per row (desktop only; remembered in this browser)
   function paintCols(v) {
@@ -131,10 +160,16 @@
   $('updMore').addEventListener('click', () => { state.updAll = !state.updAll; paintUpdates(); });
   let resizeT = 0; addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (state.updates.length) paintUpdates(); }, 200); });
 
-  fetch('/api/site', { cache: 'no-store' }).then((r) => r.json()).then((site) => {
-    // finished games (free) and, clearly marked, games still in development; nothing else
+  // the developer flag comes from the server session (it only adds a test link; the server checks every request)
+  const meReady = fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.json()).catch(() => ({}));
+  Promise.all([fetch('/api/site', { cache: 'no-store' }).then((r) => r.json()), meReady]).then(([site, me]) => {
+    state.developer = me?.developer === true;
+    if (site.devMessage) state.devMessage = site.devMessage;
+    // released games (free) and, clearly marked, games under development; the first game back comes first
     state.games = [...(site.games || []), ...(site.extraGames || [])].filter((g) => g.status === 'available' || g.status === 'dev');
-    state.games.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0) || (a.status === 'dev' ? 1 : 0) - (b.status === 'dev' ? 1 : 0));
+    state.games.sort((a, b) => (b.spotlight ? 1 : 0) - (a.spotlight ? 1 : 0) || (a.status === 'dev' ? 1 : 0) - (b.status === 'dev' ? 1 : 0) || (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
+    const anyAvailable = state.games.some((g) => g.status === 'available');
+    $('devStrip').hidden = anyAvailable || !state.games.length;
     state.updates = (site.gameUpdates || []).slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
     state.updated = new Set(state.updates.filter((u) => u.type === 'update' && daysAgo(u.date) <= UPDATED_DAYS).map((u) => u.mode));
     paint();
@@ -224,7 +259,7 @@
     if (text) $('connText').textContent = text;
     $('connLink').textContent = label; $('connLink').href = href;
   }
-  fetch('/api/access/me', { credentials: 'same-origin', cache: 'no-store' }).then((r) => r.json()).then(async (me) => {
+  meReady.then(async (me) => {
     if (!me.account) { connect('guest', 'غير مسجّل', 'سجّل الدخول بحساب مجاني، ثم اربط TikTok أو Kick مرة واحدة — وكل لعبة تتصل ببثك من صفحتها.', 'ربط حساب البث', '/login?next=%2Faccount%23platforms'); return; }
     // the header's account button is the shared site header (site-header.js)
     const p = await fetch('/api/me/profile', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);

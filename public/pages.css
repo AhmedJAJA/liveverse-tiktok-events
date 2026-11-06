@@ -106,3 +106,6 @@ form.pg-row{align-items:flex-end}
 /* owner panel: frame previews */
 .pg-frame-demo{display:inline-flex;align-items:center;gap:8px;padding:8px 6px 4px}
 .pg-frame-av{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:linear-gradient(180deg,#4FDBFF,var(--sl-primary));color:#03122F;font-weight:900}
+
+/* admin «حالة الألعاب» */
+.pg-ok{color:var(--sl-success)}.pg-warn{color:var(--sl-yellow)}

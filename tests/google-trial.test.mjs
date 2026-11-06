@@ -12,6 +12,9 @@ import os from 'node:os';
 import path from 'node:path';
 import pg from 'pg';
 import { GoogleVerifier } from '../src/google.mjs';
+// These tests exercise the game machinery itself, so the games are released here; «قيد التطوير» (every game
+// stopped until it is rebuilt) is covered by tests/game-status.test.mjs.
+process.env.SKY_GAMES_DEFAULT = 'available';
 
 const ADMIN = process.env.TEST_DATABASE_URL || 'postgres://sponge@localhost:55432/postgres';
 const dbName = 'sponge_gtest_' + process.pid;

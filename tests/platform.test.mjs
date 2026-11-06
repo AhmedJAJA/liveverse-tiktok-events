@@ -13,6 +13,9 @@ import pg from 'pg';
 import { createPool, migrate } from '../src/db.mjs';
 import { Platform, canonicalEmail, validateSignup } from '../src/platform.mjs';
 import { PromoStore } from '../src/promo.mjs';
+// These tests exercise the game machinery itself, so the games are released here; «قيد التطوير» (every game
+// stopped until it is rebuilt) is covered by tests/game-status.test.mjs.
+process.env.SKY_GAMES_DEFAULT = 'available';
 
 const ADMIN = process.env.TEST_DATABASE_URL || 'postgres://sponge@localhost:55432/postgres';
 const dbName = 'sponge_test_' + process.pid;

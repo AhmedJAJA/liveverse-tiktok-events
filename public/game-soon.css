@@ -1,0 +1,32 @@
+/* سبونج لايف — «قيد التطوير»: what a direct link to a game under development shows. Tokens only (shared-theme.css). */
+.gs-main{position:relative;z-index:1;display:grid;place-items:center;min-height:calc(100dvh - var(--sl-header-real, 84px) - 40px);width:min(980px,var(--sl-frame));margin:0 auto;padding:var(--sl-sp-6) 0 120px}
+.gs-card{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);align-items:center;gap:var(--sl-sp-7);width:100%;padding:var(--sl-sp-7);border-radius:var(--sl-r-xl);
+  background:radial-gradient(120% 90% at 100% 0%,rgba(var(--sl-cyan-rgb),.14),transparent 60%),var(--sl-grad-card);border:1.5px solid rgba(var(--sl-cyan-rgb),.28);
+  box-shadow:var(--sl-shadow-card),0 0 60px -24px rgba(var(--sl-primary-rgb),.7);animation:sl-pop var(--sl-dur-3) var(--sl-ease-spring) both}
+.gs-art{position:relative;justify-self:center;width:min(240px,100%);aspect-ratio:220/282;border-radius:var(--sl-r-lg);overflow:hidden;background:var(--sl-navy);
+  border:1px solid var(--sl-border-2);box-shadow:var(--sl-shadow-lg);transform:rotate(-3deg)}
+.gs-art img{display:block;width:100%;height:100%;object-fit:cover;filter:saturate(.75) brightness(.8)}
+.gs-ribbon{position:absolute;inset-inline:0;bottom:16px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0;
+  background:rgba(var(--sl-deep-rgb),.82);color:var(--sl-yellow);font:var(--sl-fw-black) var(--sl-fs-sm)/1 var(--sl-font);letter-spacing:.02em;border-block:1px solid rgba(var(--sl-yellow-rgb),.45)}
+.gs-ribbon svg{fill:none;stroke:currentColor}
+.gs-body{display:grid;gap:var(--sl-sp-4);text-align:start}
+.gs-badges{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+.gs-badge{color:var(--sl-yellow);background:rgba(var(--sl-yellow-rgb),.12);border-color:rgba(var(--sl-yellow-rgb),.5)}
+.gs-badge.is-spotlight{color:var(--sl-ink);background:var(--sl-grad-sun);border-color:transparent;box-shadow:var(--sl-glow-sun)}
+.gs-body h1{margin:0;font:var(--sl-fw-black) var(--sl-fs-2xl)/1.2 var(--sl-font);color:var(--sl-text);text-shadow:0 0 30px rgba(var(--sl-cyan-rgb),.35)}
+.gs-msg{margin:0;font:var(--sl-fw-bold) var(--sl-fs-md)/1.8 var(--sl-font);color:var(--sl-text)}
+.gs-state{display:inline-flex;align-items:center;gap:10px;justify-self:start;margin:0;padding:8px 14px;border-radius:var(--sl-r-pill);background:rgba(var(--sl-deep-rgb),.5);
+  border:1px solid var(--sl-border-2);color:var(--sl-muted);font:var(--sl-fw-bold) var(--sl-fs-sm)/1.5 var(--sl-font)}
+.gs-state i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--sl-warn);box-shadow:0 0 0 0 rgba(255,176,32,.6);animation:gs-pulse 1.8s ease-out infinite}
+.gs-note{margin:0;color:var(--sl-cyan-soft);font:var(--sl-fw-bold) var(--sl-fs-base)/1.7 var(--sl-font)}
+.gs-acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:var(--sl-sp-2)}
+.gs-keep{margin:0;color:var(--sl-faint);font:var(--sl-fw-regular) var(--sl-fs-sm)/1.7 var(--sl-font)}
+@keyframes gs-pulse{0%{box-shadow:0 0 0 0 rgba(255,176,32,.55)}100%{box-shadow:0 0 0 10px rgba(255,176,32,0)}}
+@media (max-width:760px){
+  .gs-main{place-items:start;padding-top:var(--sl-sp-5)}
+  .gs-card{grid-template-columns:1fr;gap:var(--sl-sp-5);padding:var(--sl-sp-5) var(--sl-sp-4) var(--sl-sp-6);text-align:center}
+  .gs-art{width:min(180px,56vw)}
+  .gs-body{text-align:center}.gs-badges,.gs-acts{justify-content:center}.gs-state{justify-self:center}
+  .gs-acts .sl-btn{flex:1 1 220px}
+}
+@media (prefers-reduced-motion:reduce){.gs-card{animation:none}.gs-state i{animation:none}}

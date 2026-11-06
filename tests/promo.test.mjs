@@ -7,6 +7,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { PromoStore, normalizeCode, generateCode } from '../src/promo.mjs';
+// These tests exercise the game machinery itself, so the games are released here; «قيد التطوير» (every game
+// stopped until it is rebuilt) is covered by tests/game-status.test.mjs.
+process.env.SKY_GAMES_DEFAULT = 'available';
 
 test('promo store: hashed codes, limits, expiry, disable and persistence', () => {
   let t = 1_000_000;

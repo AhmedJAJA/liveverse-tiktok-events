@@ -207,6 +207,38 @@ body.gl button,body.gl input{font:inherit;color:inherit}
 .gl-play[aria-disabled=true]{pointer-events:none;background:linear-gradient(180deg,#1B2A4D,#142243);color:var(--sl-muted);box-shadow:0 4px 0 0 #0A1430,inset 0 1px 0 rgba(255,255,255,.06)}
 .gl-play[aria-disabled=true] svg{transform:none;width:17px;height:17px;color:var(--sl-muted);filter:none}
 .gl-card.is-dev .gl-tile{filter:grayscale(.6) brightness(.85)}
+/* «قيد التطوير»: the card keeps its art, name and description; «العب الآن» becomes a button that explains */
+.gl-play.is-dev{width:100%;border:0;font-family:inherit;cursor:pointer;background:linear-gradient(180deg,var(--sl-elevated),var(--sl-surface));color:var(--sl-muted);
+  box-shadow:0 4px 0 0 rgba(var(--sl-deep-rgb),.9),inset 0 1px 0 rgba(255,255,255,.06),inset 0 0 0 1px rgba(var(--sl-cyan-rgb),.18)}
+.gl-play.is-dev svg{transform:none;width:17px;height:17px;color:var(--sl-yellow);filter:none}
+.gl-play.is-dev:hover{filter:none;color:var(--sl-text);box-shadow:0 4px 0 0 rgba(var(--sl-deep-rgb),.9),inset 0 0 0 1px rgba(var(--sl-cyan-rgb),.45)}
+.gl-play.is-dev:hover svg{transform:none}
+.gl-play.is-dev:focus-visible{outline:none;box-shadow:var(--sl-focus)}
+.gl-off{display:flex;align-items:center;gap:8px;margin:0;color:var(--sl-muted);font-size:var(--sl-fs-sm);font-weight:var(--sl-fw-bold)}
+.gl-off i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--sl-warn);box-shadow:0 0 10px rgba(255,176,32,.7)}
+.gl-badge-dev{color:var(--sl-yellow);background:rgba(var(--sl-yellow-rgb),.1);border-color:rgba(var(--sl-yellow-rgb),.42)}
+.gl-badge-spot{color:var(--sl-ink);background:var(--sl-grad-sun);border-color:transparent;box-shadow:0 4px 14px -6px rgba(255,184,0,.9)}
+.gl-card.is-spotlight{border-color:rgba(var(--sl-yellow-rgb),.55);box-shadow:var(--sl-shadow-card),0 0 0 1px rgba(var(--sl-yellow-rgb),.18),0 0 46px -16px rgba(var(--sl-yellow-rgb),.55)}
+.gl-devtest{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin-top:-4px;color:var(--sl-cyan);font-size:var(--sl-fs-sm);font-weight:var(--sl-fw-heavy);text-decoration:none}
+.gl-devtest svg{width:15px;height:15px}
+.gl-devtest:hover{color:var(--sl-cyan-soft);text-decoration:underline}
+.gl-devstrip{display:flex;align-items:center;gap:10px;margin:0 0 var(--sl-sp-4);padding:12px 16px;border-radius:var(--sl-r-md);background:rgba(var(--sl-primary-rgb),.12);
+  border:1px solid rgba(var(--sl-cyan-rgb),.28);color:var(--sl-text);font-size:var(--sl-fs-base);font-weight:var(--sl-fw-bold);line-height:1.7}
+.gl-devstrip svg{flex:none;color:var(--sl-cyan)}
+.gl-dev{max-width:min(440px,calc(100vw - 32px));padding:0;border:0;background:transparent;color:var(--sl-text)}
+.gl-dev::backdrop{background:rgba(var(--sl-deep-rgb),.72);backdrop-filter:blur(6px)}
+.gl-dev[open]{animation:sl-pop var(--sl-dur-3) var(--sl-ease-spring)}
+.gl-dev-card{display:grid;justify-items:center;gap:12px;padding:28px 24px 24px;border-radius:var(--sl-r-xl);text-align:center;
+  background:radial-gradient(120% 80% at 50% 0%,rgba(var(--sl-cyan-rgb),.16),transparent 60%),var(--sl-grad-card);border:1.5px solid rgba(var(--sl-cyan-rgb),.32);box-shadow:var(--sl-shadow-lg)}
+.gl-dev-ic{display:grid;place-items:center;width:72px;height:72px;border-radius:22px;background:linear-gradient(180deg,#F2FCFF,#A8E9FF);color:var(--sl-primary-lo);box-shadow:var(--sl-shadow-md)}
+.gl-dev-ic svg{width:42px;height:42px}
+.gl-dev-badge{margin:0;padding:5px 12px;border-radius:var(--sl-r-pill);color:var(--sl-yellow);background:rgba(var(--sl-yellow-rgb),.1);border:1px solid rgba(var(--sl-yellow-rgb),.45);font-size:var(--sl-fs-xs);font-weight:var(--sl-fw-heavy)}
+.gl-dev-badge.is-spotlight{color:var(--sl-ink);background:var(--sl-grad-sun);border-color:transparent}
+.gl-dev-card h2{margin:0;font-size:var(--sl-fs-xl);font-weight:var(--sl-fw-black)}
+.gl-dev-msg{margin:0;font-size:var(--sl-fs-md);font-weight:var(--sl-fw-bold);line-height:1.8}
+.gl-dev-note{margin:0;color:var(--sl-cyan-soft);font-size:var(--sl-fs-sm);line-height:1.7}
+.gl-dev-acts{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:6px}
+.gl-dev-acts .sl-btn{min-width:130px}
 .gl-empty{display:grid;justify-items:center;gap:6px;margin-top:22px;padding:34px 20px;border-radius:22px;border:1px dashed var(--sl-border-2);text-align:center;color:var(--sl-muted)}
 .gl-empty[hidden]{display:none}
 .gl-empty b{color:var(--sl-text);font-size:var(--sl-fs-md)}
