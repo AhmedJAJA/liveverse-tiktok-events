@@ -94,6 +94,10 @@ test('one address per page: file names, trailing slashes and other hosts redirec
   for (const pathname of ['/login', '/signup', '/account', '/overlay', '/play', '/role', '/draw', '/game/roulette', '/api/oauth/google/callback', '/api/oauth/tiktok/callback', '/api/kick/webhook', '/ws', '/robots.txt', '/sitemap.xml'])
     assert.equal(r({ pathname, host: 'liveverse-tiktok-events.onrender.com' }), null, pathname);
   assert.equal(r({ pathname: '/games', host: 'liveverse-tiktok-events.onrender.com', method: 'POST' }), null);
+  // a signed-in visitor on Render's address stays there (sessions are per host); file names are still cleaned up
+  assert.equal(r({ pathname: '/games', host: 'liveverse-tiktok-events.onrender.com', signedIn: true }), null);
+  assert.equal(r({ pathname: '/', host: 'liveverse-tiktok-events.onrender.com', signedIn: true }), null);
+  assert.equal(r({ pathname: '/home.html', host: 'liveverse-tiktok-events.onrender.com', signedIn: true }), '/');
   assert.equal(r({ pathname: '/games', host: 'localhost:3000', production: false }), null, 'local development is never redirected');
   assert.equal(r({ pathname: '/games', host: 'evil.example' }), null, 'unknown hosts are not redirected');
 });
@@ -262,6 +266,9 @@ test('over HTTP in production: other hosts redirect to the canonical address, HS
     let r = await get('/games?utm_source=x', 'liveverse-tiktok-events.onrender.com');
     assert.equal(r.status, 301); assert.equal(r.headers.get('location'), SITE_URL + '/games?utm_source=x');
     r = await get('/', 'www.' + new URL(SITE_URL).host); assert.equal(r.headers.get('location'), SITE_URL + '/');
+    r = await get('/games', 'liveverse-tiktok-events.onrender.com', { 'X-Forwarded-Proto': 'https', Cookie: 'sky_session=abc' });
+    assert.equal(r.status, 200, 'a signed-in visitor is not moved to another host (they would lose their session)');
+    assert.equal(r.headers.get('x-robots-tag'), 'noindex', '…and the page is still not indexable there');
     r = await get('/login', 'liveverse-tiktok-events.onrender.com'); assert.equal(r.status, 200, 'sign-in still works on Render\'s address'); assert.equal(r.headers.get('x-robots-tag'), 'noindex');
     r = await get('/overlay', 'liveverse-tiktok-events.onrender.com'); assert.equal(r.status, 200, 'OBS overlays keep working'); assert.equal(r.headers.get('x-robots-tag'), 'noindex');
     r = await get('/', new URL(SITE_URL).host);
@@ -316,5 +323,17 @@ test('in a browser (phone and desktop): public pages render without errors, fail
       }
       await ctx.close();
     }
+    // the server-rendered cards play their entrance once: when games.js swaps in the live cards (here after a slow
+    // /api/site), they must not vanish and fade in a second time
+    const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
+    await page.route('**/api/site', async (r) => { await sleep(800); await r.continue(); });
+    await page.addInitScript(() => { window.__op = []; const t0 = performance.now(); const tick = () => { const c = document.querySelector('#gameGrid .gl-card'); if (c) window.__op.push([+getComputedStyle(c).opacity, c.classList.contains('no-in')]); if (performance.now() - t0 < 2600) requestAnimationFrame(tick); }; requestAnimationFrame(tick); });
+    await page.goto(srv.base + '/games');
+    await page.waitForFunction(() => performance.now() > 2700, null, { timeout: 10_000 });
+    const op = await page.evaluate(() => window.__op);
+    let max = 0, dips = 0; for (const [o] of op) { if (o < max - 0.05) dips++; max = Math.max(max, o); }
+    assert.ok(op.some(([, swapped]) => swapped), 'games.js replaced the server-rendered cards');
+    assert.equal(dips, 0, 'cards flash (fade out and in again) when the live data arrives');
+    await page.close();
   } finally { await browser.close(); await srv.stop(); }
 });

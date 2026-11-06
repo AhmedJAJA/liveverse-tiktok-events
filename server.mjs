@@ -1436,7 +1436,8 @@ const server = http.createServer(async (req, res) => {
   // HTTPS only from now on (Render already redirects http → https; this tells browsers to skip the http step)
   if (IS_PRODUCTION && isHttps(req)) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   // search engines: one address per public page (see src/seo.mjs)
-  const moved = seoRedirect({ method: req.method, host: req.headers.host, pathname: url.pathname, search: url.search, production: IS_PRODUCTION });
+  const moved = seoRedirect({ method: req.method, host: req.headers.host, pathname: url.pathname, search: url.search, production: IS_PRODUCTION,
+    signedIn: !!parseCookies(req.headers.cookie)[COOKIE] });
   if (moved) { res.writeHead(301, { Location: moved, 'Cache-Control': 'public, max-age=3600' }); return res.end(); }
   if ((req.method === 'GET' || req.method === 'HEAD') && SEO_FILES[url.pathname]) return serveText(req, res, SEO_FILES[url.pathname]);
   try {

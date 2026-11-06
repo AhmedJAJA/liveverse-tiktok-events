@@ -173,7 +173,7 @@ Screenshots (session evidence, not committed): production phone home page; `main
 ### Remaining issues (not fixed here)
 
 * 404 pages are JSON (`{"error":"Not found"}`) — correct status, but a visitor who mistypes a URL sees raw JSON. A designed 404 page would be a visual change; left for your decision.
-* Visitors signed in on the onrender.com address who open `/` or `/games` land on spongelive.com signed out (cookies are per host). Intended consolidation; everything else on onrender keeps working.
+* ~~Signed-in visitors on the onrender.com address would be moved to spongelive.com and lose their session~~ — fixed in the safety review (F1 below).
 * Home page LCP on a throttled phone profile is 1.8–2.7 s (target < 2.5 s): the hero artwork; unchanged by this work.
 * `/privacy`, `/terms`, `/refund` stay `noindex` (owner's existing choice).
 
@@ -200,3 +200,41 @@ Screenshots (session evidence, not committed): production phone home page; `main
 **E5 — Deploy approval** — Render auto-deploys `main` on every commit. Merging the pull request **is** the production deploy. After it is live, re-run: `curl -I https://spongelive.com/robots.txt`, `/sitemap.xml`, `curl -I https://liveverse-tiktok-events.onrender.com/games` (expect 301) and `npm run test:seo`.
 
 **E6 — Optional** — a PageSpeed Insights API key would allow measuring field data (INP) from this environment.
+
+---
+
+## F. Pre-merge production-safety review (same day)
+
+**Cookies and sign-in.** Every cookie (`sky_session`, `sl_dev`, `sl_ref`, `oa_state`, `og_bind`, `g_nonce`, `g_pending`) is
+host-only (no `Domain=`), `HttpOnly`, `SameSite=Lax`, `Secure` over HTTPS — so spongelive.com and the onrender.com
+address have separate sessions. OAuth redirect URIs are built from the visitor's own host (`baseFor`), and the
+`/api/oauth/*` routes are never redirected, so a Google/TikTok/Kick sign-in that starts on a host finishes on it.
+
+**F1 — fixed.** After a successful sign-in on the onrender.com address the server sends the user to `/games` (or `/`);
+the first version of this PR moved that page to spongelive.com, where the user has no session → signed out right after
+signing in. Now a request carrying a session cookie is never moved to another host (the page still carries `noindex`
+there). Crawlers send no cookies, so the duplicate-host consolidation is unchanged. Tests added (unit + HTTP).
+
+**F2 — fixed.** With real network latency the server-rendered library cards played their entrance animation, then
+`games.js` replaced them and the new cards faded in again (measured: 15 opacity dips on the first card with an 800 ms
+`/api/site`). The first swap now skips the entrance (`.gl-card.no-in`); later filter/search repaints animate as before.
+Measured after: 0 dips. A browser regression check was added to `tests/seo.test.mjs`. This was also why
+`tests/library.test.mjs` measured the play button at 47.9998 px instead of 48 px under load.
+
+**Database tests.** Ran against an isolated, throwaway PostgreSQL 16 in the sandbox (`localhost:55432`, deleted
+afterwards; production `DATABASE_URL` was never set). Full suite: **339 tests, 337 pass, 1 fail, 1 skip**. The failure is
+`tests/roulette-http.test.mjs` (timeout "waiting for history") — it fails the same way on `main` in a full parallel run
+(326 tests, 325 pass, 1 fail) and passes on both `main` and this branch when run alone (2 runs each): a pre-existing
+timing-sensitive test, unrelated to SEO. Covered by these DB tests: accounts, Google sign-in code paths (with a fake
+Google), sessions, payments/economy, roulette, library, lobbies, overlays.
+
+**Scope.** 18 files, all SEO-related. `server.mjs`: a 301/robots step before routing (GET/HEAD page addresses only),
+`robots.txt`/`sitemap.xml`, HTML rendering of the library, headers. Not touched: WebSocket upgrade (live games, OBS),
+POST webhooks (Kick, payments), OAuth handlers, sessions, game engines.
+
+**Still unverified.**
+* Real Google/TikTok/Kick OAuth round-trips and a real payment (no provider accounts here; code paths unchanged and covered by fakes).
+* Production after deploy (needs the merge).
+* Who actually uses the onrender.com address: Render returned no request logs for this service.
+* `http://` → `https://` on production (sandbox cannot reach port 80).
+* Field Core Web Vitals (no PageSpeed quota).

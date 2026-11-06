@@ -42,16 +42,18 @@ export const FILE_ALIASES = Object.freeze({
  * sign-in, OAuth callbacks, OBS overlays, WebSockets and APIs keep working on every host.
  *  - /home.html, /games.html … → the clean address
  *  - /games/ → /games
- *  - on Render's own address or www (production only) → the same page on SITE_URL
+ *  - on Render's own address or www (production only) → the same page on SITE_URL — but never for a visitor who
+ *    carries a session cookie: sessions are per host, so moving them would sign them out (crawlers send no cookies;
+ *    those pages still carry «noindex» on the other host)
  */
-export function seoRedirect({ method, host, pathname, search = '', production = false, siteUrl = SITE_URL }) {
+export function seoRedirect({ method, host, pathname, search = '', production = false, signedIn = false, siteUrl = SITE_URL }) {
   if (method !== 'GET' && method !== 'HEAD') return null;
   let path = pathname;
   if (FILE_ALIASES[path]) path = FILE_ALIASES[path];
   else if (path.length > 1 && path.endsWith('/') && INDEXABLE.has(path.replace(/\/+$/, ''))) path = path.replace(/\/+$/, '');
   const canonicalHost = new URL(siteUrl).host;
   const h = String(host || '').toLowerCase();
-  const foreignHost = production && h && h !== canonicalHost && (h === 'www.' + canonicalHost || h.endsWith('.onrender.com'));
+  const foreignHost = production && !signedIn && h && h !== canonicalHost && (h === 'www.' + canonicalHost || h.endsWith('.onrender.com'));
   if (foreignHost && (INDEXABLE.has(path) || path !== pathname)) return siteUrl + path + search;
   if (path !== pathname) return path + search;
   return null;
@@ -150,7 +152,7 @@ export function gameCardsHtml(games, updates = [], now = Date.now()) {
 /** games.html with the cards in place (and the «under development» note shown when no game is released). */
 export function renderLibrary(html, games, updates, now) {
   const list = libraryOrder(games);
-  let out = html.replace('<ul class="gl-grid" id="gameGrid"></ul>', `<ul class="gl-grid" id="gameGrid">${gameCardsHtml(games, updates, now)}</ul>`);
+  let out = html.replace('<ul class="gl-grid" id="gameGrid"></ul>', `<ul class="gl-grid" id="gameGrid" data-ssr="1">${gameCardsHtml(games, updates, now)}</ul>`);
   if (list.length && !list.some((g) => g.status === 'available')) out = out.replace('<p class="gl-devstrip" id="devStrip" hidden>', '<p class="gl-devstrip" id="devStrip">');
   return out;
 }
