@@ -74,7 +74,12 @@ export function mount(arena, { paintAvatar, frameOf }) {
   const stamp = h('div', 'rr-stamp'); stamp.append(h('b', '', 'OUT'), h('span', '', 'تم الإقصاء')); stamp.setAttribute('aria-hidden', 'true');
   const hud = h('div', 'rr-hud'), cyl = h('div', 'rr-cyl'), cylText = h('p', 'rr-cyl-text', ''), oddsText = h('small', 'rr-odds', '');
   hud.append(cyl, cylText, oddsText);
-  shotScene.append(glShot, target, stamp, hud);
+  // the duel: the holder who chose sits across the table from the target (their photo, or their equipped skin and frame)
+  const shooter = h('div', 'rr-shooter'), shooterAvBox = h('div', 'rr-shooter-avbox');
+  const shooterText = h('div', 'rr-shooter-text'), shooterRole = h('small', 'rr-shooter-role', 'يضغط الزناد');
+  const shooterName = h('div', 'rr-shooter-name'), shooterNum = h('span', 'rr-shooter-num num', '');
+  shooterText.append(shooterRole, shooterName, shooterNum); shooter.append(shooterAvBox, shooterText); shooter.hidden = true;
+  shotScene.append(glShot, shooter, target, stamp, hud);
   // the winner
   const winScene = h('section', 'rr-scene rr-win-scene');
   const glWin = h('div', 'rr-gl-host rr-win-gl');
@@ -446,6 +451,15 @@ export function mount(arena, { paintAvatar, frameOf }) {
       targetBy.textContent = p.how === 'chat' && hp && hp.number !== tp.number ? 'اختاره صاحب الدور ' + nameOf(hp) + ' من الشات'
         : p.how === 'host' && r?.reason === 'host' ? 'قرار المضيف' : p.how === 'host' ? 'اختاره المضيف (صاحب الدور)' : p.how === 'random' ? 'هدف عشوائي من الخادم'
         : p.how === 'timeout' ? 'انتهت مهلة ' + (hp ? nameOf(hp) : 'صاحب الدور') + ' — اختار الخادم هذا اللاعب' : '';
+      // the shooter: the holder, when someone else faces the revolver (the host's own decision has no shooter)
+      const duel = hp && hp.number !== tp.number && p.how !== 'host';
+      shooter.hidden = !duel;
+      if (duel) {
+        avatar(shooterAvBox, hp, { cls: 'rr-shooter-av' });
+        nameplate(shooterName, hp, 'rr-shooter-plate');
+        shooterNum.textContent = '#' + hp.number;
+        shooterRole.textContent = p.how === 'chat' ? 'يضغط الزناد' : 'صاحب الدور';
+      }
       shotScene.classList.remove('is-hit', 'is-safe', 'is-settled', 'is-host-out');
       buildCylinder(p.rules?.chambers || 2);
     }
@@ -515,7 +529,7 @@ export function mount(arena, { paintAvatar, frameOf }) {
     if (v.gl) {
       v.gl.attach(glShot);
       v.gl.frame({ scene: 'revolver', phase: p.phase === 'reveal' ? 'reveal' : 'aim', u, ms: t, outcome: outcome === 'host' ? null : outcome, chamberTop: top, chambers: C,
-        effects: p.display?.effects || 'normal', reduced: calm, clock: tNow, at: stage.clientWidth > stage.clientHeight ? 0.68 : 0.5 });
+        effects: p.display?.effects || 'normal', reduced: calm, clock: tNow, at: stage.clientWidth > stage.clientHeight ? 0.64 : 0.5 });
     }
   }
 

@@ -22,15 +22,26 @@ export function createStage2D({ chambers = 2 } = {}) {
   const lin = (gid, stops, x2 = 0, y2 = 1) => { const g = el('linearGradient', { id: id + gid, x1: 0, y1: 0, x2, y2 }, defs); stops.forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, g)); };
   lin('steel', [[0, '#eef3fa'], [0.35, '#aeb9c9'], [0.55, '#6f7c90'], [0.8, '#c9d3e0'], [1, '#56627a']]);
   lin('drum', [[0, '#dbe3ee'], [0.5, '#7c8aa0'], [1, '#3d4759']]);
-  lin('grip', [[0, '#ffe36a'], [0.6, '#ffd02a'], [1, '#e2a400']], 1, 1);
+  lin('wood', [[0, '#6b3a1c'], [0.45, '#4a2814'], [1, '#2a1408']], 1, 1);
   lin('gold', [[0, '#fff2b8'], [0.35, '#ffd24a'], [0.7, '#d89400'], [1, '#ffe48a']], 1, 0);
   const rg = el('radialGradient', { id: id + 'flash' }, defs);
   [[0, '#ffffff'], [0.25, '#fff2b0'], [0.55, 'rgba(255,170,40,.6)'], [1, 'rgba(255,90,20,0)']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, rg));
-  const pores = el('pattern', { id: id + 'pores', width: 46, height: 46, patternUnits: 'userSpaceOnUse' }, defs);
-  el('rect', { width: 46, height: 46, fill: 'url(#' + id + 'grip)' }, pores);
-  for (let i = 0; i < 6; i++) el('circle', { cx: 6 + ((i * 17) % 40), cy: 5 + ((i * 29) % 40), r: 2.2 + (i % 3), fill: 'rgba(150,96,0,.55)' }, pores);
+  // the grip: lacquered walnut (a gradient) with a checkered panel (a diamond pattern), a steel backstrap
+  const checks = el('pattern', { id: id + 'checks', width: 28, height: 28, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(30)' }, defs);
+  el('rect', { width: 28, height: 28, fill: '#3a1f0f' }, checks);
+  el('path', { d: 'M0 0 L28 28 M28 0 L0 28', stroke: '#1a0b04', 'stroke-width': 3 }, checks);
   const clip = el('clipPath', { id: id + 'drumclip' }, defs); el('rect', { x: -190, y: -170, width: 380, height: 360, rx: 60 }, clip);
 
+  // the duel table under the prop: felt with a printed cyan ring, a walnut rim, the prop's soft shadow
+  const rgF = el('radialGradient', { id: id + 'felt', cx: 0.5, cy: 0.35, r: 0.7 }, defs);
+  [[0, '#123a58'], [0.7, '#0a2238'], [1, '#05111f']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, rgF));
+  const rgS = el('radialGradient', { id: id + 'shadow' }, defs);
+  [[0, 'rgba(0,0,0,.55)'], [1, 'rgba(0,0,0,0)']].forEach(([o, c]) => el('stop', { offset: o, 'stop-color': c }, rgS));
+  const table = el('g', { 'data-part': 'table' }, svg);
+  el('ellipse', { cx: 0, cy: 700, rx: 1500, ry: 250, fill: 'url(#' + id + 'wood)', stroke: '#1a0b04', 'stroke-width': 6 }, table);
+  el('ellipse', { cx: 0, cy: 694, rx: 1470, ry: 236, fill: 'url(#' + id + 'felt)' }, table);
+  el('ellipse', { cx: 0, cy: 700, rx: 1100, ry: 165, fill: 'none', stroke: CYAN, 'stroke-width': 5, opacity: 0.45 }, table);
+  const shadow = el('ellipse', { cx: 60, cy: 560, rx: 820, ry: 70, fill: 'url(#' + id + 'shadow)' }, table);
   // the prop (muzzle to the left), drawn around the cylinder at 0,0
   const world = el('g', {}, svg);
   const gun = el('g', {}, world);
@@ -49,8 +60,11 @@ export function createStage2D({ chambers = 2 } = {}) {
   el('path', { d: 'M-20 230 Q120 420 260 230', fill: 'none', stroke: 'url(#' + id + 'steel)', 'stroke-width': 26, 'stroke-linecap': 'round' }, gun); // guard
   const trig = el('g', { transform: 'translate(110 230)' }, gun);
   el('path', { d: 'M-12 0 Q30 70 -8 120 Q4 60 -26 0 Z', fill: '#2b3446' }, trig);
-  el('path', { d: 'M180 220 L420 250 Q500 270 520 380 L590 640 Q600 720 520 720 L360 700 Q300 690 300 620 L270 420 Q250 300 180 220 Z', fill: 'url(#' + id + 'pores)', stroke: '#b07a00', 'stroke-width': 8 }, gun); // sponge grip
-  el('circle', { cx: 430, cy: 470, r: 46, fill: CYAN, stroke: '#e9fbff', 'stroke-width': 6 }, gun);
+  el('path', { d: 'M180 220 L420 250 Q500 270 520 380 L590 640 Q600 720 520 720 L360 700 Q300 690 300 620 L270 420 Q250 300 180 220 Z', fill: 'url(#' + id + 'wood)', stroke: '#1a0b04', 'stroke-width': 8, 'data-part': 'grip' }, gun); // walnut grip
+  el('path', { d: 'M300 320 L440 340 L520 620 L380 610 Z', fill: 'url(#' + id + 'checks)', stroke: '#1a0b04', 'stroke-width': 4, 'stroke-linejoin': 'round' }, gun); // checkered panel
+  el('path', { d: 'M420 250 Q500 270 520 380 L590 640 Q600 720 520 720', fill: 'none', stroke: 'url(#' + id + 'steel)', 'stroke-width': 22, 'stroke-linecap': 'round' }, gun); // backstrap
+  el('circle', { cx: 420, cy: 470, r: 34, fill: 'url(#' + id + 'steel)', stroke: '#1d2738', 'stroke-width': 5 }, gun);
+  el('circle', { cx: 420, cy: 470, r: 20, fill: 'none', stroke: CYAN, 'stroke-width': 6 }, gun); // cyan inlay
   // flash and smoke at the muzzle
   const fx = el('g', { transform: 'translate(-1130 -100)' }, world);
   const glow = el('circle', { r: 260, fill: 'url(#' + id + 'flash)', opacity: 0 }, fx);
@@ -58,25 +72,32 @@ export function createStage2D({ chambers = 2 } = {}) {
   const puffs = Array.from({ length: 6 }, () => el('circle', { r: 60, fill: 'rgba(214,226,244,.2)', opacity: 0 }, fx));
   // the trophy
   const trophy = el('g', { opacity: 0 }, svg);
-  el('ellipse', { cx: 0, cy: 520, rx: 300, ry: 46, fill: 'rgba(0,0,0,.35)' }, trophy);
-  el('rect', { x: -240, y: 400, width: 480, height: 110, rx: 30, fill: NAVY, stroke: CYAN, 'stroke-width': 8 }, trophy);
-  el('path', { d: 'M-90 400 L-60 250 Q-60 200 0 200 Q60 200 60 250 L90 400 Z', fill: 'url(#' + id + 'gold)' }, trophy);
-  el('path', { d: 'M-330 -420 H330 Q330 160 0 210 Q-330 160 -330 -420 Z', fill: 'url(#' + id + 'gold)', stroke: '#a86b00', 'stroke-width': 10 }, trophy);
-  el('path', { d: 'M-330 -330 Q-520 -330 -480 -140 Q-440 20 -250 60', fill: 'none', stroke: 'url(#' + id + 'gold)', 'stroke-width': 40, 'stroke-linecap': 'round' }, trophy);
-  el('path', { d: 'M330 -330 Q520 -330 480 -140 Q440 20 250 60', fill: 'none', stroke: 'url(#' + id + 'gold)', 'stroke-width': 40, 'stroke-linecap': 'round' }, trophy);
-  el('path', { d: 'M0 -260 L40 -150 L155 -150 L62 -82 L98 30 L0 -38 L-98 30 L-62 -82 L-155 -150 L-40 -150 Z', fill: CYAN, stroke: '#e9fbff', 'stroke-width': 6 }, trophy);
-  const shine = el('rect', { x: -400, y: -440, width: 80, height: 700, fill: 'rgba(255,255,255,.35)', transform: 'skewX(-18)' }, trophy);
+  const cup = el('g', { 'data-part': 'trophy' }, trophy); // the solid trophy (the light sweep is clipped to it)
+  el('ellipse', { cx: 0, cy: 520, rx: 300, ry: 46, fill: 'rgba(0,0,0,.35)' }, cup);
+  el('rect', { x: -240, y: 400, width: 480, height: 110, rx: 30, fill: NAVY, stroke: CYAN, 'stroke-width': 8 }, cup);
+  el('path', { d: 'M-90 400 L-60 250 Q-60 200 0 200 Q60 200 60 250 L90 400 Z', fill: 'url(#' + id + 'gold)' }, cup);
+  el('path', { d: 'M-330 -420 H330 Q330 160 0 210 Q-330 160 -330 -420 Z', fill: 'url(#' + id + 'gold)', stroke: '#a86b00', 'stroke-width': 10 }, cup);
+  el('path', { d: 'M-330 -330 Q-520 -330 -480 -140 Q-440 20 -250 60', fill: 'none', stroke: 'url(#' + id + 'gold)', 'stroke-width': 40, 'stroke-linecap': 'round' }, cup);
+  el('path', { d: 'M330 -330 Q520 -330 480 -140 Q440 20 250 60', fill: 'none', stroke: 'url(#' + id + 'gold)', 'stroke-width': 40, 'stroke-linecap': 'round' }, cup);
+  el('path', { d: 'M0 -260 L40 -150 L155 -150 L62 -82 L98 30 L0 -38 L-98 30 L-62 -82 L-155 -150 L-40 -150 Z', fill: CYAN, stroke: '#e9fbff', 'stroke-width': 6 }, cup);
+  const cupClip = el('clipPath', { id: id + 'cup' }, defs); el('path', { d: 'M-330 -420 H330 Q330 160 0 210 Q-330 160 -330 -420 Z' }, cupClip);
+  const shineG = el('g', { 'clip-path': 'url(#' + id + 'cup)' }, trophy); // the light sweeps over the cup only
+  const shine = el('rect', { x: -400, y: -440, width: 80, height: 700, fill: 'rgba(255,255,255,.35)', transform: 'skewX(-18)' }, shineG);
 
   let n = Math.max(2, Math.min(6, chambers | 0));
   function frame(s) {
     if (s.scene === 'trophy') {
-      world.setAttribute('opacity', '0'); trophy.setAttribute('opacity', '1');
+      world.setAttribute('opacity', '0'); table.setAttribute('opacity', '0'); trophy.setAttribute('opacity', '1');
       const t = Math.max(0, s.ms || 0), rise = s.reduced ? 1 : easeOutBack(t / WIN.rise, 1.25);
-      trophy.setAttribute('transform', `translate(0 ${lerp(700, 0, rise).toFixed(1)}) scale(${(0.8 + 0.2 * rise).toFixed(3)})`);
+      // the trophy stands where the stage says (s.at: its place across the screen, as in the WebGL scene) — on a wide
+      // screen the winner's card fills the other side, so the trophy must not sit in the middle under it
+      const box = svg.getBoundingClientRect(), k = Math.min(box.width / 2400, box.height / 1240) || 1;
+      const x = ((s.at ?? 0.5) - 0.5) * (box.width / k), fit = Math.min(1, Math.max(0.55, ((s.at ?? 0.5) < 0.5 ? (s.at ?? 0.5) : 1 - (s.at ?? 0.5)) * 2 * (box.width / k) / 1150));
+      trophy.setAttribute('transform', `translate(${x.toFixed(1)} ${lerp(700, 0, rise).toFixed(1)}) scale(${((0.8 + 0.2 * rise) * fit).toFixed(3)})`);
       shine.setAttribute('x', String(-700 + ((t % 3200) / 3200) * 1400));
       return;
     }
-    world.setAttribute('opacity', '1'); trophy.setAttribute('opacity', '0');
+    world.setAttribute('opacity', '1'); table.setAttribute('opacity', '1'); trophy.setAttribute('opacity', '0');
     if (s.chambers) n = Math.max(2, Math.min(6, s.chambers | 0));
     const u = s.phase === 'aim' ? clamp01(s.u) : 1, t = s.phase === 'reveal' ? s.ms : -1;
     const enter = s.reduced ? 1 : easeOutBack(span(u, AIM.enter[0], AIM.enter[1]), 1.2);
@@ -85,6 +106,7 @@ export function createStage2D({ chambers = 2 } = {}) {
     const jx = shk * 26 * noise(Math.floor(t / 16)), jy = shk * 20 * noise(Math.floor(t / 16) + 77);
     world.setAttribute('transform', `translate(${(lerp(1300, 0, enter) + jx).toFixed(1)} ${jy.toFixed(1)}) rotate(${(lerp(18, 0, enter) - kick * 16).toFixed(2)} 300 300) scale(0.92)`);
     gun.setAttribute('transform', `translate(${(kick * 60).toFixed(1)} 0)`);
+    shadow.setAttribute('cx', (lerp(1300, 0, enter) * 0.92 + 60).toFixed(1)); shadow.setAttribute('opacity', (0.4 + 0.6 * enter).toFixed(3));
     // the cylinder seen from the side: its flutes run past as it turns
     const angle = s.phase === 'aim' ? drumTurn(u, n, s.chamberTop || 0) : (s.chamberTop || 0) * ((Math.PI * 2) / n);
     const pitch = 360 / Math.max(3, n), off = ((angle / (Math.PI * 2)) * n * pitch) % pitch;
