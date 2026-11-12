@@ -58,7 +58,7 @@ test('the rules: announced defaults, every value checked, at least one empty cha
 
 test('every setting on the settings page changes the game (none is decorative)', () => {
   const keys = GAME_SETTINGS.roulette.map((f) => f.key).sort();
-  assert.deepEqual(keys, ['autoRun', 'bullets', 'chambers', 'chooseSeconds', 'cylinder', 'drawSpeed', 'effects', 'graphics', 'hostPlays', 'maxPlayers', 'resultSeconds', 'showFrames', 'showNames', 'sounds', 'timeoutRule', 'trial'].sort());
+  assert.deepEqual(keys, ['autoRun', 'bullets', 'chambers', 'chooseSeconds', 'cylinder', 'drawSpeed', 'effects', 'graphics', 'hostPlays', 'maxPlayers', 'resultSeconds', 'repeatTarget', 'showFrames', 'showNames', 'sounds', 'timeoutRule', 'trial'].sort());
   for (const f of GAME_SETTINGS.roulette) assert.ok(f.label && f.options.length >= 2, f.key);
   // applied to the engine: the rules reach the match, the lobby limit and the host seat reach the registration
   let t = 1000;

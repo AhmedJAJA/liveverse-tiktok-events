@@ -128,6 +128,14 @@ body.rr-on .ov-roomcode{inset-block:12px auto}
 .rr-banner-line.is-paused{color:var(--sl-cyan)}
 @keyframes rr-nudge{0%,100%{transform:none}30%{transform:translateX(calc(var(--u)*-6))}65%{transform:translateX(calc(var(--u)*5))}}
 .rr-ring.is-paused{opacity:.55;animation:none}
+/* the lock-in beat: the shooter's tile, the target's tile, and the line between them */
+.rr-lockline{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity .2s ease;z-index:3;overflow:visible}
+.rr-lockline.is-on{opacity:1}
+.rr-lockline line{stroke:var(--rr-red);stroke-width:calc(var(--u)*6);stroke-linecap:round;stroke-dasharray:calc(var(--u)*18) calc(var(--u)*12);filter:drop-shadow(0 0 calc(var(--u)*10) rgba(255,77,106,.7));animation:rr-dash .6s linear infinite}
+@keyframes rr-dash{to{stroke-dashoffset:calc(var(--u)*-60)}}
+.rr-tile.is-target .rr-tile-ring{box-shadow:0 0 0 calc(var(--u)*5) var(--rr-red),0 0 calc(var(--u)*36) rgba(255,77,106,.65);animation:rr-beat .45s ease-in-out infinite alternate}
+.rr-rank-txt{display:grid;min-width:0;line-height:1.15}
+.rr-rank-by{color:var(--sl-muted);font-size:.72em;font-weight:var(--sl-fw-bold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rr-ring{--p:100;position:relative;width:calc(var(--u)*116);height:calc(var(--u)*116);border-radius:50%;display:grid;place-items:center;align-content:center;
   background:radial-gradient(closest-side,var(--sl-surface) 82%,transparent 84%),conic-gradient(var(--sl-yellow) calc(var(--p)*1%),rgba(var(--sl-text-rgb),.12) 0)}
 .rr-ring b{font-size:calc(var(--u)*44);line-height:1;color:var(--sl-yellow)}

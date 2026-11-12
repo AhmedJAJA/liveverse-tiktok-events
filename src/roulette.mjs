@@ -35,8 +35,9 @@ export const ROULETTE_RULES = Object.freeze({
   autoRun: ['manual', 'auto'],
   drawSpeed: ['slow', 'normal', 'fast'],
   resultSeconds: [3, 4, 5, 7],
+  repeatTarget: ['allow', 'block'],    // «block»: the previous turn's target is protected for one turn (anti-bullying)
 });
-export const ROULETTE_DEFAULTS = Object.freeze({ targetMode: 'choose', chambers: 2, bullets: 1, cylinder: 'advance', chooseSeconds: 25, timeoutRule: 'random', autoRun: 'manual', drawSpeed: 'normal', resultSeconds: 4 });
+export const ROULETTE_DEFAULTS = Object.freeze({ targetMode: 'choose', chambers: 2, bullets: 1, cylinder: 'advance', chooseSeconds: 25, timeoutRule: 'random', autoRun: 'manual', drawSpeed: 'normal', resultSeconds: 4, repeatTarget: 'allow' });
 /** Display choices: they change how the screens look, never what happens. */
 export const ROULETTE_DISPLAY = Object.freeze({ showNames: [true, false], showFrames: [true, false], sounds: [true, false], effects: ['low', 'normal', 'high'], graphics: ['auto', 'high', 'low'], hostPlays: [true, false] });
 export const ROULETTE_DISPLAY_DEFAULTS = Object.freeze({ showNames: true, showFrames: true, sounds: true, effects: 'normal', graphics: 'auto', hostPlays: false });
@@ -50,6 +51,8 @@ const BOT_MIN_MS = 1800, BOT_SPREAD_MS = 3400; // trial players choose their tar
 const REEL_LEN = 30, REEL_STOP = 26;  // names on the reel; the chosen one stops at this position
 /** The chat drops while the holder chooses: the countdown waits this long at most, then the timeout rule decides. */
 export const CHAT_PAUSE_MAX_MS = 120_000;
+/** The lock-in beat after the target is known (shooter → target on the grid), before the revolver scene. */
+export const LOCK_MS = 1200;
 const MAX_LOG = 40;
 
 const fail = (message, status = 409) => { throw Object.assign(new Error(message), { status }); };
@@ -93,10 +96,10 @@ export class RussianRoulette extends RoundGame {
   /** The host does not play unless «السماح للمضيف بالمشاركة» is on. */
   start(players) { super.start(this.display.hostPlays ? players : players.filter((p) => !p.host)); }
   setup() {
-    for (const p of this.roster.values()) Object.assign(p, { cyl: this.load(), shots: 0, survived: 0, drawn: 0, targeted: 0, eliminatedTurn: null, by: null });
+    for (const p of this.roster.values()) Object.assign(p, { cyl: this.load(), shots: 0, survived: 0, drawn: 0, targeted: 0, kills: 0, eliminatedTurn: null, by: null });
     this.turn = 0; this.bag = []; this.lastHolder = null; this.log = []; this.seq = 0;
     this.holder = null; this.target = null; this.how = null; this.pending = null; this.result = null; this.reel = null; this.botAt = null; this.waitingHost = false; this.spin = null;
-    this.feedback = null; this.sawChat = false; this.chatDownSince = null; this.chatLeft = 0;
+    this.feedback = null; this.sawChat = false; this.chatDownSince = null; this.chatLeft = 0; this.lastTarget = null;
     this.requests = new Map();
     this.stats = { turns: 0, pulls: 0, empty: 0, out: 0, timeouts: 0, cancelled: 0, hostOut: 0 };
     this.emit({ type: 'start', players: [...this.roster.values()].map(pub), rules: this.rules });
@@ -172,16 +175,19 @@ export class RussianRoulette extends RoundGame {
     // «تُدار»: the chamber the spin (drawn with the turn) stopped on; «تتقدم»: the next chamber of the target's cylinder
     const chamber = this.rules.cylinder === 'spin' ? (this.spin ?? this.random(this.rules.chambers)) : target.shots;
     this.pending = { chamber, out: target.cyl.includes(chamber) };
-    this.enter('aim', SPEED[this.rules.drawSpeed].aim);
+    this.enter('aim', LOCK_MS + SPEED[this.rules.drawSpeed].aim); // the lock-in beat, then the revolver's own scene
   }
   resolve() {
     const t = this.roster.get(this.target), h = this.roster.get(this.holder), f = this.pending;
     if (!t || !f) { this.enter('ready', this.rules.autoRun === 'auto' ? AUTO_GAP_MS : null); return; }
     t.shots++; this.stats.pulls++;
-    if (f.out) { this.knockOut(t, h); this.stats.out++; } else { t.survived++; this.stats.empty++; }
+    // who pulled the trigger: the holder who chose (chat, or the host holding the turn) — not the server's own choice
+    const shooter = this.how === 'chat' || this.how === 'host' ? h : null;
+    if (f.out) { this.knockOut(t, shooter); this.stats.out++; if (shooter && shooter.id !== t.id) shooter.kills++; } else { t.survived++; this.stats.empty++; }
+    this.lastTarget = t.id;
     this.result = { outcome: f.out ? 'out' : 'empty', reason: 'shot', chamber: f.chamber + 1, of: this.rules.chambers, how: this.how };
     this.pending = null;
-    this.note({ kind: f.out ? 'out' : 'empty', chamber: f.chamber + 1 });
+    this.note({ kind: f.out ? 'out' : 'empty', chamber: f.chamber + 1, how: this.how });
     this.enter('reveal', this.rules.resultSeconds * 1000);
     this.emit({ type: 'turn', turn: this.turn, holder: pub(h), target: pub(t), outcome: this.result.outcome, reason: 'shot', chamber: f.chamber + 1, of: this.rules.chambers, how: this.how });
   }
@@ -196,10 +202,16 @@ export class RussianRoulette extends RoundGame {
     const h = this.roster.get(this.holder); this.stats.timeouts++;
     const rule = this.rules.timeoutRule;
     this.note({ kind: 'timeout', rule });
-    const others = this.alive.filter((p) => p.id !== h?.id);
+    const others = this.candidates(h?.id);
     if (rule === 'random' && others.length) return this.aimAt(others[this.random(others.length)], 'timeout');
     this.cancelTurn('timeout');
   }
+  /** «استهداف هدف الدور السابق: ممنوع»: the previous turn's target is protected — unless they are the only one left. */
+  isProtected(p, holderId) {
+    return this.rules.repeatTarget === 'block' && !!p && p.id === this.lastTarget && this.alive.filter((x) => x.id !== holderId).length > 1;
+  }
+  /** Who may face the revolver this turn: every other player still in, minus a protected one. */
+  candidates(holderId) { return this.alive.filter((p) => p.id !== holderId && !this.isProtected(p, holderId)); }
   /** The chat dropped while the holder chooses (a real stream that was connected during this match): the countdown
       keeps the time that was left, for CHAT_PAUSE_MAX_MS at most. Returns true when the screens should know. */
   holdForChat(t) {
@@ -229,7 +241,7 @@ export class RussianRoulette extends RoundGame {
     const chatNews = this.holdForChat(t);
     // a trial player holding the turn chooses on its own (never a real viewer)
     if (this.phase === 'choose' && this.botAt != null && t >= this.botAt) {
-      const others = this.alive.filter((p) => p.id !== this.holder);
+      const others = this.candidates(this.holder);
       if (others.length) { this.aimAt(others[this.random(others.length)], 'chat'); return true; }
     }
     if (this.endsAt == null || t < this.endsAt) return chatNews;
@@ -277,7 +289,7 @@ export class RussianRoulette extends RoundGame {
     const at = this.now();
     if (c.ambiguous) { this.feedback = { kind: 'ambiguous', numbers: c.ambiguous.slice(0, 5), at }; return true; }
     const p = [...this.roster.values()].find((x) => x.number === c.n);
-    const kind = !p ? 'missing' : p.id === this.holder ? 'self' : !p.alive ? 'out' : null;
+    const kind = !p ? 'missing' : p.id === this.holder ? 'self' : !p.alive ? 'out' : this.isProtected(p, this.holder) ? 'protected' : null;
     if (kind) { this.feedback = { kind, number: c.n, at }; return true; }
     this.totalInputs++;
     this.aimAt(p, 'chat');
@@ -295,12 +307,13 @@ export class RussianRoulette extends RoundGame {
       if (!h || !hostId || h.id !== hostId) fail('الدور ليس لك — صاحب الدور يختار من الشات');
       const target = this.alive.find((p) => p.number === Number(body.number));
       if (!target || target.id === h.id) fail('اختر رقم لاعب ما زال في اللعبة غيرك', 400);
+      if (this.isProtected(target, h.id)) fail('هذا اللاعب كان الهدف في الدور السابق — اختر لاعبًا آخر', 400);
       this.aimAt(target, 'host');
       return { target: target.number };
     }
     if (cmd === 'random') {
       if (this.phase !== 'choose') fail('ليس وقت اختيار الهدف');
-      const others = this.alive.filter((p) => p.id !== h.id);
+      const others = this.candidates(h.id);
       this.note({ kind: 'random' });
       this.aimAt(others.length ? others[this.random(others.length)] : h, 'random');
       return { target: this.roster.get(this.target).number };
@@ -330,7 +343,7 @@ export class RussianRoulette extends RoundGame {
     this.endsAt = null; this.reel = null; this.pending = null;
     super.finish(reason);
     const w = this.alive.length === 1 ? this.alive[0] : null;
-    this.winner = w ? { ...pub(w), survived: w.survived, drawn: w.drawn, targeted: w.targeted } : null;
+    this.winner = w ? { ...pub(w), survived: w.survived, drawn: w.drawn, targeted: w.targeted, kills: w.kills || 0 } : null;
     this.endedAtMs = this.now();
     this.seq++;
     this.emit({ type: 'finish', reason, winner: this.winner, stats: this.matchStats() });
@@ -351,12 +364,13 @@ export class RussianRoulette extends RoundGame {
     const who = 'صاحب الدور يكتب في الشات رقم لاعب آخر ما زال في اللعبة ليضغط عليه الزناد — خلال ' + this.rules.chooseSeconds + ' ثانية';
     const late = this.rules.timeoutRule === 'skip' ? 'إذا لم يختر في الوقت يُلغى الدور' : 'إذا لم يختر في الوقت يختار الخادم لاعبًا آخر عشوائيًا';
     // the rule of the game first: a vertical screen shows only the first line (and the odds)
-    return [who + '.', cyl + '، ' + how + '.', late + '.', 'يسحب الخادم صاحب الدور عشوائيًا، وكل لاعب يُسحب مرة في كل دورة قبل أن يتكرر أحد.', 'آخر من يبقى يفوز.'];
+    const repeat = this.rules.repeatTarget === 'block' ? ['لا يمكن اختيار هدف الدور السابق مباشرة.'] : [];
+    return [who + '.', cyl + '، ' + how + '.', late + '.', ...repeat, 'يسحب الخادم صاحب الدور عشوائيًا، وكل لاعب يُسحب مرة في كل دورة قبل أن يتكرر أحد.', 'آخر من يبقى يفوز.'];
   }
   view() {
     const C = this.rules.chambers, inScene = this.phase === 'aim' || this.phase === 'reveal';
     const h = this.holder ? this.roster.get(this.holder) : null, t = this.target ? this.roster.get(this.target) : null;
-    const players = this.roster ? [...this.roster.values()].map((p) => ({ n: p.number, a: p.alive ? 1 : 0, s: Math.min(p.shots, C), v: p.survived, ...(p.eliminatedTurn ? { o: p.eliminatedTurn } : {}), ...(p.host ? { h: 1 } : {}) })) : [];
+    const players = this.roster ? [...this.roster.values()].map((p) => ({ n: p.number, a: p.alive ? 1 : 0, s: Math.min(p.shots, C), v: p.survived, ...(p.eliminatedTurn ? { o: p.eliminatedTurn } : {}), ...(p.alive ? {} : { b: p.by ?? null }), ...(p.kills ? { k: p.kills } : {}), ...(p.host ? { h: 1 } : {}) })) : [];
     const alive = this.roster ? this.alive.length : 0, total = this.roster?.size || 0;
     return {
       prompt: this.finished ? 'انتهت المباراة' : 'الروليت — آخر من يبقى يفوز',
@@ -370,6 +384,7 @@ export class RussianRoulette extends RoundGame {
       reel: this.phase === 'drawing' || this.phase === 'picked' ? this.reel : null,
       result: this.phase === 'reveal' ? this.result : null,
       how: inScene ? this.how : null,
+      lockMs: this.phase === 'aim' ? LOCK_MS : null,
       // the holder's wrong number (shown while they choose) and «the chat dropped — the countdown waits»
       feedback: this.phase === 'choose' && this.feedback ? { ...this.feedback } : null,
       chatDown: this.phase === 'choose' && this.chatDownSince != null && !this.chatGaveUp,

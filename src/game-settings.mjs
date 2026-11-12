@@ -65,6 +65,7 @@ export const GAME_SETTINGS = Object.freeze({
     { ...f('trial', 'وضع التجربة', onOff, false, '«جهّز اللوبي» يبدأ بلاعبين تجريبيين بدون بث — لا يدخل التصنيف'), control: 'toggle', group: 'match' },
     { ...f('chooseSeconds', 'مهلة اختيار الهدف (ثانية)', [15, 20, 25, 30, 45].map((n) => [n, String(n)]), 25, 'يكتب صاحب الدور في الشات رقم لاعب آخر ما زال في اللعبة'), control: 'counter', group: 'rules' },
     { ...f('timeoutRule', 'إذا لم يختر صاحب الدور', [['random', 'يختار الخادم لاعبًا آخر عشوائيًا'], ['skip', 'يُلغى الدور']], 'random', 'صاحب الدور لا يواجه المسدس بسبب سحب اسمه أبدًا'), control: 'segment', group: 'rules' },
+    { ...f('repeatTarget', 'استهداف هدف الدور السابق', [['allow', 'مسموح'], ['block', 'ممنوع لدور واحد']], 'allow', '«ممنوع»: لا يُختار نفس اللاعب مرتين متتاليتين — يحمي اللاعب من الاستهداف المتكرر'), control: 'segment', group: 'rules' },
     { ...f('chambers', 'حجرات خزنة كل لاعب', [2, 3, 4, 5, 6].map((n) => [n, String(n)]), 2, 'لكل لاعب خزنته؛ الطلقة في مكان عشوائي يحدده الخادم'), control: 'counter', group: 'rules' },
     { ...f('bullets', 'الطلقات في الخزنة', [1, 2, 3].map((n) => [n, String(n)]), 1, 'أقل من عدد الحجرات دائمًا'), control: 'counter', group: 'rules' },
     { ...f('cylinder', 'الخزنة بعد كل سحبة', [['advance', 'تتقدم حجرة'], ['spin', 'تُدار من جديد']], 'advance', '«تتقدم»: من نجا مرة يقترب من الطلقة. «تُدار»: الاحتمال نفسه كل مرة'), control: 'segment', group: 'rules' },
@@ -145,7 +146,7 @@ export function applySettings(engine, mode, s) {
     case 'wheel': break;
     case 'roulette': {
       const variant = {};
-      for (const k of ['chambers', 'bullets', 'cylinder', 'chooseSeconds', 'timeoutRule', 'autoRun', 'drawSpeed', 'resultSeconds', 'showNames', 'showFrames', 'sounds', 'effects', 'graphics', 'hostPlays']) variant[k] = v[k];
+      for (const k of ['chambers', 'bullets', 'cylinder', 'chooseSeconds', 'timeoutRule', 'repeatTarget', 'autoRun', 'drawSpeed', 'resultSeconds', 'showNames', 'showFrames', 'sounds', 'effects', 'graphics', 'hostPlays']) variant[k] = v[k];
       engine.configure({ variant });
       applyLobbySettings(engine, mode, v);
       break;
