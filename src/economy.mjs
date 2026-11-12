@@ -62,6 +62,7 @@ export class Economy {
       balance: earned + purchased, earned, purchased,
       totalEarned: Number(w?.total_earned || 0), totalBought: Number(w?.total_bought || 0), totalSpent: Number(w?.total_spent || 0),
       shards: Number(w?.shards || 0),
+      freeSpins: Number(w?.free_spins || 0),
       daily: { amount: DAILY_REWARD, nextAt: iso(w?.next_daily_at), count: Number(w?.daily_count || 0) },
       serverNow: iso(serverNow),
     };
@@ -235,12 +236,15 @@ export class Economy {
       if (done) return { id: done.id, replay: true };
       const eff = await this.effectiveOdds(c);
       if (!Object.keys(eff.pool).length) fail('العجلة متوقفة مؤقتًا', 503);
-      const cost = n === 10 ? eff.cost10 : eff.cost1;
-      const w = (await c.query('SELECT earned FROM wallets WHERE user_id=$1', [userId])).rows[0];
+      const w = (await c.query('SELECT earned, free_spins FROM wallets WHERE user_id=$1', [userId])).rows[0];
+      // a free spin won in SpongePass pays for one spin (no coins)
+      const free = n === 1 && Number(w.free_spins) > 0;
+      const cost = free ? 0 : n === 10 ? eff.cost10 : eff.cost1;
       if (Number(w.earned) < cost) fail(`تحتاج ${cost} عملة مكتسبة — رصيدك المكتسب ${Number(w.earned)}`, 402);
-      const spin = (await c.query('INSERT INTO wheel_spins (user_id, idem_key, count, cost, odds, odds_version) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-        [userId, key, n, cost, { odds: eff.odds, configured: eff.configured, pool: eff.pool }, eff.version])).rows[0];
-      await this.move(c, userId, { amount: -cost, bucket: 'earned', kind: 'spin', ref: 'spin:' + spin.id, note: n === 10 ? '10 لفات' : 'لفة واحدة' });
+      const spin = (await c.query('INSERT INTO wheel_spins (user_id, idem_key, count, cost, bucket, odds, odds_version) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
+        [userId, key, n, cost, free ? 'free' : 'earned', { odds: eff.odds, configured: eff.configured, pool: eff.pool }, eff.version])).rows[0];
+      if (free) await c.query('UPDATE wallets SET free_spins = free_spins - 1, updated_at=now() WHERE user_id=$1', [userId]);
+      else await this.move(c, userId, { amount: -cost, bucket: 'earned', kind: 'spin', ref: 'spin:' + spin.id, note: n === 10 ? '10 لفات' : 'لفة واحدة' });
       for (let i = 0; i < n; i++) {
         const d = this.draw(eff);
         const ins = (await c.query(`INSERT INTO user_skins (user_id, skin_id, source) VALUES ($1,$2,'wheel')

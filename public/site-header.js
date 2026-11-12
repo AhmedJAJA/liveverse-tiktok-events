@@ -33,7 +33,13 @@
 
   /* the current page */
   const path = location.pathname;
-  const current = path === '/' ? 'home' : /^\/games?(\/|$)/.test(path) ? 'games' : null;
+  const current = path === '/' ? 'home' : /^\/games?(\/|$)/.test(path) ? 'games' : path === '/pass' ? 'pass' : null;
+  /* «SpongePass»: one link on every page's bar (before «المزيد»), without editing each page's markup */
+  const navEl = bar.querySelector('.sl-nav');
+  if (navEl && !navEl.querySelector('[data-nav=pass]')) {
+    const a = el('a', 'sl-nav-pass', 'SpongePass'); a.href = '/pass'; a.dataset.nav = 'pass'; a.dir = 'ltr';
+    navEl.insertBefore(a, navEl.querySelector('.sl-more'));
+  }
   for (const a of bar.querySelectorAll('.sl-nav [data-nav]')) if (a.dataset.nav === current) a.setAttribute('aria-current', 'page');
 
   /* «المزيد» */
@@ -47,7 +53,7 @@
   }
 
   /* the phone menu: one list for the whole site */
-  const LINKS = [['/', 'home', 'الرئيسية'], ['/games', 'games', 'مكتبة الألعاب'], ['/#live', 'live', 'البثوث النشطة'], ['/#leaders', 'trophy', 'المتصدرون'], ['/#store', 'ticket', 'المتجر'], ['/#room', 'key', 'دخول الغرفة'], ['/account', 'user', 'حسابي'], ['/guide/games', 'note', 'دليل الألعاب'], ['/guide/tools', 'screen', 'أدوات البث'], ['/#faq', 'question', 'الأسئلة الشائعة']];
+  const LINKS = [['/', 'home', 'الرئيسية'], ['/games', 'games', 'مكتبة الألعاب'], ['/#live', 'live', 'البثوث النشطة'], ['/#leaders', 'trophy', 'المتصدرون'], ['/#store', 'ticket', 'المتجر'], ['/pass', 'trophy', 'SpongePass'], ['/#room', 'key', 'دخول الغرفة'], ['/account', 'user', 'حسابي'], ['/guide/games', 'note', 'دليل الألعاب'], ['/guide/tools', 'screen', 'أدوات البث'], ['/#faq', 'question', 'الأسئلة الشائعة']];
   const burger = $('menuButton');
   let menu = null, lastFocus = null;
   function buildMenu() {

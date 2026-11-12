@@ -8,7 +8,8 @@
 // that equipped it — guests keep their platform picture, nothing is invented for them.
 const RARITY_ORDER = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
 export const FRAME_RARITIES = Object.freeze({ common: 'عادي', rare: 'نادر', epic: 'ملحمي', legendary: 'أسطوري', mythic: 'خرافي' });
-export const FRAME_EFFECTS = Object.freeze(['none', 'cyan', 'gold', 'saudi', 'flame', 'ice', 'crown', 'royal']);
+export const FRAME_EFFECTS = Object.freeze(['none', 'cyan', 'gold', 'saudi', 'flame', 'ice', 'crown', 'royal',
+  'tide', 'bubble', 'coral', 'abyss', 'sunken', 'pearl', 'kraken', 'neon_sponge', 'sponge_king']); // SpongePass season 1 (src/spongepass.mjs)
 export const BUILTIN_FRAMES = Object.freeze([
   { id: 'cyan', name: 'الموجة السماوية', rarity: 'common', access: 'free', effect: 'cyan', sort: 10 },
   { id: 'gold', name: 'لمعة الذهب', rarity: 'rare', access: 'grant', effect: 'gold', sort: 20 },

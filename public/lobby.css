@@ -298,3 +298,5 @@ body[data-immersive] #hostTools{z-index:9994}
   .gm-toast{top:52px}
   body[data-screen=game] .st-drawer{top:52px;max-height:calc(100dvh - 60px)}
 }
+/* crowned frames (التاج، الزخرفة الملكية، ملك الإسفنج) in the list: the crown stays inside the row gap */
+.lb-plate .fr-av>.fr-crown{width:54%;top:-30%}

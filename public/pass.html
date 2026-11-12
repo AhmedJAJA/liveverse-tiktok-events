@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#020A22">
+<meta name="robots" content="noindex">
+<title>SpongePass — سبونج لايف</title>
+<link rel="icon" href="/brand/favicon-64.png" type="image/png">
+<link rel="preload" href="/fonts/tajawal-arabic-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/shared-theme.css">
+<link rel="stylesheet" href="/games.css">
+<link rel="stylesheet" href="/bottom-nav.css">
+<link rel="stylesheet" href="/frames.css">
+<link rel="stylesheet" href="/pass.css">
+<script defer src="/frames.js"></script>
+<script defer src="/pass.js"></script>
+<script defer src="/bottom-nav.js"></script>
+<script defer src="/site-header.js"></script>
+</head>
+<body class="sl-page gl sp">
+<div class="sl-sea" aria-hidden="true"></div>
+
+<header class="sl-header" id="bar">
+ <div class="sl-header-in">
+  <button type="button" class="sl-icon-btn sl-burger-btn" id="menuButton" aria-controls="menu" aria-expanded="false" aria-label="القائمة"><span class="sl-burger" aria-hidden="true"><i></i><i></i><i></i></span></button>
+  <a class="sl-brand" href="/" aria-label="سبونج لايف — الرئيسية"><img src="/brand/sponge-128.webp" alt="" width="40" height="40"><span><b>سبونج</b> لايف</span></a>
+  <nav class="sl-nav" aria-label="أقسام الموقع">
+   <a href="/" data-nav="home">الرئيسية</a>
+   <a href="/games" data-nav="games">الألعاب</a>
+   <a href="/#live" data-nav="live">البثوث النشطة</a>
+   <a href="/#leaders" data-nav="leaders">المتصدرون</a>
+   <a href="/#store" data-nav="store">المتجر</a>
+   <div class="sl-more">
+    <button type="button" class="sl-more-btn" id="moreButton" aria-expanded="false" aria-controls="moreMenu">المزيد <span aria-hidden="true">▾</span></button>
+    <div class="sl-more-menu" id="moreMenu" hidden>
+     <a href="/#room">دخول الغرفة</a>
+     <a href="/#partners" data-partners-link hidden>الشركاء</a>
+     <a href="/#faq">الأسئلة الشائعة</a>
+     <a href="/guide/games">دليل الألعاب</a>
+     <a href="/guide/tiktok-live">دليل تيك توك لايف</a>
+     <a href="/guide/tools">أدوات البث</a>
+    </div>
+   </div>
+  </nav>
+  <div class="sl-actions">
+   <a class="sc-pill" id="barCoins" href="/account#wallet" hidden aria-label="رصيد عملات الإسفنجة"><img src="/brand/coin-64.webp" alt="" width="28" height="28"><b data-coin-balance>0</b></a>
+   <a class="sl-btn sl-btn-sun" id="barTrial" href="/signup">ابدأ مجاناً</a>
+   <a class="sl-btn sl-btn-primary sl-user" id="barAccount" href="/login"><svg width="18" height="18" aria-hidden="true"><use href="/icons.svg?v=20261106#i-user"></use></svg><span id="barAccountLabel">تسجيل الدخول</span></a>
+  </div>
+ </div>
+</header>
+
+<main class="sp-main" id="main">
+ <section class="sp-hero" aria-labelledby="spTitle">
+  <div class="sp-id">
+   <h1 class="sp-mark" id="spTitle"><span>Sponge</span><b>Pass</b></h1>
+   <p class="sp-season"><span id="spSeason">—</span> <span class="sp-left" id="spLeft"></span></p>
+  </div>
+  <div class="sp-level" aria-live="polite">
+   <div class="sp-tier"><small>المستوى</small><b id="spTier">0</b><small id="spOf">من 50</small></div>
+   <div class="sp-xp">
+    <div class="sp-bar" role="progressbar" aria-labelledby="spXpText" aria-valuemin="0" id="spBar"><i id="spBarFill"></i></div>
+    <p id="spXpText">—</p>
+   </div>
+  </div>
+  <div class="sp-premium" id="spPremium" data-on="false">
+   <b class="sp-premium-title" id="spPremiumTitle">المسار المميز</b>
+   <p id="spPremiumText">ستة إطارات إضافية، منها «ملك الإسفنج» في المستوى الأخير، ولفّات ومكافآت في كل مستوى.</p>
+   <button type="button" class="sl-btn sl-btn-sun" id="spBuy"><img src="/brand/coin-64.webp" alt="" width="22" height="22"><span id="spBuyLabel">افتح المميز</span></button>
+   <small class="sp-balance" id="spBalance"></small>
+  </div>
+ </section>
+
+ <p class="sp-msg" id="spMsg" role="status" aria-live="polite" hidden></p>
+
+ <section class="sp-track-box" aria-labelledby="spTrackTitle">
+  <div class="sp-track-head">
+   <h2 id="spTrackTitle">المكافآت</h2>
+   <span class="sp-legend"><i class="is-premium"></i>المسار المميز<i class="is-free"></i>المسار المجاني</span>
+   <button type="button" class="sl-btn sl-btn-primary sl-btn-sm" id="spClaimAll" hidden>استلم كل الجاهز (<span id="spReady">0</span>)</button>
+  </div>
+  <div class="sp-track" id="spTrack" tabindex="0" aria-label="مستويات الموسم — مرّر أفقيًا"></div>
+ </section>
+
+ <section class="sp-frames" aria-labelledby="spFramesTitle">
+  <h2 id="spFramesTitle">إطارات الموسم</h2>
+  <p class="sp-sub">يظهر الإطار مع اسمك في قائمة اللاعبين في كل غرفة تدخلها — بعد ربط حساب TikTok أو Kick بحسابك.</p>
+  <ul class="sp-frame-grid" id="spFrames"></ul>
+ </section>
+
+ <section class="sp-how" aria-labelledby="spHowTitle">
+  <h2 id="spHowTitle">كيف تجمع نقاط الخبرة</h2>
+  <p class="sp-sub">تُحسب من الجولات الحقيقية التي يسجلها الخادم خلال الموسم — كل ٢٥٠ نقطة مستوى.</p>
+  <ul class="sp-rules" id="spRules"></ul>
+ </section>
+</main>
+
+<footer class="gl-foot"><p>© <span id="year">2026</span> سبونج لايف — <a href="/terms">شروط الاستخدام</a> · <a href="/privacy">الخصوصية</a> · <a href="/refund">الاسترداد</a></p></footer>
+</body>
+</html>
