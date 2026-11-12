@@ -53,6 +53,8 @@ export function createSfx() {
     },
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     reelTick(speed = 1) { tone(1500 + Math.min(1, speed) * 500, { dur: 0.018, type: 'square', gain: 0.035 }); noise({ dur: 0.012, gain: 0.08, freq: 5200, q: 2 }); },
+    /** The holder's last five seconds: one dry tick per second, the last one higher. */
+    countTick(left = 5) { tone(left <= 1 ? 1320 : 880, { dur: 0.07, type: 'square', gain: left <= 1 ? 0.07 : 0.05 }); },
     whoosh() { noise({ dur: 0.45, gain: 0.16, type: 'bandpass', freq: 600, to: 3200, q: 0.8, curve: 1 }); },
     picked() { tone(1318.5, { dur: 0.35, type: 'triangle', gain: 0.12 }); tone(1975.5, { at: 0.08, dur: 0.5, type: 'triangle', gain: 0.1 }); tone(2637, { at: 0.16, dur: 0.6, gain: 0.05 }); noise({ dur: 0.3, gain: 0.08, type: 'highpass', freq: 3000, curve: 1.5 }); },
     ratchet() { noise({ dur: 0.012, gain: 0.22, freq: 3400, q: 3 }); tone(2300, { dur: 0.014, type: 'square', gain: 0.025 }); },

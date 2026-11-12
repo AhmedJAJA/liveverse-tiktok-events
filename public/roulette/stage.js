@@ -49,7 +49,10 @@ export function mount(arena, { paintAvatar, frameOf }) {
   banner.append(bannerAvBox, bannerWho, ring);
   const grid = h('div', 'rr-grid'); grid.setAttribute('role', 'list');
   const toast = h('div', 'rr-toast'); toast.hidden = true; const toastTitle = h('strong', '', ''), toastLine = h('span', '', ''); toast.append(svgIcon('i-refresh'), toastTitle, toastLine);
-  gridScene.append(banner, grid, toast);
+  // the lock-in beat: a line from the shooter's tile to the target's, drawn over the grid
+  const lockSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); lockSvg.setAttribute('class', 'rr-lockline'); lockSvg.setAttribute('aria-hidden', 'true');
+  const lockLine = document.createElementNS('http://www.w3.org/2000/svg', 'line'); lockSvg.append(lockLine);
+  gridScene.append(banner, grid, toast, lockSvg);
   // draw scene
   const drawScene = h('section', 'rr-scene rr-draw-scene');
   const drawPhoto = h('div', 'rr-draw-photo'), drawAvBox = h('div', 'rr-draw-avbox'), drawRing = h('div', 'rr-draw-ring'); drawRing.append(drawAvBox, h('i', 'rr-draw-orbit'));
@@ -154,7 +157,7 @@ export function mount(arena, { paintAvatar, frameOf }) {
     paintSide(data, party);
     const scene = sceneOf(party);
     setScene(scene, party);
-    if (scene === 'grid') paintGrid(data, party);
+    if (scene === 'grid' || scene === 'lock') paintGrid(data, party);
     if (scene === 'draw') paintDraw(party);
     if (scene === 'shot') paintShot(party);
     if (scene === 'win') paintWin(data, party);
@@ -164,11 +167,13 @@ export function mount(arena, { paintAvatar, frameOf }) {
   }
   function paintSoundHint() { soundHint.hidden = !v.party || sfx.status() !== 'blocked'; }
   sfx.onChange(paintSoundHint);
+  /** The revolver's own scene starts after the lock-in beat (both on the server clock). */
+  const aimStart = (p) => (p.phaseStartedAt || 0) + (p.lockMs || 0);
   function sceneOf(p) {
     if (!p) return 'grid';
     if (p.phase === 'finished') return 'win';
     if (p.phase === 'drawing' || p.phase === 'picked') return 'draw';
-    if (p.phase === 'aim') return 'shot';
+    if (p.phase === 'aim') return now() < aimStart(p) ? 'lock' : 'shot';
     if (p.phase === 'reveal') return p.result?.outcome === 'cancel' ? 'grid' : 'shot';
     return 'grid';
   }
@@ -178,7 +183,7 @@ export function mount(arena, { paintAvatar, frameOf }) {
     stage.dataset.phase = p?.phase || 'lobby';
     const r = p?.phase === 'reveal' ? p.result : null;
     stage.dataset.tone = r ? (r.outcome === 'out' ? 'out' : r.outcome === 'empty' ? 'safe' : 'cancel') : p?.phase === 'aim' ? 'tense' : p?.phase === 'finished' ? (p.winner ? 'win' : 'ended') : '';
-    for (const [el, name] of [[gridScene, 'grid'], [drawScene, 'draw'], [shotScene, 'shot'], [winScene, 'win']]) el.classList.toggle('is-on', name === scene);
+    for (const [el, name] of [[gridScene, 'grid'], [drawScene, 'draw'], [shotScene, 'shot'], [winScene, 'win']]) el.classList.toggle('is-on', name === scene || (name === 'grid' && scene === 'lock'));
   }
 
   /* ------------------------------------------------------------------ header and side */
@@ -234,7 +239,10 @@ export function mount(arena, { paintAvatar, frameOf }) {
     const who = (x) => (x ? '#' + x.number + ' ' + nameOf(x) : '');
     switch (e.kind) {
       case 'empty': return ['safe', who(t) + ' نجا — الحجرة ' + fmtNum(e.chamber) + ' فارغة'];
-      case 'out': return ['out', who(t) + ' خرج — انطلقت الطلقة'];
+      case 'out':
+        if ((e.how === 'chat' || e.how === 'host') && ho && t && ho.number !== t.number) return ['out', who(ho) + ' أقصى ' + who(t) + ' — انطلقت الطلقة'];
+        if (e.how === 'timeout') return ['out', who(t) + ' خرج — اختاره الخادم بعد انتهاء المهلة'];
+        return ['out', who(t) + ' خرج — انطلقت الطلقة'];
       case 'timeout': return ['info', 'انتهت مهلة ' + who(ho) + (e.rule === 'skip' ? ' — أُلغي الدور' : ' — اختار الخادم هدفًا عشوائيًا')];
       case 'cancel': return ['info', 'ألغى المضيف دور ' + who(ho)];
       case 'random': return ['info', 'هدف عشوائي لدور ' + who(ho)];
@@ -275,13 +283,13 @@ export function mount(arena, { paintAvatar, frameOf }) {
 
   /* ------------------------------------------------------------------ the grid */
   function playersList(data, p) {
-    if (p) return (p.players || []).map((x) => ({ ...playerOf(x.n), number: x.n, alive: !!x.a, shots: x.s || 0, survived: x.v || 0, outTurn: x.o || null, host: !!x.h }));
+    if (p) return (p.players || []).map((x) => ({ ...playerOf(x.n), number: x.n, alive: !!x.a, shots: x.s || 0, survived: x.v || 0, outTurn: x.o || null, host: !!x.h, by: x.b ?? null, kills: x.k || 0 }));
     return [...v.roster.values()].map((x) => ({ ...x, alive: true, shots: 0, survived: 0, outTurn: null }));
   }
   function paintGrid(data, p) {
     const list = playersList(data, p);
     const C = p?.rules?.chambers || Number(data.flow?.settings?.chambers) || 2, spin = (p?.rules?.cylinder || data.flow?.settings?.cylinder) === 'spin';
-    const holderN = p?.holder?.number ?? null, choose = p?.phase === 'choose';
+    const holderN = p?.holder?.number ?? null, choose = p?.phase === 'choose', targetN = p?.phase === 'aim' ? p.target?.number ?? null : null;
     // the holder's banner while they choose
     banner.hidden = !choose;
     if (choose && p.holder) {
@@ -301,7 +309,7 @@ export function mount(arena, { paintAvatar, frameOf }) {
     const cancel = p?.phase === 'reveal' && p.result?.outcome === 'cancel';
     toast.hidden = !cancel;
     if (cancel) { toastTitle.textContent = 'أُلغي الدور'; toastLine.textContent = p.result.reason === 'timeout' ? 'انتهت مهلة الاختيار — لم يُضغط الزناد على أحد' : 'ألغى المضيف هذا الدور'; }
-    const sig = JSON.stringify([list.map((x) => [x.number, x.name, x.avatar || '', x.alive, x.shots, x.survived, x.host]), holderN, C, spin, p?.display?.showNames, p?.display?.showFrames, Object.keys(data.frames || {}).length, Object.keys(data.skins || {}).length]);
+    const sig = JSON.stringify([list.map((x) => [x.number, x.name, x.avatar || '', x.alive, x.shots, x.survived, x.host]), holderN, targetN, C, spin, p?.display?.showNames, p?.display?.showFrames, Object.keys(data.frames || {}).length, Object.keys(data.skins || {}).length]);
     if (sig === v.gridSig) { layoutGrid(list.length); return; }
     v.gridSig = sig;
     const seen = new Set();
@@ -323,7 +331,8 @@ export function mount(arena, { paintAvatar, frameOf }) {
       nameplate(t.name, x, 'rr-name');
       if (t.wasAlive && !x.alive && v.gridSig) { t.el.classList.remove('is-just-out'); void t.el.offsetWidth; t.el.classList.add('is-just-out'); }
       t.wasAlive = x.alive;
-      t.el.classList.toggle('is-holder', x.number === holderN && !!p && ['choose', 'picked'].includes(p.phase));
+      t.el.classList.toggle('is-holder', x.number === holderN && !!p && ['choose', 'picked', 'aim'].includes(p.phase));
+      t.el.classList.toggle('is-target', x.number === targetN);
       t.el.classList.toggle('is-host', !!x.host);
       t.el.classList.toggle('is-bot', !!x.bot);
       // pips: one per chamber of this player's cylinder (the fired ones lit), or — with a spun cylinder — one per survived pull
@@ -348,6 +357,7 @@ export function mount(arena, { paintAvatar, frameOf }) {
     if (f.kind === 'self') return '#' + f.number + ' هو رقمك — اكتب رقم لاعب آخر';
     if (f.kind === 'out') return '#' + f.number + ' خرج من اللعبة — اختر لاعبًا ما زال فيها';
     if (f.kind === 'missing') return 'لا يوجد لاعب برقم ' + f.number + ' — انظر الأرقام على الشاشة';
+    if (f.kind === 'protected') return '#' + f.number + ' كان الهدف في الدور السابق — اختر لاعبًا آخر';
     if (f.kind === 'ambiguous') return 'اكتب رقمًا واحدًا فقط (كتبت ' + (f.numbers || []).join(' و ') + ')';
     return '';
   }
@@ -471,8 +481,8 @@ export function mount(arena, { paintAvatar, frameOf }) {
     const r = p.phase === 'reveal' ? p.result : null;
     const C = p.rules?.chambers || 2, idx = p.chamber?.index ?? (r?.chamber || 1);
     const top = Math.max(0, (idx || 1) - 1);
-    const aimDur = Math.max(1, (p.endsAt || 0) - (p.phaseStartedAt || 0));
-    const u = p.phase === 'aim' ? clamp01((tNow - p.phaseStartedAt) / aimDur) : 1;
+    const aimDur = Math.max(1, (p.endsAt || 0) - aimStart(p));
+    const u = p.phase === 'aim' ? clamp01((tNow - aimStart(p)) / aimDur) : 1;
     const t = p.phase === 'reveal' ? tNow - p.phaseStartedAt : -1;
     const outcome = r?.reason === 'host' ? 'host' : r?.outcome || null;
     // the 2D cylinder face turns with the 3D one
@@ -481,11 +491,12 @@ export function mount(arena, { paintAvatar, frameOf }) {
     // cues on the timeline (only when they happen now)
     if (p.phase === 'aim') {
       const notch = drumNotch(angle, C);
-      if (v.lastNotch != null && notch !== v.lastNotch && fresh(p, aimDur + 200)) sfx.ratchet();
+      const live = fresh(p, (p.lockMs || 0) + aimDur + 200);
+      if (v.lastNotch != null && notch !== v.lastNotch && live) sfx.ratchet();
       v.lastNotch = notch;
-      if (u >= AIM.cock[0]) cue('cock', () => sfx.cock(), fresh(p, aimDur));
-      if (u >= 0.76) cue('hb1', () => sfx.heartbeat(), fresh(p, aimDur));
-      if (u >= 0.9 && aimDur > 2600) cue('hb2', () => sfx.heartbeat(), fresh(p, aimDur));
+      if (u >= AIM.cock[0]) cue('cock', () => sfx.cock(), live);
+      if (u >= 0.76) cue('hb1', () => sfx.heartbeat(), live);
+      if (u >= 0.9 && aimDur > 2600) cue('hb2', () => sfx.heartbeat(), live);
     }
     if (p.phase === 'reveal' && t >= REVEAL.trigger) {
       const ok = t < REVEAL.trigger + 600;
@@ -519,7 +530,7 @@ export function mount(arena, { paintAvatar, frameOf }) {
     if (w) {
       avatar(winAvBox, w, { cls: 'rr-win-av' });
       nameplate(winName, w, 'rr-win-plate');
-      winLine.textContent = 'آخر من بقي — ' + (w.survived ? 'نجا من المسدس ' + ar(w.survived, 'مرة', 'مرتين', 'مرات', 'مرة') : 'لم يُصبه المسدس مرة');
+      winLine.textContent = (w.kills ? 'أقصى ' + ar(w.kills, 'لاعبًا واحدًا', 'لاعبَين', 'لاعبين', 'لاعبًا') + ' • ' : '') + 'آخر من بقي — ' + (w.survived ? 'نجا من المسدس ' + ar(w.survived, 'مرة', 'مرتين', 'مرات', 'مرة') : 'لم يُصبه المسدس مرة');
       say('الفائز ' + nameOf(w));
     } else { winName.replaceChildren(h('strong', 'rr-win-plate', 'انتهت المباراة')); winName.dataset.k = ''; winLine.textContent = 'أوقف المضيف المباراة قبل أن يبقى لاعب واحد — لا فائز في هذه المباراة'; }
     const s = p.stats || {};
@@ -528,7 +539,12 @@ export function mount(arena, { paintAvatar, frameOf }) {
       .map(([b, small]) => { const x = h('span', 'rr-win-stat'); x.append(h('b', 'num', b), h('small', '', small)); return x; }));
     // the final ranking after the winner: the last ones to go out
     const outs = (p.players || []).filter((x) => !x.a && x.o).sort((a, b) => b.o - a.o).slice(0, 4);
-    winRank.replaceChildren(...outs.map((x, i) => { const pl = playerOf(x.n), li = h('li', ''), avb = h('div', 'rr-rank-av'); avatar(avb, pl, { frame: false, cls: 'rr-rank-photo' }); li.append(h('b', 'num', String(i + 2)), avb, h('bdi', '', nameOf(pl))); return li; }));
+    winRank.replaceChildren(...outs.map((x, i) => {
+      const pl = playerOf(x.n), li = h('li', ''), avb = h('div', 'rr-rank-av'); avatar(avb, pl, { frame: false, cls: 'rr-rank-photo' });
+      // who eliminated them: the holder who chose, or the server after a silent holder
+      const by = x.b != null ? 'أقصاه ' + nameOf(playerOf(x.b)) : 'اختيار الخادم';
+      const txt = h('span', 'rr-rank-txt'); txt.append(h('bdi', '', nameOf(pl)), h('small', 'rr-rank-by', by));
+      li.append(h('b', 'num', String(i + 2)), avb, txt); return li; }));
     winRank.hidden = !outs.length || !w;
     winNote.textContent = p.demo ? 'مباراة تجريبية — لاعبون تجريبيون، لا تدخل الترتيب' : '';
     // confetti (count by «قوة المؤثرات»)
@@ -575,12 +591,26 @@ export function mount(arena, { paintAvatar, frameOf }) {
     // the winner's trophy turns gently: full rate at first, then a light 24 fps
     if (p.phase === 'finished' && tNow - (p.phaseStartedAt || tNow) > 4000 && performance.now() - v.lastFrameAt < 41) { if (needsLoop()) v.raf = requestAnimationFrame(loop); return; }
     v.lastFrameAt = performance.now();
+    // the lock-in beat ends on the server clock: every screen switches to the revolver at the same moment
+    if (p.phase === 'aim') { const want = sceneOf(p); if (want !== v.scene) { setScene(want, p); if (want === 'shot') paintShot(p); } }
+    if (v.scene === 'lock') frameLock();
+    else lockSvg.classList.remove('is-on');
     if (v.scene === 'draw') frameReel(p, tNow);
     else if (v.scene === 'shot') frameShot(p, tNow);
     else if (v.scene === 'win') frameWin(p, tNow);
     else { flashEl.style.opacity = '0'; main.style.transform = ''; }
     if (p.phase === 'choose' || (p.phase === 'ready' && p.endsAt)) paintCountdown(p, tNow);
     if (needsLoop()) v.raf = requestAnimationFrame(loop);
+  }
+  /** The line from the shooter's tile to the target's (tiles move with the layout, so it is placed every frame). */
+  function frameLock() {
+    const a = grid.querySelector('.rr-tile.is-holder .rr-tile-ring'), b = grid.querySelector('.rr-tile.is-target .rr-tile-ring');
+    if (!a || !b) { lockSvg.classList.remove('is-on'); return; }
+    const box = gridScene.getBoundingClientRect(), ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    lockSvg.setAttribute('viewBox', '0 0 ' + Math.max(1, box.width).toFixed(0) + ' ' + Math.max(1, box.height).toFixed(0));
+    lockLine.setAttribute('x1', (ra.left + ra.width / 2 - box.left).toFixed(1)); lockLine.setAttribute('y1', (ra.top + ra.height / 2 - box.top).toFixed(1));
+    lockLine.setAttribute('x2', (rb.left + rb.width / 2 - box.left).toFixed(1)); lockLine.setAttribute('y2', (rb.top + rb.height / 2 - box.top).toFixed(1));
+    lockSvg.classList.add('is-on');
   }
   /** «ينتهي الاختيار خلال …» (and the automatic mode's next draw), on the server clock. */
   function paintCountdown(p, tNow) {
@@ -590,6 +620,8 @@ export function mount(arena, { paintAvatar, frameOf }) {
     if (ringNum.textContent !== String(left)) ringNum.textContent = String(left);
     ring.style.setProperty('--p', (clamp01((p.endsAt - tNow) / 1000 / total) * 100).toFixed(1));
     ring.classList.toggle('is-urgent', left <= 5);
+    // the holder's last five seconds tick (not while the chat is down: the countdown is frozen then)
+    if (p.phase === 'choose' && !p.chatDown && left >= 1 && left <= 5) cue('cd' + left, () => sfx.countTick(left), true);
     if (p.phase === 'ready' && p.rules?.autoRun === 'auto' && !p.waitingHost) sub.textContent = 'السحب التالي يبدأ تلقائيًا خلال ' + left + ' ث';
   }
   function kick() { if (!v.raf && needsLoop()) v.raf = requestAnimationFrame(loop); }
