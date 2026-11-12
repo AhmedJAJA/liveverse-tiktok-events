@@ -94,6 +94,30 @@ test('lock-in beat, kill feed, protected target and the winner\'s screen — a w
     if (w.kills) assert.match(await page.textContent('.rr-win-line'), /أقصى/);
     await page.screenshot({ path: path.join(os.tmpdir(), 'rr-p1-winner.png') });
     assert.ok(lockSeen && killSeen, 'lock-in and kill feed seen');
+    // the protected-target answer needs a turn where the previous target is still in and does not hold the turn:
+    // the draw is random, so a match may never offer one — play more matches until one does
+    for (let m = 0; !protectedSeen && m < 6; m++) {
+      await chatMatch(s, { chooseSeconds: 45, drawSpeed: 'fast', resultSeconds: 3, repeatTarget: 'block' });
+      let prev = null, g2 = 0;
+      while (!protectedSeen && g2++ < 40) {
+        const p0 = await s.until(async () => { const x = (await s.state()).party; return ['ready', 'finished'].includes(x?.phase) && x; }, 20_000, 'ready');
+        if (p0.phase === 'finished') break;
+        await s.api('roulette', { cmd: 'draw', requestId: 'protect-' + m + '-' + g2 });
+        const c = await s.until(async () => { const x = (await s.state()).party; return x?.phase === 'choose' && x; }, 15_000, 'choose');
+        const holder = await nameOf(s, c.holder.number);
+        const others = c.players.filter((x) => x.a && x.n !== c.holder.number).map((x) => x.n);
+        if (prev && others.includes(prev) && others.length > 1) {
+          await say(s, holder, String(prev));
+          await page.waitForFunction(() => /الدور السابق/.test(document.querySelector('.rr-banner-line')?.textContent || ''), null, { timeout: 5000 });
+          assert.equal((await s.state()).party.phase, 'choose', 'the protected number does not end the choice');
+          protectedSeen = true;
+        }
+        const target = others.find((n) => n !== prev) ?? others[0];
+        await say(s, holder, String(target));
+        await s.until(async () => { const x = (await s.state()).party; return ['reveal', 'finished'].includes(x?.phase) && x; }, 20_000, 'reveal');
+        prev = target;
+      }
+    }
     assert.ok(protectedSeen, 'the protected-target answer was seen');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); await s.stop(); }
