@@ -186,3 +186,9 @@ html.sl-menu-open{overflow:hidden}
 @keyframes sl-fade{from{opacity:0}to{opacity:1}}
 @keyframes sl-slide{from{transform:translateX(100%)}to{transform:none}}
 @media (prefers-reduced-motion:reduce){.sl-menu,.sl-menu-panel,.sl-more-menu{animation:none}.sl-btn,.sl-icon-btn,.sl-card-lift{transition:none}}
+/* «SpongePass» in the site bar: the season pass is the one sponge-yellow link */
+.sl-nav .sl-nav-pass{color:var(--sl-yellow);font-weight:900}
+.sl-nav .sl-nav-pass[aria-current=page]{color:var(--sl-yellow-hi)}
+/* «SpongePass»: a season badge next to a player's name (public profile) */
+.pf-pass-badge{display:inline-flex;align-items:center;gap:6px;margin-inline-start:8px;padding:3px 12px;border-radius:999px;background:linear-gradient(180deg,#FFF27D,var(--sl-yellow));color:#2B2000;font-size:13px;font-weight:900;text-decoration:none;vertical-align:middle;box-shadow:0 0 14px -4px rgba(255,214,42,.9)}
+.pf-pass-badge:focus-visible{outline:3px solid #fff;outline-offset:2px}

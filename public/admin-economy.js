@@ -133,7 +133,9 @@
   });
 
   /* name frames */
-  const EFFECTS = [['none', 'بدون'], ['cyan', 'سماوي'], ['gold', 'لمعة ذهبية'], ['saudi', 'أخضر سعودي'], ['ice', 'جليد'], ['flame', 'لهب'], ['crown', 'تاج'], ['royal', 'ملكي']];
+  const EFFECTS = [['none', 'بدون'], ['cyan', 'سماوي'], ['gold', 'لمعة ذهبية'], ['saudi', 'أخضر سعودي'], ['ice', 'جليد'], ['flame', 'لهب'], ['crown', 'تاج'], ['royal', 'ملكي'],
+    // SpongePass — season 1
+    ['tide', 'المدّ'], ['bubble', 'فقاعات'], ['coral', 'مرجان'], ['abyss', 'الأعماق'], ['sunken', 'كنز الغارقة'], ['pearl', 'لؤلؤة'], ['kraken', 'أخطبوط'], ['neon_sponge', 'إسفنجة النيون'], ['sponge_king', 'ملك الإسفنج']];
   async function frames() {
     const tb = $('frameRows');
     try {

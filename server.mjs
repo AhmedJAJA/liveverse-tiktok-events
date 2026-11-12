@@ -22,6 +22,7 @@ import { createPool, migrate } from './src/db.mjs';
 import { PromoMirror, SessionMirror } from './src/persist.mjs';
 import { Platform, PlatformError, canonicalEmail, PLANS as PLATFORM_PLANS, AVATARS, privacyOf, weekOf } from './src/platform.mjs';
 import { createMailer, createGateway } from './src/services.mjs';
+import { SpongePass, PassError } from './src/spongepass.mjs';
 import { Economy, EconomyError, hashDevice, hashIp, WHATSAPP_URL, DAILY_REWARD, REFERRAL_REWARD, REFERRAL_CAP } from './src/economy.mjs';
 import { GoogleVerifier, GoogleOAuth } from './src/google.mjs';
 import { Providers, TokenBox, OAuthError, pkcePair } from './src/oauth.mjs';
@@ -35,7 +36,7 @@ const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
 if (!process.env.ADMIN_TOKEN) { if (process.env.NODE_ENV === 'production') console.warn('ADMIN_TOKEN is unset; configure it in the hosting environment.'); else console.log('\n[LOCAL ADMIN TOKEN] ' + authToken + '\nSet ADMIN_TOKEN in hosting environment before publishing.'); }
 const safeToken = Buffer.from(authToken, 'utf8');
 const matchesToken = (raw) => { const incoming = Buffer.from(String(raw||''), 'utf8'); return incoming.length === safeToken.length && timingSafeEqual(incoming, safeToken); };
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8', '.glb': 'model/gltf-binary' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg' };
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.SKY_DATA_DIR || path.join(here, 'data', 'runtime');
 const COOKIE = 'sky_session';
@@ -248,7 +249,7 @@ for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((
 /* PostgreSQL (DATABASE_URL): accounts with permanent IDs, trials, subscriptions, payments, admin audit — and
    the promo codes and sessions above are written through to it, so nothing depends on the host's disk. */
 const pool = createPool();
-let platform = null, economy = null, frames = null;
+let platform = null, economy = null, frames = null, spongePass = null;
 /* «قيد التطوير»: one switch per game (src/game-status.mjs). Every game is under development until the owner releases it. */
 const rouletteStore = new RouletteStore(null); // attached to PostgreSQL below
 const gameStatus = new GameStatus({ modes: ALL_GAMES.map((g) => g.mode), defaultStatus: process.env.SKY_GAMES_DEFAULT || 'dev', testers: process.env.SKY_GAME_TESTERS || '' });
@@ -263,6 +264,8 @@ if (pool) {
   await platform.init();
   economy = new Economy({ pool, platform });
   frames = new FrameStore({ pool });
+  spongePass = new SpongePass({ pool, economy, frames });
+  await spongePass.seed();
   for (const code of String(process.env.SPONGE_PROMO_CODES || '').split(',').map((c) => c.trim()).filter(Boolean)) promos.seed(code);
 } else console.warn('[db] DATABASE_URL is not set: games and promo codes work; accounts, trials and subscriptions are off.');
 const appUrl = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:' + (Number(process.env.PORT) || 3000)).replace(/\/$/, '');
@@ -984,7 +987,7 @@ const meLimiter = new RateLimiter({ limit: 60, windowMs: 10 * 60_000 });
 const findLimiter = new RateLimiter({ limit: 20, windowMs: 60_000 });
 const clearCookie = (req, res) => res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${isHttps(req) ? '; Secure' : ''}`);
 const platformOff = (res) => json(res, 503, { error: 'الحسابات غير مفعّلة على هذا الخادم بعد (قاعدة البيانات غير مهيأة). يمكنك الدخول بالرمز الترويجي.', disabled: true });
-const pErr = (res, err) => { if (err instanceof PlatformError || err instanceof EconomyError) return json(res, err.status, { error: err.message, ...(err.fields ? { fields: err.fields } : {}) }); throw err; };
+const pErr = (res, err) => { if (err instanceof PlatformError || err instanceof EconomyError || err instanceof PassError) return json(res, err.status, { error: err.message, ...(err.fields ? { fields: err.fields } : {}) }); throw err; };
 
 async function handleAuth(action, req, res) {
   if (action === 'me' && req.method === 'GET') {
@@ -1108,6 +1111,7 @@ async function handleMe(action, req, res) {
     if (action === 'invites' && req.method === 'GET') { const u = platform.cached(userId).user; return json(res, 200, await economy.invitations(userId, u.public_id, appUrl)); }
     if (action === 'skins' && req.method === 'GET') return json(res, 200, await platform.skins(userId));
     if (action === 'frames' && req.method === 'GET') return json(res, 200, await frames.list(userId));
+    if (action === 'pass' && req.method === 'GET') return json(res, 200, await spongePass.status(userId));
     if (action === 'friends' && req.method === 'GET') return json(res, 200, await platform.community(userId));
     if (action === 'find' && req.method === 'GET') {
       if (!findLimiter.hit('find:' + userId)) return json(res, 429, { error: 'بحث كثير — انتظر دقيقة' });
@@ -1134,6 +1138,9 @@ async function handleMe(action, req, res) {
     if (action === 'skin-equip') return json(res, 200, { ok: true, ...(await platform.equipSkin(userId, body.id)) });
     if (action === 'frame-claim') { const r = await frames.claim(userId, body.id); frameCache.clear(); return json(res, 200, { ok: true, ...r }); }
     if (action === 'frame-equip') { const r = await frames.equip(userId, body.id === null ? null : String(body.id || '')); frameCache.clear(); for (const room of rooms.values()) room.scheduleBroadcast(); return json(res, 200, { ok: true, ...r }); }
+    /* ---- «SpongePass» (tiers come from the server's statistics; each reward is taken once) ---- */
+    if (action === 'pass-claim') { const r = await spongePass.claim(userId, body.all === true ? { all: true } : { tier: Number(body.tier), track: body.track === 'premium' ? 'premium' : 'free' }); if (r.granted.some((g) => g.kind === 'frame')) frameCache.clear(); return json(res, 200, { ok: true, ...r }); }
+    if (action === 'pass-buy') return json(res, 200, { ok: true, ...(await spongePass.buyPremium(userId)) });
     if (action === 'skin-buy') { await economy.buySkin(userId, body.id); return json(res, 200, { ok: true, ...(await platform.skins(userId)), wallet: await economy.wallet(userId) }); }
     /* ---- «المجتمع» (the other account is named only by its SPG ID; who I am comes from the session) ---- */
     if (action === 'friend-request') return json(res, 200, { ok: true, ...(await platform.friendRequest(userId, body.id)) });
@@ -1248,6 +1255,7 @@ async function handleManage(action, req, res) {
       if (action === 'wheel') return json(res, 200, await economy.wheelReport());
       if (action === 'skins') return json(res, 200, { skins: await platform.adminSkins() });
       if (action === 'frames') return json(res, 200, { frames: await frames.admin() });
+      if (action === 'pass') return json(res, 200, await spongePass.adminOverview());
       if (action === 'purchases') return json(res, 200, { purchases: await economy.adminPurchases(url.searchParams.get('status') || ''), packages: await economy.packages() });
       if (action === 'codes') return json(res, 200, { codes: promos.list(), levels: PROMO_LEVELS, vouchers: await platform.voucherStats() });
       if (action === 'games') return json(res, 200, { games: ALL_GAMES.map((g) => ({ ...gameStatus.view(g.mode), title: g.title, category: g.categoryLabel })), defaultStatus: gameStatus.default });
@@ -1278,6 +1286,7 @@ async function handleManage(action, req, res) {
     if (action === 'wallet-adjust') { const w = await economy.adjust(userId, { amount: Number(body.amount), bucket: body.bucket === 'purchased' ? 'purchased' : 'earned', reason: body.reason, actor: admin.name }); await log('wallet-adjust', { amount: Number(body.amount), reason: String(body.reason || '').slice(0, 200) }); return json(res, 200, { ok: true, wallet: w }); }
     if (action === 'referral-decide') { const r = await economy.decideReferral(userId, body.approve === true, admin.name, body.reason); return json(res, 200, { ok: true, result: r }); }
     if (action === 'password-reset-link') { const t = await platform.createPasswordReset(userId); await log('password-reset-link'); return json(res, 200, { ok: true, link: baseFor(req) + '/reset?token=' + t, expiresInMinutes: 30 }); }
+    if (action === 'pass-premium') { const r = await spongePass.setPremium(userId, body.on === true, admin.name); await log('pass-premium', { on: body.on === true }); return json(res, 200, { ok: true, ...r }); }
     if (action === 'frame-grant') { const r = await frames.grant(userId, body.frame, admin.name); frameCache.clear(); await log('frame-grant', { frame: String(body.frame || '').slice(0, 32) }); return json(res, 200, r); }
     if (action === 'skin-grant') { const r = await platform.grantSkin(userId, body.skin, admin.name); await log('skin-grant', { skin: String(body.skin || '').slice(0, 32) }); return json(res, 200, r); }
     if (action === 'grant') { const r = await platform.grant(userId, body); await log('subscription-grant', { days: Number(body.days), plan: body.plan || 'manual', note: String(body.note || '').slice(0, 200) }); return json(res, 200, { ok: true, access: r }); }
@@ -1422,11 +1431,13 @@ function sweepLive() {
   }
 }
 
-const STATIC = new Set(['shared-theme.css','roulette.css','site-header.js','game-soon.html','game-soon.js','game-soon.css','setup.css','games.html','games.js','games.css','game-icons.svg','profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css',
+const STATIC = new Set(['shared-theme.css','roulette.css','site-header.js','game-soon.html','game-soon.js','game-soon.css','setup.css','games.html','games.js','games.css','game-icons.svg','profile.html','profile.js','dash.css','index.html','home.html','home.js','home.css','pages.css','auth.html','auth.js','me.html','me.js','admin.html','admin.js','privacy.html','terms.html','refund.html','google.js','studio.html','studio.js','studio.css','event.html','event.js','event.css','bomb.html','bomb.js','bomb.css','draw.html','draw.js','draw.css','play.html','play.js','play.css','role.html','role.js','sponge.css','sponge.js','sponge-ui.js','sponge-mark.svg','seafloor.svg','draw-mark.svg','icons.svg','royal-core.css','royal-studio.css','royal-broadcast.css','royal-luxe.css','royal-arena.css','royal-dash.css','aurum.css','aurum.js','session.js','account.js','account.css','mascot.js','overlay.html','app.js','overlay.js','favicon.svg','tools.html','tools.js','tools.css','tool.html','tool.js','tool.css','guide-games.html','guide-tiktok.html','guide-tools.html','skin-viewer.js','bottom-nav.js','bottom-nav.css','coins.js','coins.css','wheel.js','wheel.css','store.js','store.css','admin-economy.js','frames.js','frames.css','lobby.css','me-frames.js','game-ui.css','auth.css','pass.html','pass.js','pass.css',
   ...ALL_GAMES.map((g) => g.cover.slice(1)),
   // game art, legacy covers and flags: every file in these folders is public
   ...['cards', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   // 3D skins (optimized GLB + poster) and the pinned, self-hosted three.js (no CDN — the CSP allows only 'self')
+  // the roulette's recorded sound effects (docs/ROULETTE_P3_AUDIO.md)
+  ...(() => { try { return fs.readdirSync(path.join(here, 'public', 'roulette', 'audio')).filter((f) => /^[\w-]+\.mp3$/.test(f)).map((f) => 'roulette/audio/' + f); } catch { return []; } })(),
   ...['skins', 'vendor/three', 'roulette'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(glb|webp|js|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt']);
 
@@ -1457,6 +1468,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname.startsWith('/api/u/') && req.method === 'GET') {
       if (!platform) return json(res, 404, { error: 'غير موجود' });
       const p = await platform.publicProfile(decodeURIComponent(url.pathname.slice(7)), accountSession(req)?.userId || null);
+      if (p && spongePass) { const id = await platform.userByPublicId(p.publicId); p.passBadges = id ? await spongePass.badges(id) : []; } // season badges are public
       return p ? json(res, 200, p) : json(res, 404, { error: 'لا يوجد حساب بهذا المعرف' });
     }
     const fu = /^\/frames\/u\/([a-z0-9_]{2,32})-(avatar|plate)\.(png|webp)$/.exec(url.pathname);
@@ -1589,12 +1601,13 @@ const server = http.createServer(async (req, res) => {
   if ((url.pathname === '/login' || url.pathname === '/signup') && accountSession(req)) {
     const intent = url.searchParams.get('intent'), next = url.searchParams.get('next') || '';
     const a = accountView(accountSession(req).userId);
-    const to = /^\/(account|game\/[a-z]+|admin)(?:[/?#]|$)/.test(next) ? next : intent === 'studio' || intent === 'trial' ? GAMES_LIST : '/account';
+    const to = /^\/(account|pass|game\/[a-z]+|admin)(?:[/?#]|$)/.test(next) ? next : intent === 'studio' || intent === 'trial' ? GAMES_LIST : '/account';
     res.writeHead(302, { Location: to, 'Cache-Control': 'no-store' }); return res.end();
   }
   if (url.pathname === '/admin' && !adminActor(req)) { res.writeHead(302, { Location: '/login?next=/admin', 'Cache-Control': 'no-store' }); return res.end(); }
+  if (url.pathname === '/pass' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/pass', 'Cache-Control': 'no-store' }); return res.end(); }
   if (url.pathname === '/account' && !accountSession(req)) { res.writeHead(302, { Location: '/login?next=/account' + encodeURIComponent(url.search), 'Cache-Control': 'no-store' }); return res.end(); }
-  const fileMap = { '/': 'home.html', '/games': 'games.html', '/signup': 'auth.html', '/login': 'auth.html', '/forgot': 'auth.html', '/reset': 'auth.html', '/account': 'me.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/og-512.webp' };
+  const fileMap = { '/': 'home.html', '/games': 'games.html', '/signup': 'auth.html', '/login': 'auth.html', '/forgot': 'auth.html', '/reset': 'auth.html', '/account': 'me.html', '/pass': 'pass.html', '/admin': 'admin.html', '/privacy': 'privacy.html', '/terms': 'terms.html', '/refund': 'refund.html', '/event': 'event.html', '/bomb': 'bomb.html', '/dashboard': 'index.html', '/overlay': 'overlay.html', '/draw': 'draw.html', '/play': 'play.html', '/role': 'role.html', '/tools': 'tools.html', '/tool': 'tool.html', '/guide/games': 'guide-games.html', '/guide/tiktok-live': 'guide-tiktok.html', '/guide/tools': 'guide-tools.html', '/favicon.ico': 'brand/favicon-64.png', '/apple-touch-icon.png': 'brand/sponge-192.png', '/og-image.webp': 'brand/og-512.webp' };
   const relative = fileMap[url.pathname] || (gamePage ? 'studio.html' : null) || (/^\/u\/SPG-[A-Z0-9]{6}$/i.test(url.pathname) ? 'profile.html' : url.pathname.slice(1));
   // Explicit whitelist: no path traversal, hidden files or project files exposed.
   if (!STATIC.has(relative)) return json(res, 404, { error: 'Not found' });

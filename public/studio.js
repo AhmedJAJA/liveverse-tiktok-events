@@ -607,19 +607,23 @@
       const key = p.number + '\u0000' + p.name, isNew = !lbSeen.has(key) && !lbFirst;
       lbSeen.add(key); if (isNew) joined++;
       const fr = !p.bot && !p.manual || p.host ? frames['n:' + p.number] : null; // frames only for verified linked accounts
-      const li = el('li', 'lb-player' + (isNew ? ' is-new' : '') + (p.host ? ' is-host' : '') + (p.bot ? ' is-bot' : ''));
+      // a slim nameplate: the avatar (in its frame) overlapping the plate's edge, the name, where the player comes from,
+      // the player's number; the remove button sits outside the plate
+      const li = el('li', 'lb-player' + (isNew ? ' is-new' : '') + (p.host ? ' is-host' : '') + (p.bot ? ' is-bot' : '') + (fr ? ' has-frame' : ''));
+      const plate = el('span', 'lb-plate');
       const who = el('span', 'lb-who');
       who.append(window.SpongeFrames ? SpongeFrames.plate(p.name, fr) : el('bdi', '', p.name));
-      const tags = el('span', 'lb-tags');
-      tags.append(el('span', 'lb-tag', '#' + num(p.number)));
-      if (p.host) tags.append(el('span', 'lb-tag is-host', 'المضيف'));
-      else if (p.bot) tags.append(el('span', 'lb-tag is-bot', 'تجريبي'));
-      else if (p.manual) tags.append(el('span', 'lb-tag is-manual', 'يدوي'));
-      else if (c.platform && PICON[c.platform]) tags.append(el('span', 'lb-tag', PICON[c.platform]));
-      if (fr) tags.append(el('span', 'lb-tag', fr.name));
-      who.append(tags);
+      const src = p.host ? ['is-host', 'المضيف'] : p.bot ? ['is-bot', 'تجريبي'] : p.manual ? ['is-manual', 'يدوي'] : c.platform && PICON[c.platform] ? ['', PICON[c.platform]] : null;
+      if (src || fr) {
+        const tags = el('span', 'lb-tags');
+        if (src) tags.append(el('span', 'lb-tag ' + src[0], src[1]));
+        if (fr) tags.append(el('span', 'lb-tag is-frame', fr.name));
+        who.append(tags);
+      }
       const av = window.SpongeFrames ? SpongeFrames.avatar(lbAvatar(p), fr) : lbAvatar(p);
-      li.append(av, who);
+      const n = el('span', 'lb-num', num(p.number)); n.setAttribute('aria-label', 'رقم ' + num(p.number));
+      plate.append(av, who, n);
+      li.append(plate);
       if (!roundOn) {
         const x = el('button', 'lb-rm'); x.type = 'button'; x.dataset.number = p.number; x.dataset.name = p.name; x.setAttribute('aria-label', 'إزالة ' + p.name);
         x.innerHTML = ''; const ic = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); ic.setAttribute('class', 'i'); ic.setAttribute('aria-hidden', 'true');
@@ -636,7 +640,8 @@
     $('lbReg').dataset.open = String(open);
     $('lbRegText').textContent = open ? 'التسجيل مفتوح' : f.state === 'LOBBY_READY' ? 'اللوبي جاهز — التسجيل لم يُفتح' : 'التسجيل مغلق';
     $('lbRegSub').textContent = open ? 'يُقبل كل من يكتب «' + word + '»' : 'لا يُقبل لاعبون جدد من التعليقات';
-    $('lbRegToggle').textContent = open ? 'إغلاق التسجيل' : 'فتح التسجيل';
+    $('lbRegToggleText').textContent = open ? 'إغلاق التسجيل' : 'فتح التسجيل';
+    $('lbRegToggle').dataset.open = String(open);
     $('lbRegToggle').disabled = busy || roundOn;
     const seated = !!reg.hostSeated;
     $('lbSeat').setAttribute('aria-pressed', String(seated)); $('lbSeatLabel').textContent = seated ? 'إلغاء مشاركتي' : 'دخّلني كلاعب';

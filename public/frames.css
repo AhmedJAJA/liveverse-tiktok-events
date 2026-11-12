@@ -39,6 +39,42 @@
 [data-effect=royal]>.fr-crown{width:56%;top:-38%}
 .fr-plate[data-effect=royal]{color:#FFF3C4;background:radial-gradient(60% 120% at 50% 0%,rgba(255,214,42,.25),transparent 70%),linear-gradient(90deg,#2A0F5E,#5B2DB8 50%,#2A0F5E);border-color:var(--sl-yellow);box-shadow:0 0 0 1px rgba(177,140,255,.6) inset,0 0 16px -3px rgba(177,140,255,.95)}
 
+/* =============== SpongePass — season 1: the undersea set (src/spongepass.mjs, PASS_FRAMES) =============== */
+/* ---- bubble: «فقاعات القاع» (common) ---- */
+[data-effect=bubble]>.fr-ring{border:2.5px solid #3FE0C5;box-shadow:0 0 9px rgba(63,224,197,.7)}
+[data-effect=bubble]>.fr-spark{inset:-12px -4px 0;background:radial-gradient(circle at 18% 70%,rgba(220,255,250,.9) 0 2px,transparent 2.6px),radial-gradient(circle at 80% 55%,rgba(220,255,250,.8) 0 2.5px,transparent 3.1px),radial-gradient(circle at 62% 85%,rgba(220,255,250,.7) 0 1.6px,transparent 2.2px),radial-gradient(circle at 30% 30%,rgba(220,255,250,.6) 0 1.4px,transparent 2px);animation:fr-rise 2.8s linear infinite}
+.fr-plate[data-effect=bubble]{color:#E6FFFB;background:radial-gradient(circle at 12% 70%,rgba(255,255,255,.35) 0 2px,transparent 2.5px) 0 0/22px 18px,linear-gradient(90deg,#0B5C63,#0F8C88 55%,#0B5C63);border-color:rgba(63,224,197,.8);box-shadow:0 0 12px -3px rgba(63,224,197,.8)}
+/* ---- tide: «المدّ» (rare) ---- */
+[data-effect=tide]>.fr-ring{padding:3px;background:conic-gradient(from 0deg,#0A2A6B,var(--sl-cyan),#BFF3FF,var(--sl-cyan),#0A2A6B,#1E8BFF,#0A2A6B);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));animation:fr-spin 6s linear infinite}
+.fr-plate[data-effect=tide]{color:#E8FBFF;background:repeating-linear-gradient(115deg,rgba(56,212,255,.0) 0 10px,rgba(56,212,255,.22) 10px 14px) 0 0/40px 100%,linear-gradient(90deg,#082560,#0D3D8F 50%,#082560);border-color:rgba(56,212,255,.85);box-shadow:0 0 12px -2px rgba(56,212,255,.75);animation:fr-tide 2.6s linear infinite}
+/* ---- coral: «المرجان» (rare) ---- */
+[data-effect=coral]>.fr-ring{border:3px solid #FF7A6B;box-shadow:0 0 0 2px rgba(255,190,150,.55),0 0 12px rgba(255,110,90,.75)}
+.fr-plate[data-effect=coral]{color:#3B0A06;background:linear-gradient(90deg,#FF8A6B,#FFB38A 50%,#FF7A6B);border-color:#FFD3B8;box-shadow:0 0 12px -2px rgba(255,120,95,.85)}
+/* ---- abyss: «الأعماق» (epic) ---- */
+[data-effect=abyss]>.fr-ring{border:3px solid #1B1F6B;box-shadow:0 0 0 1.5px rgba(80,255,220,.45),0 0 14px rgba(40,60,200,.9),inset 0 0 8px rgba(0,0,0,.8)}
+[data-effect=abyss]>.fr-spark{background:radial-gradient(1.6px 1.6px at 15% 35%,#5CFFE0,transparent),radial-gradient(1.8px 1.8px at 85% 25%,#7DE8FF,transparent),radial-gradient(1.4px 1.4px at 72% 88%,#5CFFE0,transparent),radial-gradient(1.6px 1.6px at 25% 82%,#B48CFF,transparent);animation:fr-twinkle 3s ease-in-out infinite}
+.fr-plate[data-effect=abyss]{color:#7DFCE6;text-shadow:0 0 8px rgba(92,255,224,.7);background:radial-gradient(1.2px 1.2px at 20% 40%,rgba(92,255,224,.9),transparent) 0 0/26px 20px,linear-gradient(90deg,#03051F,#0B1052 50%,#03051F);border-color:rgba(92,255,224,.55);box-shadow:0 0 14px -3px rgba(60,80,230,.95)}
+/* ---- sunken: «كنز الغارقة» (epic) ---- */
+[data-effect=sunken]>.fr-ring{padding:3px;background:conic-gradient(#B07A2A,#E8C26A,#3E8C7A,#B07A2A,#7A5418,#E8C26A,#B07A2A);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));box-shadow:0 0 10px rgba(232,194,106,.6)}
+.fr-plate[data-effect=sunken]{color:#FFE29A;background:linear-gradient(90deg,#2C3B2F,#4A5E3E 30%,#6E5420 70%,#2C3B2F);border-color:#C9A24E;box-shadow:inset 0 0 0 1px rgba(62,140,122,.6),0 0 12px -3px rgba(232,194,106,.8)}
+/* ---- pearl: «اللؤلؤة» (epic) ---- */
+[data-effect=pearl]>.fr-ring{padding:3px;background:conic-gradient(#FFFFFF,#FFD6EC,#D6FFF4,#E4DAFF,#FFF6D6,#FFFFFF);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));box-shadow:0 0 12px rgba(255,230,250,.75);animation:fr-spin 9s linear infinite}
+.fr-plate[data-effect=pearl]{color:#2A2140;background:linear-gradient(110deg,#F4EEFF 0%,#FFE3F1 25%,#E1FFF6 50%,#F6F0FF 75%,#FFF3DE 100%) 0 0/250% 100%;border-color:#fff;box-shadow:0 0 14px -3px rgba(255,220,245,.95);animation:fr-shimmer 5s linear infinite}
+/* ---- kraken: «الأخطبوط العملاق» (legendary) ---- */
+[data-effect=kraken]>.fr-ring{padding:4px;background:repeating-conic-gradient(from 0deg,#C04BFF 0 18deg,#5A0F8C 18deg 30deg,#FF4FB8 30deg 40deg,#5A0F8C 40deg 60deg);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4.5px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 4.5px),#000 calc(100% - 4px));box-shadow:0 0 16px rgba(192,75,255,.85);animation:fr-spin 7s linear infinite reverse}
+.fr-plate[data-effect=kraken]{color:#FFE3F6;background:radial-gradient(circle at 10% 50%,rgba(255,79,184,.45) 0 3px,transparent 3.5px) 0 0/18px 100%,linear-gradient(90deg,#26053F,#5A0F8C 50%,#26053F);border-color:#E07BFF;box-shadow:0 0 16px -3px rgba(192,75,255,.95)}
+/* ---- neon_sponge: «إسفنجة النيون» (legendary) ---- */
+[data-effect=neon_sponge]>.fr-ring{border:3px solid #FFE94A;box-shadow:0 0 6px #FFE94A,0 0 18px rgba(255,214,42,.85),inset 0 0 6px rgba(255,233,74,.7);animation:fr-neon 3.4s steps(1) infinite}
+[data-effect=neon_sponge]>.fr-spark{inset:-3px;border-radius:50%;background:radial-gradient(circle at 22% 30%,rgba(120,80,0,.55) 0 2.4px,transparent 3px),radial-gradient(circle at 78% 40%,rgba(120,80,0,.5) 0 2px,transparent 2.6px),radial-gradient(circle at 60% 82%,rgba(120,80,0,.5) 0 2.6px,transparent 3.2px)}
+.fr-plate[data-effect=neon_sponge]{color:#2B2000;background:radial-gradient(circle,rgba(150,100,0,.45) 0 2px,transparent 2.6px) 0 0/14px 12px,linear-gradient(180deg,#FFF27D,var(--sl-yellow));border-color:#FFF6B0;box-shadow:0 0 8px #FFE94A,0 0 20px -2px rgba(255,214,42,.9);animation:fr-neon 3.4s steps(1) infinite}
+/* ---- sponge_king: «ملك الإسفنج» (mythic, the last tier) ---- */
+[data-effect=sponge_king]>.fr-ring{padding:4px;background:conic-gradient(from 0deg,#FFE680,var(--sl-cyan),var(--sl-yellow),#1E8BFF,#FFF3A8,var(--sl-cyan),#FFE680);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4.5px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 4.5px),#000 calc(100% - 4px));box-shadow:0 0 0 1.5px rgba(255,255,255,.7),0 0 20px rgba(255,214,42,.9),0 0 32px rgba(56,212,255,.5);animation:fr-spin 5s linear infinite}
+[data-effect=sponge_king]>.fr-crown{animation:fr-bob 2.2s ease-in-out infinite}
+.fr-plate[data-effect=sponge_king]{color:#FFF3C4;text-shadow:0 1px 0 rgba(0,0,0,.5);background:linear-gradient(110deg,#0A2A6B 0%,#1E5BD8 30%,var(--sl-yellow) 48%,#FFF6C4 52%,var(--sl-yellow) 56%,#1E5BD8 74%,#0A2A6B 100%) 0 0/260% 100%;border-color:#FFE680;box-shadow:0 0 0 1px rgba(56,212,255,.6) inset,0 0 18px -2px rgba(255,214,42,.95);animation:fr-shimmer 4s linear infinite}
+@keyframes fr-rise{from{background-position:0 6px,0 4px,0 8px,0 5px;opacity:.2}30%{opacity:1}to{background-position:0 -14px,0 -16px,0 -10px,0 -18px;opacity:0}}
+@keyframes fr-tide{to{background-position:-40px 0,0 0}}
+@keyframes fr-neon{0%,100%{filter:none}92%{filter:brightness(.55)}94%{filter:none}96%{filter:brightness(.7)}}
+
 @keyframes fr-pulse{50%{box-shadow:0 0 18px currentColor,0 0 4px rgba(255,255,255,.5)}}
 @keyframes fr-spin{to{rotate:360deg}}
 @keyframes fr-shimmer{to{background-position:-250% 0}}

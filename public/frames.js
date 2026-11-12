@@ -7,7 +7,7 @@
   const KEY = 'sl_frame_fx';
   const SVG = 'http://www.w3.org/2000/svg';
   const safeSrc = (u) => (typeof u === 'string' && /^\/frames\/u\/[a-z0-9_]{2,32}-(avatar|plate)\.(png|webp)(\?v=\d+)?$/.test(u) ? u : null);
-  const EFFECTS = ['cyan', 'gold', 'saudi', 'ice', 'flame', 'crown', 'royal'];
+  const EFFECTS = ['cyan', 'gold', 'saudi', 'ice', 'flame', 'crown', 'royal', 'tide', 'bubble', 'coral', 'abyss', 'sunken', 'pearl', 'kraken', 'neon_sponge', 'sponge_king'];
   function crown() {
     const s = document.createElementNS(SVG, 'svg'); s.setAttribute('viewBox', '0 0 48 30'); s.setAttribute('aria-hidden', 'true');
     const p = document.createElementNS(SVG, 'path');
@@ -28,8 +28,8 @@
       const src = safeSrc(frame.avatar);
       if (src) { const img = document.createElement('img'); img.className = 'fr-img'; img.alt = ''; img.decoding = 'async'; img.src = src; img.addEventListener('error', () => img.remove(), { once: true }); box.append(img); }
       else if (effect !== 'none') { const ring = document.createElement('i'); ring.className = 'fr-ring'; ring.setAttribute('aria-hidden', 'true'); box.append(ring); }
-      if (effect === 'ice' || effect === 'flame') { const sp = document.createElement('i'); sp.className = 'fr-spark'; sp.setAttribute('aria-hidden', 'true'); box.append(sp); }
-      if (effect === 'crown' || effect === 'royal') { const c = document.createElement('i'); c.className = 'fr-crown'; c.append(crown()); box.append(c); }
+      if (['ice', 'flame', 'bubble', 'abyss', 'neon_sponge'].includes(effect)) { const sp = document.createElement('i'); sp.className = 'fr-spark'; sp.setAttribute('aria-hidden', 'true'); box.append(sp); }
+      if (effect === 'crown' || effect === 'royal' || effect === 'sponge_king') { const c = document.createElement('i'); c.className = 'fr-crown'; c.append(crown()); box.append(c); }
       return box;
     },
     /** The name, on the frame's nameplate (nine-slice image when the frame has one). */
