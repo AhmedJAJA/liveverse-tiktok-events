@@ -204,6 +204,44 @@ test('a phone shows the portrait stage; «منخفض» draws the light SVG prop;
   } finally { await browser.close(); await srv.stop(); }
 });
 
+test('the studio: «صوت المعاينة» lets the host hear the game screen here (muted by default — OBS carries the sound)', { skip, timeout: 180_000 }, async () => {
+  const srv = await boot();
+  const browser = await playwright.chromium.launch(); // a normal browser: sound needs a click
+  try {
+    const { api, state } = await match(srv.base, { chooseSeconds: 15, drawSpeed: 'fast', resultSeconds: 3 });
+    assert.equal((await api('flow-start', {})).status, 200);
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, extraHTTPHeaders: { Authorization: 'Bearer ' + OWNER } });
+    await ctx.addInitScript((t) => { try { sessionStorage.setItem('liveverse_admin', t); } catch {} }, OWNER);
+    await ctx.addInitScript(() => { window.__snd = 0; const P = AudioScheduledSourceNode.prototype, st = P.start; P.start = function (...a) { window.__snd++; return st.apply(this, a); }; });
+    const page = await ctx.newPage();
+    const errors = []; page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(srv.base + '/game/roulette', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#rrControls:not([hidden])', { timeout: 20_000 });
+    const src = () => page.getAttribute('#liveFrame', 'src');
+    assert.match(await src(), /mute=1/, 'muted by default');
+    assert.equal(await page.getAttribute('#rrSound', 'aria-pressed'), 'false');
+    await page.click('#rrSound');
+    await until(async () => !/mute=1/.test(await src()), 3000, 'preview unmuted');
+    assert.equal(await page.getAttribute('#rrSound', 'aria-pressed'), 'true');
+    const frame = () => page.frames().find((f) => /\/overlay/.test(f.url()));
+    await until(async () => frame() && (await frame().evaluate(() => !!document.querySelector('#rouletteStage:not([hidden])')).catch(() => false)), 10_000, 'preview loaded');
+    // one turn: the preview plays it
+    await api('roulette', { cmd: 'draw', requestId: 'studio-sound-01' });
+    await until(async () => { const x = (await state()).party; if (x?.phase === 'choose') await api('roulette', { cmd: 'random' }); return x?.phase === 'reveal'; }, 20_000, 'reveal');
+    await sleep(1200);
+    assert.ok(await frame().evaluate(() => window.__snd) > 5, 'the host hears the preview');
+    // the choice is remembered, and turning it off mutes the preview again
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.waitForSelector('#rrControls:not([hidden])', { timeout: 20_000 });
+    assert.equal(await page.getAttribute('#rrSound', 'aria-pressed'), 'true');
+    assert.doesNotMatch(await src(), /mute=1/);
+    await page.click('#rrSound');
+    await until(async () => /mute=1/.test(await src()), 3000, 'muted again');
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  } finally { await browser.close(); await srv.stop(); }
+});
+
 test('the studio: the turn buttons follow the scene; a double click or Space draws one turn; Android width', { skip, timeout: 180_000 }, async () => {
   const srv = await boot();
   const browser = await playwright.chromium.launch();

@@ -63,9 +63,8 @@ export const GAME_SETTINGS = Object.freeze({
     { ...f('effects', 'قوة المؤثرات', [['low', 'خفيفة'], ['normal', 'متوسطة'], ['high', 'قوية']], 'normal', 'الومضة واهتزاز الكاميرا والجزيئات'), control: 'segment', group: 'match' },
     { ...f('graphics', 'مستوى الرسوميات', [['auto', 'تلقائي'], ['high', 'عالٍ'], ['low', 'منخفض']], 'auto', 'المنخفض يرسم المسدس بدون ثلاثي الأبعاد للأجهزة الضعيفة'), control: 'segment', group: 'match' },
     { ...f('trial', 'وضع التجربة', onOff, false, '«جهّز اللوبي» يبدأ بلاعبين تجريبيين بدون بث — لا يدخل التصنيف'), control: 'toggle', group: 'match' },
-    { ...f('targetMode', 'من يواجه المسدس؟', [['self', 'اللاعب المسحوب'], ['choose', 'يختاره صاحب الدور']], 'self', '«يختاره صاحب الدور»: يكتب في الشات رقم لاعب آخر يضغط عليه الزناد'), control: 'segment', group: 'rules' },
-    { ...f('chooseSeconds', 'مهلة اختيار الهدف (ثانية)', [15, 20, 25, 30, 45].map((n) => [n, String(n)]), 25, 'عندما يختار صاحب الدور'), control: 'counter', group: 'rules' },
-    { ...f('timeoutRule', 'إذا لم يختر صاحب الدور', [['self', 'يواجه المسدس بنفسه'], ['random', 'هدف عشوائي'], ['skip', 'يُلغى الدور']], 'self'), control: 'segment', group: 'rules' },
+    { ...f('chooseSeconds', 'مهلة اختيار الهدف (ثانية)', [15, 20, 25, 30, 45].map((n) => [n, String(n)]), 25, 'يكتب صاحب الدور في الشات رقم لاعب آخر ما زال في اللعبة'), control: 'counter', group: 'rules' },
+    { ...f('timeoutRule', 'إذا لم يختر صاحب الدور', [['random', 'يختار الخادم لاعبًا آخر عشوائيًا'], ['skip', 'يُلغى الدور']], 'random', 'صاحب الدور لا يواجه المسدس بسبب سحب اسمه أبدًا'), control: 'segment', group: 'rules' },
     { ...f('chambers', 'حجرات خزنة كل لاعب', [2, 3, 4, 5, 6].map((n) => [n, String(n)]), 2, 'لكل لاعب خزنته؛ الطلقة في مكان عشوائي يحدده الخادم'), control: 'counter', group: 'rules' },
     { ...f('bullets', 'الطلقات في الخزنة', [1, 2, 3].map((n) => [n, String(n)]), 1, 'أقل من عدد الحجرات دائمًا'), control: 'counter', group: 'rules' },
     { ...f('cylinder', 'الخزنة بعد كل سحبة', [['advance', 'تتقدم حجرة'], ['spin', 'تُدار من جديد']], 'advance', '«تتقدم»: من نجا مرة يقترب من الطلقة. «تُدار»: الاحتمال نفسه كل مرة'), control: 'segment', group: 'rules' },
@@ -95,12 +94,18 @@ export const JOIN_WORD_SUGGESTIONS = Object.freeze(['انضم', 'العب', 'د�
 export function defaultSettings(mode) {
   return Object.fromEntries((GAME_SETTINGS[mode] || []).map((x) => [x.key, x.default]));
 }
+/** Saved roulette settings from before the rule was fixed: no «targetMode», and a silent holder never faces the revolver. */
+function legacyRoulette(out) { delete out.targetMode; if (out.timeoutRule === 'self') out.timeoutRule = 'random'; return out; }
 /** Merge a change into the saved settings; every value must be one of the listed options. */
 export function validateSettings(mode, input = {}, base = defaultSettings(mode)) {
   const schema = GAME_SETTINGS[mode];
   if (!schema) throw new Error('لعبة غير معروفة');
   const out = { ...defaultSettings(mode), ...base };
-  for (const [k, v] of Object.entries(input || {})) {
+  if (mode === 'roulette') legacyRoulette(out);
+  for (let [k, v] of Object.entries(input || {})) {
+    // «الروليت» from before: «من يواجه المسدس؟» is gone (the holder always chooses), «يواجه المسدس بنفسه» became «random»
+    if (mode === 'roulette' && k === 'targetMode') continue;
+    if (mode === 'roulette' && k === 'timeoutRule' && v === 'self') v = 'random';
     const field = schema.find((x) => x.key === k);
     if (!field) throw new Error('إعداد غير معروف لهذه اللعبة');
     const hit = field.options.find(([val]) => String(val) === String(v));
@@ -140,7 +145,7 @@ export function applySettings(engine, mode, s) {
     case 'wheel': break;
     case 'roulette': {
       const variant = {};
-      for (const k of ['targetMode', 'chambers', 'bullets', 'cylinder', 'chooseSeconds', 'timeoutRule', 'autoRun', 'drawSpeed', 'resultSeconds', 'showNames', 'showFrames', 'sounds', 'effects', 'graphics', 'hostPlays']) variant[k] = v[k];
+      for (const k of ['chambers', 'bullets', 'cylinder', 'chooseSeconds', 'timeoutRule', 'autoRun', 'drawSpeed', 'resultSeconds', 'showNames', 'showFrames', 'sounds', 'effects', 'graphics', 'hostPlays']) variant[k] = v[k];
       engine.configure({ variant });
       applyLobbySettings(engine, mode, v);
       break;

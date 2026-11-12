@@ -81,7 +81,8 @@ class Room {
     // the game session's launch flow (library → setup → join word → lobby → round → results), kept on the server
     this.flow = new GameFlow({ engine: this.engine, games: ALL_GAMES, onChange: () => this.lobbyChanged() });
     // «الروليت»: every turn and the winner are recorded; the auto mode only goes on while a host window is open
-    this.engine.partyExtras = (mode) => (mode === 'roulette' ? { onEvent: (e) => rouletteStore.record(this, e), hostPresent: () => !!this.hostTab(), demo: !!this.flow.lobby?.demo } : null);
+    this.engine.partyExtras = (mode) => (mode === 'roulette' ? { onEvent: (e) => rouletteStore.record(this, e), hostPresent: () => !!this.hostTab(), demo: !!this.flow.lobby?.demo,
+      chatConnected: () => this.engine.connection.state === 'connected' } : null);
     this.lastLobbyState = this.flow.state; this.lastCount = 0; this.persistTimer = null; this.persistSig = ''; this.restoring = null; this.preparing = null;
     this.engine.questionSource = (filter) => drawQuestion(this.questionBank, filter);
   }
