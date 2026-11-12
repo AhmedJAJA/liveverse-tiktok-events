@@ -35,7 +35,7 @@ const authToken = process.env.ADMIN_TOKEN || randomBytes(24).toString('hex');
 if (!process.env.ADMIN_TOKEN) { if (process.env.NODE_ENV === 'production') console.warn('ADMIN_TOKEN is unset; configure it in the hosting environment.'); else console.log('\n[LOCAL ADMIN TOKEN] ' + authToken + '\nSet ADMIN_TOKEN in hosting environment before publishing.'); }
 const safeToken = Buffer.from(authToken, 'utf8');
 const matchesToken = (raw) => { const incoming = Buffer.from(String(raw||''), 'utf8'); return incoming.length === safeToken.length && timingSafeEqual(incoming, safeToken); };
-const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8', '.glb': 'model/gltf-binary' };
+const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png', '.txt': 'text/plain; charset=utf-8', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg' };
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.SKY_DATA_DIR || path.join(here, 'data', 'runtime');
 const COOKIE = 'sky_session';
@@ -1427,6 +1427,8 @@ const STATIC = new Set(['shared-theme.css','roulette.css','site-header.js','game
   // game art, legacy covers and flags: every file in these folders is public
   ...['cards', 'covers', 'flags', 'brand'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(png|webp|svg|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   // 3D skins (optimized GLB + poster) and the pinned, self-hosted three.js (no CDN — the CSP allows only 'self')
+  // the roulette's recorded sound effects (docs/ROULETTE_P3_AUDIO.md)
+  ...(() => { try { return fs.readdirSync(path.join(here, 'public', 'roulette', 'audio')).filter((f) => /^[\w-]+\.mp3$/.test(f)).map((f) => 'roulette/audio/' + f); } catch { return []; } })(),
   ...['skins', 'vendor/three', 'roulette'].flatMap((dir) => { try { return fs.readdirSync(path.join(here, 'public', dir)).filter((f) => /^[\w.-]+\.(glb|webp|js|txt)$/.test(f)).map((f) => dir + '/' + f); } catch { return []; } }),
   'fonts/tajawal-arabic-500-normal.woff2','fonts/tajawal-arabic-700-normal.woff2','fonts/tajawal-arabic-800-normal.woff2','fonts/tajawal-latin-700-normal.woff2','fonts/inter-display-light.woff','fonts/inter-display-semibold.woff','fonts/OFL.txt']);
 

@@ -345,6 +345,7 @@ export class RussianRoulette extends RoundGame {
     const w = this.alive.length === 1 ? this.alive[0] : null;
     this.winner = w ? { ...pub(w), survived: w.survived, drawn: w.drawn, targeted: w.targeted, kills: w.kills || 0 } : null;
     this.endedAtMs = this.now();
+    this.phaseStartedAt = this.endedAtMs; // the winner scene starts now (screens time the fanfare and the trophy from it)
     this.seq++;
     this.emit({ type: 'finish', reason, winner: this.winner, stats: this.matchStats() });
   }
