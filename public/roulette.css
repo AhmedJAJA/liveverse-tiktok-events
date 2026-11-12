@@ -46,6 +46,8 @@ body.rr-on .ov-roomcode{inset-block:12px auto}
 .rr-pill{display:inline-flex;align-items:center;gap:calc(var(--u)*8);height:calc(var(--u)*44);padding:0 calc(var(--u)*16);border-radius:var(--sl-r-pill);font-size:calc(var(--u)*17);font-weight:var(--sl-fw-bold);
   background:rgba(var(--sl-deep-rgb),.62);border:1px solid var(--rr-line);color:var(--sl-text);white-space:nowrap}
 .rr-pill .i{width:calc(var(--u)*20);height:calc(var(--u)*20)}
+.rr-sound-hint{margin:0;color:var(--sl-yellow);border-color:rgba(var(--sl-yellow-rgb),.55);background:rgba(var(--sl-yellow-rgb),.1)}
+.rr-sound-hint[hidden]{display:none}
 .rr-pill.is-trial{color:var(--sl-yellow);border-color:rgba(var(--sl-yellow-rgb),.55);background:rgba(var(--sl-yellow-rgb),.1)}
 .rr-dot{width:calc(var(--u)*10);height:calc(var(--u)*10);border-radius:50%;background:var(--sl-muted)}
 .rr-conn[data-tone=ok] .rr-dot{background:var(--rr-green);box-shadow:0 0 calc(var(--u)*10) var(--rr-green)}
@@ -121,6 +123,11 @@ body.rr-on .ov-roomcode{inset-block:12px auto}
 .rr-banner-who small{color:var(--sl-cyan);font-size:calc(var(--u)*18);font-weight:var(--sl-fw-heavy)}
 .rr-banner-name{font-size:calc(var(--u)*40);font-weight:var(--sl-fw-black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rr-banner-line{color:var(--sl-muted);font-size:calc(var(--u)*20);font-weight:var(--sl-fw-bold)}
+/* the holder wrote a number that is not a choice / the chat dropped (the countdown waits) */
+.rr-banner-line.is-warn{color:var(--sl-yellow);animation:rr-nudge .32s ease-out 1}
+.rr-banner-line.is-paused{color:var(--sl-cyan)}
+@keyframes rr-nudge{0%,100%{transform:none}30%{transform:translateX(calc(var(--u)*-6))}65%{transform:translateX(calc(var(--u)*5))}}
+.rr-ring.is-paused{opacity:.55;animation:none}
 .rr-ring{--p:100;position:relative;width:calc(var(--u)*116);height:calc(var(--u)*116);border-radius:50%;display:grid;place-items:center;align-content:center;
   background:radial-gradient(closest-side,var(--sl-surface) 82%,transparent 84%),conic-gradient(var(--sl-yellow) calc(var(--p)*1%),rgba(var(--sl-text-rgb),.12) 0)}
 .rr-ring b{font-size:calc(var(--u)*44);line-height:1;color:var(--sl-yellow)}
@@ -306,7 +313,7 @@ html.au-perf .rr-strip.is-fast .rr-card{filter:none}
   .rr-side{inset-block:auto 0;inset-inline:0;width:auto;height:calc(var(--u)*340);grid-template-rows:none;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
   .rr-side h2{font-size:calc(var(--u)*26)}
   .rr-rules ul{font-size:calc(var(--u)*22)}
-  .rr-rules li:not(.is-odds):nth-child(n+3){display:none}
+  .rr-rules li:not(.is-odds):nth-child(n+2){display:none} /* the rule of the game (first) and the odds fit the panel */
   .rr-fair{display:none}
   .rr-log li{font-size:calc(var(--u)*23)}
   .rr-stage[data-choose="1"] .rr-grid{top:calc(var(--u)*190)}

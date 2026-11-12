@@ -33,7 +33,9 @@ export function mount(arena, { paintAvatar, frameOf }) {
   const stats = h('div', 'rr-stats');
   const stat = (cls, label) => { const s = h('span', 'rr-stat ' + cls), b = h('b', 'num', '0'); s.append(b, h('small', '', label)); stats.append(s); return b; };
   const statIn = stat('is-in', 'داخل اللعبة'), statOut = stat('is-out', 'خرجوا'), statTurn = stat('is-turn', 'الدور');
-  meta.append(trialPill, connPill, stats);
+  // the browser blocks sound until the page is clicked (a normal tab; OBS never does): say so instead of staying silent
+  const soundHint = h('p', 'rr-pill rr-sound-hint'); soundHint.append(svgIcon('i-volume-off'), h('span', '', 'الصوت متوقف من المتصفح — اضغط على الصفحة لتشغيله')); soundHint.hidden = true;
+  meta.append(soundHint, trialPill, connPill, stats);
   head.append(titleBox, meta);
   // body: the scenes (main) and the side panel (events, announced rules)
   const body = h('div', 'rr-body'), main = h('div', 'rr-main'), side = h('aside', 'rr-side');
@@ -145,6 +147,7 @@ export function mount(arena, { paintAvatar, frameOf }) {
     stage.hidden = false;
     stage.dataset.fx = party?.display?.effects || 'normal';
     sfx.setEnabled(party ? party.display?.sounds !== false : false);
+    paintSoundHint();
     const key = party ? party.match + ':' + party.seq : 'lobby';
     if (key !== v.key) { v.key = key; v.lastTick = -1; v.lastNotch = null; }
     paintHead(data, party);
@@ -159,6 +162,8 @@ export function mount(arena, { paintAvatar, frameOf }) {
     oneShots(party);
     kick();
   }
+  function paintSoundHint() { soundHint.hidden = !v.party || sfx.status() !== 'blocked'; }
+  sfx.onChange(paintSoundHint);
   function sceneOf(p) {
     if (!p) return 'grid';
     if (p.phase === 'finished') return 'win';
@@ -203,9 +208,17 @@ export function mount(arena, { paintAvatar, frameOf }) {
         return { eyebrow: 'الدور ' + fmtNum(p.turn + 1), title: 'الجولة جاهزة', sub: auto ? 'السحب التالي يبدأ تلقائيًا' : 'بانتظار «ابدأ السحب» — الخادم يختار صاحب الدور عشوائيًا' };
       }
       case 'drawing': return { eyebrow: 'الدور ' + fmtNum(p.turn), title: 'السحب جارٍ…', sub: 'من صاحب الدور؟' };
-      case 'picked': return { eyebrow: 'الدور ' + fmtNum(p.turn), title: 'الدور على ' + (hol ? nameOf(hol) : ''), sub: p.rules?.targetMode === 'choose' ? 'سيختار من يواجه المسدس' : 'يواجه المسدس الآن' };
-      case 'choose': return { eyebrow: 'الدور ' + fmtNum(p.turn), title: 'صاحب الدور يختار', sub: 'اكتب في الشات رقم اللاعب الذي تضغط عليه الزناد' };
-      case 'aim': return { eyebrow: 'الدور ' + fmtNum(p.turn) + (tgt ? ' • ' + nameOf(tgt) : ''), title: 'الخزنة تدور…', sub: 'هل الطلقة هنا؟' };
+      case 'picked': return { eyebrow: 'الدور ' + fmtNum(p.turn), title: 'الدور على ' + (hol ? nameOf(hol) : ''), sub: 'سيختار من يواجه المسدس' };
+      case 'choose': return { eyebrow: 'الدور ' + fmtNum(p.turn), title: 'صاحب الدور يختار', sub: p.chatDown ? 'الشات منقطع — المهلة متوقفة حتى يعود الاتصال' : 'اكتب في الشات رقم لاعب آخر ما زال في اللعبة' };
+      case 'aim': {
+        // the lock-in: who pulls the trigger on whom, and why
+        const T = tgt ? nameOf(tgt) : '';
+        const title = !tgt ? 'الخزنة تدور…'
+          : (p.how === 'chat' || p.how === 'host') && hol && hol.number !== tgt.number ? nameOf(hol) + ' يصوّب على ' + T
+          : p.how === 'timeout' ? 'انتهت المهلة — الخادم اختار ' + T
+          : p.how === 'random' ? 'هدف عشوائي: ' + T : 'الخزنة تدور…';
+        return { eyebrow: 'الدور ' + fmtNum(p.turn) + (tgt ? ' • ' + T : ''), title, sub: 'الخزنة تدور… هل الطلقة هنا؟' };
+      }
       case 'reveal': {
         const r = p.result || {};
         if (r.outcome === 'out') return r.reason === 'host' ? { eyebrow: 'الدور ' + fmtNum(p.turn), title: 'OUT — قرار المضيف', sub: (tgt ? nameOf(tgt) : '') + ' خرج من الجولة' } : { eyebrow: 'الدور ' + fmtNum(p.turn), title: 'انطلقت الطلقة', sub: (tgt ? nameOf(tgt) : '') + ' — خرج من الجولة' };
@@ -222,7 +235,7 @@ export function mount(arena, { paintAvatar, frameOf }) {
     switch (e.kind) {
       case 'empty': return ['safe', who(t) + ' نجا — الحجرة ' + fmtNum(e.chamber) + ' فارغة'];
       case 'out': return ['out', who(t) + ' خرج — انطلقت الطلقة'];
-      case 'timeout': return ['info', 'انتهت مهلة ' + who(ho) + (e.rule === 'skip' ? ' — أُلغي الدور' : e.rule === 'random' ? ' — هدف عشوائي' : ' — يواجه المسدس بنفسه')];
+      case 'timeout': return ['info', 'انتهت مهلة ' + who(ho) + (e.rule === 'skip' ? ' — أُلغي الدور' : ' — اختار الخادم هدفًا عشوائيًا')];
       case 'cancel': return ['info', 'ألغى المضيف دور ' + who(ho)];
       case 'random': return ['info', 'هدف عشوائي لدور ' + who(ho)];
       case 'host-out': return ['out', 'أقصى المضيف ' + who(ho)];
@@ -251,8 +264,8 @@ export function mount(arena, { paintAvatar, frameOf }) {
   function preRules(s) {
     if (!s || !s.chambers) return ['آخر من يبقى يفوز.'];
     const c = Number(s.chambers), b = Math.min(Number(s.bullets) || 1, c - 1);
-    return ['لكل لاعب خزنة من ' + ar(c, 'حجرة', 'حجرتين', 'حجرات', 'حجرة') + ' فيها ' + ar(b, 'طلقة واحدة', 'طلقتان', 'طلقات', 'طلقة') + '.',
-      s.targetMode === 'choose' ? 'صاحب الدور يكتب في الشات رقم اللاعب الذي يضغط عليه الزناد.' : 'اللاعب المسحوب يواجه المسدس بنفسه.', 'آخر من يبقى يفوز.'];
+    return ['صاحب الدور يكتب في الشات رقم لاعب آخر ما زال في اللعبة ليضغط عليه الزناد.',
+      'لكل لاعب خزنة من ' + ar(c, 'حجرة', 'حجرتين', 'حجرات', 'حجرة') + ' فيها ' + ar(b, 'طلقة واحدة', 'طلقتان', 'طلقات', 'طلقة') + '.', 'آخر من يبقى يفوز.'];
   }
   function oddsLine(r) {
     if (!r || !r.chambers) return '';
@@ -275,7 +288,12 @@ export function mount(arena, { paintAvatar, frameOf }) {
       const hp = playerOf(p.holder.number);
       avatar(bannerAvBox, hp, { cls: 'rr-banner-av' });
       bannerName.textContent = nameOf(hp) + ' — #' + hp.number;
-      bannerLine.textContent = 'يكتب في الشات رقم لاعب آخر ليضغط عليه الزناد';
+      const f = p.feedback, warn = !!f && !p.chatDown;
+      bannerLine.textContent = p.chatDown ? 'الشات منقطع — المهلة متوقفة حتى يعود الاتصال' : f ? feedbackText(f) : 'يكتب في الشات رقم لاعب آخر ليضغط عليه الزناد';
+      bannerLine.classList.toggle('is-warn', warn);
+      bannerLine.classList.toggle('is-paused', !!p.chatDown);
+      ring.classList.toggle('is-paused', !!p.chatDown);
+      if (warn) { cue('fb' + f.at, () => sfx.cancel(), now() - f.at < 1500); say(bannerLine.textContent); }
       paintCountdown(p, now());
     }
     stage.dataset.choose = choose ? '1' : '';
@@ -324,6 +342,14 @@ export function mount(arena, { paintAvatar, frameOf }) {
     });
     for (const [n, t] of v.tiles) if (!seen.has(n)) { t.el.remove(); v.tiles.delete(n); }
     layoutGrid(list.length);
+  }
+  /** The holder wrote a number that is not a choice: the stream says why, so they can write another one. */
+  function feedbackText(f) {
+    if (f.kind === 'self') return '#' + f.number + ' هو رقمك — اكتب رقم لاعب آخر';
+    if (f.kind === 'out') return '#' + f.number + ' خرج من اللعبة — اختر لاعبًا ما زال فيها';
+    if (f.kind === 'missing') return 'لا يوجد لاعب برقم ' + f.number + ' — انظر الأرقام على الشاشة';
+    if (f.kind === 'ambiguous') return 'اكتب رقمًا واحدًا فقط (كتبت ' + (f.numbers || []).join(' و ') + ')';
+    return '';
   }
   /** Tile size: as large as the space allows for every player at once (up to 100). */
   function layoutGrid(n) {
@@ -407,9 +433,9 @@ export function mount(arena, { paintAvatar, frameOf }) {
       nameplate(targetName, tp, 'rr-target-plate');
       targetNum.textContent = '#' + tp.number;
       const hp = p.holder ? playerOf(p.holder.number) : null;
-      targetBy.textContent = p.how === 'self' ? 'سُحب اسمه — يواجه المسدس بنفسه' : p.how === 'chat' && hp && hp.number !== tp.number ? 'اختاره صاحب الدور ' + nameOf(hp)
+      targetBy.textContent = p.how === 'chat' && hp && hp.number !== tp.number ? 'اختاره صاحب الدور ' + nameOf(hp) + ' من الشات'
         : p.how === 'host' && r?.reason === 'host' ? 'قرار المضيف' : p.how === 'host' ? 'اختاره المضيف (صاحب الدور)' : p.how === 'random' ? 'هدف عشوائي من الخادم'
-        : p.how === 'timeout' ? (hp && hp.number !== tp.number ? 'انتهت مهلة ' + nameOf(hp) + ' — هدف عشوائي' : 'انتهت المهلة — يواجه المسدس بنفسه') : '';
+        : p.how === 'timeout' ? 'انتهت مهلة ' + (hp ? nameOf(hp) : 'صاحب الدور') + ' — اختار الخادم هذا اللاعب' : '';
       shotScene.classList.remove('is-hit', 'is-safe', 'is-settled', 'is-host-out');
       buildCylinder(p.rules?.chambers || 2);
     }

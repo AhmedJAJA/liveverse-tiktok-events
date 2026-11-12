@@ -4,6 +4,8 @@
    browser allows sound. Levels go through a compressor so the shot never clips the stream's audio. */
 export function createSfx() {
   let ctx = null, out = null, verb = null, enabled = true;
+  const listeners = new Set();
+  const changed = () => listeners.forEach((fn) => { try { fn(); } catch { /* a listener never breaks the sound */ } });
   const muted = () => !enabled || !!window.SpongeFx?.muted || new URLSearchParams(location.search).get('mute') === '1';
   function audio() {
     if (muted()) return null;
@@ -11,6 +13,7 @@ export function createSfx() {
       if (!ctx) {
         const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
         ctx = new C();
+        ctx.onstatechange = changed; // «blocked» → «running» after the first click: the screen hides its hint
         const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 5; comp.attack.value = 0.002; comp.release.value = 0.25;
         out = ctx.createGain(); out.gain.value = 0.7; out.connect(comp).connect(ctx.destination);
         // a short room for the shot's tail
@@ -40,7 +43,15 @@ export function createSfx() {
     return g;
   }
   const fx = {
-    setEnabled(on) { enabled = !!on; },
+    setEnabled(on) { const was = enabled; enabled = !!on; if (was !== enabled) changed(); },
+    /** 'muted' (sounds off, or the host's own preview), 'blocked' (the browser waits for a click), 'running', 'unsupported' */
+    status() {
+      if (muted()) return 'muted';
+      const a = audio(); // creates the audio context if needed (allowed without a click; it just starts suspended)
+      if (a) return 'running';
+      return ctx ? 'blocked' : 'unsupported';
+    },
+    onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     reelTick(speed = 1) { tone(1500 + Math.min(1, speed) * 500, { dur: 0.018, type: 'square', gain: 0.035 }); noise({ dur: 0.012, gain: 0.08, freq: 5200, q: 2 }); },
     whoosh() { noise({ dur: 0.45, gain: 0.16, type: 'bandpass', freq: 600, to: 3200, q: 0.8, curve: 1 }); },
     picked() { tone(1318.5, { dur: 0.35, type: 'triangle', gain: 0.12 }); tone(1975.5, { at: 0.08, dur: 0.5, type: 'triangle', gain: 0.1 }); tone(2637, { at: 0.16, dur: 0.6, gain: 0.05 }); noise({ dur: 0.3, gain: 0.08, type: 'highpass', freq: 3000, curve: 1.5 }); },

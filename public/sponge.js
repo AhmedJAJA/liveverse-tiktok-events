@@ -7,7 +7,11 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch {} }
   };
   const params = new URLSearchParams(location.search);
-  let muted = params.get('mute') === '1' || store.get('sponge_mute', '0') === '1';
+  // The OBS screen (/overlay, not embedded in a page) follows the host's «الأصوات» setting only — a mute a viewer once saved
+  // on the site in this browser must never silence the stream. Everywhere else the viewer's own switch is kept.
+  const obsScreen = /\/overlay\/?$/.test(location.pathname) && params.get('embedded') !== '1';
+  const forced = params.get('mute') === '1';
+  let muted = forced || (!obsScreen && store.get('sponge_mute', '0') === '1');
   let fxOff = params.get('fx') === '0' || store.get('sponge_fx', '1') === '0';
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const root = document.documentElement;
@@ -89,6 +93,11 @@
     }
   }
 
+  // the viewer's switch in another page of the site (or the page around an embedded game screen) applies here at once
+  addEventListener('storage', (e) => {
+    if (e.key !== 'sponge_mute' || forced || obsScreen) return;
+    muted = e.newValue === '1'; if (muted) stopMusic();
+  });
   window.SpongeFx = {
     play(name) { if (!muted && SFX[name]) try { SFX[name](); } catch {} },
     startMusic, stopMusic, bubbles, burst,

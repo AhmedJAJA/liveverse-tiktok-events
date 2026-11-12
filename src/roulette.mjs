@@ -10,11 +10,13 @@
 // opens, and is published only when it is revealed; skipping an animation jumps to that same outcome.
 // The rules (cylinder size, bullets, mode) are fixed for the whole match and published with every state.
 //
-// One turn:  ready ─draw→ drawing ─→ picked ─→ [choose ─target→] aim ─→ reveal ─→ ready … ─→ finished
+// One turn:  ready ─draw→ drawing ─→ picked ─→ choose ─target→ aim ─→ reveal ─→ ready … ─→ finished
+// The rule of the game: the holder is drawn at random and CHOOSES who faces the revolver — never themselves. A silent
+// holder hands the choice to the server (a random other player) or loses the turn, as the host announced.
 //   ready     «الجولة جاهزة»: the players' grid; the host presses «ابدأ السحب» (or it goes on by itself in auto mode)
 //   drawing   the names reel — the turn holder is already chosen, every screen rolls to the same name
 //   picked    «الدور على …»
-//   choose    (rule «صاحب الدور يختار») the holder writes another player's number in the chat
+//   choose    the holder writes the number of another player still in the game in the chat (TikTok/Kick)
 //   aim       the revolver scene: the target's cylinder turns — «هل الطلقة هنا؟»
 //   reveal    «حجرة فارغة — نجوت!» or «OUT — تم الإقصاء»
 //   finished  the last player standing wins
@@ -24,17 +26,17 @@ import { RoundGame, pub } from './round-game.mjs';
 
 /** Every rule the host can choose, with the allowed values (the settings schema and the engine read this list). */
 export const ROULETTE_RULES = Object.freeze({
-  targetMode: ['self', 'choose'],
+  targetMode: ['choose'],              // the only rule: the holder chooses (a saved «self» from before reads as this)
   chambers: [2, 3, 4, 5, 6],
   bullets: [1, 2, 3],
   cylinder: ['advance', 'spin'],
   chooseSeconds: [15, 20, 25, 30, 45],
-  timeoutRule: ['self', 'random', 'skip'],
+  timeoutRule: ['random', 'skip'],     // a silent holder: a random OTHER player, or the turn is cancelled
   autoRun: ['manual', 'auto'],
   drawSpeed: ['slow', 'normal', 'fast'],
   resultSeconds: [3, 4, 5, 7],
 });
-export const ROULETTE_DEFAULTS = Object.freeze({ targetMode: 'self', chambers: 2, bullets: 1, cylinder: 'advance', chooseSeconds: 25, timeoutRule: 'self', autoRun: 'manual', drawSpeed: 'normal', resultSeconds: 4 });
+export const ROULETTE_DEFAULTS = Object.freeze({ targetMode: 'choose', chambers: 2, bullets: 1, cylinder: 'advance', chooseSeconds: 25, timeoutRule: 'random', autoRun: 'manual', drawSpeed: 'normal', resultSeconds: 4 });
 /** Display choices: they change how the screens look, never what happens. */
 export const ROULETTE_DISPLAY = Object.freeze({ showNames: [true, false], showFrames: [true, false], sounds: [true, false], effects: ['low', 'normal', 'high'], graphics: ['auto', 'high', 'low'], hostPlays: [true, false] });
 export const ROULETTE_DISPLAY_DEFAULTS = Object.freeze({ showNames: true, showFrames: true, sounds: true, effects: 'normal', graphics: 'auto', hostPlays: false });
@@ -46,6 +48,8 @@ export const AUTO_GAP_MS = 2800;      // auto mode: the grid stays this long bet
 const HOST_WAIT_MS = 1000;            // auto mode without a host window: look again every second
 const BOT_MIN_MS = 1800, BOT_SPREAD_MS = 3400; // trial players choose their target within these seconds
 const REEL_LEN = 30, REEL_STOP = 26;  // names on the reel; the chosen one stops at this position
+/** The chat drops while the holder chooses: the countdown waits this long at most, then the timeout rule decides. */
+export const CHAT_PAUSE_MAX_MS = 120_000;
 const MAX_LOG = 40;
 
 const fail = (message, status = 409) => { throw Object.assign(new Error(message), { status }); };
@@ -56,6 +60,17 @@ export function parseNumber(raw) {
   const t = String(raw ?? '').normalize('NFKC').replace(DIGITS, (d) => String(d.charCodeAt(0) - (d.charCodeAt(0) >= 0x6f0 ? 0x6f0 : 0x660))).trim();
   const m = t.match(/^(?:#|رقم\s*)?(\d{1,4})$/);
   return m ? Number(m[1]) : null;
+}
+/**
+ * What the holder wrote, read the way people write in a live chat: «7», «#7», «رقم ٧», «7 🔫», «اطلق على 7», «7️⃣».
+ * { n } for one player number (1–9999); { ambiguous: [..] } for several different numbers; null when there is none.
+ */
+export function parseChoice(raw) {
+  const t = String(raw ?? '').normalize('NFKC').replace(DIGITS, (d) => String(d.charCodeAt(0) - (d.charCodeAt(0) >= 0x6f0 ? 0x6f0 : 0x660)));
+  const found = [];
+  for (const m of t.matchAll(/(?<!\d)\d+(?!\d)/g)) { if (m[0].length > 4) continue; const n = Number(m[0]); if (n > 0 && !found.includes(n)) found.push(n); }
+  if (!found.length) return null;
+  return found.length === 1 ? { n: found[0] } : { ambiguous: found };
 }
 const ar = (n, one, two, few, many) => (n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? n + ' ' + few : n + ' ' + many);
 
@@ -69,7 +84,9 @@ export class RussianRoulette extends RoundGame {
     const display = {};
     for (const [k, list] of Object.entries(ROULETTE_DISPLAY)) display[k] = list.includes(o[k]) ? o[k] : ROULETTE_DISPLAY_DEFAULTS[k];
     this.display = Object.freeze(display);
-    this.hooks = { onEvent: typeof o.onEvent === 'function' ? o.onEvent : () => {}, hostPresent: typeof o.hostPresent === 'function' ? o.hostPresent : () => true };
+    this.hooks = { onEvent: typeof o.onEvent === 'function' ? o.onEvent : () => {}, hostPresent: typeof o.hostPresent === 'function' ? o.hostPresent : () => true,
+      // is the stream's chat connected right now? (unknown when the room does not say — then nothing ever waits for it)
+      chatConnected: typeof o.chatConnected === 'function' ? o.chatConnected : null };
     this.matchId = typeof o.matchId === 'string' ? o.matchId : randomUUID();
     this.demo = o.demo === true;
   }
@@ -79,6 +96,7 @@ export class RussianRoulette extends RoundGame {
     for (const p of this.roster.values()) Object.assign(p, { cyl: this.load(), shots: 0, survived: 0, drawn: 0, targeted: 0, eliminatedTurn: null, by: null });
     this.turn = 0; this.bag = []; this.lastHolder = null; this.log = []; this.seq = 0;
     this.holder = null; this.target = null; this.how = null; this.pending = null; this.result = null; this.reel = null; this.botAt = null; this.waitingHost = false; this.spin = null;
+    this.feedback = null; this.sawChat = false; this.chatDownSince = null; this.chatLeft = 0;
     this.requests = new Map();
     this.stats = { turns: 0, pulls: 0, empty: 0, out: 0, timeouts: 0, cancelled: 0, hostOut: 0 };
     this.emit({ type: 'start', players: [...this.roster.values()].map(pub), rules: this.rules });
@@ -109,6 +127,7 @@ export class RussianRoulette extends RoundGame {
     const holder = this.nextHolder();
     this.turn++; this.stats.turns++;
     this.holder = holder.id; this.target = null; this.how = null; this.pending = null; this.result = null; this.botAt = null; this.waitingHost = false;
+    this.feedback = null; this.chatDownSince = null;
     // rule «تُدار من جديد»: the cylinder is spun now, when the turn is drawn — so when the scene is skipped, or the
     // target is chosen, nothing about the pull is drawn again
     this.spin = this.rules.cylinder === 'spin' ? this.random(this.rules.chambers) : null;
@@ -148,7 +167,7 @@ export class RussianRoulette extends RoundGame {
   }
   /** The target is known: the pull is decided now (kept secret until the reveal), the revolver scene opens. */
   aimAt(target, how) {
-    this.target = target.id; this.how = how; this.botAt = null;
+    this.target = target.id; this.how = how; this.botAt = null; this.feedback = null; this.chatDownSince = null;
     target.targeted++;
     // «تُدار»: the chamber the spin (drawn with the turn) stopped on; «تتقدم»: the next chamber of the target's cylinder
     const chamber = this.rules.cylinder === 'spin' ? (this.spin ?? this.random(this.rules.chambers)) : target.shots;
@@ -172,14 +191,29 @@ export class RussianRoulette extends RoundGame {
     this.log.push({ turn: this.turn, holder: h?.number ?? null, target: t?.number ?? null, ...extra });
     if (this.log.length > MAX_LOG) this.log.shift();
   }
-  /** The holder did not choose in time («مهلة اختيار الهدف»): the published rule decides. */
+  /** The holder did not choose in time («مهلة اختيار الهدف»): the published rule decides — never the holder. */
   timedOut() {
     const h = this.roster.get(this.holder); this.stats.timeouts++;
     const rule = this.rules.timeoutRule;
     this.note({ kind: 'timeout', rule });
-    if (rule === 'self') return this.aimAt(h, 'timeout');
-    if (rule === 'random') { const others = this.alive.filter((p) => p.id !== h.id); return this.aimAt(others.length ? others[this.random(others.length)] : h, 'timeout'); }
+    const others = this.alive.filter((p) => p.id !== h?.id);
+    if (rule === 'random' && others.length) return this.aimAt(others[this.random(others.length)], 'timeout');
     this.cancelTurn('timeout');
+  }
+  /** The chat dropped while the holder chooses (a real stream that was connected during this match): the countdown
+      keeps the time that was left, for CHAT_PAUSE_MAX_MS at most. Returns true when the screens should know. */
+  holdForChat(t) {
+    const ask = this.hooks.chatConnected;
+    if (!ask || this.demo) return false;
+    const on = !!ask();
+    if (on) this.sawChat = true;
+    const down = this.phase === 'choose' && this.sawChat && !on;
+    if (!down) { if (this.chatDownSince == null) return false; this.chatDownSince = null; this.chatGaveUp = false; return true; }
+    if (this.chatDownSince == null) { this.chatDownSince = t; this.chatGaveUp = false; this.chatLeft = Math.max(1000, (this.endsAt ?? t) - t); this.endsAt = t + this.chatLeft; return true; }
+    if (t - this.chatDownSince < CHAT_PAUSE_MAX_MS) { this.endsAt = t + this.chatLeft; return false; }
+    // the pause is over: the countdown runs out with the time that was left (and the screens stop saying «paused»)
+    if (!this.chatGaveUp) { this.chatGaveUp = true; return true; }
+    return false;
   }
   cancelTurn(reason) {
     this.stats.cancelled++;
@@ -192,12 +226,13 @@ export class RussianRoulette extends RoundGame {
   tick() {
     if (this.finished) return false;
     const t = this.now();
+    const chatNews = this.holdForChat(t);
     // a trial player holding the turn chooses on its own (never a real viewer)
     if (this.phase === 'choose' && this.botAt != null && t >= this.botAt) {
       const others = this.alive.filter((p) => p.id !== this.holder);
       if (others.length) { this.aimAt(others[this.random(others.length)], 'chat'); return true; }
     }
-    if (this.endsAt == null || t < this.endsAt) return false;
+    if (this.endsAt == null || t < this.endsAt) return chatNews;
     switch (this.phase) {
       case 'ready':
         // auto mode goes on only while a host window is open; otherwise the match waits, exactly where it is
@@ -206,7 +241,6 @@ export class RussianRoulette extends RoundGame {
       case 'drawing': this.enter('picked', PICKED_MS); return true;
       case 'picked': {
         const h = this.roster.get(this.holder);
-        if (this.rules.targetMode === 'self') { this.aimAt(h, 'self'); return true; }
         this.enter('choose', this.rules.chooseSeconds * 1000);
         if (h.id.startsWith('demo:bot-')) this.botAt = t + BOT_MIN_MS + this.random(BOT_SPREAD_MS); // «وضع التجربة» players only
         return true;
@@ -233,15 +267,20 @@ export class RussianRoulette extends RoundGame {
   }
   /** The studio's generic «التالي» is the same as skipping the scene. */
   advance() { this.skip(); }
-  /** Chat: during «choose», only the turn holder's message counts — another player's number, nobody else's. */
+  /** Chat: during «choose», only the turn holder's message counts — the number of another player still in the game.
+      A wrong number gets an answer on screen (returns true: the screens have news); chatter without a number, and
+      every message from anybody else, changes nothing. */
   input(id, message) {
-    if (this.finished || this.phase !== 'choose' || id !== this.holder) return false;
-    const n = parseNumber(message);
-    if (n == null) return false;
-    const target = this.alive.find((p) => p.number === n);
-    if (!target || target.id === this.holder) return false;
+    if (this.finished || this.phase !== 'choose' || !id || id !== this.holder) return false;
+    const c = parseChoice(message);
+    if (!c) return false;
+    const at = this.now();
+    if (c.ambiguous) { this.feedback = { kind: 'ambiguous', numbers: c.ambiguous.slice(0, 5), at }; return true; }
+    const p = [...this.roster.values()].find((x) => x.number === c.n);
+    const kind = !p ? 'missing' : p.id === this.holder ? 'self' : !p.alive ? 'out' : null;
+    if (kind) { this.feedback = { kind, number: c.n, at }; return true; }
     this.totalInputs++;
-    this.aimAt(target, 'chat');
+    this.aimAt(p, 'chat');
     return true;
   }
   /** The host's buttons during a turn. `hostId` is the host's seat id (when the host plays). */
@@ -305,12 +344,14 @@ export class RussianRoulette extends RoundGame {
 
   /* ---------------- what every screen gets (nothing secret) ---------------- */
   rulesText() {
-    const { chambers: c, bullets: b, cylinder, targetMode } = this.rules;
+    const { chambers: c, bullets: b, cylinder } = this.rules;
     const cyl = 'لكل لاعب خزنة من ' + ar(c, 'حجرة', 'حجرتين', 'حجرات', 'حجرة') + ' فيها ' + ar(b, 'طلقة واحدة', 'طلقتان', 'طلقات', 'طلقة') + ' في مكان عشوائي';
     const how = cylinder === 'spin' ? 'وتُدار الخزنة قبل كل سحبة (احتمال الإقصاء ' + b + ' من ' + c + ' في كل مرة)'
       : 'وتتقدم حجرة واحدة في كل سحبة عليه (السحبة الأولى ' + b + ' من ' + c + ')';
-    const who = targetMode === 'choose' ? 'صاحب الدور يكتب في الشات رقم اللاعب الذي يضغط عليه الزناد' : 'اللاعب المسحوب يواجه المسدس بنفسه';
-    return [cyl + '، ' + how + '.', 'يسحب الخادم صاحب الدور عشوائيًا، وكل لاعب يُسحب مرة في كل دورة قبل أن يتكرر أحد.', who + '.', 'آخر من يبقى يفوز.'];
+    const who = 'صاحب الدور يكتب في الشات رقم لاعب آخر ما زال في اللعبة ليضغط عليه الزناد — خلال ' + this.rules.chooseSeconds + ' ثانية';
+    const late = this.rules.timeoutRule === 'skip' ? 'إذا لم يختر في الوقت يُلغى الدور' : 'إذا لم يختر في الوقت يختار الخادم لاعبًا آخر عشوائيًا';
+    // the rule of the game first: a vertical screen shows only the first line (and the odds)
+    return [who + '.', cyl + '، ' + how + '.', late + '.', 'يسحب الخادم صاحب الدور عشوائيًا، وكل لاعب يُسحب مرة في كل دورة قبل أن يتكرر أحد.', 'آخر من يبقى يفوز.'];
   }
   view() {
     const C = this.rules.chambers, inScene = this.phase === 'aim' || this.phase === 'reveal';
@@ -329,6 +370,9 @@ export class RussianRoulette extends RoundGame {
       reel: this.phase === 'drawing' || this.phase === 'picked' ? this.reel : null,
       result: this.phase === 'reveal' ? this.result : null,
       how: inScene ? this.how : null,
+      // the holder's wrong number (shown while they choose) and «the chat dropped — the countdown waits»
+      feedback: this.phase === 'choose' && this.feedback ? { ...this.feedback } : null,
+      chatDown: this.phase === 'choose' && this.chatDownSince != null && !this.chatGaveUp,
       waitingHost: !!this.waitingHost,
       players, log: this.log ? this.log.slice(-14) : [],
       rules: { ...this.rules, text: this.rulesText() }, display: this.display,

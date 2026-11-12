@@ -23,7 +23,8 @@ function make(n, opts = {}) {
 }
 /** Let the server clock reach the end of the current scene. */
 const finishScene = (g, c) => { if (g.endsAt != null) c.add(Math.max(0, g.endsAt - c.now())); return g.tick(); };
-/** One whole turn in «اللاعب المسحوب» mode: draw → reel → picked → revolver → result → the grid again. */
+/** One whole turn with a silent holder: draw → reel → picked → choose (time runs out: the server picks another player)
+    → revolver → result → the grid again. */
 function playTurn(g, c) {
   g.draw();
   const seen = [g.phase];
@@ -50,19 +51,20 @@ test('the rules: announced defaults, every value checked, at least one empty cha
   assert.equal(validateSettings('roulette', { chambers: 2 }, { ...defaultSettings('roulette'), chambers: 4, bullets: 3 }).bullets, 1);
   // the rules are written on screen in plain Arabic
   const text = make(4, { chambers: 6, bullets: 1, cylinder: 'spin', targetMode: 'choose' }).g.view().rules.text.join(' ');
-  assert.match(text, /6 حجرات/); assert.match(text, /طلقة واحدة/); assert.match(text, /1 من 6/); assert.match(text, /يكتب في الشات رقم اللاعب/);
+  assert.match(text, /6 حجرات/); assert.match(text, /طلقة واحدة/); assert.match(text, /1 من 6/); assert.match(text, /يكتب في الشات رقم لاعب آخر/);
+  assert.match(text, /يختار الخادم لاعبًا آخر عشوائيًا/, 'the timeout rule is announced');
   assert.match(make(4).g.view().rules.text.join(' '), /حجرتين.*السحبة الأولى 1 من 2/);
 });
 
 test('every setting on the settings page changes the game (none is decorative)', () => {
   const keys = GAME_SETTINGS.roulette.map((f) => f.key).sort();
-  assert.deepEqual(keys, ['autoRun', 'bullets', 'chambers', 'chooseSeconds', 'cylinder', 'drawSpeed', 'effects', 'graphics', 'hostPlays', 'maxPlayers', 'resultSeconds', 'showFrames', 'showNames', 'sounds', 'targetMode', 'timeoutRule', 'trial'].sort());
+  assert.deepEqual(keys, ['autoRun', 'bullets', 'chambers', 'chooseSeconds', 'cylinder', 'drawSpeed', 'effects', 'graphics', 'hostPlays', 'maxPlayers', 'resultSeconds', 'showFrames', 'showNames', 'sounds', 'timeoutRule', 'trial'].sort());
   for (const f of GAME_SETTINGS.roulette) assert.ok(f.label && f.options.length >= 2, f.key);
   // applied to the engine: the rules reach the match, the lobby limit and the host seat reach the registration
   let t = 1000;
   const e = new Engine({ now: () => t, random: randomInt });
   e.configure({ mode: 'roulette', title: 'الروليت' });
-  const s = { ...defaultSettings('roulette'), chambers: 4, bullets: 2, cylinder: 'spin', targetMode: 'choose', chooseSeconds: 15, timeoutRule: 'random', autoRun: 'auto', drawSpeed: 'fast', resultSeconds: 3, maxPlayers: 10, hostPlays: true, sounds: false, effects: 'high', graphics: 'low', showNames: false, showFrames: false };
+  const s = { ...defaultSettings('roulette'), chambers: 4, bullets: 2, cylinder: 'spin', chooseSeconds: 15, timeoutRule: 'random', autoRun: 'auto', drawSpeed: 'fast', resultSeconds: 3, maxPlayers: 10, hostPlays: true, sounds: false, effects: 'high', graphics: 'low', showNames: false, showFrames: false };
   applySettings(e, 'roulette', s);
   assert.equal(e.registration.maxPlayers, 10); assert.equal(e.registration.hostJoin, 'auto');
   e.openRegistration({ keyword: 'انضم' });
@@ -105,7 +107,11 @@ test('one turn, scene by scene: the server keeps every deadline and publishes th
   finishScene(g, c); v = g.view();
   assert.equal(v.phase, 'picked'); assert.equal(v.endsAt - v.phaseStartedAt, PICKED_MS);
   finishScene(g, c); v = g.view();
-  assert.equal(v.phase, 'aim'); assert.equal(v.target.id, v.holder.id, '«اللاعب المسحوب» faces the revolver');
+  assert.equal(v.phase, 'choose', 'the holder chooses'); assert.equal(v.endsAt - v.phaseStartedAt, 25_000); assert.equal(v.target, null);
+  const chosen = g.alive.find((x) => x.id !== v.holder.id);
+  assert.equal(g.input(v.holder.id, String(chosen.number)), true);
+  v = g.view();
+  assert.equal(v.phase, 'aim'); assert.equal(v.target.id, chosen.id, 'the player the holder wrote faces the revolver'); assert.notEqual(v.target.id, v.holder.id);
   assert.deepEqual(v.chamber, { index: 1, of: 2 }, '«الحجرة 1 من 2»');
   assert.equal(v.result, null, 'the outcome is decided, not published');
   const pub = JSON.stringify(g.snapshot());
@@ -157,7 +163,7 @@ test('an eliminated player is never drawn, never on the reel, never a target', (
     finishScene(g, c); finishScene(g, c); // → choose
     assert.equal(g.phase, 'choose');
     const dead = [...g.roster.values()].find((p) => !p.alive);
-    if (dead) assert.equal(g.input(holder.id, String(dead.number)), false, 'an eliminated number is not a target');
+    if (dead) { g.input(holder.id, String(dead.number)); assert.equal(g.phase, 'choose', 'an eliminated number is not a target'); assert.equal(g.view().feedback.kind, 'out'); }
     const other = g.alive.find((p) => p.id !== holder.id);
     assert.equal(g.input(holder.id, String(other.number)), true);
     assert.ok(g.roster.get(g.target).alive);
@@ -183,13 +189,16 @@ test('«ابدأ السحب» clicked again and again: one turn per request id, 
 });
 
 test('skipping an animation jumps to the outcome already decided — it never draws anything again', () => {
-  // advance: the outcome is the target's next chamber
+  // advance: skipping the reel stops at the choice (the holder still chooses); then skipping the revolver scene
+  // shows the target's next chamber
   for (let run = 0; run < 30; run++) {
     const { g } = make(4);
     g.draw();
-    const h = g.roster.get(g.holder), willBeOut = h.cyl.includes(h.shots);
-    const r = g.skip();
-    assert.equal(r.phase, 'reveal', 'skip from the reel goes straight to the result');
+    const h = g.roster.get(g.holder);
+    assert.equal(g.skip().phase, 'choose', 'skip from the reel goes to the holder\'s choice, never past it');
+    const t = g.alive.find((x) => x.id !== h.id), willBeOut = t.cyl.includes(t.shots);
+    g.input(h.id, String(t.number));
+    assert.equal(g.skip().phase, 'reveal');
     assert.equal(g.result.outcome, willBeOut ? 'out' : 'empty');
   }
   // spin: the cylinder is spun when the turn is drawn, so skipping cannot change it
@@ -198,8 +207,11 @@ test('skipping an animation jumps to the outcome already decided — it never dr
     g.draw();
     const spun = g.spin;
     assert.ok(Number.isInteger(spun) && spun >= 0 && spun < 6);
-    if (run % 2) { finishScene(g, c); finishScene(g, c); assert.equal(g.phase, 'aim'); assert.deepEqual(g.view().chamber, { index: spun + 1, of: 6 }, 'the chamber the spin stopped on (not whether it is loaded)'); }
-    const target = g.roster.get(g.holder);
+    if (run % 2) { finishScene(g, c); finishScene(g, c); } else g.skip();
+    assert.equal(g.phase, 'choose');
+    const target = g.alive.find((x) => x.id !== g.holder);
+    g.input(g.holder, String(target.number));
+    assert.equal(g.phase, 'aim'); assert.deepEqual(g.view().chamber, { index: spun + 1, of: 6 }, 'the chamber the spin stopped on (not whether it is loaded)');
     g.skip();
     assert.equal(g.result.chamber, spun + 1);
     assert.equal(g.result.outcome, target.cyl.includes(spun) ? 'out' : 'empty');
@@ -207,6 +219,7 @@ test('skipping an animation jumps to the outcome already decided — it never dr
   // during the revolver scene: the pending outcome is the one revealed
   const { g, c } = make(4);
   g.draw(); finishScene(g, c); finishScene(g, c);
+  g.input(g.holder, String(g.alive.find((x) => x.id !== g.holder).number));
   const pending = { ...g.pending };
   g.skip();
   assert.equal(g.result.outcome, pending.out ? 'out' : 'empty'); assert.equal(g.result.chamber, pending.chamber + 1);
@@ -223,8 +236,8 @@ test('«يختاره صاحب الدور»: only the holder\'s message counts, o
   assert.equal(v.phase, 'choose'); assert.equal(v.endsAt - v.phaseStartedAt, 20_000);
   const h = g.roster.get(g.holder), other = g.alive.find((p) => p.id !== h.id), third = g.alive.find((p) => p.id !== h.id && p.id !== other.id);
   assert.equal(g.input(other.id, String(third.number)), false, 'another viewer cannot choose');
-  assert.equal(g.input(h.id, String(h.number)), false, 'not themselves');
-  assert.equal(g.input(h.id, '99'), false, 'not a number nobody has');
+  g.input(h.id, String(h.number)); assert.equal(g.phase, 'choose', 'not themselves'); assert.equal(g.view().feedback.kind, 'self');
+  g.input(h.id, '99'); assert.equal(g.phase, 'choose', 'not a number nobody has'); assert.equal(g.view().feedback.kind, 'missing');
   assert.equal(g.input(h.id, 'هههه'), false, 'ordinary chat is ignored');
   assert.equal(g.phase, 'choose');
   const arabic = String(other.number).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
@@ -234,10 +247,10 @@ test('«يختاره صاحب الدور»: only the holder\'s message counts, o
   assert.equal(g.input(h.id, String(third.number)), false, 'one choice per turn');
 });
 
-test('the holder does not choose in time: the announced rule decides (self, random target, or the turn is cancelled)', () => {
-  const self = make(5, { targetMode: 'choose', timeoutRule: 'self' });
-  self.g.draw(); finishScene(self.g, self.c); finishScene(self.g, self.c); finishScene(self.g, self.c);
-  assert.equal(self.g.phase, 'aim'); assert.equal(self.g.target, self.g.holder); assert.equal(self.g.how, 'timeout');
+test('the holder does not choose in time: the announced rule decides (a random other player, or the turn is cancelled)', () => {
+  const legacy = make(5, { targetMode: 'choose', timeoutRule: 'self' });
+  legacy.g.draw(); finishScene(legacy.g, legacy.c); finishScene(legacy.g, legacy.c); finishScene(legacy.g, legacy.c);
+  assert.equal(legacy.g.phase, 'aim'); assert.notEqual(legacy.g.target, legacy.g.holder, 'an old «self» setting never makes the holder shoot themselves'); assert.equal(legacy.g.how, 'timeout');
   for (let run = 0; run < 20; run++) {
     const r = make(5, { targetMode: 'choose', timeoutRule: 'random' });
     r.g.draw(); finishScene(r.g, r.c); finishScene(r.g, r.c); finishScene(r.g, r.c);

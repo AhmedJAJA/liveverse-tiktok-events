@@ -190,7 +190,7 @@
     const showFrame = view === 'live' || view === 'done';
     $('liveView').hidden = !showFrame;
     if (showFrame) {
-      const base = roomPath('/overlay'), src = base + (base.includes('?') ? '&' : '?') + 'embedded=1' + (host ? '&mute=1' : '');
+      const base = roomPath('/overlay'), src = base + (base.includes('?') ? '&' : '?') + 'embedded=1' + (host && !(mode === 'roulette' && previewSound()) ? '&mute=1' : ''); // the switch lives in the roulette bar
       if ($('liveFrame').dataset.src !== src) { $('liveFrame').dataset.src = src; $('liveFrame').src = src; }
       $('liveNotice').textContent = (s.status.notice || '') + series;
       document.querySelector('.pl-live-tag').lastChild.textContent = view === 'live' ? 'اللعبة جارية' : 'النتائج';
@@ -286,6 +286,23 @@
     $('addForm').querySelectorAll('input,button').forEach((n) => { n.disabled = active && !lateManual; });
     paintTools(s, view);
   }
+  /* ---------- the host's preview is muted (OBS carries the sound to the stream); «صوت المعاينة» turns it on here ---------- */
+  const previewSound = () => { try { return localStorage.getItem('sl_preview_sound') === '1'; } catch { return false; } };
+  function paintPreviewSound() {
+    const on = previewSound(), b = $('rrSound');
+    b.setAttribute('aria-pressed', String(on));
+    b.querySelector('use').setAttribute('href', '/icons.svg#' + (on ? 'i-volume' : 'i-volume-off'));
+    b.querySelector('span').textContent = on ? 'صوت المعاينة: يعمل' : 'صوت المعاينة: مكتوم';
+  }
+  $('rrSound').addEventListener('click', () => {
+    try { localStorage.setItem('sl_preview_sound', previewSound() ? '0' : '1'); } catch { /* private mode: stays muted */ }
+    paintPreviewSound();
+    // reload the preview with (or without) its sound; this click lets the browser play it
+    const f = $('liveFrame'); if (!f.dataset.src) return;
+    const src = f.dataset.src.replace(/&mute=1/, '') + (previewSound() ? '' : '&mute=1');
+    f.dataset.src = src; f.src = src;
+  });
+  paintPreviewSound();
   /* ---------- «الروليت»: one turn at a time, the host's buttons follow the server's scene ---------- */
   const RR_STATE = { ready: 'الجولة جاهزة', drawing: 'السحب جارٍ…', picked: 'تم اختيار صاحب الدور', choose: 'صاحب الدور يختار من الشات', aim: 'الخزنة تدور…', reveal: 'النتيجة', finished: 'انتهت المباراة' };
   let rrPending = false;
@@ -305,7 +322,11 @@
     let line = 'الدور ' + num(ph === 'ready' ? p.turn + 1 : p.turn) + ' — ' + (RR_STATE[ph] || '');
     if (ph === 'ready' && p.waitingHost) line = 'الأدوار التلقائية متوقفة حتى تعود هذه النافذة';
     else if (ph === 'ready' && p.rules?.autoRun === 'auto') line += ' — السحب التالي تلقائيًا';
-    else if (['picked', 'choose'].includes(ph)) line += ' — ' + who(p.holder?.number);
+    else if (['picked', 'choose'].includes(ph)) {
+      line += ' — ' + who(p.holder?.number);
+      if (p.chatDown) line += ' — الشات منقطع: المهلة متوقفة';
+      else if (p.feedback) line += ' — كتب ' + (p.feedback.kind === 'ambiguous' ? 'أكثر من رقم' : 'رقمًا غير صالح (' + p.feedback.number + ')');
+    }
     else if (ph === 'aim') line += ' — الهدف ' + who(p.target?.number);
     else if (ph === 'reveal') line = p.result?.outcome === 'out' ? 'خرج ' + who(p.target?.number) : p.result?.outcome === 'empty' ? 'نجا ' + who(p.target?.number) + ' — حجرة فارغة' : 'أُلغي الدور';
     line += ' • داخل اللعبة ' + num(p.alive) + ' من ' + num(p.total);
