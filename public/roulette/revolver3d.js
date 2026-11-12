@@ -1,6 +1,7 @@
 /* سبونج لايف — «الروليت»: the revolver prop and the winner's trophy in WebGL (three.js r170, self-hosted).
-   An original prop made for the game — a toy-like revolver, not a real mechanism: a steel frame, a cylinder with one
-   chamber per chamber of the match, a hammer, a cyan light strip, and a sponge-yellow grip. Everything is built from
+   An original prop made for the game — a stylised revolver, not a real mechanism: a gunmetal frame, a polished
+   cylinder with one chamber per chamber of the match, a hammer, a cyan light strip, and a lacquered walnut grip with
+   checkering, a steel backstrap and a cyan-inlaid medallion. Everything is built from
    code (no model file to download), once, and reused for every turn. It only renders while its scene is on screen.
    Every pose is a function of the server clock (timeline.js): no state of its own, nothing random. */
 import { AIM, REVEAL, span, lerp, clamp01, easeOutCubic, easeOutBack, easeInOutCubic, drumTurn, hammerAim, hammerReveal, recoil, flash, shake, noise, WIN } from './timeline.js';
@@ -23,22 +24,39 @@ function canvasTexture(size, draw, { srgb = true, repeat = null } = {}) {
   t.anisotropy = 4;
   return t;
 }
-/** Sponge pores: the grip is a sea sponge — yellow with soft darker holes (colour) and dents (bump). */
-function spongeMaps(yellow) {
-  const pores = [];
-  for (let i = 0; i < 150; i++) pores.push([(noise(i) * 0.5 + 0.5), (noise(i + 400) * 0.5 + 0.5), 0.012 + (noise(i + 800) * 0.5 + 0.5) * 0.03]);
-  const map = canvasTexture(256, (g, s) => {
-    g.fillStyle = yellow; g.fillRect(0, 0, s, s);
-    for (const [x, y, r] of pores) {
-      const grd = g.createRadialGradient(x * s, y * s, 0, x * s, y * s, r * s * 1.6);
-      grd.addColorStop(0, 'rgba(150,96,0,.75)'); grd.addColorStop(0.55, 'rgba(201,138,0,.45)'); grd.addColorStop(1, 'rgba(201,138,0,0)');
-      g.fillStyle = grd; g.beginPath(); g.arc(x * s, y * s, r * s * 1.6, 0, Math.PI * 2); g.fill();
+/** The grip: lacquered walnut — grain in the colour map, a checkered panel in the colour and relief (bump) maps.
+    The grip's UVs are its side profile in prop units (see buildRevolver): x 0.3…1, y −1.2…−0.24 (offset by +1.2). */
+const GRIP_PANEL = [[0.47, 0.86], [0.66, 0.9], [0.86, 0.22], [0.56, 0.16]]; // the checkered panel, in texture units
+function panelPath(g, s) {
+  g.beginPath(); GRIP_PANEL.forEach(([x, y], i) => (i ? g.lineTo(x * s, (1 - y) * s) : g.moveTo(x * s, (1 - y) * s))); g.closePath();
+}
+function checker(g, s, line, gap) {
+  g.save(); panelPath(g, s); g.clip();
+  g.strokeStyle = line; g.lineWidth = s / 340;
+  for (const dir of [1, -1]) for (let k = -s; k < s * 2; k += gap) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + dir * s * 0.62, s); g.stroke(); }
+  g.restore();
+}
+function gripMaps() {
+  const map = canvasTexture(512, (g, s) => {
+    g.fillStyle = '#4a2814'; g.fillRect(0, 0, s, s);
+    // grain: long, slightly wavy streaks, lighter and darker, along the grip (vertical in the texture)
+    for (let i = 0; i < 90; i++) {
+      const x0 = (noise(i) * 0.5 + 0.5) * s, w = 1 + (noise(i + 200) * 0.5 + 0.5) * 5, dark = i % 3 !== 0;
+      g.strokeStyle = dark ? `rgba(28,12,4,${0.25 + (noise(i + 9) * 0.5 + 0.5) * 0.35})` : `rgba(160,92,44,${0.12 + (noise(i + 4) * 0.5 + 0.5) * 0.2})`;
+      g.lineWidth = w; g.beginPath();
+      for (let y = 0; y <= s; y += 16) { const x = x0 + Math.sin(y / (40 + i % 7 * 9) + i) * (6 + i % 5 * 3); y ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
     }
-  }, { repeat: 2.2 });
-  const bump = canvasTexture(256, (g, s) => {
-    g.fillStyle = '#fff'; g.fillRect(0, 0, s, s);
-    for (const [x, y, r] of pores) { const grd = g.createRadialGradient(x * s, y * s, 0, x * s, y * s, r * s * 1.5); grd.addColorStop(0, '#000'); grd.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = grd; g.beginPath(); g.arc(x * s, y * s, r * s * 1.5, 0, Math.PI * 2); g.fill(); }
-  }, { srgb: false, repeat: 2.2 });
+    // the checkered panel reads a little darker, with a fine border
+    g.save(); panelPath(g, s); g.fillStyle = 'rgba(20,8,2,.28)'; g.fill(); g.strokeStyle = 'rgba(12,5,1,.8)'; g.lineWidth = s / 160; g.stroke(); g.restore();
+    checker(g, s, 'rgba(10,4,1,.55)', s / 46);
+  });
+  const bump = canvasTexture(512, (g, s) => {
+    g.fillStyle = '#c8c8c8'; g.fillRect(0, 0, s, s);
+    g.save(); panelPath(g, s); g.fillStyle = '#ffffff'; g.fill(); g.strokeStyle = '#000'; g.lineWidth = s / 120; g.stroke(); g.restore();
+    checker(g, s, '#000000', s / 46);
+  }, { srgb: false });
+  for (const t of [map, bump]) { t.wrapS = t.wrapT = T.RepeatWrapping; t.offset.set(0, 1.2); }
   return { map, bump };
 }
 const glowTexture = () => canvasTexture(128, (g, s) => {
@@ -147,14 +165,18 @@ function buildRevolver(mats, chambers) {
   const tp = new T.Group(); tp.position.set(0.18, -0.32, 0); gun.add(tp);
   const ts = new T.Shape(); ts.moveTo(-0.03, 0); ts.lineTo(0.03, 0); ts.quadraticCurveTo(0.06, -0.12, 0.0, -0.22); ts.quadraticCurveTo(0.01, -0.1, -0.03, 0);
   tp.add(new T.Mesh(extrude(ts, 0.05, 0.01), mats.dark));
-  // the grip: a sponge, with a cyan medallion
+  // the grip: lacquered walnut with a checkered panel, a steel backstrap and butt cap, a cyan-inlaid steel medallion
   const g = new T.Shape();
   g.moveTo(0.3, -0.3); g.lineTo(0.62, -0.24); g.quadraticCurveTo(0.74, -0.32, 0.8, -0.52); g.lineTo(0.94, -1.0); g.quadraticCurveTo(0.98, -1.2, 0.78, -1.2);
   g.lineTo(0.52, -1.16); g.quadraticCurveTo(0.42, -1.12, 0.42, -0.98); g.lineTo(0.38, -0.66); g.quadraticCurveTo(0.34, -0.44, 0.3, -0.3);
-  const grip = new T.Mesh(extrude(g, 0.4, 0.07, 16), mats.sponge); gun.add(grip);
-  for (const z of [0.272, -0.272]) {
-    const med = new T.Mesh(new T.CylinderGeometry(0.085, 0.085, 0.02, 40), mats.cyan); med.rotation.x = Math.PI / 2; med.position.set(0.66, -0.66, z); gun.add(med);
-    const screw = new T.Mesh(new T.CylinderGeometry(0.03, 0.03, 0.03, 16), mats.steel); screw.rotation.x = Math.PI / 2; screw.position.set(0.64, -0.94, z * 0.98); gun.add(screw);
+  const grip = new T.Mesh(extrude(g, 0.36, 0.06, 20), mats.grip); grip.name = 'grip'; gun.add(grip);
+  const back = new T.CatmullRomCurve3([[0.6, -0.25], [0.72, -0.33], [0.79, -0.52], [0.93, -1.0], [0.9, -1.17]].map(([x, y]) => new T.Vector3(x + 0.035, y, 0)));
+  gun.add(new T.Mesh(new T.TubeGeometry(back, 40, 0.045, 10, false), mats.steel));
+  const cap = new T.Mesh(new T.BoxGeometry(0.46, 0.07, 0.4), mats.steel); cap.position.set(0.68, -1.2, 0); cap.rotation.z = -0.1; gun.add(cap);
+  for (const z of [0.245, -0.245]) {
+    const med = new T.Mesh(new T.CylinderGeometry(0.075, 0.075, 0.02, 40), mats.steel); med.rotation.x = Math.PI / 2; med.position.set(0.66, -0.64, z); gun.add(med);
+    const inlay = new T.Mesh(new T.TorusGeometry(0.05, 0.01, 8, 40), mats.cyan); inlay.position.set(0.66, -0.64, z * 1.05); gun.add(inlay);
+    const screw = new T.Mesh(new T.CylinderGeometry(0.026, 0.026, 0.03, 16), mats.steel); screw.rotation.x = Math.PI / 2; screw.position.set(0.66, -1.0, z * 0.98); gun.add(screw);
   }
   const api = { gun, drum, hammerPivot: hp, triggerPivot: tp, chambers: 0, muzzle: new T.Vector3(MUZZLE_X, BARREL_Y, 0) };
   api.setChambers = (n) => {
@@ -199,6 +221,35 @@ function buildTrophy(mats) {
   return t;
 }
 
+/* ------------------------------------------------------------------ the duel table (felt top, walnut rim) */
+const TABLE_Y = -1.5;
+function feltTexture(cyan) {
+  return canvasTexture(512, (g, s) => {
+    const grd = g.createRadialGradient(s / 2, s / 2, s * 0.05, s / 2, s / 2, s / 2);
+    grd.addColorStop(0, '#2a5d80'); grd.addColorStop(0.35, '#15405f'); grd.addColorStop(0.75, '#0a2238'); grd.addColorStop(1, '#05111f'); g.fillStyle = grd; g.fillRect(0, 0, s, s);
+    for (let i = 0; i < 2600; i++) { g.fillStyle = `rgba(255,255,255,${0.012 + (noise(i) * 0.5 + 0.5) * 0.02})`; g.fillRect((noise(i + 5) * 0.5 + 0.5) * s, (noise(i + 9) * 0.5 + 0.5) * s, 1.5, 1.5); }
+    g.strokeStyle = cyan; g.globalAlpha = 0.5; g.lineWidth = s / 160; g.beginPath(); g.arc(s / 2, s / 2, s * 0.36, 0, Math.PI * 2); g.stroke();
+    g.globalAlpha = 0.22; g.lineWidth = s / 300; g.beginPath(); g.arc(s / 2, s / 2, s * 0.33, 0, Math.PI * 2); g.stroke();
+  });
+}
+const shadowTexture = () => canvasTexture(128, (g, s) => {
+  const grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2); grd.addColorStop(0, 'rgba(0,0,0,.62)'); grd.addColorStop(0.55, 'rgba(0,0,0,.28)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, s, s);
+});
+function buildTable(mats, tex) {
+  const t = new T.Group(); t.name = 'table'; t.position.y = TABLE_Y;
+  const top = new T.Mesh(new T.CylinderGeometry(4.6, 4.6, 0.1, 96, 1), [mats.wood, mats.felt, mats.wood]); t.add(top); // side, top, bottom
+  const rim = new T.Mesh(new T.TorusGeometry(4.62, 0.12, 14, 120), mats.wood); rim.rotation.x = Math.PI / 2; rim.position.y = 0.04; t.add(rim);
+  const shadow = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: tex.shadow, transparent: true, depthWrite: false, name: 'shadow' }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.056; t.add(shadow);
+  return { group: t, shadow };
+}
+
+/** The average colour of a canvas (sRGB «rgb(…)»), e.g. the grip's wood. */
+function avgColour(canvas) {
+  const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); g.drawImage(canvas, 0, 0, 1, 1);
+  const [r, gg, b] = g.getImageData(0, 0, 1, 1).data; return `rgb(${r},${gg},${b})`;
+}
 /* ------------------------------------------------------------------ the scene */
 export async function createStage3D({ chambers = 2, quality = 'high' } = {}) {
   await loadThree();
@@ -210,22 +261,25 @@ export async function createStage3D({ chambers = 2, quality = 'high' } = {}) {
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;
-  const cyan = token('--sl-cyan', '#38D4FF'), yellow = token('--sl-yellow', '#FFD62A'), blue = token('--sl-primary', '#176DF0');
+  const cyan = token('--sl-cyan', '#38D4FF'), blue = token('--sl-primary', '#176DF0');
   const green = token('--sl-success', '#2FD9A0'), red = token('--sl-danger', '#FF4D6A'), navy = token('--sl-navy', '#061A44');
   const scene = new T.Scene();
   scene.environment = studioEnvironment(renderer, cyan, blue);
   const warmEnv = studioEnvironment(renderer, cyan, blue, true); // gold reflects a warm studio, not the cyan one
-  const sponge = spongeMaps(yellow);
+  const wood = gripMaps();
   const mats = {
-    steel: new T.MeshPhysicalMaterial({ color: 0xc4cfdd, metalness: 1, roughness: 0.26, clearcoat: 0.35, clearcoatRoughness: 0.2, envMapIntensity: 1.25 }),
-    drum: new T.MeshPhysicalMaterial({ color: 0x9fb0c6, metalness: 1, roughness: 0.3, clearcoat: 0.3, envMapIntensity: 1.2 }),
+    steel: new T.MeshPhysicalMaterial({ color: 0x8592a5, metalness: 1, roughness: 0.27, clearcoat: 0.45, clearcoatRoughness: 0.18, envMapIntensity: 1.3 }),
+    drum: new T.MeshPhysicalMaterial({ color: 0xc2cedd, metalness: 1, roughness: 0.22, clearcoat: 0.4, envMapIntensity: 1.35 }),
     dark: new T.MeshStandardMaterial({ color: 0x2b3446, metalness: 0.9, roughness: 0.38, envMapIntensity: 1.1 }),
     hole: new T.MeshBasicMaterial({ color: 0x03060d }),
     cyan: new T.MeshStandardMaterial({ color: cyan, emissive: cyan, emissiveIntensity: 1.8, roughness: 0.3, metalness: 0.2 }),
-    sponge: new T.MeshStandardMaterial({ color: 0xffffff, map: sponge.map, bumpMap: sponge.bump, bumpScale: 1.6, roughness: 0.82, metalness: 0, envMapIntensity: 0.22 }),
+    grip: new T.MeshPhysicalMaterial({ color: 0xffffff, map: wood.map, bumpMap: wood.bump, bumpScale: 2.4, roughness: 0.5, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.32, envMapIntensity: 0.55 }),
+    felt: new T.MeshStandardMaterial({ color: 0x5d6b80, map: feltTexture(cyan), roughness: 1, metalness: 0, envMapIntensity: 0.08 }),
+    wood: new T.MeshPhysicalMaterial({ color: 0x6a3a1c, roughness: 0.42, metalness: 0, clearcoat: 0.6, clearcoatRoughness: 0.25, envMapIntensity: 0.7 }),
     gold: new T.MeshPhysicalMaterial({ color: 0xffd060, metalness: 1, roughness: 0.15, clearcoat: 0.6, clearcoatRoughness: 0.1, envMap: warmEnv, envMapIntensity: 1.7, side: T.DoubleSide }),
     base: new T.MeshStandardMaterial({ color: navy, metalness: 0.6, roughness: 0.35, envMapIntensity: 1.0 }),
   };
+  for (const [k, m] of Object.entries(mats)) m.name = k;
   // lights: key, cyan rim, blue fill, and two that the scene drives (the result glow, the muzzle flash)
   scene.add(new T.AmbientLight(0x8fb8ff, 0.18));
   const key = new T.DirectionalLight(0xffffff, 2.3); key.position.set(2.5, 4, 5); scene.add(key);
@@ -237,6 +291,12 @@ export async function createStage3D({ chambers = 2, quality = 'high' } = {}) {
   const rv = buildRevolver(mats, chambers);
   const rig = new T.Group(); rig.add(rv.gun); scene.add(rig);
   const trophy = buildTrophy(mats); trophy.visible = false; scene.add(trophy);
+  // the duel table under the revolver: felt and a walnut rim, a soft contact shadow; the pool of light on the felt is
+  // painted into its texture (a real spotlight made every shader heavier and the first revolver frame slower, and a
+  // visible light cone lit up the canvas' rectangle on the page)
+  const tableTex = { shadow: shadowTexture() };
+  const table = buildTable(mats, tableTex); scene.add(table.group);
+  const lookAt = new T.Vector3();
 
   // effects: flash sprites, smoke puffs, sparkles (shared textures, additive where light)
   const tex = { glow: glowTexture(), star: starTexture(), smoke: smokeTexture(), spark: sparkTexture() };
@@ -294,8 +354,17 @@ export async function createStage3D({ chambers = 2, quality = 'high' } = {}) {
     // the canvas may be wider than the prop's place (the flash and the smoke need room): pan so the prop sits at s.at
     const visW = 2 * z * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect;
     const pan = portrait ? 0 : -((s.at ?? 0.5) - 0.5) * visW * 0.96;
-    camera.position.set(0.3 + jx + pan, 1.05 + jy, z);
-    camera.lookAt(-0.35 + jx * 0.5 + pan, -0.18 + jy * 0.5, 0);
+    // cinematic aim: the camera starts low and to the side of the table and swings round to face the duel as the
+    // cylinder turns; the shot punches in, an empty chamber eases back. A function of the clock only (and calm when
+    // the viewer prefers reduced motion).
+    const swing = reduced || s.phase !== 'aim' ? 0 : 1 - easeInOutCubic(span(u, 0, 0.82));
+    const punch = s.phase === 'reveal' && !reduced ? (s.outcome === 'out' ? Math.max(0, recoil(t)) * 0.45 : s.outcome === 'empty' ? -0.18 * clamp01(t / 600) : 0) : 0;
+    const yaw = 0.34 * swing, ox = 0.65, oz = z - punch, oy = 1.23 - 0.42 * swing;
+    lookAt.set(-0.35 + jx * 0.5 + pan, -0.18 + jy * 0.5, 0);
+    camera.position.set(lookAt.x + ox * Math.cos(yaw) + oz * Math.sin(yaw) + jx * 0.5, lookAt.y + oy + jy * 0.5, -ox * Math.sin(yaw) + oz * Math.cos(yaw));
+    camera.lookAt(lookAt);
+    table.group.visible = true;
+    table.shadow.position.set(rig.position.x + 0.1, 0.056, 0); table.shadow.scale.set(3.6 - breath * 4, 1.5, 1);
     // light: green when the chamber was empty, red when it fired
     const tgt = s.phase === 'reveal' && s.outcome ? (s.outcome === 'out' ? red : green) : null;
     if (tgt) { mood.color.set(tgt); mood.intensity = (s.outcome === 'out' ? 26 : 18) * clamp01(t / 250) * fx; } else mood.intensity = 0;
@@ -332,7 +401,7 @@ export async function createStage3D({ chambers = 2, quality = 'high' } = {}) {
     renderer.render(scene, camera);
   }
   function frameTrophy(s, fx, reduced) {
-    rig.visible = false; trophy.visible = true;
+    rig.visible = false; trophy.visible = true; table.group.visible = false;
     flashGlow.material.opacity = flashStar.material.opacity = 0; muzzleLight.intensity = 0;
     smoke.forEach((p) => (p.material.opacity = 0));
     const t = Math.max(0, s.ms || 0);
@@ -359,10 +428,16 @@ export async function createStage3D({ chambers = 2, quality = 'high' } = {}) {
     resize() { width = height = 0; resize(); },
     dispose() {
       scene.traverse((o) => { o.geometry?.dispose?.(); if (o.material) [].concat(o.material).forEach((m) => m.dispose()); });
-      Object.values(tex).forEach((t) => t.dispose()); sponge.map.dispose(); sponge.bump.dispose(); scene.environment?.dispose(); warmEnv.dispose();
+      Object.values(tex).forEach((t) => t.dispose()); Object.values(tableTex).forEach((t) => t.dispose()); mats.felt.map.dispose(); wood.map.dispose(); wood.bump.dispose(); scene.environment?.dispose(); warmEnv.dispose();
       renderer.dispose(); renderer.forceContextLoss?.(); canvas.remove();
     },
     info: () => renderer.info,
+    /** What the prop is made of (for tests and the report): material names, and the grip's base colour and relief. */
+    describe() {
+      const names = new Set(); scene.traverse((o) => o.visible !== false && o.isMesh && [].concat(o.material).forEach((m) => m.name && names.add(m.name)));
+      const gm = rv.gun.getObjectByName('grip').material, c = new T.Color(); c.setStyle(avgColour(gm.map.image));
+      return { materials: [...names], grip: { color: [c.r, c.g, c.b], relief: !!gm.bumpMap }, camera: { position: camera.position.toArray(), target: lookAt.toArray() } };
+    },
   };
 }
 

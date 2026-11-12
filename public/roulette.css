@@ -199,6 +199,20 @@ body.rr-on .ov-roomcode{inset-block:12px auto}
 .rr-target-name>*{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
 .rr-target-num{color:var(--sl-cyan-soft);font-size:calc(var(--u)*26)}
 .rr-target-by{margin:0;color:var(--sl-muted);font-size:calc(var(--u)*20);font-weight:var(--sl-fw-bold)}
+/* the duel: the shooter (the holder who chose) across the table from the target — top corner on the grip's side */
+.rr-shooter{position:absolute;z-index:2;inset-inline-start:1%;bottom:2%;display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*8);width:calc(var(--u)*200);text-align:center;
+  padding:calc(var(--u)*14) calc(var(--u)*12);border-radius:calc(var(--u)*28);background:rgba(var(--sl-deep-rgb),.62);border:1px solid var(--rr-line);
+  box-shadow:0 calc(var(--u)*10) calc(var(--u)*40) rgba(0,0,0,.35);animation:rr-rise .5s var(--sl-ease) both}
+.rr-shooter[hidden]{display:none}
+.rr-shooter-avbox{flex:none;width:calc(var(--u)*120);height:calc(var(--u)*120);border-radius:50%;padding:calc(var(--u)*5);background:conic-gradient(from 200deg,var(--sl-yellow),#ff9f2a,var(--sl-yellow))}
+.rr-shooter-avbox>*{width:100%;height:100%}
+.rr-shooter-avbox .rr-av{--rr-tile:calc(var(--u)*110)}
+.rr-shooter-text{display:grid;justify-items:center;max-width:100%;min-width:0;line-height:1.15}
+.rr-shooter-role{color:var(--sl-yellow);font-size:calc(var(--u)*18);font-weight:var(--sl-fw-black)}
+.rr-shooter-name{max-width:100%;min-width:0;font-size:calc(var(--u)*30);font-weight:var(--sl-fw-black)}
+.rr-shooter-name>*{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block}
+.rr-shooter-num{color:var(--sl-cyan-soft);font-size:calc(var(--u)*20)}
+.rr-shot-scene.is-hit .rr-shooter-avbox{box-shadow:0 0 calc(var(--u)*40) rgba(255,77,106,.6)}
 .rr-crack{position:absolute;inset:calc(var(--u)*10);z-index:2;border-radius:50%;opacity:0;pointer-events:none;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1.1' stroke-linecap='round' opacity='.9'%3E%3Cpath d='M46 44 L30 20 L24 4M46 44 L62 22 L70 6M46 44 L80 48 L98 44M46 44 L66 74 L72 96M46 44 L34 70 L22 96M46 44 L14 52 L2 50M30 20 L18 26M62 22 L74 28M66 74 L82 70M34 70 L18 66'/%3E%3C/g%3E%3Ccircle cx='46' cy='44' r='3' fill='%23fff'/%3E%3C/svg%3E") center/cover no-repeat}
 .rr-ok{position:absolute;z-index:3;top:4%;inset-inline-start:2%;width:calc(var(--u)*96);height:calc(var(--u)*96);border-radius:50%;display:grid;place-items:center;background:var(--rr-green);color:var(--sl-ink);
@@ -334,6 +348,9 @@ html.au-perf .rr-strip.is-fast .rr-card{filter:none}
   .rr-shot-scene .rr-gl-host{top:44%}
   .rr-stage[data-gfx="2d"] .rr-shot-scene .rr-gl{left:0;right:0;width:100%}
   .rr-stamp{inset-inline:0;margin:auto;top:12%}
+  .rr-shooter{bottom:auto;top:2%;inset-inline:auto 0}
+  .rr-shooter-avbox{width:calc(var(--u)*100);height:calc(var(--u)*100)}
+  .rr-shooter-avbox .rr-av{--rr-tile:calc(var(--u)*90)}
   .rr-hud{bottom:0}
   .rr-win-card{inset-inline:0;width:auto;bottom:40%;align-content:end}
   .rr-win-gl{top:58%}
