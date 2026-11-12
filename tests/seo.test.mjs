@@ -72,8 +72,11 @@ test('lastmod follows the last commit that changed each page (when git history i
   let shallow = true;
   try { shallow = execSync('git rev-parse --is-shallow-repository', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() !== 'false'; } catch { /* no git */ }
   if (shallow) return t.skip('no full git history');
+  // a page's content also comes from the data the server renders into it: «مكتبة الألعاب» shows the game catalogue
+  const sources = { '/games': ['src/catalog.mjs'] };
   for (const p of INDEXABLE_PAGES) {
-    const day = execSync(`git log -1 --format=%cs -- public/${p.file}`, { cwd: root }).toString().trim();
+    const files = ['public/' + p.file, ...(sources[p.path] || [])].join(' ');
+    const day = execSync(`git log -1 --format=%cs -- ${files}`, { cwd: root }).toString().trim();
     if (!day) continue; // not committed yet
     // one day of slack for commits made around midnight in another time zone
     assert.ok(new Date(p.lastmod) >= new Date(new Date(day).getTime() - 86_400_000), `${p.path}: lastmod ${p.lastmod} is older than its last change (${day}) — update src/seo.mjs`);

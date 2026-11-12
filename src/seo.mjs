@@ -22,8 +22,8 @@ function cleanSiteUrl(raw) {
  */
 export const INDEXABLE_PAGES = Object.freeze([
   { path: '/', file: 'home.html', lastmod: '2026-11-06' },
-  { path: '/games', file: 'games.html', lastmod: '2026-11-06' },
-  { path: '/guide/games', file: 'guide-games.html', lastmod: '2026-11-06' },
+  { path: '/games', file: 'games.html', lastmod: '2026-11-12' },
+  { path: '/guide/games', file: 'guide-games.html', lastmod: '2026-11-12' },
   { path: '/guide/tiktok-live', file: 'guide-tiktok.html', lastmod: '2026-11-06' },
   { path: '/guide/tools', file: 'guide-tools.html', lastmod: '2026-11-06' }
 ].map(Object.freeze));

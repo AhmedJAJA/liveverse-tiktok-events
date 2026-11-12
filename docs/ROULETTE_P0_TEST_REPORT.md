@@ -61,6 +61,11 @@ revealed under heavy parallel load); it passed 3/3 run alone and in the final fu
 
 `npm run check` passes · `npm audit --omit=dev`: 0 vulnerabilities · no secrets in the diff.
 
+**Sitemap dates (fix after the first CI run):** this PR changes the content of two public pages — `/guide/games` (its HTML)
+and `/games` (the roulette card text comes from `src/catalog.mjs`, rendered into the page by the server). Their `lastmod`
+in `src/seo.mjs` is now `2026-11-12`; `/`, `/guide/tiktok-live` and `/guide/tools` are unchanged (`2026-11-06`). The
+`lastmod` test now also follows the data rendered into `/games`, so a catalogue change can no longer leave its date stale.
+
 ## Real browser simulations (chat only, no trial bots)
 
 Throwaway local server, OBS screen `/overlay`, 6 viewers who joined by writing «انضم»; every target came from simulated
